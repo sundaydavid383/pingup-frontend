@@ -1,0 +1,104 @@
+
+{
+    
+    Who exactly will use the site? Only hospitals, only blood donors, or both?
+    Hospitals, donors, and even individuals. Anyone looking to buy blood,
+
+    
+ Will hospitals need their own login (dashboard) to manage blood requests and records?
+ The feature to allow hospitals have their own landing page and domain on our website is a good idea but it is for the future, not now
+
+}
+
+{
+
+     What features should come first?
+
+    1. Donor registration and records of donations. Most important 
+
+2. Lab test results and issuing blood units per buyer(hospital or individual) are very important incase we are ever asked to present these and it will work together. Second most important.
+
+3. Report statistics is useful to us the owners, so that we can refine our business. Just as important as 1, to prevent leaks
+
+Hospital request for blood is great, and will help us in the business process.
+
+}
+
+{
+    Which tests should we record for each donated blood? (For example: HIV, Hepatitis, Malaria, Syphilis)?
+    All of them
+    1. HIV 1 & 2 (antibody + antigen testing).
+    2. Hepatitis B surface antigen (HBsAg).
+    3. ⁠Hepatitis C (HCV).
+    4. ⁠Syphilis (VDRL / TPHA).,
+    
+    Should the blood be split into parts (like plasma, platelets, red cells), or just kept as whole blood?
+    Splitting the blood into components is a wonderful addition, and would come at cost. We need a special license for platelets and co. This part is for the future,
+    
+    Do you already have rules that say when someone cannot donate blood (like age, weight, health reasons)?
+    Anyone can donate, no rules,
+
+}
+
+{
+Do you want the site to show hospitals the real-time stock of blood by type and location?
+ANSWER-This is good, but it’s for the future, not now.,
+
+When a hospital requests blood, should the system reserve the unit for some hours before giving it to another hospital? If yes, how long?
+ANSWER-This is good, but it’s for the future, not now.,
+
+Do you want the system to remind you about blood expiry dates or storage temperature issues?
+Yes, this would be very important to avoid any problems, but I don’t expect the blood to stay in the shelf up to 5days.
+Which is why the donor registration is necessary  so we have a sort of donor farm.
+
+}
+
+
+{
+
+    Do we need to follow any official rules or government regulations about how data is stored? if yes, please direct me.
+    I wouldn’t know about data storage rules, but for safety, let’s store our data privately accessible only with the highest level of clearance,
+
+    Do you want special security for staff logins (like extra verification, logging staff actions, encrypted data)?
+    Yes!!!Staff verification is very important, especially if staff have to use their own account to collect money for blood, let’s know if product was sold or not,
+
+    just to be sure How long should records be kept in the system (for example, 5 years, 10 years, or more or not needed)?
+    Lets start with 5years, we can upgrade it as we go along, 
+
+
+
+}
+
+{
+
+ Do you want the system to send notifications (SMS, WhatsApp, or Email) when requests are made or blood is available?
+ Notifications are important so that we know brought has been sold.,
+
+ Will the site handle payments? If yes, which payment platform do you prefer (Paystack, Flutterwave, or others)?
+If t is available, yes. I only wonder if using payment platforms, wouldn’t be burdensome to the people buying blood?,
+
+Do we need to connect this system to any existing hospital software?
+No need to connect to anyone else for now.,
+
+}
+
+{
+
+    How many hospitals/centers will start using the site? (1, 5, 10 or more?)
+    Individuals are first, as we grow, we will encourage hospitals to begin using the site. ,
+
+    About how many donations do you expect per month?
+    Donors would depend on business growth. I am hoping to do 100-200 monthly for a start.
+
+    Will staff use computers only, or also tablets/phones?
+    Staff don’t have a restriction on devices to use. Do you have a recommendation?
+
+}
+
+{
+  Do you already have a logo, brand colors, or content for the website?
+  We don’t have any existing data, so you have creative liberty.
+
+  Do you have any existing data (like Excel or paper records) that should be imported?
+  Already have brand colours, have a designer working on the logo. I will communicate that to you once it’s done
+}

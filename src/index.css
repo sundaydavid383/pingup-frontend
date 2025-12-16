@@ -1,0 +1,928 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+
+* {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+body{
+   overflow-x: hidden;
+   overflow-y: scroll;
+}
+.bottomnine{
+  bottom: -57px;
+}
+/* Root Colors */
+:root {
+  /* Primary Theme Colors */
+  --primary: #1e40af; /* Indigo-800 */
+  --secondary: #0f172a; /* Slate-900 */
+  --accent: var(--primary);
+  --gold: rgb(223, 190, 61);
+
+    --color-1: #fdfcfb;
+  --color-2: #e2d1c3;
+  --color-3: #c2b3e4;
+  --color-4: #fae8f5;
+  --color-5: #8fd3f4;
+  --color-6: #e6ebfa;
+  --radial-highlight: rgba(255, 255, 255, 0.2);
+
+  /* Typography */
+  --text-dark: #171717;
+  --text-main: #fdfdfd; /* Slate-50 */
+  --text-secondary: #94a3b8; /* Slate-400 */
+  --text-muted: #64748b; /* Slate-500 */
+  --text-accent-dark: #4338ca; /* Indigo-700 */
+
+  /* Backgrounds */
+  --bg-main: #0f172a; /* Slate-900 */
+  --bg-light: #1e293b; /* Slate-800 */
+  --form-bg: rgba(15, 23, 42, 0.75);
+  --input-bg: rgba(15, 23, 42, 0.6);
+  --hover-light: #c9d4f7; /* Indigo-50 */
+  --hover-subtle-bg: #f9fafb; /* Gray-50 */
+  --hover-dark: #809cf0;
+  --dark-indigo-gradient: linear-gradient(to right, var(--input-bg), var(--secondary));
+  --inverse-dark-indigo-gradient: linear-gradient(to right, var(--secondary), var(--input-bg));
+  --hover-gradient: linear-gradient(to right, var(--hover-light), var(--hover-dark));
+  --inverse-hover-gradient: linear-gradient(to right, var(--hover-dark), var(--hover-light));
+  --chat-custom-gradient: linear-gradient(to right, var(--color-6) , var(--white));
+
+  /* Borders & Shadows */
+  --input-border: #99b7e0;
+  --input-shadow: 0 0 6px 2px rgba(1, 1, 2, 0.3);
+
+  /* Effects */
+  --backdrop-blur: blur(10px);
+  --transition-default: all 0.3s ease;
+
+  /* Button Colors */
+  --btn-bg: #1e40af;
+  --btn-hover: #1e3a8a;
+  --btn-text: #ffffff;
+
+  /* Radius & Spacing */
+  --radius: 0.5rem;
+  --padding: 1rem;
+
+  /* ==== Alert / Toast colors (add these) ==== */
+  --success: #16a34a;   /* green-600 */
+  --error:   #ef4444;   /* red-500 */
+  --danger:  #dc2626;   /* red-600 */
+  --info:    #3b82f6;   /* blue-500 */
+  --warning: #f59e0b;   /* amber-500 */
+
+  /* commonly used text color */
+  --white: #ffffff;
+  --black: #000000;
+}
+
+/* ===== Global Scrollbar Styling ===== */
+
+/* Chrome, Edge, Brave, Opera */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: var(--radius);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: var(--radius);
+  border: 2px solid var(--bg-light);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--hover-dark);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--bg-light);
+}
+
+
+/* Gradient Background */
+.bg-multi-gradient {
+  position: relative; /* Required to make ::before position correctly */
+  z-index: 0; /* Important: establishes stacking context */
+  background-image:
+    radial-gradient(circle at 15% 15%, var(--radial-highlight), transparent 60%),
+    radial-gradient(circle at 85% 80%, var(--radial-highlight), transparent 70%),
+    linear-gradient(
+      135deg,
+      var(--color-1),
+      var(--color-2),
+      var(--color-3),
+      var(--color-4),
+      var(--color-5)
+    );
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  max-height: 100vh;
+  overflow-x: hidden;
+  animation: gradientShift 15s ease infinite;
+}
+
+option{
+  color: black;
+}
+.typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+  padding: 8px 12px;
+  background-color: #e5e5ea; /* bubble color */
+  position: relative;
+  max-width: 130px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+  align-items: center;
+  border-radius: 16px;
+}
+
+/* Bubble tails */
+.typing-indicator.sender {
+  border-radius: 16px 16px 4px 16px; /* tail on right */
+  align-self: flex-end; /* aligns bubble to right */
+}
+
+.typing-indicator.sender::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -6px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-top-color: #e5e5ea;
+  border-bottom: 0;
+  border-right: 0;
+  margin-bottom: -6px;
+}
+
+.typing-indicator.receiver {
+  border-radius: 16px 16px 16px 4px; /* tail on left */
+  align-self: flex-start; /* aligns bubble to left */
+}
+
+.typing-indicator.receiver::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -6px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-top-color: #e5e5ea;
+  border-bottom: 0;
+  border-left: 0;
+  margin-bottom: -6px;
+}
+
+/* Dots */
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #555;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.fb-audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: #1f2937; /* dark gray */
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  position: relative; /* for spinner overlay */
+}
+
+.fb-audio button {
+  background-color: var(--primary); /* use primary color */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fb-audio button:hover {
+  background-color: var(--primary); /* optional darker shade or adjust as needed */
+}
+
+.fb-audio input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #374151; /* dark gray track */
+  cursor: pointer;
+}
+
+.fb-audio input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary); /* primary color for thumb */
+  cursor: pointer;
+  border: none;
+  margin-top: -5px; /* center thumb vertically */
+  transition: background 0.2s ease;
+}
+
+.fb-audio input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: var(--primary); /* optional darker shade */
+}
+
+/* Firefox */
+.fb-audio input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: none;
+  cursor: pointer;
+}
+
+.fb-audio input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #374151;
+  border-radius: 2px;
+}
+
+/* Spinner styling */
+.fb-audio .spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--primary);
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 10;
+}
+
+@keyframes spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+
+/* Container */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px;       /* clear distance between dots */
+  margin-bottom: 24px; /* lifts dots up from bottom */
+}
+
+/* Dot style */
+.loading-dots .dot {
+  width: 12px;
+  height: 12px;
+  background-color: var(--primary); /* replace with your primary color */
+  border-radius: 50%;
+  animation: bounceWave 0.9s infinite ease-in-out;
+}
+
+/* Staggered animation delays */
+.loading-dots .dot:nth-child(1) { animation-delay: 0s; }
+.loading-dots .dot:nth-child(2) { animation-delay: 0.15s; }
+.loading-dots .dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Keyframes for smooth up-and-down lift */
+@keyframes bounceWave {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-30px); /* height of lift */
+  }
+}
+
+
+
+/* =================== circle laoding ======================= */
+/* Smooth spin like Gemini */
+@keyframes spin-smooth {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-spin-smooth {
+  animation: spin-smooth 1s linear infinite;
+}
+
+/* Dash moving around the circle */
+@keyframes dash {
+  0% { stroke-dashoffset: 60; }
+  50% { stroke-dashoffset: 15; }
+  100% { stroke-dashoffset: 60; }
+}
+.stroke-dashanimate {
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+
+
+
+/* ---Deleting Story  --- */
+.delete-btn {
+  width: 50px;
+  transition: width 0.3s;
+}
+
+.delete-btn:hover {
+  width: 140px;
+}
+
+/* --- Layout fix for 3 attachments --- */
+.three-layout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.three-layout > div:nth-child(1),
+.three-layout > div:nth-child(2) {
+  width: 48%;             /* Make top two larger */
+  height: 250px;          /* Balanced height */
+  object-fit: cover;
+}
+
+.three-layout > div:nth-child(3) {
+  width: 70%;             /* Centered bottom one */
+  height: 360px;          /* Taller for emphasis */
+  margin: 0 auto;
+  object-fit: cover;
+}
+
+
+
+/* === Custom Scrollbar Styling === */
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: transparent; /* keep it subtle */
+  border-radius: 10px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+  transition: var(--transition-default);
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--hover-dark);
+}
+
+/* Firefox support */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.text-red-500:hover {
+  transform: scale(1.1);
+  transition: 0.2s;
+}
+
+
+
+
+
+
+
+
+/* Leaflet CSS */
+.leaflet-container {
+  width: 100%;
+  height: 100vh; /* full viewport height */
+}
+
+
+
+
+/* Blur Overlay */
+.bg-multi-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(20px);
+  background-color: rgba(255, 255, 255, 0.06); /* subtle frost */
+  z-index: -1; /* now works properly because of z-index: 0 on parent */
+}
+.hidden_scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+.hidden_scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--hover-dark);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary);
+  border-radius: 1px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+
+
+
+/* ================ page-container==========
+=*/
+
+
+.page-container {
+  min-width: 0;
+  width: 100%;
+  max-width: 690px;  
+  margin: 0 auto;
+  padding: 0 2px; /* adjust padding separately */
+  box-sizing: border-box;
+}
+
+
+
+
+@media (max-width: 1400px) {
+  .page-container {
+    max-width:650px;
+    /* background-color: brown; */
+  }
+}
+
+@media (max-width: 900px) {
+  .page-container {
+    max-width:560px;
+    /* background-color: rgb(165, 42, 165); */
+  }
+}
+
+/* Large screens */
+@media (max-width: 800px) {
+  .page-container {
+    max-width:526px;
+    /* background-color: yellow; */
+  }
+}
+@media (max-width: 750px) {
+  .page-container {
+    max-width:479px;
+    /* background-color: rgba(143, 143, 4, 0.262); */
+  }
+}
+
+ /* Medium tablets */
+@media (max-width: 700px) {
+  .page-container {
+    max-width: 458px;
+      /* background-color: blue;  */
+  }
+} 
+@media (max-width: 660px) {
+  .page-container {
+    max-width: 418px; 
+  }
+}
+ /* Medium tablets */
+@media (max-width: 635px) {
+  .page-container {
+      max-width: 99%;
+     /* background-color: red;  */
+  }
+} 
+
+
+
+
+/* ================ TITLE =====================================*/
+
+
+@media (max-width: 638px) {
+
+
+}
+.gradient-hover:hover {
+  background: var(--hover-gradient);
+   transition: background 0.3s ease;
+}
+.story-gradient{
+  background: var(--dark-indigo-gradient);
+  transition: background 0.3s ease;
+  backdrop-filter: blur(20px);
+}
+.story-gradient:hover{
+    background: var(--inverse-dark-indigo-gradient);
+}
+/* Active state uses the full gradient immediately */
+.custom-gradient {
+  background: var(--hover-gradient);
+}
+.custom-gradient:hover{
+  background: var(--inverse-hover-gradient);
+}
+.chat-custom-gradient{
+  background: var(--chat-custom-gradient);
+}
+
+/* Default avatar utilities */
+.default-avatar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* initials layer used when an image is present (sits under the image) */
+.default-avatar .avatar-initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* small helper classes */
+.avatar-sm { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+.avatar-md { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+.avatar-lg { width: 64px; height: 64px; min-width: 64px; min-height: 64px; }
+
+/* optional: subtle border for avatars */
+.avatar-bordered { border: 3px solid white; box-shadow: 0 6px 14px rgba(2,6,23,0.08); }
+
+/* make sure profile pictures inside avatar containers fill correctly */
+.default-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+
+
+/* 🎯 Base Styles for Post Attachments */
+.post-attachments-grid {
+  display: grid;
+}
+
+.post-attachment-img {
+  width: 100%;
+  height: 100%;
+  max-height: 240px;
+}
+
+.post-attachment-video {
+  max-height: 300px;
+}
+
+.post-attachment-yt {
+  min-height: 180px;
+  max-height: 280px;
+}
+
+/* 🧠 Responsive Breakpoints */
+
+/* 📱 Phones: stack two images vertically & remove margins */
+@media (max-width: 480px) {
+  html{
+    font-size: 90%;
+  }
+  .post-attachments-grid {
+    display: flex;
+    flex-direction: column; /* stack vertically */
+    gap: 6px; /* small gap between images */
+  }
+
+  .post-attachments-grid > div {
+    margin: 0 !important; /* remove side margins */
+    width: 100%;
+  }
+
+  .post-attachment-img {
+    max-height: 180px;
+    object-fit: cover;
+  }
+
+  .post-attachment-video {
+    max-height: 220px;
+  }
+
+  .post-attachment-yt {
+    min-height: 160px;
+  }
+}
+
+/* 📲 Small tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .post-attachment-img {
+    max-height: 200px;
+  }
+  .post-attachment-video {
+    max-height: 240px;
+  }
+  .post-attachment-yt {
+    min-height: 180px;
+  }
+}
+
+/* 💻 Medium devices (tablets / small laptops) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .post-attachment-img {
+    max-height: 220px;
+  }
+  .post-attachment-video {
+    max-height: 260px;
+  }
+}
+
+/* 🖥️ Large screens (desktops) */
+@media (min-width: 1025px) {
+  .post-attachment-img {
+    max-height: 260px;
+  }
+  .post-attachment-video {
+    max-height: 320px;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-main);
+  background-color: var(--accent);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover & lift */
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* chat loading */
+@keyframes laodingShimmer {
+  0% { opacity: 0.6; backdrop-filter: blur(20px); }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; backdrop-filter: blur(20px)}
+}
+.sending {
+  animation: laodingShimmer 1.5s infinite ease-in-out;
+  filter: brightness(0.95);
+}
+/* Glass shimmer */
+.btn::before {
+  content: "";
+  position: absolute;
+  top: -90%;
+  left: -194%;
+  width: 100px;
+  height: 200px;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  transform: rotate(25deg);
+  z-index: 1;
+}
+
+/* Ripple click effect */
+.btn::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
+  width: 100px;
+  height: 100vh;
+  top: 50%;
+  left: 50%;
+  transform: scale(0) translate(-50%, -50%);
+  opacity: 0;
+  transition: transform 0.5s ease, opacity 1s ease;
+  z-index: 2;
+}
+
+.btn:active::after {
+  transform: scale(2.5) translate(-50%, -50%);
+  opacity: 1;
+}
+.btn:hover::before{
+  animation: shimmer 2.5s infinite;
+}
+/* Fix Chrome/Edge/Brave scrollbars */
+.no-scrollbar::-webkit-scrollbar,
+.no-scrollbar *::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Fix Firefox */
+.no-scrollbar {
+  scrollbar-width: none !important;
+}
+
+
+/* Makes the calendar icon white for any input with .date-white */
+.date-white::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 1;
+}
+
+
+/* Pop-in animation */
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.live-pop {
+  animation: pop-in 0.6s ease-out;
+}
+
+
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background: gray;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.3s infinite ease-in-out;
+}
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.shimmer {
+  animation: bar_shimmer 2s infinite;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-100%);
+  box-shadow: 9px 4px 6px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes bar_shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+
+
+
+
+
+@keyframes pulseSmooth {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.animate-pulse-smooth span {
+  animation: pulseSmooth 1.2s infinite ease-in-out;
+  display: inline-block;
+}
+.animate-pulse-smooth span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.animate-pulse-smooth span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+
+
+@keyframes glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.animate-glow {
+  animation: glow 1s infinite ease-in-out;
+}
+
+
+
+
+
+
+.shimmer-0 {
+  animation-delay: 0s;
+}
+.shimmer-1 {
+  animation-delay: 0.43s;
+}
+.shimmer-2 {
+  animation-delay: 0.26s;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease forwards;
+}
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+/* Shimmer keyframe */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-109%) rotate(25deg);
+  }
+  100% {
+    transform: translateX(760%) rotate(25deg);
+  }
+}
+@keyframes story_shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  animation: story_shimmer 1.5s infinite linear;
+  background-size: 200% 100%;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}

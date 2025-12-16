@@ -1,0 +1,81 @@
+.friend-card {
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 18px;
+}
+
+/* Beautiful hover */
+.friend-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.12);
+}
+
+/* Glow outline on hover */
+.friend-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--white), var(--hover-light));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.friend-card:hover::after {
+  opacity: 0.55;
+}
+
+/* Avatar */
+
+
+
+
+.friend-name {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #222;
+}
+
+.friend-occupation {
+  font-size: 0.75rem;
+  color: #777;
+}
+.friend-name,
+.friend-occupation {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;        /* required */
+  display: block;     /* ensures ellipsis works properly */
+}
+.friend-info {
+  width: 100%;
+  max-width: 130px;   /* adjust based on your design */
+}
+
+/* Selected State */
+.friend-card.selected {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(0, 120, 255, 0.15);
+  border: 1px solid var(--primary);
+  background: rgba(0, 120, 255, 0.05);
+}
+
+/* Selected glow ring */
+.friend-card.selected::after {
+  opacity: 0.9 !important;
+background: linear-gradient(135deg, var(--white), var(--hover-light));
+}
+
+/* Selected avatar emphasis */
+.friend-card.selected .friend-avatar {
+  transform: scale(1.1);
+}
+

@@ -1,0 +1,55 @@
+.discoveries_iput{
+    width: 100%;
+     padding: 1rem .9rem;
+    border-radius: 2rem;
+    background-color: rgba(255, 254, 254, 0.6); 
+    backdrop-filter: blur(39px);
+    color: var(--text-dark); 
+    box-shadow: 0 0 6px 2px rgba(197, 206, 219, 0.3); /* shadow-sm */
+    transition: all 0.2s;
+}
+
+.discoveries_iput:focus {
+    outline: none;
+    border-color: var(--primary); /* primary color on focus */
+    box-shadow: 0 0 20px 9px rgba(208, 214, 223, 0.3),
+                inset 0 0 0px 2px rgba(197, 206, 219, 0.3); /* shadow on focus */
+}
+
+.discoveries_btn{
+    border-radius: 2rem;
+}
+
+/* Sticky Search Section */
+.discover_search_wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: white;
+  padding-top: 10px;
+  padding-bottom: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+/* Smooth transition when it becomes sticky */
+.discover_search_wrapper.sticky-active {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+
+.discoveries_grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding doesn't break layout */
+}
+
+
+@media (max-width: 688px) {
+  .discoveries_grid {
+    grid-template-columns: 1fr; /* Single column on small screens */
+  }
+}

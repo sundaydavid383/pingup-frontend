@@ -1,0 +1,102 @@
+/* -----------------------------
+   GLOBAL SAFETY RULES
+----------------------------- */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* -----------------------------
+   MAIN CHATBOX LAYOUT
+----------------------------- */
+.chatbox-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main, #fff); /* room for input (increase if input height changes) */
+  overflow-x: hidden;
+  overflow-y: visible;
+  box-sizing: border-box;
+}
+
+/* -----------------------------
+   HEADER (STICKY)
+----------------------------- */
+.chatbox-header {
+ 
+  z-index: 60; /* keep header above messages */
+  background: var(--bg-main, #fff);
+  box-sizing: border-box;
+}
+
+/* -----------------------------
+   MESSAGES AREA
+----------------------------- */
+.chatbox-messages {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -----------------------------
+   FIXED INPUT BAR
+   (we use left + right from inline style)
+----------------------------- */
+.chatbox-input {
+  position: fixed;
+  bottom: 0;
+  z-index: 99999;               /* MUST be above sidebar stacking context */
+  padding: 8px 12px;
+  box-sizing: border-box;
+  background: var(--input-ui-overlay, rgba(255,255,255,0.9));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(0,0,0,0.05);
+  display: block;               /* full-width block anchored by left/right */
+  pointer-events: auto;
+}
+
+/* ensure children don't overflow the fixed container */
+.chatbox-input > div,
+.chatbox-input textarea,
+.chatbox-input button {
+  box-sizing: border-box;
+}
+
+/* textarea specifics */
+.chatbox-input textarea {
+  width: 100%;
+  min-height: 40px;
+  max-height: 120px;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: var(--input-bg, #fff);
+  color: var(--input-text-color, #000);
+  font-size: 0.95rem;
+}
+
+/* -----------------------------
+   RESPONSIVE BEHAVIOR
+----------------------------- */
+/* Medium screens (if your app changes sidebar width) */
+@media (max-width: 1000px) {
+  .chatbox-wrapper { padding-bottom: 72px; }
+  .chatbox-input { padding: 8px 8px; }
+}
+
+/* Small screens / mobile */
+@media (max-width: 600px) {
+  .chatbox-wrapper { padding-bottom: 82px; } /* more safe area */
+  .chatbox-input { left: 0 !important; right: 0 !important; width: auto !important; padding: 8px 6px; }
+}
