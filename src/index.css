@@ -17,7 +17,7 @@ body{
 /* Root Colors */
 :root {
   /* Primary Theme Colors */
-  --primary: #fd5e02ff; /* Indigo-800 */
+  --primary: #1e40af; /* Indigo-800 */
   --secondary: #0f172a; /* Slate-900 */
   --accent: var(--primary);
   --gold: rgb(223, 190, 61);
