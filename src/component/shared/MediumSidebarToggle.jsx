@@ -60,7 +60,7 @@ const MediumSidebarToggle = ({ sponsors }) => {
       <button
         ref={buttonRef}
         onClick={() => setShowSidebar(!showSidebar)}
-        className="flex lg:hidden fixed top-1 z-555 right-5 bg-white p-2 rounded-full transition duration-300"
+        className="flex lg:hidden fixed top-1 z-555 right-1 bg-white p-2 rounded-full transition duration-300"
         style={{ boxShadow: "0 4px 10px var(--primary)" }}
         onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "none")}
         onMouseLeave={(e) =>

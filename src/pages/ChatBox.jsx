@@ -55,7 +55,8 @@ const ChatBox = () => {
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-
+  const [sending, setSending] = useState(false);
+  const hasInitialScrolledRef = useRef(false);
 
   //==================chnage placeholderfs ===============
   useEffect(() => {
@@ -95,15 +96,6 @@ const ChatBox = () => {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Scroll automatically if user is near bottom when new messages arrive
-  useEffect(() => {
-    if (!loading && messages.length > 0 && isUserNearBottom.current) {
-      containerRef.current?.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: "smooth", // use "auto" if you want instant scroll
-      });
-    }
-  }, [messages, loading]);
 
 
 
@@ -151,56 +143,33 @@ const ChatBox = () => {
           { ...m, status: "seen" } :
           m)));
     };
-    const handleReceiveMessage = (newMsg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m._id === newMsg._id)) return prev;
+const handleReceiveMessage = (newMsg) => {
+  setMessages(prev => {
+    // 1️⃣ If message already exists → ignore
+    if (prev.some(m => m._id === newMsg._id)) {
+      return prev;
+    }
 
-        // replace temp message if exists
-        const tempIndex = prev.findIndex(
-          (m) =>
-            m._id.startsWith("temp_") &&
-            m.from_user_id === newMsg.from_user_id &&
-            m.to_user_id === newMsg.to_user_id &&
-            (m.text === newMsg.text || m.media_url === newMsg.media_url)
-        );
+    // 2️⃣ Replace temp message if it exists
+    const tempIndex = prev.findIndex(m =>
+      m._id.startsWith("temp_") &&
+      m.from_user_id === newMsg.from_user_id &&
+      m.to_user_id === newMsg.to_user_id &&
+      m.text === newMsg.text
+    );
 
-        if (tempIndex !== -1) {
-          const updated = [...prev];
-          updated[tempIndex] = { ...newMsg, status: "sent" };
-          return updated;
-        }
+    if (tempIndex !== -1) {
+      const updated = [...prev];
+      updated[tempIndex] = newMsg;
+      return updated;
+    }
 
-        return [...prev, newMsg];
-      });
+    // 3️⃣ Otherwise append
+    return [...prev, newMsg];
+  });
+};
 
-      // check if the message is in viewport
-      const container = containerRef.current;
-      if (container) {
-        const messageEl = container.querySelector(`[data-id="${newMsg._id}"]`);
-        const rect = messageEl?.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
 
-        const visible =
-          rect &&
-          rect.bottom > containerRect.top &&
-          rect.top < containerRect.bottom;
-
-        if (!visible) {
-          incrementUnread(newMsg.from_user_id);
-          addUnread(newMsg.from_user_id, {
-            text: newMsg.text || "",
-            createdAt: newMsg.createdAt || new Date().toISOString(),
-          });
-
-          // play notification sound
-          receiveSound.current.currentTime = 0;
-          receiveSound.current.play().catch(() => { });
-        } else {
-          // mark immediately read if visible
-          sendRead(newMsg._id, chatId);
-        }
-      }
-    };
 
 
 
@@ -287,7 +256,9 @@ const handleTypingFrom = ({ from_user_id }) => {
   // ======================== SEND MESSAGE ====================== 
   const sendMessage = async (overrideText = null) => {
     const currentText = (overrideText !== null) ? overrideText : text;
-    if (!currentText && !image && !audioURL) return; const message_type = audioURL ? "audio" : image ? "image" : "text";
+    if (!currentText && !image && !audioURL) return; 
+    
+    const message_type = audioURL ? "audio" : image ? "image" : "text";
     const tempId = "temp_" + Date.now();
     const tempMsg = {
       _id: tempId, chatId, from_user_id: user._id, to_user_id: userId, text: currentText || "",
@@ -300,6 +271,7 @@ const handleTypingFrom = ({ from_user_id }) => {
     // clear only the controlled input state (not needed when overrideText used), // but keep consistent UX:
     setText("");
     try {
+      setSending(true);
       const formData = new FormData();
       formData.append("chatId", chatId || "");
       formData.append("from_user_id", user._id);
@@ -326,6 +298,7 @@ const handleTypingFrom = ({ from_user_id }) => {
               "delivered" : "sent"
           } : m));
       setImage(null); setAudioURL(null);
+      setSending(false);
       sendSound.current.currentTime = 0;
       sendSound.current.play().catch(() => { }); // catch avoids console errors if autoplay blocked
 
@@ -337,7 +310,12 @@ const handleTypingFrom = ({ from_user_id }) => {
       const failedMsg = { ...tempMsg, failed: true, status: "failed" };
       setMessages((p) => p.map((m) => (m._id === tempId ? failedMsg : m)));
       const stored = getFailedMessages();
+      setSending(false);
       saveFailedMessages([...stored, failedMsg]);
+    }
+    finally{
+      setSending(false)
+      console.log("setting sending to false", sending)
     }
   };
   // ============================== RESEND MESSAGE ========================= 
@@ -449,6 +427,26 @@ const handleTypingFrom = ({ from_user_id }) => {
   // Input bar height / spacing
   const INPUT_BAR_HEIGHT_PX = 96;
   // a safe height accounting for padding and potential previews 
+
+
+  useEffect(() => {
+  if (
+    loading === false &&
+    containerRef.current &&
+    sortedMessages.length > 0 &&
+    !hasInitialScrolledRef.current
+  ) {
+    containerRef.current.scrollTo({
+      top: containerRef.current.scrollHeight,
+      behavior: "auto", // instant, no animation
+    });
+
+    hasInitialScrolledRef.current = true; // 🔒 lock it forever
+  }
+}, [loading, sortedMessages.length]);
+
+
+
 
 
   //================disconnect user================
@@ -614,19 +612,21 @@ const handleTypingFrom = ({ from_user_id }) => {
 
   // =========================== RETURN UI =========================== 
   return (
-    <div className="flex flex-col h-full w-full relative">
+    <div
+     ref={chatContainerRef} 
+      className="flex flex-col h-full w-full relative">
       <div className="chatbox-header">
         {renderHeader()}
       </div>
         <div
-          className="flex flex-col  overflow-y-hidden chatbox-wrapper 
+        ref={containerRef}
+          className="flex flex-col chatbox-wrapper 
           chatbox-messages bg-[var(--input-chatbox-bg-gradient)]"
-          ref={chatContainerRef} style={{
+         style={{
             background: "var(--input-chatbox-bg-gradient)",
             color: "var(--input-text-color)",
-                    maxHeight: "80%",
-                    overflowY: "auto",
-                    paddingBottom: "calc(96px + env(safe-area-inset-bottom))",
+                    
+                    paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
           }}>
           {loading ?
             (
@@ -728,7 +728,6 @@ const handleTypingFrom = ({ from_user_id }) => {
                   ) :
               sortedMessages.length > 0 ? (
                 <ChatMessagesFull
-
                   messages={sortedMessages}
                   user={user}
                   resendMessage={resendMessage}
@@ -738,6 +737,7 @@ const handleTypingFrom = ({ from_user_id }) => {
                   formatTime={formatTime}
                   typingUser={typingUser}
                   typingUserFromId={typingUserFromId}
+                  scrollToBottom={scrollToBottom}
                   showScrollButton={showScrollButton}
 
                 />
@@ -772,180 +772,247 @@ const handleTypingFrom = ({ from_user_id }) => {
           )}
           {
             showMediaViewer && (
-              <div className=" fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000] " > {/* Close button */}
-                <button className=" absolute top-5 right-5 text-white text-2xl font-bold bg-black/40 hover:bg-black/60 p-2 rounded-full transition "
-                  onClick={() => setShowMediaViewer(false)} > ✕ </button>
-                {/* Previous button */}
-                <button className=" absolute left-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition "
-                  onClick={() => setCurrentImageIndex((prev) => prev === 0 ? imageMessages.length - 1 : prev - 1)} >
-                  ‹
-                </button>
-                {/* Image */}
-                <img src={imageMessages[currentImageIndex]?.media_url} alt="Viewer"
-                  className=" rounded-lg shadow-2xl object-contain transition-transform duration-300 max-h-[75vh] md:max-h-[85vh] max-w-[85vw] md:max-w-[80vw] lg:max-w-[65vw] " />
-                {/* Next button */}
-                <button
-                  className=" absolute right-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition "
-                  onClick={() => setCurrentImageIndex((prev) => prev === imageMessages.length - 1 ? 0 : prev + 1)} > › </button>
-              </div>)
+              <div
+  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000]"
+  onClick={() => setShowMediaViewer(false)} // Click outside closes modal
+>
+  {/* Close button */}
+  <button
+    className="absolute top-5 right-5 text-white text-2xl font-bold bg-black/40 hover:bg-black/60 p-2 rounded-full transition"
+    onClick={(e) => { 
+      e.stopPropagation(); // Prevent click from reaching overlay
+      setShowMediaViewer(false); 
+    }}
+  >
+    ✕
+  </button>
+
+  {/* Previous button */}
+  <button
+    className="absolute left-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
+    onClick={(e) => {
+      e.stopPropagation();
+      setCurrentImageIndex((prev) => prev === 0 ? imageMessages.length - 1 : prev - 1);
+    }}
+  >
+    ‹
+  </button>
+
+  {/* Image */}
+  <img
+    src={imageMessages[currentImageIndex]?.media_url}
+    alt="Viewer"
+    className="rounded-lg shadow-2xl object-contain transition-transform duration-300 max-h-[75vh] md:max-h-[85vh] max-w-[85vw] md:max-w-[80vw] lg:max-w-[65vw]"
+    onClick={(e) => e.stopPropagation()} // Prevent modal close when clicking the image
+  />
+
+  {/* Next button */}
+  <button
+    className="absolute right-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
+    onClick={(e) => {
+      e.stopPropagation();
+      setCurrentImageIndex((prev) => prev === imageMessages.length - 1 ? 0 : prev + 1);
+    }}
+  >
+    ›
+  </button>
+</div>
+)
           }
         </div >
 
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
-      <div
-        className="z-50"
-        style={{
-          background: "var(--input-ui-overlay, rgba(255,255,255,0.95))",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          boxShadow: "0 -2px 10px rgba(0,0,0,0.12)", // subtle top shadow
-        }}
-      >
-        <div
-          className="max-w-full sm:max-w-4xl mx-auto flex items-end gap-2 px-4 py-3"
-          style={{ position: "relative" }}
+<div
+  className="z-20 w-full mx-auto flex items-end gap-2 px-4 py-2 sticky bottom-0"
+  style={{
+    background: "var(--input-ui-overlay, rgba(255,255,255,0.95))",
+    paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
+    boxShadow: "0 -2px 10px rgba(0,0,0,0.12)",
+  }}
+  
+>
+  {/* Textarea (only show if not recording) */}
+ {!recording && !audioURL && (
+    <textarea
+      id="chatInput"
+      className="flex-1 min-h-[40px] max-h-[120px] resize-none outline-none border-none text-sm leading-relaxed text-black"
+      style={{
+        borderRadius: "20px",
+        padding: "12px 16px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        background: "#fff",
+        width: "100%", // still keep this
+        minWidth: 0,   // important for flex shrinking
+      }}
+      placeholder={placeholders[placeholderIndex] || ""}
+      value={typeof text === "string" ? text : ""}
+      rows={1}
+      onFocus={() => setPlaceholderIndex(0)}
+      onChange={(e) => {
+        const val = e.target.value;
+        setText(val);
+        e.target.style.height = "auto";
+        const newHeight = Math.min(e.target.scrollHeight, 120);
+        e.target.style.height = `${newHeight}px`;
+        if (socket && chatId && user?._id)
+          socket.emit("typing", { chatId, from_user_id: user._id });
+      }}
+      onKeyDown={async (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (text.trim() !== "") {
+            await sendMessage();
+            setText("");
+            e.target.style.height = "auto";
+          }
+        }
+      }}
+    />
+  )}
+
+
+  <div className="flex items-end gap-2">
+  {/* Image preview or upload */}
+  {!recording && !audioURL && (
+    <>
+      {image instanceof File ? (
+        <div className="relative w-12 h-12">
+          <img
+            src={URL.createObjectURL(image)}
+            alt="preview"
+            className="w-full h-full object-cover rounded-md"
+          />
+          <button
+            onClick={() => setImage(null)}
+            className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition"
+            title="Cancel"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <label htmlFor="image" className="cursor-pointer relative">
+          <ImageIcon className="text-gray-500" />
+          <input
+            type="file"
+            id="image"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0];
+              if (f instanceof File) setImage(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
+    </>
+  )}
+
+  {/* Recording / audio preview */}
+{(audioURL || recording) && (
+  <div className="flex flex-col items-center w-full gap-3">
+    {audioURL ? (
+      <div className="relative inline-block w-full">
+        <AudioMessage msg={{ media_url: audioURL }} />
+        <button
+          onClick={() => setAudioURL(null)}
+          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
+          title="Cancel audio"
         >
-          {/* Textarea (only show if not recording) */}
-          {(!recording && !audioURL) && (
-            <textarea
-              id="chatInput"
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none outline-none border-none text-sm leading-relaxed text-black"
-              style={{
-                borderRadius: "20px",
-                padding: "12px 16px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                background: "#fff",
-                width: "100%",
-              }}
-              placeholder={placeholders[placeholderIndex]}
-              value={text}
-              rows={1}
-              onFocus={() => setPlaceholderIndex(0)}
-              onChange={(e) => {
-                setText(e.target.value);
-                 // Auto-grow
-                e.target.style.height = "auto";
-                const newHeight = Math.min(e.target.scrollHeight, 120);
-                e.target.style.height = `${newHeight}px`;
-                if (socket && chatId && user?._id)
-                  socket.emit("typing", { chatId, from_user_id: user._id });
-              }}
-              onKeyDown={async (e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  await sendMessage();
-                  e.target.style.height = "auto";
-                  setText("");
-                }
-              }}
-            />
-          )}
-
-          {/* Image preview or upload (hide if recording) */}
-          {!recording && !audioURL && (
-            <>
-              {image ? (
-                <div className="relative w-12 h-12">
-                  <img
-                    src={URL.createObjectURL(image)}
-                    alt="preview"
-                    className="w-full h-full object-cover rounded-md"
-                  />
-                  <button
-                    onClick={() => setImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition"
-                    title="Cancel"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <label htmlFor="image" className="cursor-pointer relative">
-                  <ImageIcon className="text-gray-500" />
-                  <input
-                    type="file"
-                    id="image"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => {
-                      const f = e.target.files && e.target.files[0];
-                      if (f) setImage(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              )}
-            </>
-          )}
-
-          {/* Recording / audio preview */}
-          {audioURL || recording ? (
-            <div className="flex flex-col items-center w-full">
-              {audioURL ? (
-                <div className="relative inline-block">
-                  {/* <audio controls src={audioURL} className="w-32" /> */}
-                  <AudioMessage msg={{ media_url: audioURL }} />
-                  <button
-                    onClick={() => setAudioURL(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
-                    title="Cancel audio"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center w-full">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="flex-1 h-8 bg-gray-300 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-red-500 transition-all duration-200"
-                        style={{
-                          width: `${Math.min(
-                            (recordTime / MAX_RECORD_TIME) * 100,
-                            100
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <button
-                      onClick={stopRecording}
-                      className="bg-red-500 text-white p-2 rounded-full"
-                    >
-                      Stop
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {/* Send button (always show) */}
-          {(text || image || audioURL) && !recording && (
-            <button
-              onClick={sendMessage}
-              className="bg-[var(--input-primary)] text-white p-2 rounded-full"
-              title="Send"
-            >
-              <SendHorizonal size={18} />
-            </button>
-          )}
-
-          {/* Record button (hide if recording or if text is typed) */}
-          {!text && !image && !recording && !audioURL && (
-            <button
-              onClick={recording ? stopRecording : startRecording}
-              className={`flex items-center justify-center p-3 rounded-full transition-all duration-200 ${recording
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              title={recording ? "Stop Recording" : "Start Recording"}
-            >
-              {recording ? <Square size={18} /> : <Mic size={18} />}
-            </button>
-          )}
+          ×
+        </button>
+      </div>
+    ) : (
+      <div className="flex items-center w-full gap-3">
+        {/* Range-style progress bar filling all available space */}
+        <div className="flex-1">
+          <input
+            type="range"
+            min={0}
+            max={MAX_RECORD_TIME}
+            value={recordTime}
+            readOnly
+            className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
+            style={{
+              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
+            }}
+          />
         </div>
 
+        {/* Time indicator */}
+        <span className="text-xs text-gray-700 min-w-[50px] text-right">
+          {recordTime}s / {MAX_RECORD_TIME}s
+        </span>
+
+        {/* Stop button */}
+        <button
+          onClick={stopRecording}
+          className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
+        >
+          Stop
+        </button>
       </div>
-      </div>);
+    )}
+  </div>
+)}
+
+
+
+
+  {/* Send button (shows if text, image, or audio exist) */}
+
+{(!recording && (text?.trim() || image || audioURL)) && (
+  <button
+    onClick={sendMessage}
+    style={{ backgroundColor: "var(--input-primary)" }}
+    className="text-white p-2 rounded-full flex items-center justify-center"
+    title="Send"
+    disabled={sending} // disable while sending
+  >
+    {sending ? (
+      <svg
+        className="animate-spin h-5 w-5 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+        ></path>
+      </svg>
+    ) : (
+      <SendHorizonal size={18} />
+    )}
+  </button>
+)}
+
+
+  {/* Record button (show only if nothing to send) */}
+  {!recording && !text?.trim() && !image && !audioURL && (
+    <button
+      onClick={startRecording}
+      className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      title="Start Recording"
+    >
+      <Mic size={18} />
+    </button>
+  )}
+  </div>
+</div>
+
+      </div>
+      );
 }; export default ChatBox;

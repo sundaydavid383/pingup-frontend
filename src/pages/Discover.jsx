@@ -224,15 +224,16 @@ const fetchMore = useCallback(async () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 py-10">
+    <div className="bg-gradient-to-br  from-white via-slate-50 to-blue-50 py-10  ">
       {/* <BackButton top="2" right="2" /> */}
 
       {/* Sticky Search Bar */}
  {/* SEARCH BAR */}
-      <div
-        id="discover-search-wrapper"
-        className="sticky top-0 z-40 mobilenav_intervention backdrop-blur-md bg-white/40 px-5 py-3"
-      >
+<div
+  id="discover-search-wrapper"
+  className="sticky top-0 z-40 mobilenav_intervention backdrop-blur-md bg-white/40 px-5 py-3 sm:py-3 xs:py-1"
+>
+
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
           <div className="w-full flex gap-2">
             <input

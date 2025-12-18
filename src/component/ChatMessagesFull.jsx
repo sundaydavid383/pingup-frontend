@@ -18,7 +18,7 @@ const ChatMessagesFull = ({
   showScrollButton,
   scrollToBottom
 }) => {
-  const containerRef = useRef(null);
+ 
 
   // Group messages by day
   const groupedMessages = messages.reduce((acc, msg) => {
@@ -34,7 +34,6 @@ const ChatMessagesFull = ({
 
   return (
     <div
-      ref={containerRef}
     >
       <BackButton top="34" right="4" />
       <div className="space-y-3 max-w-4xl mx-auto px-4 pt-4">

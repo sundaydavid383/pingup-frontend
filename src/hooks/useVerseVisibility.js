@@ -27,7 +27,7 @@ export default function useVerseVisibility(onEnter, onLeave) {
           }
         });
       },
-      { threshold: 0.6 }
+      { threshold: 0.2 }
     );
 
     if (elementRef.current) {

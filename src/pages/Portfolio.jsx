@@ -3,6 +3,7 @@ import image1 from "../assets/port1.png"
 import image2 from "../assets/port2.png"
 import image3 from "../assets/port3.png"
 import image4 from "../assets/port4.png"
+import profile from "../assets/port5.jpg"
 import { FaFacebook, FaWhatsapp, FaPhoneAlt, FaEnvelope, FaInstagram, FaYoutube } from "react-icons/fa";
 // Portfolio.jsx (dynamic)
 // - This version uses arrays to drive the UI so you can add/remove items easily.
@@ -191,7 +192,7 @@ const SOCIAL = [
           <div className="w-full md:w-96 flex-shrink-0">
             <div className="bg-white/10 p-2 rounded-xl shadow-lg backdrop-blur-md hover:scale-105 transform transition">
               <img
-                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=60"
+                src={profile}
                 alt="Profile"
                 className="w-full rounded-lg object-cover h-64 md:h-72"
               />

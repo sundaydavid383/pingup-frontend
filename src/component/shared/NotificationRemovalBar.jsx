@@ -38,7 +38,7 @@ const NotificationRemovalBar = () => {
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <span>Read notifications will be removed around 12:00 PM ({timeLeft})</span>
+<span>Heads up! Read notifications will disappear by 12:00 PM — only {timeLeft} left to check them.</span>
     </div>
   );
 };

@@ -22,7 +22,7 @@ const MobileNavbar = ({ setSidebarOpen }) => {
   return (
     <div className="mobile-navbar">
       {/* Sidebar Toggle */}
-  <BackButton className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white" top="5px" left="49px"  onClick={() => setSidebarOpen(true)} />
+  {/* <BackButton className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white" top="5px" left="49px"  onClick={() => setSidebarOpen(true)} /> */}
 
       {/* Menu Icons */}
       <div className="mobile-navbar-menu">

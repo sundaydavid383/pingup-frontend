@@ -636,7 +636,7 @@ textarea {
 /* 📱 Phones: stack two images vertically & remove margins */
 @media (max-width: 480px) {
   html{
-    font-size: 90%;
+    font-size: 92%;
   }
   .post-attachments-grid {
     display: flex;

@@ -18,11 +18,12 @@ html, body {
   height: 80dvh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-main, #fff); /* room for input (increase if input height changes) */
+  background: var(--bg-main, #fff);
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;   /* ✅ FIX */
   box-sizing: border-box;
 }
+
 
 /* -----------------------------
    HEADER (STICKY)
