@@ -137,26 +137,22 @@ export default function VoiceInput({ onTranscribe, disabled }) {
     recognition.lang = "en-US";
 
     recognition.onresult = (event) => {
-      let interim = "";
-      for (let i = 0; i < event.results.length; i++) {
-        interim += event.results[i][0].transcript;
-      }
-      interim = interim.trim();
-      if (!interim) return;
+  let finalText = "";
 
-      if (pauseTimer.current) clearTimeout(pauseTimer.current);
-      pauseTimer.current = setTimeout(() => {
-        const leftover = leftoverRef.current.trim();
-        if (leftover) {
-          onTranscribe(leftover, "");
-          leftoverRef.current = "";
-        } else {
-          onTranscribe(null, "");
-        }
-      }, PAUSE_MS);
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    const result = event.results[i];
+    if (result.isFinal) {
+      finalText += result[0].transcript + " ";
+    }
+  }
 
-      processTranscript(interim);
-    };
+  finalText = finalText.trim();
+  if (!finalText) return;
+
+  // ONLY final speech reaches here
+  processTranscript(finalText);
+};
+
 
     recognition.onerror = (event) => console.error("SpeechRecognition error:", event.error);
 

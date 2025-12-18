@@ -380,7 +380,8 @@ const meDisliked = (serverPost.recentDislikes || []).some(
               <div
                 key={index}
                 onClick={() => {
-                  if (!isYouTube) {
+                  if (!isYouTube || !isVideo) return;
+                  else{ // 🚀 stop viewer for videos
                       onMediaView();
                       setViewerIndex(index);
                       setSelectedMediaIndex(index);
@@ -420,9 +421,9 @@ const meDisliked = (serverPost.recentDislikes || []).some(
                     key={index}
                     onClick={(e) => {
                       if (isVideo || isYouTube) return; // 🚀 stop viewer for videos
-                      setViewerOpen(true);
-                      setViewerIndex(index);
-                      setSelectedMediaIndex(index);
+                      // setViewerOpen(true);
+                      // setViewerIndex(index);
+                      // setSelectedMediaIndex(index);
                       setCurrentPost(post)
                       console.log("this is the new selelcted index", index)
                       console.log(post)
@@ -439,7 +440,8 @@ const meDisliked = (serverPost.recentDislikes || []).some(
                       poster={file.poster || ""}
                       maxHeight={maxHeight}
                       primaryColor="#FF4D4F" // your theme color
-                      autoPlayOnView={false}
+                      autoPlayOnView={true}
+                      sectionId="feed-1"
                     />
                   </div>
                 )}

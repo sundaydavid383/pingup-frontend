@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import "./videoplayer.css"; // make sure this file exists and is valid
 import { BsPlayFill, BsPauseFill, BsFillVolumeMuteFill, BsFillVolumeUpFill } from "react-icons/bs";
 import { MdFullscreen } from "react-icons/md";
-import {videoManager} from "../../utils/videoManager";
+import {videoManager, videoState} from "../../utils/videoManager";
 
 /**
  * Props:
@@ -20,6 +20,7 @@ export default function VideoPlayer({
   autoPlayOnView = true,
   unmuteOnView = false, 
   onEnded,
+  sectionId="default"
 }) {
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -44,6 +45,48 @@ export default function VideoPlayer({
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setShowControls(false), 2500);
   }, []);
+
+
+
+const handleMuteToggle = () => {
+  const vid = videoRef.current;
+  if (!vid) return;
+
+  const next = !muted;
+  setMuted(next);
+  vid.muted = next;
+
+  if (!next) {
+    // 🔓 USER GESTURE (once is enough)
+    videoState.userHasUnmuted = true;
+    videoState.activeVideo = vid;
+
+    videoManager.dispatchEvent(
+      new CustomEvent("video-play", { detail: vid })
+    );
+
+    vid.volume = volume || 0.8;
+    vid.play().catch(() => {});
+  }
+};
+
+
+useEffect(() => {
+  const vid = videoRef.current;
+  if (!vid) return;
+
+  const onGlobalPlay = (e) => {
+    if (e.detail !== vid) {
+      vid.pause();
+      vid.muted = false;     // 🔥 FORCE MUTE
+      setMuted(false);
+    }
+  };
+
+  videoManager.addEventListener("video-play", onGlobalPlay);
+  return () => videoManager.removeEventListener("video-play", onGlobalPlay);
+}, []);
+
 
   const fmt = (s) => {
     if (s == null || isNaN(s)) return "0:00";
@@ -119,25 +162,43 @@ useEffect(() => {
     const vid = videoRef.current;
     if (!el || !vid) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            // only autoplay if user hasn't manually paused
-            if (!userPaused) {
-                videoManager.dispatchEvent(new CustomEvent("video-play", { detail: vid }));
-              vid.play().catch(() => {});
-              vid.muted = !unmuteOnView; // <-- UNMUTE if prop is true
-              if (unmuteOnView) vid.volume = 0.8;
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      const vid = videoRef.current;
+      if (!vid) return;
 
-            }
-          } else {
-            vid.pause();
-          }
-        });
-      },
-      { threshold: [0, 0.5, 1] }
-    );
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        // 🎯 claim ownership
+        videoState.activeVideo = vid;
+
+        // 🔔 notify others
+        videoManager.dispatchEvent(
+          new CustomEvent("video-play", { detail: vid })
+        );
+
+        // 🔑 autoplay logic
+        // If user never unmuted, browser policy may require muted first
+        vid.muted = !videoState.userHasUnmuted;
+        if (videoState.userHasUnmuted) {
+          vid.volume = volume || 0.8;
+        }
+
+        // always play when visible
+        vid.play().catch(() => {});
+      } else {
+        // leaving viewport: pause video
+        if (videoState.activeVideo === vid) {
+          videoState.activeVideo = null;
+        }
+
+        vid.pause();
+      }
+    });
+  },
+  { threshold: 0.5 }
+);
+
 
     observer.observe(el);
     return () => observer.disconnect();
@@ -364,18 +425,11 @@ return (
         {/* Mute/unmute button */}
         <button
           className="vp-btn vp-btn-large"
-          onClick={() => {
-            setMuted((m) => {
-              const next = !m;
-              setUserPaused(false);
-              if (!videoRef.current) return next;
-              videoRef.current.muted = next;
-              return next;
-            });
-          }}
+          onClick={handleMuteToggle}
           aria-label={muted ? "Unmute" : "Mute"}
         >
-          {muted ? <BsFillVolumeMuteFill className="vp-icon vp-icon-bigger" /> : <BsFillVolumeUpFill className="vp-icon vp-icon-bigger" />}
+          {muted ? <BsFillVolumeMuteFill className="vp-icon vp-icon-bigger" /> : 
+          <BsFillVolumeUpFill className="vp-icon vp-icon-bigger" />}
         </button>
 
         <input
