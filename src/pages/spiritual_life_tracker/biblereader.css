@@ -52,8 +52,8 @@
   flex: 1;
   padding: 0.5rem 0.75rem;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
+  border-radius: 19px;
+  font-size: .9rem;
   outline: none; /* remove default outline */
   transition: border 0.2s, box-shadow 0.2s;
 }
@@ -63,16 +63,7 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2); /* subtle focus ring */
 }
 
-.bible-search-button {
-  padding: 0.5rem 1rem;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+
 
 .bible-search-button:hover {
   background: darken(var(--primary), 10%);

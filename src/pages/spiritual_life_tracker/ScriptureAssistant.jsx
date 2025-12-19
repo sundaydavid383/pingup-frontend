@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import VoiceInput from "./VoiceInput";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
+import { BookOpen } from "lucide-react";
 
 
 // Debounce helper
@@ -209,40 +210,44 @@ useEffect(() => {
   };
 
   // ---------- searchChunk now uses localSearch if available, otherwise falls back to server ----------
-  const searchChunk = async (chunk) => {
-    if (!chunk || chunk.length < 3) return; // ignore very short chunks
+const searchChunk = async (chunk) => {
+  if (!chunk || chunk.length < 3) return;
 
-    // check cache
-    const cleanedChunk = clean(chunk);
-    if (chunkCache.current[cleanedChunk]) {
-      const verse = chunkCache.current[cleanedChunk];
-      if (verse) {
-        setMatchedVerses((prev) => [...prev, verse]);
-        setCurrentContext({
-          currentBook: verse.book,
-          currentChapter: verse.chapter,
-          currentVerse: verse.verse
-        });
-      }
-      return;
-    }
+  setLoading(true); // start loading
 
-    // try local search
-    const localResult = localSearch(chunk);
-    if (localResult) {
-      chunkCache.current[clean(chunk)] = localResult;
-      setMatchedVerses((prev) => [...prev, localResult]);
+  // check cache
+  const cleanedChunk = clean(chunk);
+  if (chunkCache.current[cleanedChunk]) {
+    const verse = chunkCache.current[cleanedChunk];
+    if (verse) {
+      setMatchedVerses((prev) => [...prev, verse]);
       setCurrentContext({
-        currentBook: localResult.book,
-        currentChapter: localResult.chapter,
-        currentVerse: localResult.verse
+        currentBook: verse.book,
+        currentChapter: verse.chapter,
+        currentVerse: verse.verse
       });
-      return;
     }
+    setLoading(false); // end loading
+    return;
+  }
 
-    // fallback: call backend search endpoint (keeps compatibility)
-    return
-  };
+  const localResult = localSearch(chunk);
+  if (localResult) {
+    chunkCache.current[cleanedChunk] = localResult;
+    setMatchedVerses((prev) => [...prev, localResult]);
+    setCurrentContext({
+      currentBook: localResult.book,
+      currentChapter: localResult.chapter,
+      currentVerse: localResult.verse
+    });
+    setLoading(false); // end loading
+    return;
+  }
+
+  // fallback to backend can go here if needed
+
+  setLoading(false); // ensure loading ends even if nothing found
+};
 
   // ---------- processChunks (unchanged) ----------
   const processChunks = debounce(async (inputText) => {
@@ -322,36 +327,72 @@ useEffect(() => {
   // ---------- render ----------
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
-      <VoiceInput
-        onTranscribe={async (sentChunk, leftover) => {
-          // leftover always shows pending unsent words
-          setText(leftover || "");
 
-          if (sentChunk) {
-            // allow context commands to override (chapter/verse navigation)
-            if (parseContextCommand(sentChunk)) return;
+<div className="flex flex-col items-center mb-6 text-center">
+  <div className="flex items-center mb-2">
+    <BookOpen className="w-7 h-7 text-[var(--primary)] mr-2" />
+    <h2 className="text-2xl font-bold text-[var(--primary)] tracking-tight">
+      Scripture Assistant
+    </h2>
+  </div>
+  <span className="text-[var(--text-secondary)] text-sm max-w-md leading-relaxed">
+    Speak and find the wisdom you seek. Ask for specific chapters or share your heart.
+  </span>
+</div>
 
-            // prevent duplicate chunk processing
-            if (!processedChunksRef.current.includes(sentChunk)) {
-              processedChunksRef.current.push(sentChunk);
-              setProcessedChunks([...processedChunksRef.current]);
+<VoiceInput
+  onTranscribe={async (sentChunk, leftover) => {
+    // show the full spoken text in textarea
+    if (sentChunk) {
+      setText((prev) => (prev ? prev + " " + sentChunk : sentChunk));
+    } else {
+      setText(leftover || "");
+    }
 
-              // live search (uses local index when available)
-              await searchChunk(sentChunk);
-            }
-          }
-        }}
-      />
+    // allow context commands to override (chapter/verse navigation)
+    if (sentChunk && parseContextCommand(sentChunk)) return;
 
-      <textarea
-        ref={inputRef}
-        value={text}
-        onChange={handleChange}
-        placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
-        disabled={!currentUser}
-        rows={1}
-        className="w-full rounded-md border border-gray-300 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 overflow-hidden"
-      />
+    // prevent duplicate chunk processing
+    if (sentChunk && !processedChunksRef.current.includes(sentChunk)) {
+      processedChunksRef.current.push(sentChunk);
+      setProcessedChunks([...processedChunksRef.current]);
+
+      // live search (uses local index when available)
+      await searchChunk(sentChunk);
+    }
+  }}
+/>
+
+
+
+<textarea
+  ref={inputRef}
+  value={text}
+  onChange={handleChange}
+  placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
+  disabled={!currentUser}
+  rows={1}
+  className="
+    w-full
+    rounded-[var(--radius)]
+    border
+    border-[var(--input-border)]
+    bg-[var(--input-bg)]
+    p-4
+    text-[var(--text-main)]
+    text-sm
+    placeholder:text-[var(--text-muted)]
+    shadow-[var(--input-shadow)]
+    focus:outline-none
+    focus:ring-2
+    focus:ring-[var(--primary)]
+    focus:border-[var(--primary)]
+    transition-[var(--transition-default)]
+    resize-none
+    overflow-hidden
+  "
+/>
+
 
       {error && (
         <div className="p-3 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-md mb-3">
@@ -359,28 +400,85 @@ useEffect(() => {
         </div>
       )}
 
-      <div className="mt-4 space-y-2">
-        {loading && (
-          <div className="mt-4 space-y-2">
-            {[...Array(2)].map((_, idx) => (
-              <div
-                key={idx}
-                className="p-2 border-l-4 border-indigo-500 bg-gray-100 rounded-md animate-pulse"
-              >
-                <div className="h-3 bg-gray-300 rounded w-1/4 mb-1"></div> {/* book/chapter */}
-                <div className="h-3 bg-gray-300 rounded w-3/4"></div> {/* text */}
-              </div>
-            ))}
-          </div>
-        )}
+<div className="mt-4 space-y-2">
+  {loading && (
+    <div className="space-y-2">
+      {[...Array(3)].map((_, idx) => (
+        <div
+          key={idx}
+          className="p-2 border-l-4 border-indigo-500 bg-gray-100 rounded-md animate-pulse"
+        >
+          <div className="h-3 bg-gray-300 rounded w-1/4 mb-1"></div> {/* book/chapter */}
+          <div className="h-3 bg-gray-300 rounded w-3/4"></div> {/* verse text */}
+        </div>
+      ))}
+    </div>
+  )}
 
-        {matchedVerses.map((v, idx) => (
-          <div key={idx} className="p-2 border-l-4 border-indigo-500 bg-gray-50 rounded-md">
-            <p className="text-xs font-semibold">{v.book} {v.chapter}:{v.verse}</p>
-            <p className="text-sm">{v.text}</p>
-          </div>
-        ))}
-      </div>
+{matchedVerses.map((v, idx) => (
+  <div
+    key={idx}
+    className="
+      group
+      relative
+      rounded-xl
+      bg-[var(--form-bg)]
+      backdrop-blur-[var(--backdrop-blur)]
+      px-5
+      py-4
+      shadow-sm
+      border
+      border-white/5
+      transition-[var(--transition-default)]
+      hover:shadow-md
+      hover:border-[var(--primary)]
+    "
+  >
+    {/* Accent bar */}
+    <div
+      className="
+        absolute
+        left-0
+        top-4
+        bottom-4
+        w-[3px]
+        rounded-full
+        bg-[var(--primary)]
+        opacity-70
+      "
+    />
+
+    {/* Reference */}
+    <p
+      className="
+        mb-1
+        text-xs
+        font-medium
+        tracking-wide
+        text-[var(--text-secondary)]
+      "
+    >
+      {v.book} {v.chapter}:{v.verse}
+    </p>
+
+    {/* Verse text */}
+    <p
+      className="
+        text-[15px]
+        leading-relaxed
+        text-[var(--text-main)]
+        font-normal
+        group-hover:text-[var(--white)]
+        transition-[var(--transition-default)]
+      "
+    >
+      {v.text}
+    </p>
+  </div>
+))}
+
+</div>
+
     </div>
   );
 }

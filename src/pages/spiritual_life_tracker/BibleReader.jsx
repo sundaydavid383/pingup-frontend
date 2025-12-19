@@ -89,11 +89,11 @@ export default function BibleReader() {
   const [isLoadingVerses, setIsLoadingVerses] = useState(false);
   const [verseSeen, setVerseSeen] = useState([]);
   const touchStartX = React.useRef(0);
-const [searchQuery, setSearchQuery] = useState("");
-const [searchResults, setSearchResults] = useState([]);
-const [isSearching, setIsSearching] = useState(false);
-const [hasSearched, setHasSearched] = useState(false);
-const fuseRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const fuseRef = useRef(null);
 
 
   useEffect(() => {
@@ -160,35 +160,58 @@ const fuseRef = useRef(null);
   }, [verseSeen]);
 
   // Initialize Fuse.js for fuzzy search
-useEffect(() => {
-  if (allVerses.length) {
-    fuseRef.current = new Fuse(allVerses, {
-      keys: ["text", "book"],
-      includeScore: true,
-      threshold: 0.4,
-      ignoreLocation: true,
-      minMatchCharLength: 3,
-    });
-  }
-}, [allVerses]);
+  useEffect(() => {
+    if (allVerses.length) {
+      fuseRef.current = new Fuse(allVerses, {
+        keys: ["text", "book"],
+        includeScore: true,
+        threshold: 0.4,
+        ignoreLocation: true,
+        minMatchCharLength: 3,
+      });
+    }
+  }, [allVerses]);
 
-// Trigger search on button click
-const handleSearchClick = () => {
-  if (!searchQuery.trim() || !fuseRef.current) return;
+  // Trigger search on button click
+  const handleSearchClick = () => {
+    if (!searchQuery.trim() || !fuseRef.current) return;
 
-  setIsSearching(true);
-  setHasSearched(true);
-  setSearchResults([]);
+    setIsSearching(true);
+    setHasSearched(true);
+    setSearchResults([]);
 
-  // Small delay to allow loading bar to show (UX polish)
-  setTimeout(() => {
-    const results = fuseRef.current.search(searchQuery.trim());
-    const verses = results.map((r) => r.item);
+    // Small delay to allow loading bar to show (UX polish)
+    setTimeout(() => {
+      const results = fuseRef.current.search(searchQuery.trim());
+      const query = searchQuery.trim().toLowerCase();
 
-    setSearchResults(verses.slice(0, 20));
-    setIsSearching(false);
-  }, 300);
-};
+      const ranked = results
+        .map((r) => {
+          const text = r.item.text.toLowerCase();
+          const book = r.item.book.toLowerCase();
+
+          let boost = 0;
+
+          // Exact phrase match → strongest signal
+          if (text.includes(query)) boost -= 0.15;
+
+          // Book name relevance
+          if (book.includes(query)) boost -= 0.1;
+
+          // Slight preference for shorter verses
+          boost += Math.min(text.length / 1000, 0.1);
+
+          return {
+            ...r.item,
+            _score: r.score + boost,
+          };
+        })
+        .sort((a, b) => a._score - b._score);
+
+      setSearchResults(ranked.slice(0, 20));
+      setIsSearching(false);
+    }, 300);
+  };
 
 
 
@@ -211,12 +234,20 @@ const handleSearchClick = () => {
 
 
   const handleBookSelection = (bookName) => {
+    exitSearchMode();
     setSelectedBookName(bookName);
     setSelectedChapterNumber(1);
     displayChapterVerses(bookName, 1);
   };
+// 🔴 Exit search mode and return to reading mode
+const exitSearchMode = () => {
+  setSearchResults([]);
+  setHasSearched(false);
+  setSearchQuery("");
+};
 
   const handleChapterSelection = (chapterNumber) => {
+    exitSearchMode();
     setSelectedChapterNumber(chapterNumber);
     displayChapterVerses(selectedBookName, chapterNumber);
   };
@@ -292,6 +323,7 @@ const handleSearchClick = () => {
     console.debug("moveChapter ->", { from: `${selectedBookName} ${selectedChapterNumber}`, to: `${newBook} ${newChapter}` });
 
     // IMPORTANT: update selection state so UI reflects change
+    exitSearchMode();
     setSelectedBookName(newBook);
     setSelectedChapterNumber(newChapter);
     // update displayed verses
@@ -331,42 +363,42 @@ const handleSearchClick = () => {
   const isReadingChapter = !!selectedBookName;
 
 
-useEffect(() => {
-  const handler = (e) => {
-    const { book, chapter, verse } = e.detail;
+  useEffect(() => {
+    const handler = (e) => {
+      const { book, chapter, verse } = e.detail;
 
-    // 🔴 EXIT SEARCH MODE
-    setSearchResults([]);
-    setHasSearched(false);
-    setSearchQuery("");
+      // 🔴 EXIT SEARCH MODE
+      setSearchResults([]);
+      setHasSearched(false);
+      setSearchQuery("");
 
-    // ✅ Update selectors
-    setSelectedBookName(book);
-    setSelectedChapterNumber(chapter);
+      // ✅ Update selectors
+      setSelectedBookName(book);
+      setSelectedChapterNumber(chapter);
 
-    // ✅ Load chapter verses
-    const chapterVerses = allVerses.filter(
-      (v) => v.book === book && v.chapter === chapter
-    );
+      // ✅ Load chapter verses
+      const chapterVerses = allVerses.filter(
+        (v) => v.book === book && v.chapter === chapter
+      );
 
-    setDisplayedVerses(chapterVerses);
+      setDisplayedVerses(chapterVerses);
 
-    // ✅ Scroll to exact verse
-    setTimeout(() => {
-      const el = document.getElementById(`v-${book}-${chapter}-${verse}`);
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-        el.classList.add("verse-visible");
-      }
-    }, 300);
-  };
+      // ✅ Scroll to exact verse
+      setTimeout(() => {
+        const el = document.getElementById(`v-${book}-${chapter}-${verse}`);
+        if (el) {
+          el.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          el.classList.add("verse-visible");
+        }
+      }, 300);
+    };
 
-  window.addEventListener("go-to-verse", handler);
-  return () => window.removeEventListener("go-to-verse", handler);
-}, [allVerses]);
+    window.addEventListener("go-to-verse", handler);
+    return () => window.removeEventListener("go-to-verse", handler);
+  }, [allVerses]);
 
 
 
@@ -378,108 +410,120 @@ useEffect(() => {
   return (
     <div className="bible-reader-container">
       {/* --- Replace your fixed-header block with this --- */}
-     <div className="fixed-header">
-  <h2 className="bible-title">Bible Reader</h2>
+   <div className="fixed-header">
+  <div className="header-inner">
+    {/* Left: Title */}
+    <h2 className="bible-title">Bible Reader</h2>
 
-  {/* Search Bar */}
-<div className="search-bar-container">
-  <input
-    type="text"
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    placeholder="Search for a verse..."
-    className="bible-search-input"
-  />
-  <button onClick={handleSearchClick} className="bible-search-button">
-    Search
-  </button>
-</div>
+    {/* Center: Search */}
+    <div className="search-bar-container">
+    <input
+  type="text"
+  value={searchQuery}
+  onChange={(e) => setSearchQuery(e.target.value)}
+  placeholder="Search scripture, book, or phrase"
+  className="bible-search-input"
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      handleSearchClick();
+    }
+  }}
+/>
 
+      <button onClick={handleSearchClick} className="btn">
+        Search
+      </button>
+    </div>
 
-  {/* Book & Chapter selectors */}
-  <div className="selectors">
-    <CustomSelect
-      options={bookNames}
-      value={selectedBookName}
-      onChange={handleBookSelection}
-      placeholder="Select Book"
-    />
-    {selectedBookName && (
+    {/* Right: Selectors */}
+    <div className="selectors">
       <CustomSelect
-        options={Array.from({ length: maximumChapterNumber }, (_, index) => index + 1)}
-        value={selectedChapterNumber}
-        onChange={handleChapterSelection}
-        placeholder="Select Chapter"
+        options={bookNames}
+        value={selectedBookName}
+        onChange={handleBookSelection}
+        placeholder="Book"
       />
-    )}
+      {selectedBookName && (
+        <CustomSelect
+          options={Array.from(
+            { length: maximumChapterNumber },
+            (_, i) => i + 1
+          )}
+          value={selectedChapterNumber}
+          onChange={handleChapterSelection}
+          placeholder="Chapter"
+        />
+      )}
+    </div>
   </div>
 </div>
+
 
 
 
       {/* Display verses */}
       {isSearching && (
-  <div className="search-loading-bar">
-    <div className="search-loading-progress" />
-  </div>
-)}
-     
-<div
-  className="verses-container"
-  onTouchStart={(e) => {
-    if (selectedBookName) touchStartX.current = e.touches[0].clientX;
-  }}
-  onTouchEnd={(e) => {
-    if (!selectedBookName) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX.current - touchEndX;
-    if (diff > 50) moveChapter("next");
-    else if (diff < -50) moveChapter("prev");
-  }}
->
-  {isLoadingVerses ? (
-    <div className="verse-skeleton-wrapper">
-      {[1, 2, 3, 5, 6, 7, 8].map((i) => (
-        <div key={i} className="verse-skeleton">
-          <div className="skeleton-line short"></div>
-          <div className="skeleton-line"></div>
-          <div className="skeleton-line"></div>
+        <div className="search-loading-bar">
+          <div className="search-loading-progress" />
         </div>
-      ))}
-    </div>
-  ) : searchResults.length > 0 ? (
-    // Search results (Verse component styling preserved)
-    searchResults.map((v, index) => (
-      <Verse
-        key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
-        verse={v}
-        isChapterVerse={false}
-        handleVerseSeen={handleVerseSeen}
-      />
-    ))
-  ) : hasSearched && !isSearching ? (
-    // No search results message
-    <p className="text-gray-400 text-center py-8">
-      No results found for “{searchQuery}”
-    </p>
-  ) : displayedVerses.length > 0 ? (
-    // Normal chapter / random verses
-    displayedVerses.map((v, index) => (
-      <Verse
-        key={
-          isReadingChapter
-            ? `${v.book}-${v.chapter}-${v.verse}`
-            : `${v.book}-${v.chapter}-${v.verse}-${index}`
-        }
-        verse={v}
-        isChapterVerse={isReadingChapter}
-        handleVerseSeen={handleVerseSeen}
-      />
-    ))
-  ) : (
-    <p className="text-gray-400 text-center py-8">No verses to display</p>
-  )}
-</div>
+      )}
+
+      <div
+        className="verses-container"
+        onTouchStart={(e) => {
+          if (selectedBookName) touchStartX.current = e.touches[0].clientX;
+        }}
+        onTouchEnd={(e) => {
+          if (!selectedBookName) return;
+          const touchEndX = e.changedTouches[0].clientX;
+          const diff = touchStartX.current - touchEndX;
+          if (diff > 50) moveChapter("next");
+          else if (diff < -50) moveChapter("prev");
+        }}
+      >
+        {isLoadingVerses ? (
+          <div className="verse-skeleton-wrapper">
+            {[1, 2, 3, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="verse-skeleton">
+                <div className="skeleton-line short"></div>
+                <div className="skeleton-line"></div>
+                <div className="skeleton-line"></div>
+              </div>
+            ))}
+          </div>
+        ) : searchResults.length > 0 && hasSearched  ? (
+          // Search results (Verse component styling preserved)
+          searchResults.map((v, index) => (
+            <Verse
+              key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
+              verse={v}
+              isChapterVerse={false}
+              handleVerseSeen={handleVerseSeen}
+            />
+          ))
+        ) : hasSearched && !isSearching ? (
+          // No search results message
+          <p className="text-gray-400 text-center py-8">
+            No results found for “{searchQuery}”
+          </p>
+        ) : displayedVerses.length > 0 ? (
+          // Normal chapter / random verses
+          displayedVerses.map((v, index) => (
+            <Verse
+              key={
+                isReadingChapter
+                  ? `${v.book}-${v.chapter}-${v.verse}`
+                  : `${v.book}-${v.chapter}-${v.verse}-${index}`
+              }
+              verse={v}
+              isChapterVerse={isReadingChapter}
+              handleVerseSeen={handleVerseSeen}
+            />
+          ))
+        ) : (
+          <p className="text-gray-400 text-center py-8">No verses to display</p>
+        )}
+      </div>
 
 
 

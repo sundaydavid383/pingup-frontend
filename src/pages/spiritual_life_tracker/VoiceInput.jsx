@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
+import MicButton from "./MicButton";
+
 
 export default function VoiceInput({ onTranscribe, disabled }) {
   const [listening, setListening] = useState(false);
@@ -192,29 +194,15 @@ export default function VoiceInput({ onTranscribe, disabled }) {
     return `${base + Math.floor(Math.random() * 10)}px`;
   };
 
-  return (
-    <div className="mb-4 flex items-center space-x-3">
-      <button
-        type="button"
-        onClick={toggleListening}
-        disabled={disabled}
-        className={`flex items-center justify-center w-10 h-10 rounded-full text-white transition-colors duration-200 ${listening ? "bg-red-500 hover:bg-red-600" : "bg-indigo-500 hover:bg-indigo-600"} shadow-lg`}
-        title={listening ? "Stop Recording" : "Start Recording"}
-        aria-pressed={listening}
-        aria-label={listening ? "Stop voice input" : "Start voice input"}
-      >
-        {listening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-      </button>
+return (
+  <>
+    {/* Mic Wrapper (Centered) */}
+    <MicButton
+      listening={listening}
+      toggleListening={toggleListening}
+      disabled={false}
+    />
+  </>
+);
 
-      {listening && (
-        <div className="flex items-end space-x-1 select-none" aria-hidden>
-          {[...Array(5)].map((_, idx) => (
-            <span key={idx} className="w-1.5 bg-red-500 rounded transition-all" style={{height: randomHeight(idx), animation: `pulse 900ms ${idx * 80}ms infinite ease-in-out`, display: "inline-block"}} />
-          ))}
-          <style>{`@keyframes pulse {0%{transform:scaleY(0.6);opacity:0.7}50%{transform:scaleY(1.25);opacity:1}100%{transform:scaleY(0.6);opacity:0.7}}`}</style>
-          <span className="ml-2 text-gray-700 font-medium text-sm">Listening...</span>
-        </div>
-      )}
-    </div>
-  );
 }

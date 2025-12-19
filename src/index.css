@@ -926,3 +926,9 @@ textarea {
     background-position: 0% 50%;
   }
 }
+
+@keyframes rotateGradient {
+  to {
+    transform: rotate(360deg);
+  }
+}
