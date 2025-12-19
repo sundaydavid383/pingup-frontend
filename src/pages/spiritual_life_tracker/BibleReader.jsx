@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
+import { FaSearch, FaBook } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import useVerseVisibility from "../../hooks/useVerseVisibility";
@@ -94,6 +95,27 @@ export default function BibleReader() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const fuseRef = useRef(null);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const searchRef = useRef(null);
+  const [selectorsVisible, setSelectorsVisible] = useState(false);
+const selectorsRef = useRef(null);
+
+// Close dropdown if clicked outside
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (searchRef.current && !searchRef.current.contains(event.target)) {
+      setSearchVisible(false);
+    }
+    if(selectorsRef.current && !selectorsRef.current.contains(event.target)){
+      setSelectorsVisible(false);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
 
 
   useEffect(() => {
@@ -409,54 +431,83 @@ const exitSearchMode = () => {
 
   return (
     <div className="bible-reader-container">
+      <div className="bible-reader-inner">
       {/* --- Replace your fixed-header block with this --- */}
-   <div className="fixed-header">
+  <div className="fixed-header">
   <div className="header-inner">
     {/* Left: Title */}
     <h2 className="bible-title">Bible Reader</h2>
 
-    {/* Center: Search */}
-    <div className="search-bar-container">
-    <input
-  type="text"
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
-  placeholder="Search scripture, book, or phrase"
-  className="bible-search-input"
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      handleSearchClick();
-    }
-  }}
-/>
+    {/* Center: Chapter */}
+    {selectedBookName && (
+      <div className="chapter-center">
+        {selectedBookName} {selectedChapterNumber}
+      </div>
+    )}
 
-      <button onClick={handleSearchClick} className="btn">
-        Search
-      </button>
-    </div>
-
-    {/* Right: Selectors */}
-    <div className="selectors">
-      <CustomSelect
-        options={bookNames}
-        value={selectedBookName}
-        onChange={handleBookSelection}
-        placeholder="Book"
-      />
-      {selectedBookName && (
-        <CustomSelect
-          options={Array.from(
-            { length: maximumChapterNumber },
-            (_, i) => i + 1
-          )}
-          value={selectedChapterNumber}
-          onChange={handleChapterSelection}
-          placeholder="Chapter"
+    {/* Right: Search & Selectors */}
+    <div className="header-right">
+      {/* Search Dropdown */}
+      <div className="search-container" ref={searchRef}>
+        <FaSearch
+          className="search-toggle-icon"
+          onClick={() => setSearchVisible(prev => !prev)}
         />
-      )}
+        {searchVisible && (
+          <div className="search-dropdown">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search scripture, book, or phrase"
+              className="bible-search-input"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+            />
+            <button
+              onClick={() => handleSearchClick()}
+            >
+              Search
+            </button>
+            {/* Loading bar appears inside dropdown */}
+            {isSearching && (
+              <div className="search-loading-bar">
+                <div className="search-loading-progress" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Book/Chapter Selectors */}
+      <div className="selectors-container" ref={selectorsRef}>
+        <FaBook
+          className="selectors-toggle-icon"
+          onClick={() => setSelectorsVisible(prev => !prev)}
+        />
+        {selectorsVisible && (
+          <div className="selectors-dropdown">
+            <CustomSelect
+              options={bookNames}
+              value={selectedBookName}
+              onChange={handleBookSelection}
+              placeholder="Book"
+            />
+            {selectedBookName && (
+              <CustomSelect
+                options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
+                value={selectedChapterNumber}
+                onChange={handleChapterSelection}
+                placeholder="Chapter"
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   </div>
 </div>
+
+
 
 
 
@@ -525,7 +576,7 @@ const exitSearchMode = () => {
         )}
       </div>
 
-
+     </div>
 
     </div>
   );

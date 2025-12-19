@@ -342,26 +342,48 @@ const searchChunk = async (chunk) => {
 
 <VoiceInput
   onTranscribe={async (sentChunk, leftover) => {
-    // show the full spoken text in textarea
-    if (sentChunk) {
-      setText((prev) => (prev ? prev + " " + sentChunk : sentChunk));
-    } else {
-      setText(leftover || "");
-    }
+    // Always append both final chunk and leftover for live display
+    setText((prev) => {
+      const parts = [];
+      if (prev) parts.push(prev);
+      if (sentChunk) parts.push(sentChunk);
+      if (leftover) parts.push(leftover);
+      return parts.join(" ");
+    });
 
-    // allow context commands to override (chapter/verse navigation)
+    // First, handle context commands (chapter/verse navigation)
     if (sentChunk && parseContextCommand(sentChunk)) return;
 
-    // prevent duplicate chunk processing
+    // Process only new chunks
     if (sentChunk && !processedChunksRef.current.includes(sentChunk)) {
       processedChunksRef.current.push(sentChunk);
       setProcessedChunks([...processedChunksRef.current]);
 
-      // live search (uses local index when available)
+      // Run live search (uses local index when available)
       await searchChunk(sentChunk);
+    }
+
+    // Try matching leftover as potential Bible reference
+    if (leftover) {
+      const refMatch = leftover.match(/([1-3]?\s?\w+)\s+(\d+):(\d+)/);
+      if (refMatch) {
+        const book = refMatch[1];
+        const chapter = parseInt(refMatch[2]);
+        const verse = parseInt(refMatch[3]);
+        const localVerse = getLocalVerse(book, chapter, verse);
+        if (localVerse) {
+          setMatchedVerses((prev) => [...prev, localVerse]);
+          setCurrentContext({
+            currentBook: localVerse.book,
+            currentChapter: localVerse.chapter,
+            currentVerse: localVerse.verse
+          });
+        }
+      }
     }
   }}
 />
+
 
 
 

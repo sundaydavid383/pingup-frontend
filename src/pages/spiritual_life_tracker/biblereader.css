@@ -1,126 +1,225 @@
 
 
 .bible-reader-container {
-  min-height: 90vh; /* always fill viewport */
-  max-width: 700px;
-  margin: 0 auto;
-    background: var(--bg-main);
-     height: 100%;
-  color: var(--text-main);
-  padding: var(--padding);
-  padding-top: .4rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-light) 100%);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-}
-
-.fixed-header{
-  position: static;
-  display: flex;
-  flex-direction: column;
-  gap: .1rem;
-  top: 3rem;
   width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-light) 100%);
+  display: flex;
+  justify-content: center; /* centers inner content */
+  color: var(--text-main);
 }
 
-/* ===== Title Styling ===== */
+.bible-reader-inner {
+  width: 100%;
+  max-width: 700px; /* your original reading width */
+  padding: var(--padding);
+  padding-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}/* ===== Fixed Header ===== */
+/* ===== Fixed Header ===== */
+.fixed-header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: rgba(40, 41, 85, 0.6);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Header Inner ===== */
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* left: title, center: chapter, right: search + selectors */
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ===== Title ===== */
 .bible-title {
   font-size: 2rem;
   font-weight: 800;
-  margin-bottom: .58rem;
-  margin-top: -.82rem;
-  text-align: center;
+  text-align: left;
   background: linear-gradient(90deg, var(--primary), var(--hover-subtle-bg));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: 1px;
-  text-shadow: 0 2px 5px rgba(73, 73, 73, 0.4);
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
-/*===============SEARCH BAR===================*/
-.search-bar-container {
+/* ===== Chapter Center ===== */
+.chapter-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--text-main);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ===== Header Right ===== */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  position: relative;
+}
+
+/* ===== Search ===== */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Search Icon */
+.search-toggle-icon {
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--primary);
+  transition: transform 0.2s;
+}
+.search-toggle-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Search Dropdown */
+.search-dropdown {
+  position: absolute;
+  top: 120%;
+  right: 0;
   display: flex;
   gap: 0.5rem;
-  width: 100%;
-  max-width: 500px;
-  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(30, 30, 60, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  z-index: 150;
+  width: 260px;
+  transition: all 0.3s ease;
+  flex-direction: column;
 }
 
-.bible-search-input {
+.search-dropdown input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 19px;
-  font-size: .9rem;
-  outline: none; /* remove default outline */
-  transition: border 0.2s, box-shadow 0.2s;
+  padding: 0.4rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--input-border);
+  outline: none;
+  font-size: 0.95rem;
+  background: rgba(255,255,255,0.1);
+  color: var(--text-main);
+}
+.search-dropdown input::placeholder {
+  color: rgba(255,255,255,0.6);
 }
 
-.bible-search-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2); /* subtle focus ring */
+.search-dropdown button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+.search-dropdown button:hover {
+  background: #3f51b5;
 }
 
-
-
-.bible-search-button:hover {
-  background: darken(var(--primary), 10%);
-}
-
-
-
+/* Loading Bar inside dropdown */
 .search-loading-bar {
   width: 100%;
   height: 4px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255,255,255,0.2);
+  margin-top: 0.25rem;
   overflow: hidden;
-  margin-bottom: 0.5rem;
+  border-radius: 4px;
 }
-
 .search-loading-progress {
   height: 100%;
   width: 40%;
   background: var(--primary);
   animation: search-loading 1s infinite ease-in-out;
 }
-
 @keyframes search-loading {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(250%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
 }
-
-
 
 /* ===== Selectors ===== */
-.selectors {
+.selectors-container {
+  position: relative;
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.selector {
-  padding: 0.6rem 1.2rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--text-main);
-  font-weight: 500;
-  box-shadow: var(--input-shadow);
-  transition: all 0.4s ease;
+.selectors-toggle-icon {
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--primary);
+  transition: transform 0.2s;
+}
+.selectors-toggle-icon:hover {
+  transform: scale(1.1);
 }
 
-.selector:hover {
-  border-color: var(--primary);
-  background: var(--dark-indigo-gradient);
-  transform: translateY(-2px);
+.selectors-dropdown {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  min-width: 220px;
+  background: rgba(30, 30, 60, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  z-index: 150;
+  transition: all 0.3s ease;
 }
+
+/* Full width for dropdown selects */
+.selectors-dropdown .custom-select-container {
+  width: 100%;
+}
+
+
+/* ===== Media Queries ===== */
+@media (max-width: 768px) {
+  .header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .chapter-center {
+    position: relative;
+    left: auto;
+    transform: none;
+    margin: 0.5rem 0;
+    pointer-events: auto;
+  }
+  .header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .search-dropdown, .selectors-dropdown {
+    right: 0;
+    width: 90%;
+  }
+}
+
 
 /* ===== Chapter Verses (Paragraphs) ===== */
 .verses-container {

@@ -224,7 +224,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="bg-white max-w-xs mt-4 min-h-20 rounded-md shadow text-slate-800">
+    <div className="bg-white max-w-xs mt-4 min-h-25 rounded-md shadow text-slate-800">
       <h3 className="font-semibold text-sm text-slate-800 mb-3 px-2 pt-2">
         Recent Messages
       </h3>
