@@ -485,9 +485,10 @@ textarea {
 .page-container {
   min-width: 0;
   width: 100%;
-  max-width: 690px;  
+  /* Use a fluid/clamped max width so pages scale smoothly from mobile to desktop */
+  max-width: clamp(360px, 92vw, 1100px);
   margin: 0 auto;
-  padding: 0 2px; /* adjust padding separately */
+  padding: 0 1rem; /* smaller default padding for better mobile fit */
   box-sizing: border-box;
 }
 
@@ -496,7 +497,7 @@ textarea {
 
 @media (max-width: 1400px) {
   .page-container {
-    max-width:650px;
+    max-width: clamp(360px, 85vw, 900px);
     /* background-color: brown; */
   }
 }
@@ -931,4 +932,54 @@ textarea {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ===============================
+   Generic app layout helpers
+   These provide a consistent responsive structure across pages.
+   Use .app-layout > .app-main and .app-sidebar in components where applicable.
+================================= */
+.app-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.app-main {
+  flex: 1 1 0;
+  min-width: 0; /* allow children to shrink properly */
+  max-width: 100%;
+}
+
+.app-sidebar {
+  width: 320px;
+  flex: 0 0 320px;
+}
+
+/* Collapse sidebar on smaller screens and stack layout */
+@media (max-width: 1024px) {
+  .app-layout {
+    gap: 0.75rem;
+    padding: 0 0.5rem;
+  }
+
+  .app-sidebar {
+    display: none;
+  }
+}
+
+/* Make sure images and media are fluid by default */
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Small screens: slightly reduce base font-size for layout breathing room */
+@media (max-width: 480px) {
+  html { font-size: 95%; }
+  .page-container { padding: 0 0.75rem; }
 }
