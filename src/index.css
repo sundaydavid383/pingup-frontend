@@ -493,9 +493,10 @@ textarea {
 .page-container {
   min-width: 0;
   width: 100%;
-  max-width: 690px;  
+  /* Use a fluid/clamped max width so pages scale smoothly from mobile to desktop */
+  max-width: clamp(360px, 92vw, 1100px);
   margin: 0 auto;
-  padding: 0 2px; /* adjust padding separately */
+  padding: 0 1rem; /* smaller default padding for better mobile fit */
   box-sizing: border-box;
 }
 
@@ -504,7 +505,7 @@ textarea {
 
 @media (max-width: 1400px) {
   .page-container {
-    max-width:650px;
+    max-width: clamp(360px, 85vw, 900px);
     /* background-color: brown; */
   }
 }

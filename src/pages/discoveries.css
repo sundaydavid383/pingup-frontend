@@ -27,49 +27,16 @@
 .discoveries_grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  align-items: start;
   width: 100%;
+  box-sizing: border-box; /* Ensure padding doesn't break layout */
 }
 
-/* Custom styles for the search icon button inside input */
-.discoveries_btn_inside {
-  transition: transform 0.1s ease;
-}
 
-.discoveries_btn_inside:active {
-  transform: translateY(-50%) scale(0.9);
-}
-
-/* Media Queries for Grid Layout */
-@media (min-width: 1024px) {
+@media (max-width: 688px) {
   .discoveries_grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .discoveries_grid {
-    grid-template-columns: 1fr;
-  }
-  .discoveries_iput {
-    font-size: 14px;
-    padding-top: 12px;
-    padding-bottom: 12px;
-  }
-}
-
-/* Force three columns on wide viewports to give cards more horizontal room */
-@media (min-width: 1200px) {
-  .discoveries_grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2rem;
-  }
-}
-
-/* Fallback for very small screens to ensure single-column layout */
-@media (max-width: 440px) {
-  .discoveries_grid {
-    grid-template-columns: 1fr; /* Single column on very small screens */
+    grid-template-columns: 1fr; /* Single column on small screens */
   }
 }
 
