@@ -144,11 +144,8 @@ recognition.onresult = (event) => {
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const result = event.results[i];
-    if (result.isFinal) {
-      finalText += result[0].transcript + " ";
-    } else {
-      interimText += result[0].transcript + " ";
-    }
+    if (result.isFinal) finalText += result[0].transcript + " ";
+    else interimText += result[0].transcript + " ";
   }
 
   const combined = (leftoverRef.current + " " + interimText + " " + finalText)
@@ -157,29 +154,34 @@ recognition.onresult = (event) => {
 
   if (!combined) return;
 
-  // 🔵 ALWAYS update textarea live
+  // 🔵 Live textarea update
   onTranscribe(null, combined, { live: true });
 
-  // reset pause timer
   if (pauseTimer.current) clearTimeout(pauseTimer.current);
 
   const words = combined.split(" ");
 
-  // ✅ Rule 1: search immediately at 15 words
+  const doSearch = () => {
+    if (!combined) return;
+    // Keep leftover words beyond MAX_CHUNK_WORDS in leftoverRef
+    const take = Math.min(MAX_CHUNK_WORDS, words.length);
+    const chunk = words.slice(0, take).join(" ");
+    const leftover = words.slice(take).join(" ");
+    leftoverRef.current = leftover;
+
+    onTranscribe(chunk, leftover, { forceSearch: true });
+  };
+
+  // Rule 1: immediate search if 15+ words final
   if (words.length >= 15 && finalText) {
-    leftoverRef.current = "";
-    onTranscribe(combined, "", { forceSearch: true });
+    doSearch();
     return;
   }
 
-  // ✅ Rule 2: search if user pauses for 1 second
-  pauseTimer.current = setTimeout(() => {
-    if (combined.trim()) {
-      leftoverRef.current = "";
-      onTranscribe(combined, "", { forceSearch: true });
-    }
-  }, 1000);
+  // Rule 2: search after 1s pause
+  pauseTimer.current = setTimeout(doSearch, 1000);
 };
+
 
 
 

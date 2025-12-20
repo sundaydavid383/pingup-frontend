@@ -18,7 +18,10 @@ export function flattenBible(bible) {
         const textRaw = chapterVerses[v];
         if (!textRaw || !textRaw.trim()) continue;
 
-        const text = textRaw.trim();
+        let text = textRaw.trim();
+
+        // Remove any text inside [], {}, ()
+        text = text.replace(/\[\]|\{\}|\(\)/g, "").trim();
 
         const entry = {
           id,
@@ -34,7 +37,7 @@ export function flattenBible(bible) {
         // build inverted index
         const words = text
           .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, "")
+          .replace(/[^a-z0-9\s]/g, "") // remove other punctuation
           .split(/\s+/)
           .filter(Boolean);
 
