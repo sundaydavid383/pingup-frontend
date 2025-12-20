@@ -4,6 +4,7 @@ import VoiceInput from "./VoiceInput";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 import { BookOpen } from "lucide-react";
+import Fuse from "fuse.js";
 
 
 // Debounce helper
@@ -44,6 +45,8 @@ const invertedIndexRef = useRef(new Map());
 const bookChapterMapRef = useRef(new Map());
 const localIndexReady = useRef(false);
 const chunkCache = useRef({});
+const fuseRef = useRef(null);
+
 
 // -------------------------
 // Initialize local index from flattenBible
@@ -78,6 +81,20 @@ useEffect(() => {
 
 
 
+
+
+//============= FUSE.JS INITIALIZING....==================
+useEffect(() => {
+  if (versesRef.current.length) {
+    fuseRef.current = new Fuse(versesRef.current, {
+      keys: ["text", "book"],
+      includeScore: true,
+      threshold: 0.4,
+      ignoreLocation: true,
+      minMatchCharLength: 3,
+    });
+  }
+}, [versesRef.current]);
 
 
 
@@ -210,44 +227,45 @@ useEffect(() => {
   };
 
   // ---------- searchChunk now uses localSearch if available, otherwise falls back to server ----------
-const searchChunk = async (chunk) => {
-  if (!chunk || chunk.length < 3) return;
+const runFuseSearch = (query) => {
+  if (!query.trim() || !fuseRef.current) return;
 
-  setLoading(true); // start loading
+  setLoading(true);
 
-  // check cache
-  const cleanedChunk = clean(chunk);
-  if (chunkCache.current[cleanedChunk]) {
-    const verse = chunkCache.current[cleanedChunk];
-    if (verse) {
-      setMatchedVerses((prev) => [...prev, verse]);
-      setCurrentContext({
-        currentBook: verse.book,
-        currentChapter: verse.chapter,
-        currentVerse: verse.verse
-      });
-    }
-    setLoading(false); // end loading
-    return;
-  }
+  const results = fuseRef.current.search(query.trim());
 
-  const localResult = localSearch(chunk);
-  if (localResult) {
-    chunkCache.current[cleanedChunk] = localResult;
-    setMatchedVerses((prev) => [...prev, localResult]);
+  const ranked = results
+    .map((r) => {
+      const text = r.item.text.toLowerCase();
+      const book = r.item.book.toLowerCase();
+      let boost = 0;
+
+      // Exact phrase match → stronger
+      if (text.includes(query.toLowerCase())) boost -= 0.15;
+      if (book.includes(query.toLowerCase())) boost -= 0.1;
+      boost += Math.min(text.length / 1000, 0.1);
+
+      return {
+        ...r.item,
+        _score: r.score + boost,
+      };
+    })
+    .sort((a, b) => a._score - b._score)
+    .slice(0, 3); // only top 3
+
+  setMatchedVerses(ranked);
+
+  if (ranked.length) {
     setCurrentContext({
-      currentBook: localResult.book,
-      currentChapter: localResult.chapter,
-      currentVerse: localResult.verse
+      currentBook: ranked[0].book,
+      currentChapter: ranked[0].chapter,
+      currentVerse: ranked[0].verse,
     });
-    setLoading(false); // end loading
-    return;
   }
 
-  // fallback to backend can go here if needed
-
-  setLoading(false); // ensure loading ends even if nothing found
+  setLoading(false);
 };
+
 
   // ---------- processChunks (unchanged) ----------
   const processChunks = debounce(async (inputText) => {
@@ -324,6 +342,21 @@ const searchChunk = async (chunk) => {
     processChunks(e.target.value);
   };
 
+  //==================auto grow==================
+  const autoGrowTextarea = () => {
+  const el = inputRef.current;
+  if (!el) return;
+
+  el.style.height = "auto";          // allow shrink
+  el.style.height = el.scrollHeight + "px"; // grow to fit
+};
+useEffect(() => {
+  autoGrowTextarea();
+}, [text]);
+useEffect(() => {
+  autoGrowTextarea();
+}, []);
+
   // ---------- render ----------
   return (
     <div className="w-full max-w-2xl mx-auto p-4">
@@ -341,48 +374,28 @@ const searchChunk = async (chunk) => {
 </div>
 
 <VoiceInput
-  onTranscribe={async (sentChunk, leftover) => {
-    // Always append both final chunk and leftover for live display
-    setText((prev) => {
-      const parts = [];
-      if (prev) parts.push(prev);
-      if (sentChunk) parts.push(sentChunk);
-      if (leftover) parts.push(leftover);
-      return parts.join(" ");
-    });
+  onTranscribe={async (sentChunk, leftover, meta = {}) => {
 
-    // First, handle context commands (chapter/verse navigation)
-    if (sentChunk && parseContextCommand(sentChunk)) return;
-
-    // Process only new chunks
-    if (sentChunk && !processedChunksRef.current.includes(sentChunk)) {
-      processedChunksRef.current.push(sentChunk);
-      setProcessedChunks([...processedChunksRef.current]);
-
-      // Run live search (uses local index when available)
-      await searchChunk(sentChunk);
+    // 🔵 Live typing only (NO search)
+    if (meta.live) {
+      setText(leftover);
+      return;
     }
 
-    // Try matching leftover as potential Bible reference
-    if (leftover) {
-      const refMatch = leftover.match(/([1-3]?\s?\w+)\s+(\d+):(\d+)/);
-      if (refMatch) {
-        const book = refMatch[1];
-        const chapter = parseInt(refMatch[2]);
-        const verse = parseInt(refMatch[3]);
-        const localVerse = getLocalVerse(book, chapter, verse);
-        if (localVerse) {
-          setMatchedVerses((prev) => [...prev, localVerse]);
-          setCurrentContext({
-            currentBook: localVerse.book,
-            currentChapter: localVerse.chapter,
-            currentVerse: localVerse.verse
-          });
-        }
+    // 🟢 Real search trigger
+    if (meta.forceSearch && sentChunk) {
+      setText(sentChunk);
+
+      if (!processedChunksRef.current.includes(sentChunk)) {
+        processedChunksRef.current.push(sentChunk);
+        setProcessedChunks([...processedChunksRef.current]);
+        await searchChunk(sentChunk);
       }
+      return;
     }
   }}
 />
+
 
 
 
@@ -399,9 +412,9 @@ const searchChunk = async (chunk) => {
     rounded-[var(--radius)]
     border
     border-[var(--input-border)]
-    bg-[var(--input-bg)]
+    bg-[var(--white)]
     p-4
-    text-[var(--text-main)]
+    text-[var(--secondary)]
     text-sm
     placeholder:text-[var(--text-muted)]
     shadow-[var(--input-shadow)]

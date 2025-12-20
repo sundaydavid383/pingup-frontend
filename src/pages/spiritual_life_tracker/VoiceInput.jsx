@@ -138,22 +138,50 @@ export default function VoiceInput({ onTranscribe, disabled }) {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onresult = (event) => {
+recognition.onresult = (event) => {
+  let interimText = "";
   let finalText = "";
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const result = event.results[i];
     if (result.isFinal) {
       finalText += result[0].transcript + " ";
+    } else {
+      interimText += result[0].transcript + " ";
     }
   }
 
-  finalText = finalText.trim();
-  if (!finalText) return;
+  const combined = (leftoverRef.current + " " + interimText + " " + finalText)
+    .trim()
+    .replace(/\s+/g, " ");
 
-  // ONLY final speech reaches here
-  processTranscript(finalText);
+  if (!combined) return;
+
+  // 🔵 ALWAYS update textarea live
+  onTranscribe(null, combined, { live: true });
+
+  // reset pause timer
+  if (pauseTimer.current) clearTimeout(pauseTimer.current);
+
+  const words = combined.split(" ");
+
+  // ✅ Rule 1: search immediately at 15 words
+  if (words.length >= 15 && finalText) {
+    leftoverRef.current = "";
+    onTranscribe(combined, "", { forceSearch: true });
+    return;
+  }
+
+  // ✅ Rule 2: search if user pauses for 1 second
+  pauseTimer.current = setTimeout(() => {
+    if (combined.trim()) {
+      leftoverRef.current = "";
+      onTranscribe(combined, "", { forceSearch: true });
+    }
+  }, 1000);
 };
+
+
 
 
     recognition.onerror = (event) => console.error("SpeechRecognition error:", event.error);

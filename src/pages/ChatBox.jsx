@@ -72,10 +72,16 @@ const ChatBox = () => {
 
   // Scroll-to-bottom when clicking the scroll button
   const scrollToBottom = () => {
-    containerRef.current?.scrollTo({
-      top: containerRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    if (containerRef.current){
+      const container = containerRef.current;
+      const paddingBottom = parseFloat(
+        getComputedStyle(container).paddingBottom
+      );
+      container.scrollTo({
+        top: container.scrollHeight - container.clientHeight + paddingBottom,
+        behavior: "smooth"
+      })
+    }
   };
 
   const isUserNearBottom = useRef(true);
@@ -625,8 +631,7 @@ const handleTypingFrom = ({ from_user_id }) => {
          style={{
             background: "var(--input-chatbox-bg-gradient)",
             color: "var(--input-text-color)",
-                    
-                    paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
+            paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
           }}>
           {loading ?
             (
