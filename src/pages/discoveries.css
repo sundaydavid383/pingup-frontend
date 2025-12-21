@@ -1,89 +1,86 @@
-.discoveries_iput{
-    width: 100%;
-     padding: 1rem .9rem;
-    border-radius: 2rem;
-    background-color: rgba(255, 254, 254, 0.6); 
-    backdrop-filter: blur(39px);
-    color: var(--text-dark); 
-    box-shadow: 0 0 6px 2px rgba(197, 206, 219, 0.3); /* shadow-sm */
-    transition: all 0.2s;
+/* Container and Sticky logic */
+.discover_search_wrapper {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible !important;
+}
+
+/* The Search Input */
+.discoveries_iput {
+  background: white !important;
+  border: 1px solid #e2e8f0 !important; /* border-slate-200 */
+  border-radius: 9999px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  color: #1e293b;
 }
 
 .discoveries_iput:focus {
-    outline: none;
-    border-color: var(--primary); /* primary color on focus */
-    box-shadow: 0 0 20px 9px rgba(208, 214, 223, 0.3),
-                inset 0 0 0px 2px rgba(197, 206, 219, 0.3); /* shadow on focus */
+  outline: none;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+  background: white !important;
 }
 
-.discoveries_btn{
-    border-radius: 2rem;
-}
-
-/* Sticky Search Section */
-.discover_search_wrapper {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: white;
-  padding-top: 10px;
-  padding-bottom: 15px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-}
-
-/* Smooth transition when it becomes sticky */
-.discover_search_wrapper.sticky-active {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-
+/* Ensure the grid provides enough space */
 .discoveries_grid {
   display: grid;
   gap: 1.5rem;
-  /* more fluid: try to fit cards responsively with a smaller min width */
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   width: 100%;
-  box-sizing: border-box; /* Ensure padding doesn't break layout */
-  padding: 1rem 0;
 }
 
-/* Slightly reduce gap on smaller screens */
-@media (max-width: 900px) {
+/* Custom styles for the search icon button inside input */
+.discoveries_btn_inside {
+  transition: transform 0.1s ease;
+}
+
+.discoveries_btn_inside:active {
+  transform: translateY(-50%) scale(0.9);
+}
+
+/* Media Queries for Grid Layout */
+@media (min-width: 1024px) {
   .discoveries_grid {
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 688px) {
-  .discoveries_grid {
-    grid-template-columns: 1fr; /* Single column on small screens */
-    gap: 0.85rem;
-  }
-}
-
-/* Make the search row stack on small screens */
 @media (max-width: 640px) {
-  #discover-search-wrapper .max-w-6xl > .w-full {
-    flex-direction: column;
-    gap: 0.5rem;
+  .discoveries_grid {
+    grid-template-columns: 1fr;
   }
-
-  /* make input and button full width for easier tapping */
   .discoveries_iput {
-    padding: 0.75rem 0.9rem;
+    font-size: 14px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
+}
 
-  .discoveries_btn {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
+/* Force three columns on wide viewports to give cards more horizontal room */
+@media (min-width: 1200px) {
+  .discoveries_grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
   }
+}
 
-  /* Make dropdown filters full width */
-  #discover-search-wrapper .flex.flex-wrap {
-    flex-direction: column;
-    gap: 0.6rem;
+/* Fallback for very small screens to ensure single-column layout */
+@media (max-width: 440px) {
+  .discoveries_grid {
+    grid-template-columns: 1fr; /* Single column on very small screens */
   }
+}
+
+/* Make search input and button more compact on small screens */
+@media (max-width: 640px) {
+  .discoveries_iput { padding: 0.75rem 0.75rem; }
+  .discoveries_btn { padding: 0.6rem 0.9rem; }
+  .discoveries_btn, .discoveries_iput { font-size: 0.95rem; }
+}
+
+/* Stack search controls when space is tight */
+@media (max-width: 520px) {
+  .discoveries_btn { width: 100%; }
+  .discoveries_iput { width: 100%; }
+  /* when parent uses flex, allow inputs to stack nicely */
 }

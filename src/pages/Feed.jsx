@@ -135,7 +135,7 @@ useEffect(() => {
       <div className="w-full max-w-[100vw] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0">
         {/* Main Feed */}
         <main
-          className="page-container flex-1 h-screen overflow-y-scroll py-8 mx-auto box-border overflow-x-hidden
+          className="page-container flex-1 min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden
           [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <StoriesBar />

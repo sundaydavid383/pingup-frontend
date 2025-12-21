@@ -29,7 +29,7 @@ const MediumSidebarToggle = ({ sponsors }) => {
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className={`fixed top-0 right-0 z-[555] bg-white shadow-lg w-[300px] p-2 h-screen overflow-y-auto transform transition-transform duration-300 ease-in-out md:block lg:hidden ${
+        className={`fixed top-0 right-0 z-[555] bg-white shadow-lg w-[300px] p-2 min-h-screen overflow-y-auto transform transition-transform duration-300 ease-in-out md:block lg:hidden ${
           showSidebar ? "translate-x-0" : "translate-x-full"
         }`}
       >

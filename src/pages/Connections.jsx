@@ -137,7 +137,7 @@ const fetchConnections = async () => {
   ];
 
   return (
- <div className="h-screen overflow-y-auto bg-slate-50 flex">
+ <div className="w-full min-h-screen overflow-y-auto bg-slate-50 flex">
   <div className="max-w-6xl mx-auto p-6 animate-fadeIn">
         <BackButton top="2" right="2" />
 
