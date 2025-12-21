@@ -3,6 +3,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ImageIcon, SendHorizonal, Mic, Square, Check, CheckCheck } from "lucide-react";
 import axiosBase from "../utils/axiosBase";
+import moment from "moment";
 import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ui.css";
@@ -563,21 +564,23 @@ useEffect(() => {
 
     // When messages exist
     return (
-      <div className="flex items-center justify-between p-3 bg-multi-gradient text-white fixed top-0 left-0 right-0">
+      <div className="flex items-center justify-between p-2 bg-multi-gradient text-white fixed top-0 left-0 right-0">
         <div className="flex title items-center gap-3">
           <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer">
             <ProfileAvatar user={receiver} size={48} />
           </div>
           <div>
-            <p className="font-medium text-[var(--primary)]">{receiver.username}</p>
+<p className="font-medium text-[0.9rem] text-[var(--primary)]">
+  {receiver.username}
+</p>
 {onlineUsers.has(receiver._id) ? (
-  <span className="text-green-500">Online</span>
+  <span className="text-green-500 text-sm">Online</span>
 ) : lastActive ? (
-  <span className="text-gray-500">
+  <span className="text-gray-500 text-sm">
     Active {moment(lastActive).fromNow()}
   </span>
 ) : (
-  <span className="text-gray-400">Offline</span>
+  <span className="text-gray-400 text-sm">Offline</span>
 )}
           </div>
         </div>
