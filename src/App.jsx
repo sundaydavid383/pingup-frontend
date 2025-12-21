@@ -20,6 +20,7 @@ import NotFound from './pages/NotFound';
 import SinglePostPage from "./pages/SinglePostPage";
 import ScriptureAssistant from './pages/spiritual_life_tracker/ScriptureAssistant';
 import BibleReader from './pages/spiritual_life_tracker/BibleReader';
+import AppInstallPrompt from './pages/AppInstallPrompt';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
 
@@ -45,6 +46,8 @@ const App = () => {
       {modalOpen && <UserModal user={user} onClose={() => setModalOpen(false)} />}
       <Toaster />
       {/* <ReloadNotice /> */}
+
+      <AppInstallPrompt />
 
       <Routes>
 

@@ -48,7 +48,7 @@ const Notification = () => {
       {/* <BackButton top="2" right="2" /> */}
       <h2 className="text-2xl font-semibold text-gray-800">Notifications</h2>
 
-      <div className="flex flex-col gap-4 overflow-y-auto no-scrollbar min-h-[80vh] custom-scrollbar pb-6">
+      <div className="flex flex-col gap-4 overflow-y-auto no-scrollbar min-h-[70vh] custom-scrollbar pb-6">
         {sortedNotifications.length > 0 ? (
           sortedNotifications.map((n) => (
             <div
@@ -97,9 +97,11 @@ const Notification = () => {
       </div>
 
       {/* Bottom bar */}
-      {sortedNotifications.length > 0 &&
-    <NotificationRemovalBar/>
-      }
+{sortedNotifications.length > 0 && (
+  <div className="sticky bottom-4 left-0  z-[9999] w-[100%] px-4">
+    <NotificationRemovalBar />
+  </div>
+)}
     </div>
                         {/* Sidebar */}
                 <RightSidebar sponsors={sponsors} loading={!sponsors} />

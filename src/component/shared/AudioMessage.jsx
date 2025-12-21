@@ -1,5 +1,9 @@
 import { useRef, useState, useEffect } from "react";
 
+// Global references to currently playing audio & its setter
+let currentlyPlayingAudio = null;
+let currentlyPlayingSetter = null;
+
 const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -23,17 +27,20 @@ const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleWaiting = () => setIsLoading(true);
     const handlePlaying = () => setIsLoading(false);
+    const handleEnded = () => setIsPlaying(false);
 
     audio.addEventListener("loadedmetadata", handleLoaded);
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("waiting", handleWaiting);
     audio.addEventListener("playing", handlePlaying);
+    audio.addEventListener("ended", handleEnded);
 
     return () => {
       audio.removeEventListener("loadedmetadata", handleLoaded);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("waiting", handleWaiting);
       audio.removeEventListener("playing", handlePlaying);
+      audio.removeEventListener("ended", handleEnded);
     };
   }, []);
 
@@ -41,12 +48,28 @@ const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => 
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) audio.pause();
-    else {
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      if (currentlyPlayingAudio === audio) {
+        currentlyPlayingAudio = null;
+        currentlyPlayingSetter = null;
+      }
+    } else {
+      // Stop currently playing audio if any
+      if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
+        currentlyPlayingAudio.pause();
+        currentlyPlayingAudio.currentTime = 0;
+        if (currentlyPlayingSetter) currentlyPlayingSetter(false);
+      }
+
+      currentlyPlayingAudio = audio;
+      currentlyPlayingSetter = setIsPlaying;
+
       setIsLoading(true);
       audio.play();
+      setIsPlaying(true);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const scrub = (e) => {
@@ -115,7 +138,6 @@ const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => 
         ref={audioRef}
         src={msg.media_url}
         type={msg.media_url.endsWith(".webm") ? "audio/webm" : "audio/mp3"}
-        onEnded={() => setIsPlaying(false)}
       />
 
       {isLoading && (

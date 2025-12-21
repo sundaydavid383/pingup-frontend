@@ -6,6 +6,7 @@ import "./story.css";
 import { useAuth } from "../context/AuthContext";
 import VideoPlayer from "./shared/VideoPlayer";
 import ActionNotifier from "./shared/ActionNotifier";
+import StoryTextOverlay from "./shared/StoryTextOverlay";
 
 const StoryViewer = ({ viewStory, setViewStory, stories}) => {
   const { user: currentUser } = useAuth();
@@ -137,7 +138,6 @@ const handleDeleteStory = () => {
   setShowDeletePopup(true);
 };
 
-  // ------------------- Render Story Text -------------------
   const renderStoryText = (text) => {
     const maxLength = 180;
     const isLong = text.length > maxLength;
@@ -163,6 +163,8 @@ const handleDeleteStory = () => {
       </div>
     );
   };
+  
+  // ------------------- Render Story Text -------------------
 
   // ------------------- Render Story Content -------------------
   const renderContent = () => {
@@ -177,11 +179,6 @@ const handleDeleteStory = () => {
                 className="max-w-full max-h-[70vh] object-contain rounded-t-2xl shadow-[0_0_40px_rgba(255,255,255,0.1)] transition-all duration-500"
               />
             </div>
-            {viewStory.content && (
-              <div className="w-full py-5 px-6 bg-black/60 backdrop-blur-md flex justify-center rounded-b-2xl">
-                {renderStoryText(viewStory.content)}
-              </div>
-            )}
           </div>
         );
       case "video":
@@ -198,11 +195,6 @@ const handleDeleteStory = () => {
 />
               
             </div>
-            {viewStory.content && (
-              <div className="w-full py-5 px-0 bg-black/60 backdrop-blur-md flex justify-center rounded-b-2xl">
-                {renderStoryText(viewStory.content)}
-              </div>
-            )}
           </div>
         );
       case "text":
@@ -272,10 +264,10 @@ const handleDeleteStory = () => {
   <button
     onClick={handleDeleteStory}
     disabled={loadingDelete}
-    className="absolute top-20 right-5 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg rounded-full transition-all duration-300 focus:outline-none"
+    className="absolute top-0 right-15 flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg rounded-full transition-all duration-300 focus:outline-none"
   >
     <Trash2 className="w-5 h-5" />
-    <span>{loadingDelete ? "Deleting..." : "Delete Story"}</span>
+    {/* <span>{loadingDelete ? "Deleting..." : "Delete Story"}</span> */}
   </button>
 )}
 
@@ -316,7 +308,10 @@ onMouseLeave={() => {
 }}
 
       >
+
         {renderContent()}
+      {viewStory.content && <StoryTextOverlay content={viewStory.content} />}
+
       </div>
 
       {musicUrl && <audio ref={audioRef} src={musicUrl} loop />}

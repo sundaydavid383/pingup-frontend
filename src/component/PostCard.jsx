@@ -28,17 +28,14 @@ import Loading from "./shared/Loading";
 const PostCard = ({ post, setFeeds,
 setViewerIndex,
   onShare, 
-onMediaView, setSelectedMediaIndex }) => {
+onMediaView, setSelectedMediaIndex,
+onOpenMedia,
+showAlert }) => {
   const navigate = useNavigate();
   const { user: currentUser, token } = useAuth() || {};
   const userId = currentUser?._id;
 
   if (!post) return null;
-
- 
-
-  const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
-  const showAlert = (message, type = "info") => setAlert({ show: true, message, type });
 
   const [isFollowing, setIsFollowing] = useState(() => {
     if (!currentUser || !currentUser.following) return false;
@@ -112,7 +109,23 @@ const [dislikesCount, setDislikesCount] = useState(
   const shouldTruncate = post.content && post.content.length > maxLength;
   const contentToShow = isExpanded || !shouldTruncate ? post.content : post.content.slice(0, maxLength) + "...";
   const displayContent = DOMPurify.sanitize(highlightHashtags(contentToShow));
+  function linkify(text) {
+  if (!text) return "";
 
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  return text.replace(urlRegex, (url) => {
+    return `<a 
+      href="${url}" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      class="text-primary underline break-words"
+    >
+      ${url}
+    </a>`;
+  });
+}
+const processedContent = linkify(displayContent);
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (likeBarRef.current && !likeBarRef.current.contains(e.target)) setShowLikesBar(false);
@@ -265,9 +278,11 @@ const meDisliked = (serverPost.recentDislikes || []).some(
     }
   };
 
+
+
+
   return (
     <div className="bg-white rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
-      {alert.show && <CustomAlert message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, show: false })} />}
 
       {/* Header */}
       {/* Header */}
@@ -319,16 +334,20 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
 
       {/* Content */}
-      {post.content && (
-        <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
-          <div dangerouslySetInnerHTML={{ __html: displayContent }} />
-          {shouldTruncate && (
-            <button onClick={() => setIsExpanded(!isExpanded)} className="text-xs text-primary mt-1 inline-block">
-              {isExpanded ? "Read Less" : "Read More"}
-            </button>
-          )}
-        </div>
-      )}
+ {post.content && (
+  <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+    <div dangerouslySetInnerHTML={{ __html: processedContent }} />
+    {shouldTruncate && (
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="text-xs text-primary mt-1 inline-block"
+      >
+        {isExpanded ? "Read Less" : "Read More"}
+      </button>
+    )}
+  </div>
+)}
+
 
       {/* Attachments */}
       {post.attachments?.length > 0 && (
@@ -379,16 +398,16 @@ const meDisliked = (serverPost.recentDislikes || []).some(
             return (
               <div
                 key={index}
-                onClick={() => {
-                  if (!isYouTube || !isVideo) return;
-                  else{ // 🚀 stop viewer for videos
-                      onMediaView();
-                      setViewerIndex(index);
-                      setSelectedMediaIndex(index);
-                      console.log("this is the new selelcted index", index)
-                      console.log(post)
-                  }
-                }}
+               onClick={() => {
+  if (isImage) {
+    onMediaView();          // open the viewer
+    setViewerIndex(index);  // set the clicked image
+    setSelectedMediaIndex(index);
+    setCurrentPost(post);   // make sure viewer knows which post
+    console.log("Image clicked:", index, post);
+  }
+  // videos / YouTube do nothing
+}}
                 className={`relative cursor-pointer overflow-hidden ${widthClass} ${single ? "rounded-lg" : "rounded-sm"
                   } bg-gray-100`}
                 style={{

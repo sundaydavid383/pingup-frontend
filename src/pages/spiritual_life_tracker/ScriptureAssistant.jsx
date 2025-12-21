@@ -47,15 +47,15 @@ const bookChapterMapRef = useRef(new Map());
 const localIndexReady = useRef(false);
 const chunkCache = useRef({});
 const fuseRef = useRef(null);
+const lastSpokenVerseRef = useRef(null);
+
 
 
 // -------------------------
-// Initialize local index from flattenBible
+// Initialize local index + Fuse.js (ONE-TIME)
 // -------------------------
-// Initialize local index from flattenBible
 useEffect(() => {
   const { verses, invertedIndex, bookChapterMap } = flattenBible(bible);
-  console.log("Flattened verses:", verses);
 
   versesRef.current = verses;
 
@@ -66,19 +66,29 @@ useEffect(() => {
   for (const v of verses) {
     verseByIdRef.current.set(v.id, v);
 
-    // build inverted index
     for (const t of v.tokens || tokenize(clean(v.text))) {
-      if (!invertedIndexRef.current.has(t)) invertedIndexRef.current.set(t, new Set());
+      if (!invertedIndexRef.current.has(t)) {
+        invertedIndexRef.current.set(t, new Set());
+      }
       invertedIndexRef.current.get(t).add(v.id);
     }
 
-    // book|chapter|verse mapping
     const key = `${v.book}|${v.chapter}|${v.verse}`;
     bookChapterMapRef.current.set(key, v.id);
   }
 
+  // ✅ Initialize Fuse HERE (correct place)
+  fuseRef.current = new Fuse(verses, {
+    keys: ["text", "book"],
+    includeScore: true,
+    threshold: 0.4,
+    ignoreLocation: true,
+    minMatchCharLength: 3,
+  });
+
   localIndexReady.current = true;
 }, []);
+
 
 
 
@@ -94,21 +104,6 @@ const speakVerse = (verse) => {
 };
 
 
-
-
-
-//============= FUSE.JS INITIALIZING....==================
-useEffect(() => {
-  if (versesRef.current.length) {
-    fuseRef.current = new Fuse(versesRef.current, {
-      keys: ["text", "book"],
-      includeScore: true,
-      threshold: 0.4,
-      ignoreLocation: true,
-      minMatchCharLength: 3,
-    });
-  }
-}, [versesRef.current]);
 
 
 
@@ -265,18 +260,27 @@ function wordSimilarity(a, b) {
 }
 // ---------- Step 0: Fetch verse by reference ----------
 function fetchVerseByReference(query) {
+  console.log("🔎 Trying reference lookup layer");
+
   const referenceRegex = /(\b[a-zA-Z]+)\s+(\d+)\s*(?:[:.\-]\s*(\d+))?/; 
   const match = query.match(referenceRegex);
 
-  if (!match) return null;
+  if (!match) {
+    console.log("⏭️ Reference layer empty → move to next layer");
+    return null;
+  }
 
   const bookName = match[1];
   const chapter = parseInt(match[2]);
   const verse = match[3] ? parseInt(match[3]) : 1;
 
   const local = getLocalVerse(bookName, chapter, verse);
-  if (!local) return null;
+  if (!local) {
+    console.log("⏭️ Reference not found → move to next layer");
+    return null;
+  }
 
+  console.log("✅ Using reference lookup layer");
   return {
     verse: local,
     context: {
@@ -287,24 +291,10 @@ function fetchVerseByReference(query) {
   };
 }
 
-// ---------- Step 1 & 2: Tokenize and fetch candidate verses ----------
-
-
-function getTokenCandidates(query) {
-  const cleaned = clean(query);
-  const tokens = tokenize(cleaned)
-  if (!tokens.length) return null;
-
-  const tokenSets = tokens.map(t => invertedIndexRef.current.get(t)).filter(Boolean);
-  if (!tokenSets.length) return null;
-
-  return { tokens, tokenSets };
-}
-
-
-
 // ---------- LAYER 1: Two-word phrase match ----------
 function phraseMatchLayer(tokens, tokenSets) {
+  console.log("🔎 Trying LAYER 1: Phrase match");
+
   const phrases = buildBigrams(tokens);
   const phraseMatches = [];
 
@@ -325,24 +315,35 @@ function phraseMatchLayer(tokens, tokenSets) {
     }
   }
 
-  if (phraseMatches.length === 0) return null;
+  if (phraseMatches.length === 0) {
+    console.log("⏭️ LAYER 1 empty → move to LAYER 2");
+    return null;
+  }
+
+  console.log("✅ Using LAYER 1: Phrase match");
 
   // Sort descending by score and take top 3
   phraseMatches.sort((a, b) => b.score - a.score);
   return phraseMatches.slice(0, 3);
 }
 
-
-// ---------- LAYER 3: Strict intersection exact match ----------
+// ---------- LAYER 2: Strict intersection exact match ----------
 function exactMatchLayer(tokens, tokenSets) {
-  if (!tokens.length || !tokenSets.length) return null;
+  console.log("🔎 Trying LAYER 2: Exact intersection match");
+
+  if (!tokens.length || !tokenSets.length) {
+    console.log("⏭️ LAYER 2 empty → move to next layer");
+    return null;
+  }
 
   // Sort sets by size to optimize intersection
   const sortedSets = [...tokenSets].sort((a, b) => a.size - b.size);
   let exactCandidates = new Set(sortedSets[0]);
 
   for (let i = 1; i < sortedSets.length; i++) {
-    exactCandidates = new Set([...exactCandidates].filter(id => sortedSets[i].has(id)));
+    exactCandidates = new Set(
+      [...exactCandidates].filter(id => sortedSets[i].has(id))
+    );
     if (exactCandidates.size === 0) break;
   }
 
@@ -351,17 +352,65 @@ function exactMatchLayer(tokens, tokenSets) {
     .map(id => verseByIdRef.current.get(id))
     .filter(v => tokens.every(t => v.text.toLowerCase().includes(t)));
 
-  if (!exactMatches.length) return null;
+  if (!exactMatches.length) {
+    console.log("⏭️ LAYER 2 empty → move to next layer");
+    return null;
+  }
+
+  console.log("✅ Using LAYER 2: Exact match");
 
   // Sort by text length (shorter first) and return top 3
   exactMatches.sort((a, b) => a.text.length - b.text.length);
   return exactMatches.slice(0, 3);
 }
 
+// 🟢 LAYER 3: Fuse.js semantic fuzzy ranking
+const fuseLayer = (query) => {
+  console.log("🔎 Trying LAYER 3: Fuse.js fuzzy search");
+
+  if (!query.trim() || !fuseRef.current) {
+    console.log("⏭️ LAYER 3 empty → move to LAYER 4");
+    return null;
+  }
+
+  const results = fuseRef.current.search(query.trim());
+  const q = query.trim().toLowerCase();
+
+  if (!results.length) {
+    console.log("⏭️ LAYER 3 no Fuse results → move to LAYER 4");
+    return null;
+  }
+
+  const ranked = results
+    .map(r => {
+      const text = r.item.text.toLowerCase();
+      const book = r.item.book.toLowerCase();
+
+      let boost = 0;
+
+      if (text.includes(q)) boost -= 0.15;
+      if (book.includes(q)) boost -= 0.1;
+      boost += Math.min(text.length / 1000, 0.1);
+
+      return {
+        ...r.item,
+        _score: r.score + boost,
+      };
+    })
+    .sort((a, b) => a._score - b._score);
+
+  console.log("✅ Using LAYER 3: Fuse.js fuzzy search");
+  return ranked.slice(0, 3);
+};
 
 // 🔹 LAYER 4: Token overlap scoring function
 const tokenOverlapLayer = (tokens, tokenSets) => {
-  if (!tokens.length || !tokenSets.length) return null;
+  console.log("🔎 Trying LAYER 4: Token overlap scoring");
+
+  if (!tokens.length || !tokenSets.length) {
+    console.log("⏭️ LAYER 4 empty → move to LAYER 5");
+    return null;
+  }
 
   // Start with intersection of token sets
   let candidates = new Set(tokenSets[0]);
@@ -382,16 +431,27 @@ const tokenOverlapLayer = (tokens, tokenSets) => {
     return { ...v, score: matches / tokens.length, matches };
   });
 
-  if (!scored.length) return null;
+  if (!scored.length) {
+    console.log("⏭️ LAYER 4 no scored results → move to LAYER 5");
+    return null;
+  }
+
+  console.log("✅ Using LAYER 4: Token overlap scoring");
 
   // Sort descending by score and take top 3
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, 3);
 };
 
-// 🟡 LAYER 3: Letter-subset word matching
+
+// 🟡 LAYER 5: Letter-subset word matching
 const letterSubsetLayer = (tokens, tokenSets) => {
-  if (!tokens.length || !tokenSets.length) return null;
+  console.log("🔎 Trying LAYER 5: Letter-subset matching");
+
+  if (!tokens.length || !tokenSets.length) {
+    console.log("⛔ LAYER 5 empty → no more layers");
+    return null;
+  }
 
   const matches = [];
 
@@ -413,15 +473,26 @@ const letterSubsetLayer = (tokens, tokenSets) => {
     if (hits > 0) matches.push({ ...v, score: hits / tokens.length });
   }
 
-  if (!matches.length) return null;
+  if (!matches.length) {
+    console.log("⛔ LAYER 5 no matches → search exhausted");
+    return null;
+  }
 
-  matches.sort((a,b) => b.score - a.score);
-  return matches.slice(0,3);
+  console.log("✅ Using LAYER 5: Letter-subset matching");
+
+  matches.sort((a, b) => b.score - a.score);
+  return matches.slice(0, 3);
 };
 
-// 🔴 LAYER 4: Letter-to-letter fallback
+
+// 🔴 LAYER 6: Letter-to-letter fallback
 const fuzzyLayer = (tokens) => {
-  if (!tokens.length) return null;
+  console.log("🔎 Trying LAYER 6: Letter-to-letter fuzzy fallback");
+
+  if (!tokens.length) {
+    console.log("⛔ LAYER 6 empty (no tokens) → search exhausted");
+    return null;
+  }
 
   const fuzzy = [];
 
@@ -438,12 +509,16 @@ const fuzzyLayer = (tokens) => {
     if (score > 0.5) fuzzy.push({ ...v, score });
   }
 
-  if (!fuzzy.length) return null;
+  if (!fuzzy.length) {
+    console.log("⛔ LAYER 6 no matches → search exhausted");
+    return null;
+  }
 
-  fuzzy.sort((a,b) => b.score - a.score);
-  return fuzzy.slice(0,3);
+  console.log("✅ Using LAYER 6: Letter-to-letter fuzzy fallback");
+
+  fuzzy.sort((a, b) => b.score - a.score);
+  return fuzzy.slice(0, 3);
 };
-
 
 const STOP_WORDS = new Set([
   "the", "who", "was", "an", "is", "to", "and", "in", "he", "she", "of", "a"
@@ -455,20 +530,32 @@ const runLocalSearch = async (query) => {
   setLoading(true);
   await new Promise(r => setTimeout(r, 0)); // yield to browser
 
-  const handleMatch = (matches) => {
-    if (!matches || matches.length === 0) return false;
-    setMatchedVerses(matches);
-    if (matches[0].book) {
-      setCurrentContext({
-        currentBook: matches[0].book,
-        currentChapter: matches[0].chapter,
-        currentVerse: matches[0].verse,
-      });
-    }
-    speakVerse(matches[0]);
-    setLoading(false);
-    return true;
-  };
+const handleMatch = (matches) => {
+  if (!matches || matches.length === 0) return false;
+
+  const verse = matches[0];
+  const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
+
+  setMatchedVerses(matches);
+
+  setCurrentContext({
+    currentBook: verse.book,
+    currentChapter: verse.chapter,
+    currentVerse: verse.verse,
+  });
+
+  // 🔐 Prevent repeated reading
+  if (lastSpokenVerseRef.current !== verseKey) {
+    lastSpokenVerseRef.current = verseKey;
+    speakVerse(verse);
+  } else {
+    console.log("🔁 Verse already spoken, skipping TTS");
+  }
+
+  setLoading(false);
+  return true;
+};
+
 
   // 0️⃣ Direct reference check
   const refResult = fetchVerseByReference(query);
@@ -486,11 +573,12 @@ const runLocalSearch = async (query) => {
   if (!tokenSets.length) tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
 
   // Layers in order
-  if (handleMatch(phraseMatchLayer(tokens, tokenSets))) return;      // Layer 1: bigram phrase
-  if (handleMatch(exactMatchLayer(tokens, tokenSets))) return;       // Layer 2: strict intersection
-  if (handleMatch(tokenOverlapLayer(tokens, tokenSets))) return;     // Layer 3: token overlap
-  if (handleMatch(letterSubsetLayer(tokens, tokenSets))) return;     // Layer 4: letter subset
-  if (handleMatch(fuzzyLayer(tokens))) return;                        // Layer 5: fuzzy letter similarity
+if (handleMatch(phraseMatchLayer(tokens, tokenSets))) return;      // Layer 1: bigram phrase
+if (handleMatch(exactMatchLayer(tokens, tokenSets))) return;       // Layer 2: strict intersection
+if (handleMatch(fuseLayer(query))) return;                         // Layer 3: Fuse semantic
+if (handleMatch(tokenOverlapLayer(tokens, tokenSets))) return;     // Layer 4: token overlap
+if (handleMatch(letterSubsetLayer(tokens, tokenSets))) return;     // Layer 5: letter subset
+if (handleMatch(fuzzyLayer(tokens))) return;                       // Layer 6: fuzzy letter
 
   setMatchedVerses([]); // no matches
   setLoading(false);

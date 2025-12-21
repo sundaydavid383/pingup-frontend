@@ -35,13 +35,23 @@ const CustomAlert = ({ message, type = "info", onClose }) => {
 {/* Alert Box */}
 {visible && (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+    {/* Overlay */}
     <div
-      className={`transform transition-all duration-300 ${
+      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+      onClick={() => {
+        setVisible(false);
+        onClose();
+      }}
+    />
+
+    {/* Alert Box */}
+    <div
+      className={`relative transform transition-all duration-300 ${
         visible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
       }`}
     >
       <div
-        className="flex items-start gap-3 p-4 rounded-lg shadow-lg border bg-[var(--bg-main)] text-white max-w-md w-full"
+        className="flex items-start gap-3 p-4 rounded-lg shadow-lg border bg-[var(--bg-main)] text-white max-w-md w-full relative z-10"
         style={{ borderColor: background[type] || "var(--info)" }}
       >
         {/* Icon */}
@@ -70,6 +80,7 @@ const CustomAlert = ({ message, type = "info", onClose }) => {
     </div>
   </div>
 )}
+
 
     </>
   );

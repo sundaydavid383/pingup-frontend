@@ -1,13 +1,13 @@
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import VideoPlayer from "./VideoPlayer"; // use your existing VideoPlayer
+import VideoPlayer from "./VideoPlayer";
+import "../../styles/sliderButtons.css";
 
 const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPortrait, setIsPortrait] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
-
-  console.log("this is the post we are currently renderingn ", post)
+  const [textVisible, setTextVisible] = useState(true); // toggle entire text block
 
   const attachments = Array.isArray(post?.attachments) ? post.attachments : [];
   const videos = Array.isArray(post?.video_urls) ? post.video_urls : [];
@@ -19,14 +19,11 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
       ? currentItem.includes(".mp4") || currentItem.includes("youtube")
       : currentItem.url?.includes(".mp4") || currentItem.url?.includes("youtube");
 
-  // Detect portrait orientation for images
   useEffect(() => {
     if (!currentItem || isVideo) return;
     const img = new Image();
     img.src = currentItem.url || currentItem;
-    img.onload = () => {
-      setIsPortrait(img.height > img.width * 1.2);
-    };
+    img.onload = () => setIsPortrait(img.height > img.width * 1.2);
   }, [currentItem, isVideo]);
 
   const goPrev = () => {
@@ -41,13 +38,13 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
 
   if (!currentItem) return null;
 
-  const MAX_LENGTH = 150;
   const content = post.content || "";
+  const MAX_LENGTH = 150;
   const shouldTruncate = content.length > MAX_LENGTH;
   const displayText = showFullText ? content : content.slice(0, MAX_LENGTH);
 
   return (
-    <div className="absolute inset-0 z-5550 flex flex-col items-center justify-center bg-black/95 p-4 py-11 overflow-auto">
+    <div className="absolute inset-0 z-[5550] flex flex-col items-center justify-center bg-black/95 p-4 overflow-auto">
       {/* Close Button */}
       <button
         onClick={onClose}
@@ -57,8 +54,7 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
       </button>
 
       {/* Counter */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2
-       text-gray-300 text-sm font-semibold z-[60] mb-9" >
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 text-gray-300 text-sm font-semibold z-[60]">
         {currentIndex + 1} / {allMedia.length}
       </div>
 
@@ -71,7 +67,6 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
           >
             <ChevronLeft className="w-8 h-8 sm:w-10 sm:h-10" />
           </button>
-
           <button
             onClick={goNext}
             className="nav-btn nav-btn-next"
@@ -82,7 +77,7 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
       )}
 
       {/* Media */}
-      <div className="w-full flex justify-center items-center my-4 ">
+      <div className="w-full flex justify-center items-center my-4">
         {isVideo ? (
           <div className="w-full max-w-4xl">
             <VideoPlayer
@@ -99,30 +94,63 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
             alt="media"
             className={`rounded-lg shadow-lg ${
               isPortrait
-                ? "max-h-[90vh] max-w-[60vw] object-contain"
-                : "max-h-[90vh] max-w-full object-contain"
+                ? "max-h-[80vh] max-w-[60vw] object-contain"
+                : "max-h-[80vh] max-w-full object-contain"
             }`}
           />
         )}
       </div>
 
-      {/* Post Text */}
+      {/* Always-visible toggle button */}
       {content && (
-        <div className="max-w-3xl text-center text-gray-100 text-sm leading-relaxed mt-0 ">
-          <span>{displayText}</span>
-          {shouldTruncate && (
-            <>
-              {!showFullText && <span>... </span>}
-              <button
-                onClick={() => setShowFullText((prev) => !prev)}
-                className="text-[var(--primary)] font-semibold ml-1 hover:underline"
-              >
-                {showFullText ? "Show less" : "Read more"}
-              </button>
-            </>
-          )}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60]">
+          <button
+            className="text-[var(--primary)] font-semibold text-sm hover:underline bg-black/50 px-2 py-1 rounded"
+            onClick={() => setTextVisible((prev) => !prev)}
+          >
+            {textVisible ? "" : "Show Text"}
+          </button>
         </div>
       )}
+
+      {/* Text Overlay */}
+      {textVisible && content && (
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[90%] max-w-3xl bg-black/80 p-4 text-gray-100 rounded-xl z-[50] flex flex-col items-center">
+  {/* Text content */}
+  <p
+    className={`text-center text-sm leading-relaxed ${
+      !showFullText ? "line-clamp-2" : ""
+    }`}
+  >
+    {displayText}
+  </p>
+
+  {/* Buttons */}
+  <div className="flex items-center gap-4 mt-2 flex-wrap justify-center w-full">
+    {/* Show more / Show less */}
+    {shouldTruncate && (
+      <button
+        className="text-[var(--primary)] font-semibold hover:underline text-sm"
+        onClick={() => setShowFullText((prev) => !prev)}
+      >
+        {showFullText ? "Show less" : "See more"}
+      </button>
+    )}
+
+    {/* Cancel hides the overlay */}
+   <button
+    className="absolute top-2 right-2 text-white text-xs bg-red-600 px-2 py-0.5 rounded hover:bg-red-700"
+    onClick={() => setTextVisible(false)}
+  >
+    ✕
+  </button>
+
+  </div>
+</div>
+
+      )}
+
+      <div className="h-8" />
     </div>
   );
 };

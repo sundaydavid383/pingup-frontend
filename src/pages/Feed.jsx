@@ -19,6 +19,7 @@ import PostCardSkeleton from "../component/shared/PostCardSkeleton";
 import RightSidebar from "../component/RightSidebar";
 import { runOncePerSession } from "../utils/runOncePerSession";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
+import CustomAlert from "../component/shared/CustomAlert";
 
 
 const Feed = () => {
@@ -42,6 +43,9 @@ const Feed = () => {
   const [currentPost, setCurrentPost] = useState(null)
   const [showLiveMap, setShowLiveMap] = useState(false);
   const [sharesCount, setSharesCount] = useState(0);
+  const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
+  const showAlert = (message, type = "info") => setAlert({ show: true, message, type });
+
 
 
   const authHeaders = { Authorization: `Bearer ${token}` };
@@ -167,29 +171,39 @@ useEffect(() => {
             {loadingInitial ? (
       <PostCardSkeleton />
     ) :     feeds.map((post, i) => (
-              <PostWrapper
-                key={post._id}
-                index={i}
-                post={post}
-                onOpenPost={() => setSelectedPostIndex(i)}
-                onOpenMedia={() => setSelectedMediaIndex(i)}
-              > 
+  <PostWrapper
+  key={post._id}
+  index={i}
+  post={post}
+  onOpenPost={(i) => setSelectedPostIndex(i)}
+  onOpenMedia={(mediaIndex) => {
+    setCurrentPost(post);
+    setViewerOpen(true);
+    setViewerIndex(mediaIndex);
+    setSelectedMediaIndex(mediaIndex);
+  }}
+>
+  {({ handleClick }) => (
+    <PostCard
+      post={post}
+      setFeeds={setFeeds}
+      onShare={() => {
+        setCurrentPost(post);
+        setShowShareModal(true);
+      }}
+      // single click on image
+      onImageClick={() => handleClick("image")}
+      // double click on header
+      onHeaderClick={() => handleClick("header")}
+      sharedBy={post.sharedForMe ? post.sharedBy : null}
+      sharedMessage={post.sharedForMe ? post.sharedMessage : null}
+      setViewerIndex={setViewerIndex}
+      setSelectedMediaIndex={setSelectedMediaIndex}
+      showAlert={showAlert}
+    />
+  )}
+</PostWrapper>
 
-                <PostCard post={post}
-                  setFeeds={setFeeds}
-                  onShare={() => {
-                    setCurrentPost(post);
-                    setShowShareModal(true);
-                  }}
-                  onMediaView={() => {
-                    setCurrentPost(post);
-                    setViewerOpen(true);
-                  }}
-                      sharedBy={post.sharedForMe ? post.sharedBy : null}
-                      sharedMessage={post.sharedForMe ? post.sharedMessage : null}
-                  setViewerIndex={setViewerIndex}
-                  setSelectedMediaIndex={setSelectedMediaIndex} />
-              </PostWrapper>
             ))}
 
 
@@ -222,7 +236,13 @@ useEffect(() => {
             onClose={() => setViewerOpen(false)}
           />
         )}
-
+        {alert.show && (
+  <CustomAlert
+    message={alert.message}
+    type={alert.type}
+    onClose={() => setAlert({ ...alert, show: false })}
+  />
+)}
         {/* POST VIEWER */}
         {selectedPostIndex !== null && (
           <PostViewer

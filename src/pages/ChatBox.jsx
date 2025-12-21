@@ -44,6 +44,7 @@ const ChatBox = () => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const { currentTheme, setCurrentTheme } = useTheme();
+   const [lastActive, setLastActive] = useState(receiver?.lastActiveAt || null);
   const sendSound = useRef(new Audio("/sounds/send.mp3"));
   const receiveSound = useRef(new Audio("/sounds/receive.mp3"));
   const containerRef = useRef(null);
@@ -116,7 +117,9 @@ const ChatBox = () => {
         const [receiverRes, chatRes] = await Promise.all([
           axiosBase.get(`/api/user/${userId}`),
           axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),]);
+          
         setReceiver(receiverRes.data.user || null);
+         setLastActive(receiverRes.data.user?.lastActiveAt || null);
         if (chatRes.data?.room) setChatId(chatRes.data.room._id);
         if (Array.isArray(chatRes.data?.messages)) {
           const uniqueMsgs = [...new Map(
@@ -135,6 +138,7 @@ const ChatBox = () => {
     };
     fetchData();
   }, [user, userId]);
+  
   // eslint-disable-line // =========================== SOCKET CONNECTION =========================== 
   useEffect(() => {
     if (!socket || !user) {
@@ -467,6 +471,24 @@ const handleTypingFrom = ({ from_user_id }) => {
   }, [socket, user]);
 
 
+useEffect(() => { 
+  if (!socket || !receiver) return;
+
+  const handleUserOffline = (offlineUserId) => {
+    if (offlineUserId === receiver._id) {
+      setLastActive(new Date().toISOString());
+    }
+  };
+
+  socket.on("userOffline", handleUserOffline);
+
+  return () => {
+    socket.off("userOffline", handleUserOffline);
+  };
+}, [socket, receiver]);
+
+
+
   //=[==============================
   // =====SCROLL TO BOTTOM ON FIRST LOAD=
   // =============================
@@ -548,11 +570,15 @@ const handleTypingFrom = ({ from_user_id }) => {
           </div>
           <div>
             <p className="font-medium text-[var(--primary)]">{receiver.username}</p>
-            {onlineUsers.has(receiver._id) ? (
-              <span className="text-green-500 text-xs">Online</span>
-            ) : (
-              <span className="text-gray-400 text-xs">Offline</span>
-            )}
+{onlineUsers.has(receiver._id) ? (
+  <span className="text-green-500">Online</span>
+) : lastActive ? (
+  <span className="text-gray-500">
+    Active {moment(lastActive).fromNow()}
+  </span>
+) : (
+  <span className="text-gray-400">Offline</span>
+)}
           </div>
         </div>
         <ThemeDropdown containerRef={chatContainerRef} />
