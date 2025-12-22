@@ -20,13 +20,13 @@ export default defineConfig({
       ],
 
       manifest: {
-        name: 'SpringssConnect',
-        short_name: 'Springss',
+        name: 'SpringsConnect',
+        short_name: 'Springs',
         description: 'Connect, grow spiritually, and walk daily in faith',
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#000000',
+        background_color: '#f3f0f0ff',
         theme_color: '#1e40af',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

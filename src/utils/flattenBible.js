@@ -8,6 +8,7 @@ export function flattenBible(bible) {
 
   for (const book of bible) {
     const bookName = book.abbrev || book.book_name || "Unknown";
+    console.log("Bible book abbrev:", bookName);
 
     for (let c = 0; c < book.chapters.length; c++) {
       const chapterNum = c + 1; // chapter index → 1-based

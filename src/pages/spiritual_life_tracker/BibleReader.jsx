@@ -201,6 +201,7 @@ useEffect(() => {
     setIsSearching(true);
     setHasSearched(true);
     setSearchResults([]);
+    setSearchVisible(false)
 
     // Small delay to allow loading bar to show (UX polish)
     setTimeout(() => {

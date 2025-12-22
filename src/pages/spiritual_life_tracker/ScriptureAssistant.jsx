@@ -5,7 +5,9 @@ import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 import { BookOpen } from "lucide-react";
 import Fuse from "fuse.js";
+import { Play, Pause } from "lucide-react";
 import "./biblereader.css"
+import assets from "../../assets/assets";
 
 
 // Debounce helper
@@ -38,6 +40,8 @@ export default function ScriptureAssistant({ currentUser }) {
   });
   const processedChunksRef = useRef([]);
   const [loading, setLoading] = useState(false);
+  const bibleBooks = assets.bibleBooks2
+  
 
 // local index refs
 const versesRef = useRef([]);
@@ -48,7 +52,9 @@ const localIndexReady = useRef(false);
 const chunkCache = useRef({});
 const fuseRef = useRef(null);
 const lastSpokenVerseRef = useRef(null);
-
+const [ttsPlaying, setTtsPlaying] = useState(false);
+const ttsUtteranceRef = useRef(null);
+const voiceInputRef = useRef(null);
 
 
 // -------------------------
@@ -92,16 +98,48 @@ useEffect(() => {
 
 
 
-const speakVerse = (verse) => {
+const toggleSpeakVerse = (verse) => {
   if (!verse || !window.speechSynthesis) return;
 
-  const utterance = new SpeechSynthesisUtterance(`${verse.text}`);
+  // Stop current TTS if already playing
+  if (ttsPlaying) {
+    window.speechSynthesis.cancel();
+    setTtsPlaying(false);
+
+    // Resume mic if available
+    if (voiceInputRef.current?.startListening) {
+      voiceInputRef.current.startListening();
+    }
+    return;
+  }
+
+  // Stop mic before starting TTS
+  if (voiceInputRef.current?.stopListening) {
+    voiceInputRef.current.stopListening();
+  }
+
+  // Start new TTS
+  const utterance = new SpeechSynthesisUtterance(verse.text);
   utterance.lang = "en-US";
-  utterance.rate = 1;     // normal speed
-  utterance.pitch = 1;    // normal pitch
-  window.speechSynthesis.cancel(); // stop any previous speech
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  utterance.onstart = () => setTtsPlaying(true);
+  utterance.onend = () => {
+    setTtsPlaying(false);
+
+    // Resume mic after TTS finishes
+    if (voiceInputRef.current?.startListening) {
+      voiceInputRef.current.startListening();
+    }
+  };
+
+  ttsUtteranceRef.current = utterance;
   window.speechSynthesis.speak(utterance);
 };
+
+
+
 
 
 
@@ -258,42 +296,141 @@ function wordSimilarity(a, b) {
   if (b.includes(a) || a.includes(b)) return 0.85;
   return 0;
 }
+
+function normalizeBookName(rawBook) {
+  if (!rawBook) return null;
+
+  // Clean input
+  const cleaned = rawBook.toLowerCase().replace(/\./g, "").replace(/\s+/g, " ").trim();
+  console.group(`🔍 Normalizing Book Name: "${rawBook}"`);
+  console.log("Cleaned input:", cleaned);
+
+  for (const book of bibleBooks) {
+    const cleanedName = book.name.toLowerCase().replace(/\s+/g, " ");
+    // Check official name
+    if (cleanedName === cleaned) {
+      console.log(`✅ Matched official name: ${book.name} → abbrev: ${book.abbrev}`);
+      console.groupEnd();
+      return book.abbrev;
+    }
+
+    // Check aliases
+    for (const alias of book.aliases) {
+      const cleanedAlias = alias.toLowerCase().replace(/\s+/g, " ");
+      if (cleanedAlias === cleaned) {
+        console.log(`✅ Matched alias: ${alias} → abbrev: ${book.abbrev}`);
+        console.groupEnd();
+        return book.abbrev;
+      }
+    }
+  }
+
+  console.warn("❌ No match found for:", rawBook);
+  console.groupEnd();
+  return null;
+}
+
+
+
+
+
 // ---------- Step 0: Fetch verse by reference ----------
 function fetchVerseByReference(query) {
-  console.log("🔎 Trying reference lookup layer");
+  console.group("📖 REFERENCE LOOKUP DEBUG");
+  console.log("Raw query:", query);
 
-  const referenceRegex = /(\b[a-zA-Z]+)\s+(\d+)\s*(?:[:.\-]\s*(\d+))?/; 
+  const referenceRegex =
+    /(\b[1-3]?\s?[a-zA-Z]+)\s+(\d+)\s*(?:[:.\-]\s*(\d+))?/;
+
   const match = query.match(referenceRegex);
 
+  console.log("Regex used:", referenceRegex);
+  console.log("Regex match result:", match);
+
   if (!match) {
-    console.log("⏭️ Reference layer empty → move to next layer");
+    console.warn("❌ No reference pattern matched");
+    console.groupEnd();
     return null;
   }
 
-  const bookName = match[1];
-  const chapter = parseInt(match[2]);
-  const verse = match[3] ? parseInt(match[3]) : 1;
+  const rawBook = match[1];
+  const chapter = Number(match[2]);
+  const verse = match[3] ? Number(match[3]) : 1;
 
-  const local = getLocalVerse(bookName, chapter, verse);
+  console.log("Extracted raw book:", rawBook);
+  console.log("Extracted chapter:", chapter);
+  console.log("Extracted verse:", verse);
+
+  const normalizedBook = normalizeBookName(rawBook);
+  console.log("Normalized book name:", normalizedBook);
+
+  const local = getLocalVerse(normalizedBook, chapter, verse);
+
+  console.log("Local verse lookup result:", local);
+
   if (!local) {
-    console.log("⏭️ Reference not found → move to next layer");
+    console.warn("❌ Reference exists but verse not found locally");
+    console.groupEnd();
     return null;
   }
 
-  console.log("✅ Using reference lookup layer");
+  console.log("✅ REFERENCE LOOKUP SUCCESS");
+  console.groupEnd();
+
   return {
     verse: local,
     context: {
       currentBook: local.book,
       currentChapter: local.chapter,
       currentVerse: local.verse,
-    }
+    },
   };
 }
 
+
+
+// 🟢 LAYER 1 Fuse.js semantic fuzzy ranking
+const fuseLayer = (query) => {
+  console.log("🔎 Trying LAYER 1: Fuse.js fuzzy search");
+
+  if (!query.trim() || !fuseRef.current) {
+    console.log("⏭️ LAYER 1 empty → move to LAYER 2");
+    return null;
+  }
+
+  const results = fuseRef.current.search(query.trim());
+  const q = query.trim().toLowerCase();
+
+  if (!results.length) {
+    console.log("⏭️ LAYER 1 no Fuse results → move to LAYER 2");
+    return null;
+  }
+
+  const ranked = results
+    .map(r => {
+      const text = r.item.text.toLowerCase();
+      const book = r.item.book.toLowerCase();
+
+      let boost = 0;
+
+      if (text.includes(q)) boost -= 0.15;
+      if (book.includes(q)) boost -= 0.1;
+      boost += Math.min(text.length / 1000, 0.1);
+
+      return {
+        ...r.item,
+        _score: r.score + boost,
+      };
+    })
+    .sort((a, b) => a._score - b._score);
+
+  console.log("✅ Using LAYER 1: Fuse.js fuzzy search");
+  return ranked.slice(0, 3);
+};
+
 // ---------- LAYER 1: Two-word phrase match ----------
 function phraseMatchLayer(tokens, tokenSets) {
-  console.log("🔎 Trying LAYER 1: Phrase match");
+  console.log("🔎 Trying LAYER 2: Phrase match");
 
   const phrases = buildBigrams(tokens);
   const phraseMatches = [];
@@ -320,7 +457,7 @@ function phraseMatchLayer(tokens, tokenSets) {
     return null;
   }
 
-  console.log("✅ Using LAYER 1: Phrase match");
+  console.log("✅ Using LAYER 2: Phrase match");
 
   // Sort descending by score and take top 3
   phraseMatches.sort((a, b) => b.score - a.score);
@@ -329,7 +466,7 @@ function phraseMatchLayer(tokens, tokenSets) {
 
 // ---------- LAYER 2: Strict intersection exact match ----------
 function exactMatchLayer(tokens, tokenSets) {
-  console.log("🔎 Trying LAYER 2: Exact intersection match");
+  console.log("🔎 Trying LAYER 3: Exact intersection match");
 
   if (!tokens.length || !tokenSets.length) {
     console.log("⏭️ LAYER 2 empty → move to next layer");
@@ -357,51 +494,14 @@ function exactMatchLayer(tokens, tokenSets) {
     return null;
   }
 
-  console.log("✅ Using LAYER 2: Exact match");
+  console.log("✅ Using LAYER 3: Exact match");
 
   // Sort by text length (shorter first) and return top 3
   exactMatches.sort((a, b) => a.text.length - b.text.length);
   return exactMatches.slice(0, 3);
 }
 
-// 🟢 LAYER 3: Fuse.js semantic fuzzy ranking
-const fuseLayer = (query) => {
-  console.log("🔎 Trying LAYER 3: Fuse.js fuzzy search");
 
-  if (!query.trim() || !fuseRef.current) {
-    console.log("⏭️ LAYER 3 empty → move to LAYER 4");
-    return null;
-  }
-
-  const results = fuseRef.current.search(query.trim());
-  const q = query.trim().toLowerCase();
-
-  if (!results.length) {
-    console.log("⏭️ LAYER 3 no Fuse results → move to LAYER 4");
-    return null;
-  }
-
-  const ranked = results
-    .map(r => {
-      const text = r.item.text.toLowerCase();
-      const book = r.item.book.toLowerCase();
-
-      let boost = 0;
-
-      if (text.includes(q)) boost -= 0.15;
-      if (book.includes(q)) boost -= 0.1;
-      boost += Math.min(text.length / 1000, 0.1);
-
-      return {
-        ...r.item,
-        _score: r.score + boost,
-      };
-    })
-    .sort((a, b) => a._score - b._score);
-
-  console.log("✅ Using LAYER 3: Fuse.js fuzzy search");
-  return ranked.slice(0, 3);
-};
 
 // 🔹 LAYER 4: Token overlap scoring function
 const tokenOverlapLayer = (tokens, tokenSets) => {
@@ -547,7 +647,7 @@ const handleMatch = (matches) => {
   // 🔐 Prevent repeated reading
   if (lastSpokenVerseRef.current !== verseKey) {
     lastSpokenVerseRef.current = verseKey;
-    speakVerse(verse);
+    toggleSpeakVerse(verse);
   } else {
     console.log("🔁 Verse already spoken, skipping TTS");
   }
@@ -573,9 +673,9 @@ const handleMatch = (matches) => {
   if (!tokenSets.length) tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
 
   // Layers in order
+  if (handleMatch(fuseLayer(query))) return; 
 if (handleMatch(phraseMatchLayer(tokens, tokenSets))) return;      // Layer 1: bigram phrase
-if (handleMatch(exactMatchLayer(tokens, tokenSets))) return;       // Layer 2: strict intersection
-if (handleMatch(fuseLayer(query))) return;                         // Layer 3: Fuse semantic
+if (handleMatch(exactMatchLayer(tokens, tokenSets))) return;       // Layer 2: strict intersection                        // Layer 3: Fuse semantic
 if (handleMatch(tokenOverlapLayer(tokens, tokenSets))) return;     // Layer 4: token overlap
 if (handleMatch(letterSubsetLayer(tokens, tokenSets))) return;     // Layer 5: letter subset
 if (handleMatch(fuzzyLayer(tokens))) return;                       // Layer 6: fuzzy letter
@@ -701,6 +801,7 @@ useEffect(() => {
 </div>
 
 <VoiceInput
+   ref={voiceInputRef}
   onTranscribe={async (sentChunk, leftover, meta = {}) => {
     // 🔵 Live typing: always update textarea with what's being spoken
     if (meta.live) {
@@ -844,26 +945,30 @@ useEffect(() => {
       font-medium
       tracking-wider
       uppercase
-      
     "
   >
     {v.book} {v.chapter}:{v.verse}
   </p>
 
   {/* Verse text */}
-  <p
-    className="
-      text-[15px]
-      leading-relaxed
-      text-[var(--secondary)]
-      font-normal
-      transition-[var(--transition-default)]
-      group-hover:text-[var(--white)]
-    "
-  >
+<div className="flex flex-col">
+  <p className="text-[15px] leading-relaxed text-[var(--secondary)] font-normal transition-[var(--transition-default)] group-hover:text-[var(--white)]">
     {v.text}
   </p>
+{idx === 0 && (
+  <button
+    className="mt-3 w-10 h-10 flex items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg hover:bg-indigo-700 transition-[var(--transition-default)] relative z-10"
+    onClick={() => toggleSpeakVerse(v)}
+    title={ttsPlaying ? "Pause" : "Play"}
+  >
+    {ttsPlaying ? <Pause size={20} /> : <Play size={20} />}
+  </button>
+)}
+
 </div>
+
+</div>
+
 
 ))}
 
