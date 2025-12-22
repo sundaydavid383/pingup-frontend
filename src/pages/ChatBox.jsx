@@ -12,12 +12,16 @@ import { useSocket } from "../context/SocketContext";
 import { useMessageContext } from "../context/MessageContext";
 import { FaArrowDown } from "react-icons/fa";
 import ThemeDropdown from "../component/ThemeDropdown";
+import BackButton from "../component/shared/BackButton";
 import "../component/themeDropdown.css";
 import './chatbox.css'
 import { useTheme } from "../context/ThemeContext";
 import AudioMessage from "../component/shared/AudioMessage";
 import ChatMessagesFull from "../component/ChatMessagesFull";
-
+import { ArrowLeft } from "lucide-react";
+import ChatboxHeader from "../component/shared/ChatboxHeader";
+import ChatboxInput from "../component/shared/ChatboxInput";
+import HeaderArrow from "../component/shared/HeaderArrow";
 
 
 
@@ -156,17 +160,19 @@ const ChatBox = () => {
     };
 const handleReceiveMessage = (newMsg) => {
   setMessages(prev => {
-    // 1️⃣ If message already exists → ignore
-    if (prev.some(m => m._id === newMsg._id)) {
-      return prev;
-    }
+    // 1️⃣ Ignore exact duplicates
+    if (prev.some(m => m._id === newMsg._id)) return prev;
 
-    // 2️⃣ Replace temp message if it exists
+    // 2️⃣ Ignore your own messages coming from the socket
+    if (newMsg.from_user_id === user._id) return prev;
+
+    // 3️⃣ Replace temp message if it exists (optimistic UI)
     const tempIndex = prev.findIndex(m =>
       m._id.startsWith("temp_") &&
       m.from_user_id === newMsg.from_user_id &&
       m.to_user_id === newMsg.to_user_id &&
-      m.text === newMsg.text
+      m.text === newMsg.text &&
+      (!newMsg.media_url || m.media_url === newMsg.media_url) // check media match
     );
 
     if (tempIndex !== -1) {
@@ -175,10 +181,11 @@ const handleReceiveMessage = (newMsg) => {
       return updated;
     }
 
-    // 3️⃣ Otherwise append
+    // 4️⃣ Otherwise append the new message
     return [...prev, newMsg];
   });
 };
+
 
 
 
@@ -564,19 +571,20 @@ useEffect(() => {
 
     // When messages exist
     return (
-      <div className="flex items-center justify-between p-2 bg-multi-gradient text-white fixed top-0 left-0 right-0">
-        <div className="flex title items-center gap-3">
-          <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer">
-            <ProfileAvatar user={receiver} size={48} />
-          </div>
-          <div>
+      <div className="flex items-center justify-between p-2 bg-[var(--white)] text-[var(--primary)]">
+<div className="flex title items-center gap-3">
+  <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
+  <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer">
+    <ProfileAvatar user={receiver} size={48} />
+  </div>
+  <div>
 <p className="font-medium text-[0.9rem] text-[var(--primary)]">
   {receiver.username}
 </p>
 {onlineUsers.has(receiver._id) ? (
   <span className="text-green-500 text-sm">Online</span>
 ) : lastActive ? (
-  <span className="text-gray-500 text-sm">
+  <span className="text-[var(--secondary)] text-[0.8rem]">
     Active {moment(lastActive).fromNow()}
   </span>
 ) : (
@@ -649,10 +657,13 @@ useEffect(() => {
   return (
     <div
      ref={chatContainerRef} 
-      className="flex flex-col h-full w-full relative">
-      <div className="chatbox-header">
-        {renderHeader()}
-      </div>
+      className="flex flex-col mt-15 h-[84%] mobilenav_intervention_inverse w-full relative">
+
+      
+
+        <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>    
+                {renderHeader()}
+      </ChatboxHeader>
         <div
         ref={containerRef}
           className="flex flex-col chatbox-wrapper 
@@ -858,20 +869,13 @@ useEffect(() => {
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
-<div
-  className="z-20 w-full mx-auto flex items-end gap-2 px-4 py-2 sticky bottom-0"
-  style={{
-    background: "var(--input-ui-overlay, rgba(255,255,255,0.95))",
-    paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.12)",
-  }}
-  
->
+<ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
+
   {/* Textarea (only show if not recording) */}
  {!recording && !audioURL && (
     <textarea
       id="chatInput"
-      className="flex-1 min-h-[40px] max-h-[120px] resize-none outline-none border-none text-sm leading-relaxed text-black"
+      className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
       style={{
         borderRadius: "20px",
         padding: "12px 16px",
@@ -1000,7 +1004,7 @@ useEffect(() => {
 
 {(!recording && (text?.trim() || image || audioURL)) && (
   <button
-    onClick={sendMessage}
+    onClick={() =>{scrollToBottom(); sendMessage()}}
     style={{ backgroundColor: "var(--input-primary)" }}
     className="text-white p-2 rounded-full flex items-center justify-center"
     title="Send"
@@ -1045,7 +1049,7 @@ useEffect(() => {
     </button>
   )}
   </div>
-</div>
+</ChatboxInput>
 
       </div>
       );

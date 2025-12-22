@@ -11,24 +11,27 @@ const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
   const sidebarRef = useRef(null); // Reference to the sidebar
 
-  // Close sidebar on click outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target) &&
-        sidebarOpen
-      ) {
-        setSidebarOpen(false);
-      }
-    };
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    // Only trigger on mobile widths (e.g., width <= 768px)
+    if (window.innerWidth > 768) return;
 
-    document.addEventListener('mousedown', handleClickOutside);
+    if (
+      sidebarRef.current &&
+      !sidebarRef.current.contains(event.target) &&
+      sidebarOpen
+    ) {
+      setSidebarOpen(false);
+    }
+  };
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [sidebarOpen, setSidebarOpen]);
+  document.addEventListener('mousedown', handleClickOutside);
+
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, [sidebarOpen, setSidebarOpen]);
+
 
   if (!user) return <Loading />;
 

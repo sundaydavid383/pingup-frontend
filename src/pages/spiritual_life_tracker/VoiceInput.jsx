@@ -9,6 +9,7 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled }, ref) => {
   const recognitionRef = useRef(null);
   const leftoverRef = useRef(""); // unsent words
   const pauseTimer = useRef(null);
+  const isPausedRef = useRef(false);
 
   // chunking config
   const MIN_CHUNK_WORDS = 10; 
@@ -123,9 +124,12 @@ recognition.onresult = (event) => {
 
     recognition.onerror = (event) => console.error("SpeechRecognition error:", event.error);
 
-    recognition.onend = () => {
-      if (listening) recognition.start();
-    };
+recognition.onend = () => {
+  if (listening && !isPausedRef.current) {
+    recognition.start();
+  }
+};
+
 
     recognitionRef.current = recognition;
 
@@ -140,24 +144,19 @@ recognition.onresult = (event) => {
 const startListening = () => {
   if (disabled || listening || !recognitionRef.current) return;
   leftoverRef.current = "";
-  try {
-    recognitionRef.current.start();
-    setListening(true);
-  } catch (err) {
-    console.error(err);
-  }
+  isPausedRef.current = false;
+  recognitionRef.current.start();
+  setListening(true);
 };
 
-// Stop microphone listening
 const stopListening = () => {
   if (!listening || !recognitionRef.current) return;
-  const leftover = leftoverRef.current.trim();
-  if (leftover) onTranscribe(leftover, "");
   leftoverRef.current = "";
+  isPausedRef.current = true;  // prevent auto-restart
   recognitionRef.current.stop();
   setListening(false);
-  if (pauseTimer.current) clearTimeout(pauseTimer.current);
 };
+
 
 // Toggle mic
 const toggleListening = () => (listening ? stopListening() : startListening());

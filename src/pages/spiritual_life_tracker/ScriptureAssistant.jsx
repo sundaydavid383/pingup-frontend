@@ -110,6 +110,7 @@ const toggleSpeakVerse = (verse) => {
     if (voiceInputRef.current?.startListening) {
       voiceInputRef.current.startListening();
     }
+
     return;
   }
 
@@ -125,6 +126,7 @@ const toggleSpeakVerse = (verse) => {
   utterance.pitch = 1;
 
   utterance.onstart = () => setTtsPlaying(true);
+
   utterance.onend = () => {
     setTtsPlaying(false);
 
@@ -137,6 +139,7 @@ const toggleSpeakVerse = (verse) => {
   ttsUtteranceRef.current = utterance;
   window.speechSynthesis.speak(utterance);
 };
+
 
 
 

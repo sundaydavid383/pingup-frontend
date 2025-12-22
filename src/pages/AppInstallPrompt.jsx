@@ -31,7 +31,7 @@ export default function AppInstallPrompt() {
     <div className="install-overlay">
       <div className="install-modal">
         <img src="/icons/icon-192.png" alt="SpringssConnect" />
-        <h2>Install SpringssConnect?</h2>
+        <h2>Install SpringsConnect?</h2>
         <p>Would you like to install the app for a faster, offline-ready experience?</p>
         <div className="install-actions">
           <button className="yes-btn" onClick={installApp}>

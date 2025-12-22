@@ -28,12 +28,8 @@ html, body {
 /* -----------------------------
    HEADER (STICKY)
 ----------------------------- */
-.chatbox-header {
- 
-  z-index: 60; /* keep header above messages */
-  background: var(--bg-main, #fff);
-  box-sizing: border-box;
-}
+
+
 
 /* -----------------------------
    MESSAGES AREA
@@ -45,6 +41,12 @@ html, body {
   overflow-y: auto;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 638px){
+  .mobilenav_intervention_inverse{
+    margin-top: .5rem;
+    height: 90%;
+  }
 }
 
 /* -----------------------------
