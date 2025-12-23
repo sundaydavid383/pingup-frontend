@@ -22,7 +22,7 @@
   position: sticky;
   top: 5px;
   z-index: 200;
-  width: 120%;
+  width: 100%;
   padding: 0.5rem 1rem;
   background: rgba(40, 41, 85, 0.8);
   backdrop-filter: blur(20px);
@@ -88,7 +88,7 @@
 .search-toggle-icon {
   font-size: 1.4rem;
   cursor: pointer;
-  color: var(--primary);
+  color: var(--hover-light);
   transition: transform 0.2s;
 }
 .search-toggle-icon:hover {
@@ -173,7 +173,7 @@
 .selectors-toggle-icon {
   font-size: 1.4rem;
   cursor: pointer;
-  color: var(--primary);
+  color: var(--hover-light);
 }
 .selectors-dropdown {
   position: absolute;
@@ -195,6 +195,11 @@
     font-size: 1rem;
     max-width: 50%;
   }
+  .bible-reader-inner {
+  width: 100%;
+  max-width: 700px; /* your original reading width */
+  padding: 0rem;
+}
 }
 @media (max-width: 500px) {
   .bible-title {

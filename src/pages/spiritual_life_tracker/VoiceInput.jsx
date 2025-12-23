@@ -1,88 +1,24 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef,forwardRef, useImperativeHandle } from "react";
 import { Mic, MicOff } from "lucide-react";
 import MicButton from "./MicButton";
+import assets from '../../assets/assets'
 
 
-export default function VoiceInput({ onTranscribe, disabled }) {
+const VoiceInput = forwardRef(({ onTranscribe, disabled }, ref) => {
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null);
   const leftoverRef = useRef(""); // unsent words
   const pauseTimer = useRef(null);
+  const isPausedRef = useRef(false);
 
   // chunking config
   const MIN_CHUNK_WORDS = 10; 
   const MAX_CHUNK_WORDS = 20; 
   const PAUSE_MS = 200; 
+  const bibleBooks = assets.bibleBooks
 
   // Bible books array with common abbreviations
-  const bibleBooks = [
-    { name: "Genesis", aliases: ["gen", "ge", "gn"] },
-    { name: "Exodus", aliases: ["exod", "ex", "exo"] },
-    { name: "Leviticus", aliases: ["lev", "lv"] },
-    { name: "Numbers", aliases: ["num", "nm", "nu"] },
-    { name: "Deuteronomy", aliases: ["deut", "dt"] },
-    { name: "Joshua", aliases: ["josh", "jos", "jsh"] },
-    { name: "Judges", aliases: ["judg", "jdg", "jg"] },
-    { name: "Ruth", aliases: ["ruth", "ru"] },
-    { name: "1 Samuel", aliases: ["1 sam", "1 sm", "i sam"] },
-    { name: "2 Samuel", aliases: ["2 sam", "2 sm", "ii sam"] },
-    { name: "1 Kings", aliases: ["1 kgs", "1 ki", "i kings"] },
-    { name: "2 Kings", aliases: ["2 kgs", "2 ki", "ii kings"] },
-    { name: "1 Chronicles", aliases: ["1 chron", "1 ch", "i chron"] },
-    { name: "2 Chronicles", aliases: ["2 chron", "2 ch", "ii chron"] },
-    { name: "Ezra", aliases: ["ezra", "ezr"] },
-    { name: "Nehemiah", aliases: ["neh", "ne"] },
-    { name: "Esther", aliases: ["esth", "es"] },
-    { name: "Job", aliases: ["job"] },
-    { name: "Psalms", aliases: ["ps", "psalm", "psa", "pss"] },
-    { name: "Proverbs", aliases: ["prov", "pr", "prv"] },
-    { name: "Ecclesiastes", aliases: ["eccl", "ecc", "qe"] },
-    { name: "Song of Solomon", aliases: ["song", "ss", "song of sol"] },
-    { name: "Isaiah", aliases: ["isa", "is"] },
-    { name: "Jeremiah", aliases: ["jer", "je", "jr"] },
-    { name: "Lamentations", aliases: ["lam", "la"] },
-    { name: "Ezekiel", aliases: ["ezek", "ez", "eze"] },
-    { name: "Daniel", aliases: ["dan", "dn"] },
-    { name: "Hosea", aliases: ["hos", "ho"] },
-    { name: "Joel", aliases: ["joel", "jl"] },
-    { name: "Amos", aliases: ["amos", "am"] },
-    { name: "Obadiah", aliases: ["obad", "ob"] },
-    { name: "Jonah", aliases: ["jonah", "jon"] },
-    { name: "Micah", aliases: ["mic", "mc"] },
-    { name: "Nahum", aliases: ["nah", "na"] },
-    { name: "Habakkuk", aliases: ["hab", "hb"] },
-    { name: "Zephaniah", aliases: ["zeph", "zp"] },
-    { name: "Haggai", aliases: ["hag", "hg"] },
-    { name: "Zechariah", aliases: ["zech", "zc"] },
-    { name: "Malachi", aliases: ["mal", "ml"] },
-    { name: "Matthew", aliases: ["matt", "mathew"] },
-    { name: "Mark", aliases: ["mark", "mk", "mrk"] },
-    { name: "Luke", aliases: ["luke", "lk", "luk"] },
-    { name: "John", aliases: ["john", "jn", "jhn"] },
-    { name: "Acts", aliases: ["acts", "ac"] },
-    { name: "Romans", aliases: ["rom", "ro", "rm"] },
-    { name: "1 Corinthians", aliases: ["1 cor", "i cor", "1 co"] },
-    { name: "2 Corinthians", aliases: ["2 cor", "ii cor", "2 co"] },
-    { name: "Galatians", aliases: ["gal", "ga"] },
-    { name: "Ephesians", aliases: ["eph", "ep"] },
-    { name: "Philippians", aliases: ["phil", "php", "pp"] },
-    { name: "Colossians", aliases: ["col", "cl"] },
-    { name: "1 Thessalonians", aliases: ["1 thess", "i thess", "1 th"] },
-    { name: "2 Thessalonians", aliases: ["2 thess", "ii thess", "2 th"] },
-    { name: "1 Timothy", aliases: ["1 tim", "i tim", "1 ti"] },
-    { name: "2 Timothy", aliases: ["2 tim", "ii tim", "2 ti"] },
-    { name: "Titus", aliases: ["titus", "ti"] },
-    { name: "Philemon", aliases: ["philem", "phm"] },
-    { name: "Hebrews", aliases: ["heb", "he"] },
-    { name: "James", aliases: ["jas", "jm"] },
-    { name: "1 Peter", aliases: ["1 pet", "i pet", "1 pe"] },
-    { name: "2 Peter", aliases: ["2 pet", "ii pet", "2 pe"] },
-    { name: "1 John", aliases: ["1 jn", "i jn", "1 jn"] },
-    { name: "2 John", aliases: ["2 jn", "ii jn", "2 jn"] },
-    { name: "3 John", aliases: ["3 jn", "iii jn", "3 jn"] },
-    { name: "Jude", aliases: ["jude", "jd"] },
-    { name: "Revelation", aliases: ["rev", "re", "rv"] },
-  ];
+
 
   const processTranscript = (transcript) => {
     const normalizeTranscript = (text) => {
@@ -188,9 +124,12 @@ recognition.onresult = (event) => {
 
     recognition.onerror = (event) => console.error("SpeechRecognition error:", event.error);
 
-    recognition.onend = () => {
-      if (listening) recognition.start();
-    };
+recognition.onend = () => {
+  if (listening && !isPausedRef.current) {
+    recognition.start();
+  }
+};
+
 
     recognitionRef.current = recognition;
 
@@ -201,28 +140,38 @@ recognition.onresult = (event) => {
     };
   }, [onTranscribe, listening]);
 
-  const startListening = () => {
-    if (disabled || listening || !recognitionRef.current) return;
-    leftoverRef.current = "";
-    try { recognitionRef.current.start(); setListening(true); } catch (err) { console.error(err); }
-  };
+// Start microphone listening
+const startListening = () => {
+  if (disabled || listening || !recognitionRef.current) return;
+  leftoverRef.current = "";
+  isPausedRef.current = false;
+  recognitionRef.current.start();
+  setListening(true);
+};
 
-  const stopListening = () => {
-    if (!listening || !recognitionRef.current) return;
-    const leftover = leftoverRef.current.trim();
-    if (leftover) onTranscribe(leftover, "");
-    leftoverRef.current = "";
-    recognitionRef.current.stop();
-    setListening(false);
-    if (pauseTimer.current) clearTimeout(pauseTimer.current);
-  };
+const stopListening = () => {
+  if (!listening || !recognitionRef.current) return;
+  leftoverRef.current = "";
+  isPausedRef.current = true;  // prevent auto-restart
+  recognitionRef.current.stop();
+  setListening(false);
+};
 
-  const toggleListening = () => listening ? stopListening() : startListening();
+
+// Toggle mic
+const toggleListening = () => (listening ? stopListening() : startListening());
 
   const randomHeight = (idx) => {
     const base = 6 + (idx % 3) * 3;
     return `${base + Math.floor(Math.random() * 10)}px`;
   };
+
+  useImperativeHandle(ref, () => ({
+  start: startListening,
+  stop: stopListening,
+  toggle: toggleListening,
+  isListening: () => listening,
+}));
 
 return (
   <>
@@ -235,4 +184,6 @@ return (
   </>
 );
 
-}
+});
+export default VoiceInput;
+

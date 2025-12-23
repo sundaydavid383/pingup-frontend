@@ -3,7 +3,7 @@ import image1 from "../assets/port1.png"
 import image2 from "../assets/port2.png"
 import image3 from "../assets/port3.png"
 import image4 from "../assets/port4.png"
-import profile from "../assets/port5.jpg"
+import profile from "../assets/port5.jpeg"
 import { FaFacebook, FaWhatsapp, FaPhoneAlt, FaEnvelope, FaInstagram, FaYoutube } from "react-icons/fa";
 // Portfolio.jsx (dynamic)
 // - This version uses arrays to drive the UI so you can add/remove items easily.

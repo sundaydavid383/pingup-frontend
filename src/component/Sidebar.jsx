@@ -28,22 +28,16 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 
   return (
 <div
-  className={`
-    fixed top-0 left-0 z-[999] flex flex-col justify-between
+  className={`fixed top-0 left-0 z-[999999999] flex flex-col justify-between
     transition-transform duration-300 ease-in-out
+
     ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
     w-52 md:w-56 lg:w-60
     h-screen
   `}
 
-      style={{
-        backgroundColor: 'var(--form-bg)',
-        borderRight: '1px solid var(--input-border)',
-        color: 'var(--text-main)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
-    >
+
+
       {/* Mobile Close Button */}
       <X
         className="absolute top-3 right-3 w-8 h-8 p-1.5 rounded-md text-gray-700 bg-white shadow-md md:hidden cursor-pointer hover:bg-gray-100 transition"
