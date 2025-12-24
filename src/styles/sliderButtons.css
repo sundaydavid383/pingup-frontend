@@ -1,0 +1,131 @@
+/* Shared styles for both navigation buttons */
+.nav-btn {
+  position: absolute;
+  top: 12%;
+  transform: translateY(-50%) scale(1);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--secondary); /* main color */
+  color: white;
+  cursor: pointer;
+  font-size: 2rem;
+  opacity: 1;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  /* Smooth animation for transform, shadow, and color */
+  transition: 
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover state - lift and glow */
+.nav-btn:hover {
+  transform: translateY(-50%) scale(1.15);
+  background-color: var(--hover-dark); /* darker shade */
+  color: var(--secondary);
+  box-shadow: 0 0 20px 5px var(--hover-dark);
+}
+
+/* Disabled state */
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: translateY(-50%) scale(1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Positioning */
+.nav-btn-prev {
+  left: 20px;
+}
+
+.nav-btn-next {
+  right: 30px;
+}
+
+/* Optional: smooth appearing animation when the component mounts */
+.nav-btn {
+  animation: fadeInMove 0.4s ease-out;
+}
+
+@keyframes fadeInMove {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+
+/* Close Button */
+.close-btn {
+  position: absolute;
+  top: .4rem;        /* top spacing */
+  right: 2rem;      /* right spacing */
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--danger); /* red */
+  color: white;
+  cursor: pointer;
+  font-size: 1.8rem;
+  opacity: 1;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  /* Smooth animation for hover effects */
+  transition: 
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover effect – lift and glow */
+.close-btn:hover {
+  transform: scale(1.15);
+  background-color: var(--danger-dark); /* darker red on hover */
+  box-shadow: 0 0 20px 5px rgba(255, 100, 100, 0.3);
+}
+
+/* Optional: fade-in animation */
+.close-btn {
+  animation: fadeInMove 0.4s ease-out;
+}
+
+/* Reuse the same fadeInMove animation */
+@keyframes fadeInMove {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.slide-left {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-right {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.slide-left,
+.slide-right {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}

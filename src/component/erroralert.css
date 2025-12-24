@@ -1,0 +1,91 @@
+.err-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 760px;
+  margin: 16px auto;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(255,235,235,0.95), rgba(255,245,245,0.95));
+  border: 1px solid rgba(255,84,84,0.12);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  color: #7a1820; /* dark reddish text */
+  animation: err-fade-in 300ms ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+/* left column with the icon */
+.err-left {
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* icon sizing and soft pop animation */
+.err-icon {
+  width: 34px;
+  height: 34px;
+  transform-origin: center;
+  animation: err-pop 420ms cubic-bezier(.18,.89,.32,1.28);
+  filter: drop-shadow(0 6px 12px rgba(255,71,87,0.12));
+}
+
+/* body: title + message */
+.err-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.err-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.err-text {
+  font-size: 13px;
+  line-height: 1.2;
+  color: #6c1b22;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* close button */
+.err-close {
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background .18s ease, transform .12s ease;
+  color: #7a1b22;
+}
+
+.err-close:hover { background: rgba(122,27,34,0.06); transform: scale(1.03); }
+.err-close:active { transform: scale(0.98); }
+
+/* subtle entry animation */
+@keyframes err-fade-in {
+  from { transform: translateY(-6px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* icon pop */
+@keyframes err-pop {
+  0% { transform: scale(.85); opacity: 0.6; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* small responsive tweaks */
+@media (max-width: 520px) {
+  .err-alert { margin: 10px; padding: 10px; border-radius: 10px; }
+  .err-text { white-space: normal; }
+}

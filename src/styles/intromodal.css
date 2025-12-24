@@ -1,0 +1,119 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  padding: 1rem;
+  backdrop-filter: blur(8px); /* optional: blur behind overlay too */
+}
+
+.modal-container {
+  max-width: 500px;
+  width: 100%;
+}
+
+.modal-content {
+  background: var(--chat-custom-gradient);
+  backdrop-filter: blur(15px); /* blurry background effect */
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(87, 87, 87, 0.3);
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  min-height: 200px; /* ensures some space for text */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+.modal-dot {
+  width: 7px;
+  height:7px;
+
+  border-radius: 50%;
+  background: var(--primary);
+  margin: 0 auto 1rem auto; /* center + spacing below */
+  position: absolute;
+  top: 3.3rem;
+  left:1rem;
+}
+
+/* soft glow */
+.modal-dot::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--primary) 0%,
+    transparent 70%
+  );
+  opacity: 0.35;
+}
+
+/* subtle pulse */
+@keyframes dotPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+.modal-dot {
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+
+
+
+
+.modal-buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+
+
+/* Animations */
+.slide-next {
+  animation: slideInFromRight 0.8s forwards;
+}
+.slide-prev {
+  animation: slideInFromLeft 0.8s forwards;
+}
+
+@keyframes slideInFromRight {
+  0% { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInFromLeft {
+  0% { transform: translateX(-100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Responsive text */
+@media (max-width: 400px) {
+  .modal-content {
+    padding: 1.5rem;
+  }
+  .modal-btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+  }
+}

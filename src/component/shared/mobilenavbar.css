@@ -1,0 +1,89 @@
+.mobile-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 55px;
+  background-color: var(--form-bg);
+  color: var(--text-main);
+  border-bottom: 1px solid var(--input-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  z-index: 50; /* lower than sidebar */
+}
+
+  .mobilenav_intervention{
+    padding-top: 3.5rem;
+  }
+
+/* Show only below the sidebar toggle width (same as sidebar) */
+@media (min-width: 638px) {
+  .mobile-navbar {
+    display: none;
+  }
+  .mobilenav_intervention{
+    padding-top: 0rem;
+  }
+}
+
+.mobile-navbar-toggle {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.mobile-navbar-toggle:hover {
+  background-color: #f0f0f0;
+}
+
+.mobile-navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 0 auto;
+}
+
+.mobile-navbar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.mobile-navbar-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--white); /* default icon color */
+  transition: all 0.3s ease;
+}
+
+.mobile-navbar-icon:hover {
+  color: var(--hover-dark);
+  cursor: pointer;
+}
+
+/* Badge styling */
+.mobile-navbar-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #dc2626; /* red */
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 9999px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    animation: mobile-badge-pulse 1.5s infinite
+}
+
+/* Pulse animation */
+@keyframes mobile-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}

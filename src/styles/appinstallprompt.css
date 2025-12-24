@@ -1,0 +1,86 @@
+.install-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75); /* use --bg-main transparency */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.install-modal {
+  background: var(--bg-light);
+  border-radius: var(--radius);
+  padding: 2rem;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: scaleIn 0.25s ease;
+  color: var(--text-main);
+}
+
+.install-modal img {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 1rem;
+}
+
+.install-modal h2 {
+  margin: 0.5rem 0;
+  font-size: 1.3rem;
+  color: var(--primary);
+}
+
+.install-modal p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.install-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.install-actions button {
+  flex: 1;
+  padding: 0.6rem 0;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-default);
+}
+
+.yes-btn {
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+}
+
+.yes-btn:hover {
+  background: var(--btn-hover);
+}
+
+.no-btn {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--text-secondary);
+}
+
+.no-btn:hover {
+  background: var(--hover-light);
+  color: var(--primary);
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -1,0 +1,15 @@
+.profile-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #d1d5db 0%, #e5e7eb 50%, #d1d5db 100%);
+  animation: profileShimmer 1.5s infinite;
+}
+
+@keyframes profileShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
