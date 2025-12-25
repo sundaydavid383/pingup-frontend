@@ -1,5 +1,6 @@
 // BibleReader.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 import { FaSearch, FaBook } from "react-icons/fa";
@@ -98,7 +99,9 @@ export default function BibleReader() {
   const [searchVisible, setSearchVisible] = useState(false);
   const searchRef = useRef(null);
   const [selectorsVisible, setSelectorsVisible] = useState(false);
-const selectorsRef = useRef(null);
+  const selectorsRef = useRef(null);
+  const { book, chapter, verse } = useParams();
+
 
 // Close dropdown if clicked outside
 useEffect(() => {
@@ -115,6 +118,14 @@ useEffect(() => {
     document.removeEventListener("mousedown", handleClickOutside);
   };
 }, []);
+
+
+const normalizeBookName = (input) => {
+  if (!input) return null;
+
+  const key = input.toLowerCase().replace(/\s+/g, "");
+  return BOOK_FULL_NAMES[key] || input;
+};
 
 
 
@@ -236,6 +247,48 @@ useEffect(() => {
     }, 300);
   };
 
+useEffect(() => {
+  if (!allVerses.length) return;
+
+  // If no params → normal behavior
+  if (!book || !chapter) return;
+
+  const normalizedBook = normalizeBookName(book);
+  const chapterNum = Number(chapter);
+
+  if (!normalizedBook || !chapterNum) return;
+
+  // Exit search mode
+  exitSearchMode();
+
+  setSelectedBookName(normalizedBook);
+  setSelectedChapterNumber(chapterNum);
+
+  const chapterVerses = allVerses.filter(
+    (v) => v.book === normalizedBook && v.chapter === chapterNum
+  );
+
+  setDisplayedVerses(chapterVerses);
+
+  // If verse exists → scroll to it
+  if (verse) {
+    setTimeout(() => {
+      const el = document.getElementById(
+        `v-${normalizedBook}-${chapterNum}-${verse}`
+      );
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        el.classList.add("verse-highlight");
+       setTimeout(()=>{
+          el.classList.remove("verse-highlight");
+        }, 1000)
+      }
+    }, 400);
+  }
+}, [allVerses, book, chapter, verse]);
 
 
   // Helper to pick random verses excluding an optional "exclude" array
@@ -414,7 +467,10 @@ const exitSearchMode = () => {
             behavior: "smooth",
             block: "center",
           });
-          el.classList.add("verse-visible");
+          el.classList.add("verse-highlight");
+          setTimeout(()=>{
+            el.classList.remove("verse-highlight");
+        }, 2000)
         }
       }, 300);
     };

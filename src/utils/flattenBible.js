@@ -22,7 +22,8 @@ export function flattenBible(bible) {
         let text = textRaw.trim();
 
         // Remove any text inside [], {}, ()
-        text = text.replace(/\[\]|\{\}|\(\)/g, "").trim();
+         text = text.replace(/\{[^}]*:[^}]*}/g, "").trim();
+
 
         const entry = {
           id,

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
+import "./micbutton.css"
 
-export default function MicButton({ listening, toggleListening }) {
+export default function MicButton({ listening, toggleListening, disabled, statusMessage }) {
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const micStreamRef = useRef(null);
@@ -58,6 +59,15 @@ export default function MicButton({ listening, toggleListening }) {
     };
   }, [listening]);
 
+  const getStatusClass = () => {
+  if (!statusMessage) return "";
+  if (statusMessage.toLowerCase().includes("loading")) return "loading";
+  if (statusMessage.toLowerCase().includes("not")) return "error";
+  if (listening) return "listening";
+  return "";
+};
+
+
   const glowIntensity = Math.min(1, volume * 3.5);
   const speaking = volume > 0.15;
 
@@ -65,7 +75,7 @@ export default function MicButton({ listening, toggleListening }) {
   const pulsateScale = 1 + volume * 0.8; // 1 → 1.8
 
   return (
-    <div className="flex w-full items-center justify-center py-6">
+    <div className="flex flex-col gap-6 w-full items-center justify-center py-6">
       <div
         className={`relative flex items-center justify-center rounded-full transition-all duration-150 ease-out ${
           listening ? "w-[90px] h-[90px]" : "w-[48px] h-[48px]"
@@ -100,7 +110,7 @@ export default function MicButton({ listening, toggleListening }) {
         {/* ===== AMBIENT GLOW ===== */}
         {listening && !permissionDenied && (
           <div
-            className="absolute rounded-full"
+            className="absolute rounded-full "
             style={{
               inset: `-${15 + volume * 20}px`,
               background: "var(--primary)",
@@ -116,6 +126,7 @@ export default function MicButton({ listening, toggleListening }) {
           type="button"
           onClick={toggleListening}
           aria-pressed={listening}
+          disabled={disabled || false}
           aria-label={
             permissionDenied
               ? "Microphone permission denied"
@@ -136,18 +147,18 @@ export default function MicButton({ listening, toggleListening }) {
             shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]
             text-[var(--btn-text)]
             ${listening ? "w-[64px] h-[64px] bg-[var(--form-bg)]" : "w-[54px] h-[54px] bg-[var(--btn-bg)]"}
-            ${permissionDenied ? "bg-red-600 cursor-not-allowed" : ""}
+            ${disabled ? "bg-red-600 cursor-not-allowed opacity-60" : ""}
           `}
         >
-          {permissionDenied ? (
-            <MicOff className="w-8 h-8" />
-          ) : listening ? (
-            <MicOff className="w-8 h-8" />
-          ) : (
-            <Mic className="w-8 h-8" />
-          )}
+           {listening ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
         </button>
       </div>
+          {statusMessage && <div className={`mic-status ${getStatusClass()}`}>
+             {statusMessage}
+           </div>
+}
+
+    
     </div>
   );
 }

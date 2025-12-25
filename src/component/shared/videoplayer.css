@@ -87,6 +87,7 @@
   padding: 8px 10px;
   background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--vp-bg) 60%);
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--vp-gap);
   z-index: 530;
@@ -95,14 +96,21 @@
 }
 .vp-controls.hidden { opacity: 0; transform: translateY(10px); pointer-events: none; }
 .vp-controls.visible { opacity: 1; pointer-events: auto; }
-
+.vp-bottom{
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.vp-progress-wrapper{
+  width: 93%;
+}
 .vp-left, .vp-center, .vp-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .vp-left { min-width: 160px; margin-right: 8px; }
-.vp-center { flex: 1; position: relative; align-items: center; }
+.vp-center { flex: 1; position: relative; align-items: center; width: 100% }
 .vp-right { margin-left: 8px; align-items: center; }
 
 /* small buttons */

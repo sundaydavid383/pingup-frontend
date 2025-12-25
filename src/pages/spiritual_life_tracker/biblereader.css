@@ -322,6 +322,14 @@
   filter: blur(0px) !important;
   opacity: 1;
 }
+.verse-highlight {
+  background-color: var(--chat-custom-gradient) !important;
+  color: white !important;
+  opacity: 1 !important;
+  filter: blur(0px) !important;
+  transition: background-color 0.3s ease;
+}
+
 /* Random verses should always be fully visible and white */
 .random-verse {
   filter: none !important;
@@ -454,12 +462,14 @@
 .verse-card:hover{
     background: linear-gradient(
     180deg,
-    rgba(95, 120, 196, 0.06),
+    rgba(185, 189, 197, 0.6),
     transparent 40%
   ),
-  rgba(7, 23, 70, 0.6);
+  rgba(69, 98, 185, 0.6);
   backdrop-filter: blur(22px);
 }
+
+
 
 .verse-reference{
   color: var(--primary);

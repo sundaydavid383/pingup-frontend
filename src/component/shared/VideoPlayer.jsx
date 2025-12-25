@@ -385,18 +385,8 @@ return (
       className={`vp-controls ${showControls || !playing ? "visible" : "hidden"}`}
       onMouseMove={(e) => e.stopPropagation()}
     >
-      <div className="vp-left">
-        {/* Left play/pause button */}
-        <button className="vp-btn vp-btn-large" onClick={handlePlayPause} aria-label={playing ? "Pause" : "Play"}>
-          {playing ? <BsPauseFill className="vp-icon vp-icon-bigger" /> : <BsPlayFill className="vp-icon vp-icon-bigger" />}
-        </button>
 
-        <div className="vp-time">
-          {fmt(current)} / {fmt(duration)}
-        </div>
-      </div>
-
-      <div className="vp-center">
+            <div className="vp-center">
         <div className="vp-progress-wrapper">
           <input
             type="range"
@@ -420,7 +410,19 @@ return (
           />
         </div>
       </div>
+ 
 
+      <div className="vp-bottom">     
+        <div className="vp-left">
+        {/* Left play/pause button */}
+        <button className="vp-btn vp-btn-large" onClick={handlePlayPause} aria-label={playing ? "Pause" : "Play"}>
+          {playing ? <BsPauseFill className="vp-icon vp-icon-bigger" /> : <BsPlayFill className="vp-icon vp-icon-bigger" />}
+        </button>
+
+        <div className="vp-time">
+          {fmt(current)} / {fmt(duration)}
+        </div>
+      </div>
       <div className="vp-right">
         {/* Mute/unmute button */}
         <button
@@ -452,6 +454,11 @@ return (
           <MdFullscreen className="vp-icon vp-icon-bigger" />
         </button>
       </div>
+      </div>
+
+
+
+      
     </div>
   </div>
 );

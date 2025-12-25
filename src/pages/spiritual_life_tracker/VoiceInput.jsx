@@ -8,6 +8,37 @@ import assets from '../../assets/assets'
 
 const VoiceInput = forwardRef(({ onTranscribe, disabled }, ref) => {
   const [listening, setListening] = useState(false);
+  const [micAvailable, setMicAvailable] = useState(true);
+  const [speechAvailable, setSpeechAvailable] = useState(true);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const VOICE_STATE = {
+  IDLE: "idle",
+  READY: "ready",
+  LISTENING: "listening",
+  TRANSCRIBING: "transcribing",
+  PROCESSING: "processing",
+  TTS: "tts",
+  ERROR: "error",
+};
+  const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
+const statusMessage = (() => {
+  switch (voiceState) {
+    case VOICE_STATE.READY:
+      return "Speak now, I am listening";
+    case VOICE_STATE.TRANSCRIBING:
+      return "Loading text...";
+    case VOICE_STATE.PROCESSING:
+      return "Searching scripture...";
+    case VOICE_STATE.TTS:
+      return "Speaking...";
+    case VOICE_STATE.ERROR:
+      return error || "Voice error";
+    default:
+      return "";
+  }
+})();
+
+
   const [error, setError] = useState(null);
   const recognitionRef = useRef(null);
   const leftoverRef = useRef(""); // unsent words
@@ -67,6 +98,74 @@ const errorRef = useRef(null);
   };
 
 
+const checkAvailability = async () => {
+  // 1️⃣ Check mic availability
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    setMicAvailable(true);
+  } catch (err) {
+    setMicAvailable(false);
+    setSpeechAvailable(false);
+    return false;
+  }
+
+  // 2️⃣ Check WebSpeech API existence
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setSpeechAvailable(false);
+    return false;
+  }
+
+  // 3️⃣ Test if recognition can start without error
+  const testRecognition = new SpeechRecognition();
+  testRecognition.continuous = false;
+  testRecognition.interimResults = false;
+
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    const cleanUp = () => {
+      testRecognition.onstart = null;
+      testRecognition.onerror = null;
+      testRecognition.onend = null;
+      if (!resolved) {
+        resolved = true;
+        resolve(false);
+      }
+    };
+
+    testRecognition.onstart = () => {
+      setSpeechAvailable(true);
+      testRecognition.stop();
+      if (!resolved) {
+        resolved = true;
+        resolve(true);
+      }
+    };
+
+    testRecognition.onerror = (e) => {
+      console.warn("WebSpeech API not ready:", e);
+      setSpeechAvailable(false);
+      cleanUp();
+    };
+
+    testRecognition.onend = () => {
+      cleanUp();
+    };
+
+    try {
+      testRecognition.start();
+    } catch (err) {
+      console.warn("WebSpeech start failed:", err);
+      setSpeechAvailable(false);
+      resolve(false);
+    }
+  });
+};
+
+
+
+
   useEffect(() => {
   const handleOffline = () => {
     if (listening) {
@@ -100,6 +199,7 @@ const errorRef = useRef(null);
 recognition.onresult = (event) => {
   let interimText = "";
   let finalText = "";
+
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const result = event.results[i];
@@ -139,6 +239,11 @@ recognition.onresult = (event) => {
 
   // Rule 2: search after 1s pause
   pauseTimer.current = setTimeout(doSearch, 1000);
+    if (finalText.trim()) {
+    setIsTranscribing(false);
+    setVoiceState(VOICE_STATE.PROCESSING)
+  }
+
 };
 
 recognition.onerror = (event) => {
@@ -166,11 +271,6 @@ recognition.onerror = (event) => {
 };
 
 
-recognition.onend = () => {
-  if (listening && !isPausedRef.current && !error) {
-    recognition.start();
-  }
-};
 
  recognitionRef.current = recognition;
 
@@ -191,12 +291,19 @@ useEffect(() => {
 }, [error]);
 
 // Start microphone listening
-const startListening = () => {
+const startListening = async () => {
   if (disabled || listening || !recognitionRef.current) return;
 
   setError(null); // clear old error
   leftoverRef.current = "";
   isPausedRef.current = false;
+
+    const ok = await checkAvailability();
+      if (!ok) {
+    setVoiceState(VOICE_STATE.ERROR);
+    return;
+  }
+
 
     if (navigator.vibrate) {
     navigator.vibrate(25); // light tap feedback
@@ -204,24 +311,31 @@ const startListening = () => {
 
   try {
     recognitionRef.current.start();
-    
-  listeningRef.current = true;
+  setVoiceState(VOICE_STATE.READY);
     setListening(true);
   } catch (e) {
     console.error(e);
+       setError("Error starting WebSpeech")
+       setVoiceState(VOICE_STATE.ERROR);
   }
 };
 
 
 const stopListening = () => {
   if (!listening || !recognitionRef.current) return;
+
   leftoverRef.current = "";
-  isPausedRef.current = true;  // prevent auto-restart
+  isPausedRef.current = true;
   recognitionRef.current.stop();
-  
+
+  setIsTranscribing(false);
+  setVoiceState(VOICE_STATE.IDLE);
+
   listeningRef.current = false;
   setListening(false);
 };
+
+
 
 
 // Toggle mic
@@ -246,6 +360,7 @@ return (
       listening={listening}
       toggleListening={toggleListening}
       disabled={false}
+      statusMessage={statusMessage}
     />
   {error && (
   <Toast

@@ -61,7 +61,12 @@ const App = () => {
     <Route path="/" element={!user ? <AuthContainer /> : <Layout />}>
   <Route index element={<Feed />} />
   <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />
-  <Route path="bible" element={<BibleReader />} />  {/* ← new route */}
+  <Route path="bible">
+  <Route index element={<BibleReader />} />
+  <Route path=":book/:chapter" element={<BibleReader />} />
+  <Route path=":book/:chapter/:verse" element={<BibleReader />} />
+</Route>
+ {/* ← new route */}
   <Route path="messages" element={<Messages />} />
   <Route path="chatbox/:userId" element={<ChatBox />} />
   <Route path="connections" element={<Connections />} />

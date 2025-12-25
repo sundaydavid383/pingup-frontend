@@ -9,6 +9,8 @@ import { Play, Pause } from "lucide-react";
 import "./biblereader.css"
 import assets from "../../assets/assets";
 import IntroModal from "./IntroModal";
+import VerseCard from "../../component/shared/VerseCard";
+
 
 
 
@@ -115,11 +117,6 @@ const toggleSpeakVerse = (verse) => {
   if (ttsPlaying) {
     window.speechSynthesis.cancel();
     setTtsPlaying(false);
-
-    // Resume mic if available
-    if (voiceInputRef.current?.start) {
-      voiceInputRef.current.start(); // <-- changed from startListening
-    }
 
     return;
   }
@@ -564,34 +561,41 @@ const STOP_WORDS = new Set([
 const runLocalSearch = async (query) => {
   if (!query.trim() || !localIndexReady.current) return;
 
-  
   await new Promise(r => setTimeout(r, 0)); // yield to browser
+
+  // 🔹 START OF SEARCH: stop mic
   setLoading(true);
+  voiceInputRef.current?.stop();
+
   const handleMatch = (matches) => {
-  if (!matches || matches.length === 0) return false;
+    if (!matches || matches.length === 0) return false;
 
-  const verse = matches[0];
-  const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
+    const verse = matches[0];
+    const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
 
-  setMatchedVerses(matches);
+    setMatchedVerses(matches);
 
-  setCurrentContext({
-    currentBook: verse.book,
-    currentChapter: verse.chapter,
-    currentVerse: verse.verse,
-  });
+    setCurrentContext({
+      currentBook: verse.book,
+      currentChapter: verse.chapter,
+      currentVerse: verse.verse,
+    });
 
-  // 🔐 Prevent repeated reading
-  if (lastSpokenVerseRef.current !== verseKey) {
-    lastSpokenVerseRef.current = verseKey;
-    toggleSpeakVerse(verse);
-  } else {
-    console.log("🔁 Verse already spoken, skipping TTS");
-  }
+    if (lastSpokenVerseRef.current !== verseKey) {
+      lastSpokenVerseRef.current = verseKey;
+      toggleSpeakVerse(verse);
+    } else {
+      console.log("🔁 Verse already spoken, skipping TTS");
+    }
 
-  setLoading(false);
-  return true;
-};
+    // 🔹 END OF SEARCH: resume mic
+    setLoading(false);
+    voiceInputRef.current?.start();
+
+    return true;
+  };
+
+
 
   // 0️⃣ Direct reference check
   const refResult = fetchVerseByReference(query);
@@ -618,6 +622,7 @@ if (handleMatch(fuzzyLayer(tokens))) return;                       // Layer 6: f
 
   setMatchedVerses([]); // no matches
   setLoading(false);
+  voiceInputRef.current?.start();
   console.log("loading is false done loading", loading)
 };
 
@@ -849,70 +854,14 @@ Speak and find the wisdom you seek. Ask for specific chapters or share your hear
 
   ):
   matchedVerses.map((v, idx) => (
-<div
-  key={idx}
-  className="
-    verse-card
-    group
-    relative
-    rounded-xl
-    max-w-[600px]
-    px-5
-    py-4
-    shadow-sm
-    border
-    border-white/10
-    transition-[var(--transition-default)]
-    hover:shadow-md
-    hover:border-[var(--primary)]
-  "
->
-  {/* Accent bar */}
-  <div
-    className="
-      verse-accent
-      absolute
-      left-0
-      top-4
-      bottom-4
-      w-[3px]
-      rounded-full
-      bg-[var(--primary)]
-    "
+  <VerseCard
+    key={idx}
+    verse={v}
+    index={idx}
+    isFirst={idx === 0}
+    ttsPlaying={ttsPlaying}
+    onToggleSpeak={toggleSpeakVerse}
   />
-
-  {/* Reference */}
-  <p
-    className="
-      verse-reference
-      mb-1
-      text-[11px]
-      font-medium
-      tracking-wider
-      uppercase
-    "
-  >
-    {v.book} {v.chapter}:{v.verse}
-  </p>
-
-  {/* Verse text */}
-<div className="flex flex-col">
-  <p className="text-[15px] leading-relaxed text-[var(--secondary)] font-normal transition-[var(--transition-default)] group-hover:text-[var(--white)]">
-    {v.text}
-  </p>
-{idx === 0 && (
-  <button
-    className="mt-3 w-10 h-10 flex items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg hover:bg-indigo-700 transition-[var(--transition-default)] relative z-10"
-    onClick={() => toggleSpeakVerse(v)}
-    title={ttsPlaying ? "Pause" : "Play"}
-  >
-    {ttsPlaying ? <Pause size={20} /> : <Play size={20} />}
-  </button>
-)}
-
-</div>
-
-</div>
 
 
 ))}
