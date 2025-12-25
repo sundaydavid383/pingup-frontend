@@ -17,71 +17,86 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+/* 🔵 Custom icon for YOU */
+const myIcon = new L.DivIcon({
+  className: "",
+  html: `
+    <div style="
+      width:16px;
+      height:16px;
+      background:#2563eb;
+      border:3px solid white;
+      border-radius:50%;
+      box-shadow:0 0 10px rgba(37,99,235,.8);
+    "></div>
+  `,
+});
+
+/* 🟢 Custom icon for OTHERS */
+const otherIcon = new L.DivIcon({
+  className: "",
+  html: `
+    <div style="
+      width:14px;
+      height:14px;
+      background:#22c55e;
+      border:2px solid white;
+      border-radius:50%;
+    "></div>
+  `,
+});
+
 export default function LiveMap({ open }) {
   const { socket } = useSocket();
   const { user } = useAuth();
   const mapRef = useRef(null);
+  const hasCentered = useRef(false);
 
   const [myCoords, setMyCoords] = useState(null);
   const [others, setOthers] = useState({});
 
-  /* Track current user */
-  useEffect(() => {
-    if (!navigator.geolocation || !socket || !user) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-
-        setMyCoords([latitude, longitude]);
-
-        socket.emit("updateLocation", {
-          userId: user._id,
-          coords: [longitude, latitude],
-        });
-      },
-      (err) => console.error("Geo error:", err),
-      { enableHighAccuracy: true }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [socket, user]);
-
-  /* Listen for others */
+  /* 👂 Listen for location updates from socket */
   useEffect(() => {
     if (!socket) return;
 
     const handleUpdate = ({ userId, coords }) => {
-      setOthers((prev) => ({
-        ...prev,
-        [userId]: [coords[1], coords[0]],
-      }));
+      const latlng = [coords[1], coords[0]];
+
+      if (user && userId === user._id) {
+        setMyCoords(latlng);
+      } else {
+        setOthers((prev) => ({
+          ...prev,
+          [userId]: latlng,
+        }));
+      }
     };
 
     socket.on("userLocationUpdated", handleUpdate);
     return () => socket.off("userLocationUpdated", handleUpdate);
-  }, [socket]);
+  }, [socket, user]);
 
-  /* 🔥 Recenter map on YOU */
+  /* 🎯 Center map on YOU only once */
   useEffect(() => {
-    if (!mapRef.current || !myCoords) return;
+    if (!mapRef.current || !myCoords || hasCentered.current) return;
 
     mapRef.current.flyTo(myCoords, 16, { animate: true });
+    hasCentered.current = true;
   }, [myCoords]);
 
-  /* Resize when modal opens */
+  /* 🧱 Fix map size when modal opens */
   useEffect(() => {
     if (!mapRef.current || !open) return;
 
     setTimeout(() => {
       mapRef.current.invalidateSize();
-    }, 150);
+    }, 200);
   }, [open]);
 
   return (
     <div className="w-full h-full">
       <MapContainer
-        center={[6.5244, 3.3792]} // fallback
+        center={[6.5244, 3.3792]} // fallback (Lagos)
         zoom={15}
         className="w-full h-full"
         whenCreated={(map) => (mapRef.current = map)}
@@ -91,12 +106,12 @@ export default function LiveMap({ open }) {
           attribution="© OpenStreetMap contributors"
         />
 
-        {/* YOU */}
-        {myCoords && <Marker position={myCoords} />}
+        {/* 🔵 YOU */}
+        {myCoords && <Marker position={myCoords} icon={myIcon} />}
 
-        {/* OTHERS */}
+        {/* 🟢 OTHERS */}
         {Object.entries(others).map(([id, coords]) => (
-          <Marker key={id} position={coords} />
+          <Marker key={id} position={coords} icon={otherIcon} />
         ))}
       </MapContainer>
     </div>
