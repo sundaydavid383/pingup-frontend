@@ -16,16 +16,47 @@
 ================================ */
 .profile-layout {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* Center the content */
+  gap: 2rem;
+  padding: 0 1rem; /* Add breathing room on mobile */
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* Make profile main take remaining space */
 .profile-main {
-  width: 700px;
-  margin: 0 auto
-
+  width: 100%; /* Take full width on mobile */
+  max-width: 700px; /* Limit size on desktop */
+  margin: 0;
+  flex-shrink: 1;
 }
 
+/* Fix sidebar behavior */
+.right-sidebar {
+  width: 320px;
+  flex-shrink: 0; /* Don't let it squish */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1022px) {
+  .profile-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .right-sidebar {
+    display: none; /* Hide sidebar on smaller tablets/phones */
+  }
+
+  .profile-main {
+    max-width: 100%;
+  }
+}
+
+/* Ensure the profile card doesn't overflow */
+.profile-card {
+  width: 100%;
+  overflow: hidden; /* Prevent horizontal scroll */
+}
 /* Fix sidebar width so it doesn’t shrink */
 .right-sidebar {
   width: 320px;

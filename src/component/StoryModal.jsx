@@ -194,13 +194,20 @@ const handleCreateStory = async () => {
 
   {/* Text Area (always editable) */}
   <textarea
-    className={`absolute inset-0 bg-transparent text-[var(--text-main)] w-full h-full text-lg resize-none focus:outline-none p-4 z-10 ${
-      mode === "text" ? "pointer-events-auto" : "pointer-events-none"
-    }`}
-    placeholder="What's on your mind?"
-    onChange={(e) => setText(e.target.value)}
-    value={text}
-  />
+  className={`absolute inset-0 bg-transparent text-white w-full h-full text-2xl font-bold resize-none focus:outline-none p-10 z-10 flex items-center justify-center text-center ${
+    mode === "text" ? "pointer-events-auto" : "pointer-events-none"
+  }`}
+  placeholder="What's on your mind?"
+  onChange={(e) => setText(e.target.value)}
+  value={text}
+  style={{
+    display: 'flex',
+    alignItems: 'center', // Vertical centering
+    justifyContent: 'center', // Horizontal centering
+    textAlign: 'center',
+    paddingTop: !media ? '40%' : '20%' // Adjusts vertical start point
+  }}
+/>
 
   {/* Text Overlay (visible in media mode if text exists) */}
   {mode === "media" && text.trim() && (

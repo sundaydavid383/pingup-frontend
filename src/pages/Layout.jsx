@@ -1,11 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import Sidebar from '../component/Sidebar';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../component/shared/Loading';
 import MobileNavbar from "../component/shared/MobileNavbar";
-import "../component/shared/mobilenavbar.css"
+import "../component/shared/mobilenavbar.css";
 
 const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
@@ -13,11 +13,11 @@ const Layout = () => {
   return user ? (
     <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <MobileNavbar setSidebarOpen={setSidebarOpen} />
+      <MobileNavbar setSidebarOpen={setSidebarOpen} />
 
       <div
         className={`flex-1 bg-slate-50 transition-all duration-300
-          ${sidebarOpen ? 'ml-52 md:ml-56 lg:ml-60' : 'ml-0'} mobilenav_intervention` }
+          ${sidebarOpen ? 'ml-52 md:ml-56 lg:ml-60' : 'ml-0'} mobilenav_intervention`}
       >
         <Outlet />
       </div>
@@ -30,6 +30,8 @@ const Layout = () => {
         />
       )}
     </div>
+  ) : (
+    <Loading />
   );
 };
 

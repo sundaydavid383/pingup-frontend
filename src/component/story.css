@@ -2,3 +2,18 @@
     width: 80%;
 }
 
+.rounded-full {
+    border-radius: 9999px !important;
+}
+
+.aspect-square {
+    aspect-ratio: 1 / 1 !important;
+}
+
+.story-gradient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+}
