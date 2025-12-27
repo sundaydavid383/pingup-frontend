@@ -1,31 +1,132 @@
+/* userProfile.css */
+
+/* 1. Main Profile Info Container 
+*/
+.profile-info-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-top: 0;
+  overflow: visible; /* Critical for overlapping elements */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 2. Overlapping Avatar Styles 
+   This moves the profile picture up into the cover image area.
+*/
+/* userProfile.css updates */
+
+/* userProfile.css updates */
+
+/* userProfile.css */
+
+/* Add this to your CSS file */
+.avatar-overlap-container img, 
+div[style*="border-radius: 50%"] img {
+  height: 100% !important;
+  width: 100% !important;
+  object-fit: cover !important;
+}
+
+.avatar-overlap-container {
+  position: relative;
+  margin-top: -4rem; /* Pull the avatar up */
+  border: 4px solid #ffffff; /* White border around avatar */
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff; /* Fallback background */
+  overflow: hidden; /* Ensure image fits within circle */
+}
+
+@media (max-width: 640px) {
+  .avatar-overlap-container {
+    margin-top: -3rem; /* Slightly less pull-up on mobile */
+  }
+  
+  /* Make the avatar slightly smaller on mobile */
+  .avatar-overlap-container img, 
+  .avatar-overlap-container .profile-avatar-placeholder {
+    width: 90px !important;
+    height: 90px !important;
+  }
+}
+
+/* Fix the connection stack for mobile */
+.connections-stack {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping if there are many */
+  justify-content: center;
+  gap: 4px; /* Add gap if they wrap */
+}
+
+@media (min-width: 768px) {
+  .connections-stack {
+    justify-content: flex-start;
+    gap: 0; /* Revert to overlapping on desktop */
+  }
+  .stack-item {
+    margin-left: -12px;
+  }
+}
+  
+  /* Make the avatar slightly smaller on mobile */
+  .avatar-overlap-container img, 
+  .avatar-overlap-container .profile-avatar-placeholder {
+    width: 90px !important;
+    height: 90px !important;
+  }
+
+
+/* Fix the connection stack for mobile */
+.connections-stack {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping if there are many */
+  justify-content: center;
+  gap: 4px; /* Add gap if they wrap */
+}
+
+@media (min-width: 768px) {
+  .connections-stack {
+    justify-content: flex-start;
+    gap: 0; /* Revert to overlapping on desktop */
+  }
+  .stack-item {
+    margin-left: -12px;
+  }
+}
+/* 3. Connections Section 
+   Ensures the overlapping circles look clean.
+*/
 .connections-stack {
   display: flex;
   align-items: center;
-  padding-left: 20px;
-  margin-top: 20px;
+  padding-left: 12px;
+  margin-top: 1rem;
   position: relative;
 }
 
 .stack-item {
   position: relative;
-  margin-left: -12px; /* overlap */
+  margin-left: -12px; /* Creates the overlap effect */
   cursor: pointer;
   transition: transform 0.2s ease;
 }
 
 .stack-item:hover {
   transform: translateY(-4px);
-  z-index: 999 !important;
+  z-index: 50 !important;
 }
 
-/* Profile circle */
 .stack-img {
   width: 48px;
   height: 48px;
   object-fit: cover;
   border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .stack-img.fallback {
@@ -33,11 +134,13 @@
   justify-content: center;
   align-items: center;
   font-size: 18px;
-  color: white;
+  color: #ffffff;
   font-weight: bold;
 }
 
-/* Tooltip */
+/* 4. Tooltips for Connections 
+   Positioned above the stack item.
+*/
 .stack-tooltip {
   position: absolute;
   top: -55px;
@@ -47,18 +150,18 @@
   background: #ffffff;
   padding: 6px 10px;
   border-radius: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
   white-space: nowrap;
+  z-index: 100;
 }
 
 .stack-item:hover .stack-tooltip {
   opacity: 1;
 }
 
-/* Tooltip Arrow */
 .tooltip-arrow {
   position: absolute;
   bottom: -6px;
@@ -68,42 +171,32 @@
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 6px solid white;
+  border-top: 6px solid #ffffff;
 }
 
-/* Tooltip text */
 .tooltip-name {
   font-size: 12px;
   font-weight: 700;
-  color: #222;
+  color: #1f2937;
   margin: 0;
 }
 
 .tooltip-occupation {
   font-size: 10px;
-  color: #555;
+  color: #6b7280;
   margin: 0;
 }
 
-/* Skeleton Circle */
+/* 5. Skeleton Loading Animations */
 .skeleton-circle {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #e5e7eb; /* gray-200 */
+  background: #e5e7eb;
   border: 3px solid #ffffff;
   animation: pulse 1.6s infinite ease-in-out;
 }
 
-/* Skeleton Tooltip */
-
-
-/* Tooltip arrow for skeleton */
-.skeleton-arrow {
-  border-bottom-color: #f3f4f6;
-}
-
-/* Skeleton text lines */
 .skeleton-line {
   height: 8px;
   border-radius: 4px;
@@ -112,24 +205,8 @@
   animation: pulse 1.6s infinite ease-in-out;
 }
 
-.skeleton-name {
-  width: 70px;
-}
-
-.skeleton-occupation {
-  width: 50px;
-}
-
-/* Pulse Animation */
 @keyframes pulse {
-  0% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.45;
-  }
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
 }
-
