@@ -5,8 +5,6 @@ import { useAuth } from "../context/AuthContext";
 import CancellableLoading from "./shared/CancellableLoading";
 import CustomAlert from "./shared/CustomAlert";
 
-import FilerobotImageEditor, { TABS, TOOLS } from 'react-filerobot-image-editor';
-
 const presetGradients = [
   ["#4f46e5", "#db2777", "#e11d48"],
   ["#0d9488", "#16a34a", "#facc15"],
@@ -317,25 +315,19 @@ const StoryModal = ({ setShowModal, fetchStories }) => {
       </div>
 
       {/* Image Editor */}
-      {isEditing && previewUrl && (
-        <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center">
-          <FilerobotImageEditor
-            source={previewUrl}
-            onSave={onCompleteEdit}
-            onClose={() => setIsEditing(false)}
-            annotationsCommon={{ fill: '#ff0000' }}
-            tabsIds={[TABS.ADJUST, TABS.FILTERS, TABS.ANNOTATE]}
-            defaultTabId={TABS.FILTERS}
-            config={{
-              layout: "compact",
-              forceArrays: true,
-              [TABS.ADJUST]: { cropConfig: { ratio: 9/16, title: 'Story' } },
-              [TABS.ANNOTATE]: { tools: [TOOLS.PEN, TOOLS.TEXT, TOOLS.RECT, TOOLS.ARROW] }
-            }}
-            theme={{ typography: { fontSize: '14px' } }}
-          />
-        </div>
-      )}
+     {isEditing && previewUrl && (
+  <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center">
+    <div className="text-white text-center">
+      Image editing removed temporarily.
+      <button
+        onClick={() => setIsEditing(false)}
+        className="mt-4 px-4 py-2 bg-blue-600 rounded"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
 
       {loading && <CancellableLoading text="Uploading..." onCancel={() => controller?.abort()} />}
       {alert && <CustomAlert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
