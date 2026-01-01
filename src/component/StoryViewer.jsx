@@ -1,6 +1,5 @@
-import { BadgeCheck, X, Trash2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { BadgeCheck, X, Trash2, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import axiosBase from "../utils/axiosBase";
 import "./story.css";
 import { useAuth } from "../context/AuthContext";
@@ -8,6 +7,7 @@ import VideoPlayer from "./shared/VideoPlayer";
 import ActionNotifier from "./shared/ActionNotifier";
 import StoryTextOverlay from "./shared/StoryTextOverlay";
 import moment from "moment";
+import assets from "../assets/assets";
 
 const StoryViewer = ({ viewStory, setViewStory, stories }) => {
   const { user: currentUser } = useAuth();
@@ -15,44 +15,59 @@ const StoryViewer = ({ viewStory, setViewStory, stories }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
-  const [loadingDelete, setLoadingDelete] = useState(false);
 
-  const isOwnerOrAdmin = currentUser?._id === viewStory?.user?.userId || currentUser?.role === "admin";
   const rawUser = viewStory?.user || {};
-  const displayName = rawUser.name || rawUser.full_name || rawUser.displayName || "";
+  const storyUserId = rawUser.userId || rawUser._id || rawUser.id;
+  const currentId = currentUser?._id || currentUser?.id;
+  
+  const isOwnerOrAdmin = (currentId && storyUserId && String(currentId) === String(storyUserId)) || currentUser?.role === "admin";
+  
+  const displayName = rawUser.name || rawUser.full_name || rawUser.displayName || "User";
+  const profilePic = rawUser.profile_image || assets.defaultProfile;
+
+  const userStories = useMemo(() => {
+    if (!storyUserId) return [];
+    return stories.filter(s => {
+      const sUid = s.user?.userId || s.user?._id || s.user?.id;
+      return String(sUid) === String(storyUserId);
+    });
+  }, [stories, storyUserId]);
+
+  const currentSubIndex = userStories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
 
   useEffect(() => {
-    if (!viewStory || viewStory.media_type === "video") return;
-    const duration = 10000; // 10 seconds per story
-    const tick = 100;
-
-    let interval = setInterval(() => {
-      if (!isPaused) {
-        setElapsed(prev => {
-          const next = prev + tick;
-          setProgress((next / duration) * 100);
-          if (next >= duration) handleNextStory();
-          return next;
-        });
-      }
-    }, tick);
-    return () => clearInterval(interval);
+    if (!viewStory) return;
+    if (viewStory.media_type !== "video") {
+      const duration = 10000;
+      const tick = 100;
+      let interval = setInterval(() => {
+        if (!isPaused) {
+          setElapsed(prev => {
+            const next = prev + tick;
+            setProgress((next / duration) * 100);
+            if (next >= duration) handleNextStory();
+            return next;
+          });
+        }
+      }, tick);
+      return () => clearInterval(interval);
+    }
   }, [viewStory, isPaused]);
 
   const handleNextStory = () => {
-    const index = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
-    if (index !== -1 && index < stories.length - 1) {
-      setViewStory(stories[index + 1]);
+    const globalIndex = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
+    if (globalIndex !== -1 && globalIndex < stories.length - 1) {
+      setViewStory(stories[globalIndex + 1]);
       resetProgress();
     } else {
-      setViewStory(null); // Close viewer if last story
+      setViewStory(null);
     }
   };
 
   const handlePrevStory = () => {
-    const index = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
-    if (index > 0) {
-      setViewStory(stories[index - 1]);
+    const globalIndex = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
+    if (globalIndex > 0) {
+      setViewStory(stories[globalIndex - 1]);
       resetProgress();
     }
   };
@@ -65,77 +80,136 @@ const StoryViewer = ({ viewStory, setViewStory, stories }) => {
 
   const confirmDeleteStory = async () => {
     try {
-      setLoadingDelete(true);
-      await axiosBase.delete(`/api/stories/${viewStory.id || viewStory._id}`);
+      const storyId = viewStory.id || viewStory._id;
+      await axiosBase.delete(`/api/stories/${storyId}`);
       setViewStory(null);
+      window.location.reload(); 
     } catch (err) {
-      console.error("🚨 Error deleting story:", err);
-    } finally {
-      setLoadingDelete(false);
+      console.error("🚨 Delete failed:", err);
     }
   };
 
   if (!viewStory) return null;
 
   return (
-    <div className="fixed inset-0 h-screen w-full z-[5550] flex flex-col items-center justify-center bg-black">
-      {/* Progress Bars Container */}
-      <div className="absolute top-2 left-0 w-full px-2 flex gap-1 z-[9999]">
-        <div className="h-1 flex-1 bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-white transition-all duration-100" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
+    <div className="fixed inset-0 h-screen w-full z-[1000000001] flex items-center justify-center bg-black/95 backdrop-blur-xl overflow-hidden p-4">
+      <div className="absolute inset-0 z-0" onClick={() => setViewStory(null)} />
 
-      {/* User Info Header Overlay */}
-      <div className="absolute top-6 left-4 z-[9999] flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full ring-2 ring-[var(--primary)] overflow-hidden aspect-square">
-          <img
-            src={rawUser.profile_image}
-            className="w-full h-full object-cover rounded-full aspect-square"
-            alt="Avatar"
-          />
-        </div>
-        <div className="text-white drop-shadow-md">
-          <p className="text-sm font-bold flex items-center gap-1">
-            {displayName} <BadgeCheck size={14} className="text-blue-400" />
-          </p>
-          <p className="text-[10px] opacity-80">{moment(viewStory.createdAt).fromNow()}</p>
-        </div>
-      </div>
-
-      {/* Close/Delete Actions */}
-      <div className="absolute top-6 right-4 z-[9999] flex gap-3">
-        {isOwnerOrAdmin && (
-          <button onClick={() => setShowDeletePopup(true)} className="p-2 bg-red-600/20 hover:bg-red-600 rounded-full text-white transition">
-            <Trash2 size={20} />
-          </button>
-        )}
-        <button onClick={() => setViewStory(null)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white">
-          <X size={20} />
+      {/* Navigation Arrows */}
+      <div className="hidden md:flex absolute inset-x-0 top-1/2 -translate-y-1/2 justify-between px-8 z-50 pointer-events-none">
+        <button onClick={handlePrevStory} className={`p-3 rounded-full bg-white/10 text-white pointer-events-auto hover:bg-white/20 transition ${stories.indexOf(viewStory) === 0 ? 'invisible' : 'visible'}`}>
+          <ChevronLeft size={32} />
+        </button>
+        <button onClick={handleNextStory} className="p-3 rounded-full bg-white/10 text-white pointer-events-auto hover:bg-white/20 transition">
+          <ChevronRight size={32} />
         </button>
       </div>
 
-      {/* Navigation Controls */}
-      <div className="absolute inset-0 flex justify-between items-center z-40 pointer-events-none">
-        <div onClick={handlePrevStory} className="h-full w-1/4 pointer-events-auto cursor-pointer" />
-        <div onClick={handleNextStory} className="h-full w-1/4 pointer-events-auto cursor-pointer" />
-      </div>
+      <div className="relative z-10 w-full max-w-[420px] h-full max-h-[85vh] bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-white/5 flex flex-col">
+        
+        {/* Progress Bars */}
+        <div className="absolute top-4 left-0 w-full px-4 flex gap-1.5 z-50">
+          {userStories.map((_, idx) => (
+            <div key={idx} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-white transition-all duration-100 ease-linear" 
+                style={{ width: idx === currentSubIndex ? `${progress}%` : idx < currentSubIndex ? '100%' : '0%' }} 
+              />
+            </div>
+          ))}
+        </div>
 
-      {/* Visual Navigation Buttons */}
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 z-50 pointer-events-none">
-        <button onClick={handlePrevStory} className="p-3 bg-black/40 text-white rounded-full pointer-events-auto hover:bg-black/60">◀</button>
-        <button onClick={handleNextStory} className="p-3 bg-black/40 text-white rounded-full pointer-events-auto hover:bg-black/60">▶</button>
-      </div>
+        {/* Header */}
+        <div className="absolute top-10 left-4 z-50 flex items-center gap-3 w-full pr-4">
+          <div className="viewer-profile-circle border border-white/20 shadow-lg">
+  <img 
+    src={profilePic} 
+    className="story-image-fill" 
+    alt="" 
+  />
+</div>
+          <div className="flex flex-col text-white truncate max-w-[140px]">
+            <span className="text-sm font-bold flex items-center gap-1 drop-shadow-md">
+              {displayName} <BadgeCheck size={14} className="text-blue-400 fill-blue-400" />
+            </span>
+            <span className="text-[10px] opacity-70 drop-shadow-sm">{moment(viewStory.createdAt).fromNow()}</span>
+          </div>
 
-      {/* Content Rendering */}
-      <div className="w-full h-full flex items-center justify-center p-2">
-        {viewStory.media_type === "image" && (
-          <img src={viewStory.media_url} className="max-h-screen max-w-full rounded-lg object-contain" alt="story" />
+          <div className="ml-auto flex items-center gap-2 mr-12">
+            <button onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }} className="p-2 hover:bg-white/10 rounded-full text-white transition">
+              {isPaused ? <Play size={20} fill="currentColor" /> : <Pause size={20} fill="currentColor" />}
+            </button>
+            {isOwnerOrAdmin && (
+              <button onClick={(e) => { e.stopPropagation(); setShowDeletePopup(true); }} className="p-2 hover:bg-red-500/20 rounded-full text-red-500 transition">
+                <Trash2 size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <button onClick={() => setViewStory(null)} className="absolute top-10 right-4 z-[60] text-white/70 hover:text-white transition-colors">
+          <X size={28} />
+        </button>
+
+        {/* --- IMPROVED MEDIA CONTAINER --- */}
+        <div 
+            className="flex-1 w-full bg-black flex items-center justify-center relative overflow-hidden"
+            onMouseDown={() => setIsPaused(true)}
+            onMouseUp={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
+        >
+          {/* Blurred Background for Wide/Tall Images */}
+          {viewStory.media_url && (
+            <img 
+              src={viewStory.media_url} 
+              className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110" 
+              alt="" 
+            />
+          )}
+
+          {/* Actual Media Content - Using object-contain to prevent "Half Image" */}
+          <div className="relative z-10 w-full h-full flex items-center justify-center">
+  {viewStory.media_type === "image" && (
+    <img 
+      src={viewStory.media_url} 
+      className="max-w-full max-h-full object-contain" // This is correct for full images
+      alt="Story" 
+    />
+            )}
+            {viewStory.media_type === "video" && (
+              <VideoPlayer 
+                src={viewStory.media_url} 
+                onEnded={handleNextStory} 
+                autoPlayOnView 
+                isPaused={isPaused} 
+                className="max-w-full max-h-full object-contain"
+              />
+            )}
+            {!viewStory.media_url && (
+               <div className="w-full h-full flex items-center justify-center p-8 text-center" style={{ background: viewStory.background_color || '#18181b' }}>
+                  <h2 className="text-white text-2xl font-bold leading-tight drop-shadow-xl">{viewStory.content}</h2>
+               </div>
+            )}
+          </div>
+
+          {/* Caption Overlay */}
+          {viewStory.media_url && viewStory.content && (
+            <div className="absolute bottom-10 left-0 w-full px-6 text-center z-40">
+               <p className="bg-black/60 backdrop-blur-md text-white py-2.5 px-4 rounded-xl text-sm inline-block shadow-2xl border border-white/10">
+                {viewStory.content}
+               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Touch Zones */}
+        {!isPaused && (
+            <div className="absolute inset-0 flex z-30 md:hidden">
+              <div onClick={handlePrevStory} className="h-full w-1/3" />
+              <div onClick={handleNextStory} className="h-full w-2/3" />
+            </div>
         )}
-        {viewStory.media_type === "video" && (
-          <VideoPlayer src={viewStory.media_url} onEnded={handleNextStory} autoPlayOnView />
-        )}
-        {viewStory.content && <StoryTextOverlay content={viewStory.content} />}
       </div>
 
       {showDeletePopup && (

@@ -1,29 +1,22 @@
-import { useState, useEffect } from "react";
-import { Inbox, Plus, XCircle } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import "../styles/ui.css";
 import assets from "../assets/assets";
-import moment from "moment";
 import StoryModal from "./StoryModal";
 import StoryViewer from "./StoryViewer";
 import "./story.css";
 import axios from "../utils/axiosBase";
+import { useAuth } from "../context/AuthContext"; // Import Auth context
 
 export default function StoriesBar() {
+  const { user: currentUser } = useAuth(); // Access the logged-in user
   const [stories, setStories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [viewStory, setViewStory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [noStories, setNoStories] = useState(false);
-  const [count, setCount] = useState(window.innerWidth <= 560 ? 3 : 5);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setCount(window.innerWidth <= 560 ? 3 : 5);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const scrollRef = useRef(null);
 
   const fetchStories = async () => {
     setLoading(true);
@@ -52,103 +45,159 @@ export default function StoriesBar() {
     fetchStories();
   }, []);
 
-  const handleAddStoryClick = () => setShowModal(true);
+  /**
+   * Filter the list to find the current user's stories
+   */
+  const myStories = useMemo(() => {
+    return stories.filter(s => {
+      const sUid = s.user?.userId || s.user?._id || s.user?.id;
+      const currentId = currentUser?._id || currentUser?.id;
+      return String(sUid) === String(currentId);
+    });
+  }, [stories, currentUser]);
+
+  const hasMyStory = myStories.length > 0;
+
+  /**
+   * Grouping Logic: Exclude current user from the main list 
+   * to avoid duplication since they are now the first item.
+   */
+  const groupedStories = useMemo(() => {
+    const userMap = new Map();
+    const currentId = currentUser?._id || currentUser?.id;
+    
+    stories.forEach((story) => {
+      const userId = story.user?.userId || story.user?._id || story.user?.id;
+      // Skip the current user's stories in the general list
+      if (String(userId) !== String(currentId) && !userMap.has(userId)) {
+        userMap.set(userId, story);
+      }
+    });
+    
+    return Array.from(userMap.values());
+  }, [stories, currentUser]);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollAmount = clientWidth * 0.8;
+      const scrollTo = direction === "left" ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
+    }
+  };
+
+  const handleAddStoryClick = (e) => {
+    if (e) e.stopPropagation();
+    setShowModal(false) || setShowModal(true);
+  };
+
   const handleViewStoryClick = (story) => setViewStory(story);
 
   return (
-    <div className="w-[100%] lg:max-w-2xl no-scrollbar overflow-x-auto px-4 min-h-[140px]">
-      {loading ? (
-        <div className="flex items-center justify-center w-full py-10 text-slate-500">
-          {Array.from({ length: count }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center mx-2 relative overflow-hidden">
-              <div className="h-44 w-30 bg-gray-300 rounded-lg overflow-hidden animate-pulse" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-4 py-10">
-          {/* Add Story Card */}
-          <div
-            onClick={handleAddStoryClick}
-            className="rounded-lg shadow-sm min-w-24 max-w-24 max-h-36 sm:min-w-30 sm:max-w-30 sm:max-h-44 aspect-[3/4] cursor-pointer hover:shadow-lg transition-all duration-200 border-2 border-dashed border-[var(--input-border)] flex items-center justify-center bg-zinc-900"
+    <div className="relative group w-full lg:max-w-2xl mx-auto px-2">
+      
+      {/* ⬅️ Previous Button */}
+      <button 
+        onClick={() => scroll("left")}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex border border-white/10"
+      >
+        <ChevronLeft size={20} />
+      </button>
+
+      <div 
+        ref={scrollRef}
+        className="flex items-center gap-4 py-4 overflow-x-auto no-scrollbar scroll-smooth px-2"
+      >
+        {/* Updated "Your Story" Button */}
+        <div className="flex flex-col items-center gap-1.5 min-w-[75px]">
+          <div 
+            onClick={hasMyStory ? () => handleViewStoryClick(myStories[0]) : handleAddStoryClick}
+            className={`relative w-16 h-16 sm:w-18 sm:h-18 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-95 
+              ${hasMyStory ? 'p-[2.5px] ring-2 ring-blue-500' : 'border-2 border-dashed border-gray-600 bg-zinc-900 hover:bg-zinc-800'}`}
           >
-            <div className="h-full flex flex-col items-center justify-center p-3 sm:p-4 text-center">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[var(--primary)] rounded-full flex items-center justify-center mb-2">
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            {hasMyStory ? (
+              <div className="w-full h-full rounded-full overflow-hidden border-2 border-black bg-zinc-800 story-circle-container">
+                <img
+                  src={currentUser?.profile_image || currentUser?.profilePicUrl || assets.defaultProfile}
+                  className="story-image-fill"
+                  alt="Your Story"
+                />
               </div>
-              <p className="text-xs font-medium text-slate-300">Add Story</p>
-            </div>
+            ) : (
+              <Plus className="w-6 h-6 text-gray-400" />
+            )}
+
+            {/* Small add icon overlay when a story already exists */}
+            {hasMyStory && (
+              <div 
+                onClick={handleAddStoryClick}
+                className="absolute bottom-0 right-0 bg-blue-600 rounded-full border-2 border-black p-0.5 hover:bg-blue-500 transition-colors"
+              >
+                <Plus size={12} className="text-white" />
+              </div>
+            )}
           </div>
-
-          {fetchError && (
-            <div className="flex flex-col items-center justify-center w-full py-10 text-slate-500">
-              <XCircle className="w-8 h-8 mb-2" />
-              <p>Failed to fetch stories</p>
-            </div>
-          )}
-
-          {!fetchError && noStories && (
-            <div className="flex flex-col items-center justify-center w-full py-10 text-slate-500">
-              <Inbox className="w-8 h-8 mb-2" />
-              <p>No stories yet</p>
-            </div>
-          )}
-
-         {/* 🖼️ Story Cards Mapping in StoriesBar.jsx */}
-{!fetchError && !noStories && stories.map((story) => {
-  const rawUser = story.user || {};
-  const displayName = rawUser.name || rawUser.full_name || rawUser.displayName || "";
-  
-  return (
-    <div
-      key={story._id || story.id}
-      onClick={() => handleViewStoryClick(story)}
-      className="relative rounded-lg shadow min-w-24 max-w-24 h-36 sm:min-w-33 sm:max-w-33 sm:h-44 cursor-pointer transition-all duration-200 active:scale-95 hover:shadow-lg overflow-hidden bg-zinc-800"
-    >
-      {/* Background Media */}
-      {story.media_type === "image" ? (
-        <img src={story.media_url} className="h-full w-full object-cover opacity-60 hover:opacity-80 transition" alt="" />
-      ) : (
-        <video src={story.media_url} className="h-full w-full object-cover opacity-60" />
-      )}
-
-      {/* --- ADDED: Text Preview Overlay --- */}
-      {story.content && (
-        <div className="absolute inset-0 flex items-center justify-center p-2 z-[5] pointer-events-none">
-          <p className="text-white text-[10px] sm:text-xs text-center font-medium line-clamp-3 bg-black/30 rounded px-1 backdrop-blur-[2px]">
-            {story.content}
-          </p>
+          <p className="text-[11px] font-medium text-slate-400">Your Story</p>
         </div>
-      )}
 
-      {/* --- HEADER: Profile (Circle) + Time --- */}
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-2 max-w-[95%]">
-        <div className="w-8 h-8 rounded-full ring-2 ring-[var(--primary)] overflow-hidden flex-shrink-0 aspect-square">
-          <img
-            src={rawUser.profile_image || assets.defaultProfile}
-            className="w-full h-full object-cover rounded-full aspect-square"
-            alt="pfp"
-          />
-        </div>
-        <p className="text-white text-[9px] font-medium drop-shadow-lg truncate">
-          {moment(story.createdAt).fromNow(true)}
-        </p>
+        {/* Loading Skeletons */}
+        {loading && Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2 min-w-[75px] animate-pulse">
+            <div className="w-16 h-16 rounded-full bg-zinc-800" />
+            <div className="h-2 w-10 bg-zinc-800 rounded" />
+          </div>
+        ))}
+
+        {/* Display Grouped Stories */}
+        {!loading && !fetchError && groupedStories.map((story) => {
+          const rawUser = story.user || {};
+          const displayName = rawUser.name || rawUser.full_name || rawUser.displayName || "User";
+          
+          return (
+            <div
+              key={story._id || story.id}
+              onClick={() => handleViewStoryClick(story)}
+              className="flex flex-col items-center gap-1.5 min-w-[75px] cursor-pointer group/item"
+            >
+              <div className="p-[2.5px] rounded-full ring-2 ring-blue-500 transition-transform group-active/item:scale-90">
+                <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden border-2 border-black bg-zinc-800 story-circle-container">
+                  <img
+                    src={rawUser.profile_image || assets.defaultProfile}
+                    className="story-image-fill"
+                    alt={displayName}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] font-medium text-slate-200 truncate w-full text-center">
+                {displayName.split(" ")[0]}
+              </p>
+            </div>
+          );
+        })}
+
+        {fetchError && <div className="text-red-400 text-xs px-4">Error loading</div>}
+        {!loading && noStories && groupedStories.length === 0 && !hasMyStory && (
+          <div className="text-zinc-500 text-xs italic px-4">No updates</div>
+        )}
       </div>
 
-      {/* --- BOTTOM: Display Name --- */}
-      <div className="absolute bottom-2 left-0 w-full px-2 z-10">
-        <p className="text-white text-[10px] font-semibold truncate drop-shadow-lg">
-          {displayName}
-        </p>
-      </div>
-    </div>
-  );
-})}
-        </div>
-      )}
+      {/* ➡️ Next Button */}
+      <button 
+        onClick={() => scroll("right")}
+        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex border border-white/10"
+      >
+        <ChevronRight size={20} />
+      </button>
 
       {showModal && <StoryModal setShowModal={setShowModal} fetchStories={fetchStories} />}
-      {viewStory && <StoryViewer viewStory={viewStory} setViewStory={setViewStory} stories={stories} />}
+      
+      {viewStory && (
+        <StoryViewer 
+          viewStory={viewStory} 
+          setViewStory={setViewStory} 
+          stories={stories} 
+        />
+      )}
     </div>
   );
 }

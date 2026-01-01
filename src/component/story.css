@@ -17,3 +17,109 @@
     background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
     pointer-events: none;
 }
+
+
+/* story.css */
+
+/* Force the image to cover the circle completely and stay centered */
+.story-image-fill {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+}
+
+/* Ensure the circular containers are actually square before rounding */
+.story-circle-container {
+    aspect-ratio: 1 / 1 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 50% !important;
+}
+
+/* story.css */
+
+/* Ensure the modal is significantly higher than the sidebar's z-index */
+.fixed.inset-0.z-\[100000\] {
+    z-index: 1000000 !important; /* Above your 999999999 if needed */
+}
+
+/* Fix Fabric.js selection handles for touch */
+.canvas-container {
+    margin: 0 auto;
+    touch-action: none;
+    user-select: none;
+}
+
+/* Custom scrollbars for the editor mode */
+.max-h-\[95vh\] {
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* Fix for StoryViewer profile pic */
+.viewer-profile-circle {
+    width: 40px; /* Matching the w-10 class */
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* Ensure the container allows horizontal scrolling without scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Add a pulse animation for "live" stories (optional) */
+.story-ring-active {
+    border: 2px solid #e1306c; /* Instagram-like pink/red */
+    padding: 2px;
+}
+
+/* Maintain circular aspect ratio */
+.rounded-full {
+    border-radius: 50% !important;
+}
+
+/* 1. Fix Desktop Sidebar Overlap */
+/* Your Sidebar is z-[999999999], so the Editor must be higher */
+.image-editor-fullscreen-container {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1000000000 !important; /* One level higher than sidebar */
+    background: #000;
+}
+
+/* 2. Fix Mobile Display / Notches */
+.FIE_root {
+    /* Ensures the editor fills the height even with mobile browser address bars */
+    height: 100vh !important;
+    height: -webkit-fill-available !important; 
+    
+    /* Adds padding for iPhone notches and home indicators */
+    padding-top: env(safe-area-inset-top) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+/* 3. Force Tool Visibility on Mobile */
+/* This prevents the tools from being cut off at the bottom */
+.FIE_tabs-container {
+    padding-bottom: 10px !important;
+    background-color: #121212 !important;
+}
+
+/* 4. Ensure Sidebar doesn't intercept clicks when Editor is open */
+body:has(.image-editor-fullscreen-container) .fixed {
+    pointer-events: none;
+}
+body:has(.image-editor-fullscreen-container) .image-editor-fullscreen-container {
+    pointer-events: auto;
+}
