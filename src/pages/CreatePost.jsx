@@ -6,12 +6,15 @@ import CustomAlert from "../component/shared/CustomAlert";
 import location from "../utils/location";
 import BackButton from "../component/shared/BackButton";
 import ProfileAvatar from "../component/shared/ProfileAvatar"
+import { useNavigate } from "react-router-dom";
+
 
 const CreatePost = () => {
   const { user, token } = useAuth();
   const [content, setContent] = useState("");
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
+  const navigate = useNavigate();
   const [visibility, setVisibility] = useState("public");
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -165,6 +168,11 @@ const handleSubmit = async () => {
   setImages([]);
   setVideos([]);
   setVisibility("public");
+  setTimeout(() => {
+    navigate("/");
+  }, 3000);
+
+
 
   // Reset now
   setUploadProgress(0);

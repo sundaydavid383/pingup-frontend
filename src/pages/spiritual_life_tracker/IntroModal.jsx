@@ -5,7 +5,7 @@ import TypingText from "../../component/shared/TypingText";
 import { color } from "framer-motion";
 
 const prompts = [
-  "Welcome to VerseMate! I’m here to help you find and listen to verses from the Bible quickly and easily.",
+  "Welcome to VerseMate! I am here to help you quickly find and listen to verses exclusively from the King James Version (KJV) of the Bible.",
   "I read one verse at a time. If you speak a text spanning multiple verses, the result may be approximate.",
   "If your voice input is not recognized or an error occurs, try turning the microphone off and on again.",
   "If the issue persists after rebooting the mic, please reload the page or app.",

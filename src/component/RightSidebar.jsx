@@ -5,7 +5,13 @@ import RightSidebarSkeleton from "./skeleton/RightSidebarSkeleton";
 
 const RightSidebar = ({ sponsors, loading }) => {
   return (
-    <aside className="hidden lg:flex flex-col w-[330px] shrink-0 gap-4 h-[full] sticky top-0 overflow-y-auto pt-2 p-4 ml-6 mr-1">
+<aside className="
+  hidden lg:flex flex-col
+  w-[330px] shrink-0 gap-4
+  sticky top-0
+  max-h-screen overflow-y-auto
+  pt-2 p-4 ml-6 mr-1
+">
 
       {/* Loading State */}
       {loading && <RightSidebarSkeleton />}

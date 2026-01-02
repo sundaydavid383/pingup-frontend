@@ -119,7 +119,7 @@ const [dislikesCount, setDislikesCount] = useState(
       href="${url}" 
       target="_blank" 
       rel="noopener noreferrer"
-      class="text-primary underline break-words"
+      class="text-[var(--primary)] no-underline break-words"
     >
       ${url}
     </a>`;

@@ -588,7 +588,10 @@ useEffect(() => {
   </span>
 ) : lastActive ? (
   <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-[0.8rem] font-medium rounded-lg transition-colors duration-300 ease-in-out hover:bg-gray-200">
-    Active {moment(lastActive).fromNow()} <span className="hidden sm:inline text-gray-400">({moment(lastActive).format("DD/MM/YYYY HH:mm")})</span>
+    Active {moment(lastActive).fromNow()}
+     <span className="hidden sm:inline text-gray-400">
+      ({moment(lastActive).format("ddd D MMMM  h:mma")})
+      </span>
   </span>
 ) : (
   <span className="inline-flex items-center gap-2 px-2 py-1 bg-gray-50 text-gray-400 text-sm font-medium rounded-full">

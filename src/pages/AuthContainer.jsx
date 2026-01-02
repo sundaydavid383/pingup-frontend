@@ -163,18 +163,23 @@ const AuthContainer = () => {
       >
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--radial-highlight)] to-transparent pointer-events-none"></div>
 
-        <img src={assets.logo} alt="Logo" className="h-14 sm:h-16 md:h-20 mb-6" />
+        <img src={assets.logo} alt="Logo" className="h-14 w-[205px] sm:h-16 md:h-20 mb-6" />
 
         <div className="flex justify-center items-center gap-3 mb-5">
           <div className="flex -space-x-3">
-            {[assets.user2, assets.user1, assets.user3].map((src, i) => (
-              <div
-                key={i}
-                className="w-10 sm:w-12 h-10 sm:h-12 rounded-full border-2 border-white overflow-hidden"
-              >
-                <img src={src} alt="user" className="w-full h-full object-cover" />
-              </div>
-            ))}
+         {[assets.user2, assets.user1, assets.user3].map((src, i) => (
+  <div
+    key={i}
+    className="w-10 sm:w-12 h-10 sm:h-12 rounded-full border-2 border-white overflow-hidden"
+  >
+    <img
+      src={src}
+      alt="user"
+      className="w-full h-full object-cover block"
+    />
+  </div>
+))}
+
           </div>
           <div className="flex flex-col items-start">
             <div className="flex">

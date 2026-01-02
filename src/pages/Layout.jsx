@@ -9,28 +9,29 @@ import "../component/shared/mobilenavbar.css"
 
 const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
-  const sidebarRef = useRef(null); // Reference to the sidebar
+  const sidebarRef = useRef(null);
+const menuButtonRef = useRef(null);
+
 
 useEffect(() => {
   const handleClickOutside = (event) => {
-    // Only trigger on mobile widths (e.g., width <= 768px)
     if (window.innerWidth > 768) return;
+    if (!sidebarOpen) return;
 
-    if (
-      sidebarRef.current &&
-      !sidebarRef.current.contains(event.target) &&
-      sidebarOpen
-    ) {
-      setSidebarOpen(false);
-    }
+    if (sidebarRef.current?.contains(event.target)) return;
+    if (menuButtonRef.current?.contains(event.target)) return;
+
+    setSidebarOpen(false);
   };
 
-  document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener("pointerdown", handleClickOutside);
 
   return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
+    document.removeEventListener("pointerdown", handleClickOutside);
   };
 }, [sidebarOpen, setSidebarOpen]);
+
+
 
 
   if (!user) return <Loading />;
@@ -51,12 +52,13 @@ useEffect(() => {
       </div>
 
       {/* Show toggle only on small screens */}
-      {!sidebarOpen && (
-        <Menu
-          className="fixed top-1 left-1 z-55550 bg-white rounded-md shadow w-10 h-10 p-2 text-gray-600 sm:hidden cursor-pointer"
-          onClick={() => setSidebarOpen(true)}
-        />
-      )}
+   {!sidebarOpen && (
+  <Menu
+    ref={menuButtonRef}
+    className="fixed top-1 left-1 z-55550 bg-white rounded-md shadow w-10 h-10 p-2 text-gray-600 sm:hidden cursor-pointer"
+    onClick={() => setSidebarOpen(true)}
+  />
+)}
     </div>
   );
 };
