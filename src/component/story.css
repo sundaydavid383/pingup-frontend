@@ -86,7 +86,7 @@
 
 /* Maintain circular aspect ratio */
 .rounded-full {
-    border-radius: 50% !important;
+    border-radius: 50% ;
 }
 
 /* 1. Fix Desktop Sidebar Overlap */
@@ -122,4 +122,22 @@ body:has(.image-editor-fullscreen-container) .fixed {
 }
 body:has(.image-editor-fullscreen-container) .image-editor-fullscreen-container {
     pointer-events: auto;
+}
+
+@keyframes replyPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reply-animate {
+  animation: replyPopIn 0.45s ease-out both;
 }

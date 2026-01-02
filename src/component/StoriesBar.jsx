@@ -196,6 +196,7 @@ export default function StoriesBar() {
           viewStory={viewStory} 
           setViewStory={setViewStory} 
           stories={stories} 
+          setStories={setStories}
         />
       )}
     </div>
