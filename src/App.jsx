@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import "./styles/ui.css"
 import { Routes, Route } from 'react-router-dom';
-import { Helmet } from "react-helmet";
+import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
 import Feed from './pages/Feed';
 import Messages from './pages/Messages';

@@ -685,7 +685,7 @@ useEffect(() => {
           }}>
           {loading ?
             (
-            <div className="flex flex-col h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
+            <div className="flex flex-col min-h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
               {/* Top bar shimmer */}
               {/* Messages shimmer */}
               <div className="flex-1 overflow-y-auto p-4">
@@ -800,8 +800,8 @@ useEffect(() => {
                 :
                 (
                   // ❌ FETCH ERROR
-                  <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br 
-                     from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
+              from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
                     <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
                       <div className="flex justify-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>

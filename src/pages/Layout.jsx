@@ -5,7 +5,7 @@ import { Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../component/shared/Loading';
 import MobileNavbar from "../component/shared/MobileNavbar";
-import "../component/shared/mobilenavbar.css"
+import "../component/shared/mobilenavbar.css";
 
 const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
@@ -37,11 +37,8 @@ useEffect(() => {
   if (!user) return <Loading />;
 
   return (
-    <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
-      <div ref={sidebarRef}>
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      </div>
-
+ <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <MobileNavbar setSidebarOpen={setSidebarOpen} />
 
       <div
@@ -59,8 +56,9 @@ useEffect(() => {
     onClick={() => setSidebarOpen(true)}
   />
 )}
+
     </div>
-  );
+  ) 
 };
 
 export default Layout;
