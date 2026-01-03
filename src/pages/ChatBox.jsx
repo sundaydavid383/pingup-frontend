@@ -58,6 +58,7 @@ const ChatBox = () => {
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const bottomRef = useRef(null);
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -76,19 +77,12 @@ const ChatBox = () => {
   // Track if user is near bottom
 
 
-  // Scroll-to-bottom when clicking the scroll button
-  const scrollToBottom = () => {
-    if (containerRef.current){
-      const container = containerRef.current;
-      const paddingBottom = parseFloat(
-        getComputedStyle(container).paddingBottom
-      );
-      container.scrollTo({
-        top: container.scrollHeight - container.clientHeight + paddingBottom,
-        behavior: "smooth"
-      })
-    }
-  };
+const scrollToBottom = (behavior = "smooth") => {
+  requestAnimationFrame(() => {
+    bottomRef.current?.scrollIntoView({ behavior });
+  });
+};
+
 
   const isUserNearBottom = useRef(true);
 
@@ -800,13 +794,19 @@ useEffect(() => {
                 :
                 (
                   // ❌ FETCH ERROR
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
-              from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
+         <div className="
+          flex flex-col items-center justify-center
+          h-[92vh]
+          bg-gradient-to-br from-gray-100 to-gray-200
+          text-center px-6 animate-fadeIn
+        ">
+
                     <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
                       <div className="flex justify-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
                       </div>
-                      <h2 className="text-lg font-semibold text-gray-800 mb-2"> Unable to fetch your messages 😔
+                      <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                         Unable to fetch your messages 😔
                       </h2>
                       <p className="text-sm text-gray-600 mb-6"> It seems there was a problem connecting to the server. Please check your internet connection or try refreshing this page. </p>
                       <button onClick={() => window.location.reload()}
@@ -828,7 +828,7 @@ useEffect(() => {
           {
             showMediaViewer && (
               <div
-  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000]"
+  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999000]"
   onClick={() => setShowMediaViewer(false)} // Click outside closes modal
 >
   {/* Close button */}
@@ -874,6 +874,7 @@ useEffect(() => {
 </div>
 )
           }
+            <div ref={bottomRef} style={{ height: 1 }} />
         </div >
 
 

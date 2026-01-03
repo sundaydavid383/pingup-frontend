@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import AudioMessage from "./shared/AudioMessage";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Send  } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import BackButton from "./shared/BackButton";
 
@@ -122,9 +122,9 @@ const ChatMessagesFull = ({
 
 {sentByUser && (
   <span className="ml-1 flex items-center gap-1 text-xs">
-    {msg.status === "sending" && (
-      <span className="text-gray-500 animate-pulse">Sending...</span>
-    )}
+{msg.status === "sending" && (
+  <Send size={14} className="text-gray-400 animate-pulse" />
+)}
     {msg.failed && (
       <>
         <button onClick={() => resendMessage(msg)}>↻ Retry</button>

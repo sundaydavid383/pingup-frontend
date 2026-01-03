@@ -39,26 +39,26 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Background Overlay for Mobile: Closes sidebar when clicking outside */}
       {sidebarOpen && window.innerWidth < 768 && (
         <div 
-          className="fixed inset-0 bg-black/50 z-[40] md:hidden"
+          className="fixed inset-0 bg-black/50 z-[88840] md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <div
-        className={`fixed top-0 left-0 z-[50] flex flex-col justify-between
-          transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          w-52 md:w-56 lg:w-60
-          h-screen
-        `}
-        style={{
-          backgroundColor: 'var(--form-bg)',
-          borderRight: '1px solid var(--input-border)',
-          color: 'var(--text-main)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-        }}
-      >
+<div className="fixed top-0 left-0 z-[999999] h-screen w-52 md:w-56 lg:w-60">
+  <div
+    className={`
+      h-full flex flex-col justify-between
+      transition-transform duration-300 ease-in-out
+      ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+    `}
+    style={{
+      backgroundColor: 'var(--form-bg)',
+      borderRight: '1px solid var(--input-border)',
+      color: 'var(--text-main)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+    }}
+  >
         {/* Mobile Close Button */}
         <X
           className="absolute top-3 right-3 w-8 h-8 p-1.5 rounded-md text-gray-700 bg-white shadow-md md:hidden cursor-pointer hover:bg-gray-100 transition"
@@ -89,6 +89,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="w-full border-t border-[var(--input-border)] p-4 px-7">
           <UserProfileButton user={user} />
         </div>
+      </div>
       </div>
     </>
   );

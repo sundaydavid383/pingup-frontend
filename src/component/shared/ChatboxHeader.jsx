@@ -7,7 +7,7 @@ const ChatboxHeader = ({ sidebarOpen, sidebarWidth = 240, children }) => {
     top: 0,
     left: sidebarOpen ? `${sidebarWidth}px` : "0px",
     width: sidebarOpen ? `calc(100% - ${sidebarWidth}px)` : "100%",
-    zIndex: 5666888 ,
+    zIndex: 56668 ,
     background: "var(--bg-main, #fff)",
     boxSizing: "border-box",
     transition: "left 0.3s ease, width 0.3s ease",

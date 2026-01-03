@@ -8,6 +8,7 @@ import ActionNotifier from "./shared/ActionNotifier";
 import StoryTextOverlay from "./shared/StoryTextOverlay";
 import moment from "moment";
 import assets from "../assets/assets";
+import StoryReplies from "./shared/StoryReplies";
 
 const StoryViewer = ({ viewStory, setViewStory, stories, setStories }) => {
   const { user: currentUser } = useAuth();
@@ -20,7 +21,7 @@ const StoryViewer = ({ viewStory, setViewStory, stories, setStories }) => {
   const typingTimeout = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justAddedReplyId, setJustAddedReplyId] = useState(null);
-
+  
 
   const rawUser = viewStory?.user || {};
   const storyUserId = rawUser.userId || rawUser._id || rawUser.id;
@@ -41,11 +42,22 @@ const StoryViewer = ({ viewStory, setViewStory, stories, setStories }) => {
 
 const visibleReplies = useMemo(() => {
   if (!viewStory?.replies) return [];
-  if (isOwnerOrAdmin) return viewStory.replies;
-  return viewStory.replies.filter(
-    r => String(r.userId) === String(currentUser?._id)
+
+  let filtered = [];
+
+  if (isOwnerOrAdmin) {
+    filtered = viewStory.replies;
+  } else {
+    filtered = viewStory.replies.filter(
+      r => String(r.userId) === String(currentUser?._id)
+    );
+  }
+
+  // latest first
+  return [...filtered].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
-}, [viewStory, currentUser, isOwnerOrAdmin]);
+}, [viewStory?.replies, currentUser?._id, isOwnerOrAdmin]);
 
 
 
@@ -359,159 +371,22 @@ const handleEditReply = async (reply) => {
 
       </div>
 
-      {/* --- Replies Section --- */}
-<div className="absolute bottom-17 left-0 right-0 px-4 z-[9998] max-h-48 flex flex-col space-y-2 overflow-hidden">
-  {visibleReplies.length > 0 ? (
-    <>
-      {/* --- Show first visible reply --- */}
-      <div
-        className={`flex items-start gap-2 bg-[var(--form-bg)]
-        text-[var(--text-main)] p-2 rounded-[var(--radius)]
-        shadow-md backdrop-blur-[var(--backdrop-blur)]
-        border border-[var(--input-border)]
-        ${justAddedReplyId === visibleReplies[0]._id ? "reply-animate" : ""}`}
-      >
-        <img
-          src={visibleReplies[0].profilePic || assets.defaultProfile}
-          className="w-8 h-8 rounded-full border border-[var(--primary)]"
-          alt={visibleReplies[0].userName}
-        />
-        <div className="flex-1">
-          <span className="font-semibold text-sm text-[var(--primary)]">
-            {visibleReplies[0].userName}
-          </span>
-          <p className="text-xs text-[var(--text-secondary)]">
-            {visibleReplies[0].replyText}
-          </p>
-        </div>
-      </div>
-
-      {/* --- Collapse / Expand (ONLY story owner sees this) --- */}
-      {isOwnerOrAdmin && visibleReplies.length > 1 && (
-        <button
-          className="self-start text-xs text-[var(--primary)] hover:underline transition-[var(--transition-default)] mt-1"
-          onClick={() => setShowAllReplies(prev => !prev)}
-        >
-          {showAllReplies
-            ? "Collapse"
-            : `View all ${visibleReplies.length} replies`}
-        </button>
-      )}
-
-      {/* --- Expanded replies (owner only) --- */}
-      {isOwnerOrAdmin &&
-        showAllReplies &&
-        visibleReplies.map((r, idx) => {
-          if (idx === 0) return null;
-
-          const isMine = String(r.userId) === String(currentUser?._id);
-
-          return (
-            <div
-              key={r._id}
-              className={`flex items-start gap-2 bg-[var(--form-bg)]
-              text-[var(--text-main)] p-2 rounded-[var(--radius)]
-              shadow-md backdrop-blur-[var(--backdrop-blur)]
-              border border-[var(--input-border)]
-              ${justAddedReplyId === r._id ? "reply-animate" : ""}`}
-            >
-              <img
-                src={r.profilePic || assets.defaultProfile}
-                className="w-8 h-8 rounded-full border border-[var(--primary)]"
-                alt={r.userName}
-              />
-              <div className="flex-1 relative">
-                <span className="font-semibold text-sm text-[var(--primary)]">
-                  {r.userName}
-                </span>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {r.replyText}
-                </p>
-
-                {isMine && (
-                  <div className="absolute top-0 right-0 flex gap-1">
-                    <button
-                      onClick={() => handleEditReply(r)}
-                      className="text-xs text-[var(--primary)] hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteReply(r)}
-                      className="text-xs text-[var(--error)] hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-    </>
-  ) : (
-    <p className="text-xs text-[var(--text-muted)] italic">
-      No replies yet.
-    </p>
-  )}
-</div>
-
-
-
-{/* --- Reply Input --- */}
-{!isOwnerOrAdmin &&
-<div className="absolute bottom-0 left-0 right-0 px-4 py-2 z-[9999] flex items-center gap-2 bg-zinc-900/90 backdrop-blur-sm">
-<input
-  type="text"
-  value={newReply}
-  disabled={isSubmitting}
-  onChange={(e) => {
-    setNewReply(e.target.value);
-    setIsPaused(true); // Pause immediately when typing
-
-    // Clear previous timer
-    if (typingTimeout.current) clearTimeout(typingTimeout.current);
-
-    // Set new 2-second timer to resume progress
-    typingTimeout.current = setTimeout(() => {
-      setIsPaused(false);
-    }, 3000);
-  }}
-  onFocus={() => setIsPaused(true)} // pause when user clicks in
-  onBlur={() => {
-    setIsPaused(false); // resume when input loses focus
-    if (typingTimeout.current) clearTimeout(typingTimeout.current);
-  }}
-  placeholder="Write a reply..."
-    className={`flex-1 rounded-full px-3 py-2 
-    ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}
-    bg-zinc-800 text-white placeholder:text-zinc-400 focus:outline-none`}
-  onKeyDown={(e) => { 
-    if (e.key === 'Enter') {
-      submitReply();
-      setIsPaused(false); // resume immediately after sending
-      if (typingTimeout.current) clearTimeout(typingTimeout.current);
-    }
-  }}
+<StoryReplies
+  visibleReplies={visibleReplies}
+  currentUser={currentUser}
+  isOwnerOrAdmin={isOwnerOrAdmin}
+  justAddedReplyId={justAddedReplyId}
+  setShowAllReplies={setShowAllReplies}
+  showAllReplies={showAllReplies}
+  newReply={newReply}
+  setNewReply={setNewReply}
+  isSubmitting={isSubmitting}
+  submitReply={submitReply}
+  handleEditReply={handleEditReply}
+  handleDeleteReply={handleDeleteReply}
+  typingTimeout={typingTimeout}
+  setIsPaused={setIsPaused}
 />
-
-<button
-  onClick={submitReply}
-  disabled={isSubmitting}
-  className={`btn flex items-center gap-2 
-    ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
->
-  {isSubmitting ? (
-    <>
-      <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-      Sending…
-    </>
-  ) : (
-    "Send"
-  )}
-</button>
-
-</div> }
 
 
 

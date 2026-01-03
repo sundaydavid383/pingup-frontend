@@ -229,7 +229,7 @@ useEffect(() => {
         Recent Messages
       </h3>
 
-      <div className="flex flex-col max-h-[60%] overflow-y-scroll no-scrollbar">
+      <div className="flex flex-col max-h-[70%] overflow-y-scroll no-scrollbar">
         {loading ? (
          <RecentMessagesSkeleton />
         ) : sortedConnections.length === 0 ? (
