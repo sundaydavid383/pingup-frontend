@@ -77,7 +77,7 @@ const ChatMessagesFull = ({
                 >
                   <div
                     data-id={msg._id}
-                    className={`p-2 text-sm max-w-[70%] rounded-xl shadow break-words relative transition-all duration-200
+                    className={`p-2 text-sm max-w-[400px] rounded-xl shadow break-words relative transition-all duration-200
                       ${sentByUser
                         ? msg.failed
                           ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"

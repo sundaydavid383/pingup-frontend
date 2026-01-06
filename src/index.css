@@ -89,6 +89,54 @@ body{
 }
 
 /* ===== Global Scrollbar Styling ===== */
+.story-wrapper {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+}
+
+/* Gradient ring OUTSIDE */
+.story-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: -5px;            /* controls ring distance */
+  border-radius: 50%;
+  background: conic-gradient(
+    from 45deg,
+    var(--primary),
+    var(--gold),
+    var(--primary),
+    var(--text-accent-dark)
+  );
+  z-index: 0;
+}
+.storyimage_holder{
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: auto;
+  background-color: var(--white);
+  margin: auto;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+}
+/* Actual image */
+.story-img {
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  height: 90%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #18181b;
+  margin: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
 
 /* Chrome, Edge, Brave, Opera */
 *::-webkit-scrollbar {

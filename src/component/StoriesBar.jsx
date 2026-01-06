@@ -154,24 +154,20 @@ export default function StoriesBar() {
           const displayName = rawUser.name || rawUser.full_name || rawUser.displayName || "User";
           
           return (
-            <div
-              key={story._id || story.id}
-              onClick={() => handleViewStoryClick(story)}
-              className="flex flex-col items-center gap-1.5 min-w-[75px] cursor-pointer group/item"
-            >
-              <div className="p-[2.5px] rounded-full ring-2 ring-blue-500 transition-transform group-active/item:scale-90">
-                <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden border-2 border-black bg-zinc-800 story-circle-container">
-                  <img
-                    src={rawUser.profile_image || assets.defaultProfile}
-                    className="story-image-fill"
-                    alt={displayName}
-                  />
-                </div>
-              </div>
-              <p className="text-[11px] font-medium text-[var(--secondary)] truncate w-full text-center">
-                {displayName.split(" ")[0]}
-              </p>
-            </div>
+<div
+  onClick={() => handleViewStoryClick(story)}
+  className="story-wrapper group-active/item:scale-90"
+>
+  <div className="storyimage_holder">
+  <img
+    src={rawUser.profile_image || assets.defaultProfile}
+    alt={displayName}
+    className="story-img"
+  />
+  </div>
+</div>
+
+
           );
         })}
 
