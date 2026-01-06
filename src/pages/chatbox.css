@@ -74,6 +74,51 @@ html, body {
   box-sizing: border-box;
 }
 
+.glassy-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0.25rem 0.5rem; /* px-2 py-1 */
+  border-radius: 9999px; /* full pill */
+  
+  /* Glassy background */
+  background: rgba(233, 233, 233, 0.7); /* semi-transparent */
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+
+  /* Inset shadow for depth */
+  box-shadow: inset 0 0px px rgb(255, 255, 255),
+              0 1px 3px rgba(0,0,0,0.1);
+
+  /* Text and transition */
+  color: var(--secondary);
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Typing dots animation */
+.typing-dots span {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background-color: var(--secondary);
+  border-radius: 50%;
+  transform-origin: bottom;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+
+
+
 /* textarea specifics */
 .chatbox-input textarea {
   width: 100%;

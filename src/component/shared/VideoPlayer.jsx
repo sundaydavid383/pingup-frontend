@@ -346,7 +346,7 @@ return (
   }}
   onMouseMove={handleMouseMove}
   onMouseEnter={() => setShowControls(true)}
-  onMouseLeave={() => setShowControls(false)}
+  onMouseLeave={() => setTimeout(() => setShowControls(false), 3000)}
 >
   <video
     ref={videoRef}

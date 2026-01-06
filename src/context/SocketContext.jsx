@@ -14,7 +14,7 @@ export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
 
   // Import both helpers from the context
-  const { addUnread, updateLastMessage, incrementUnread  } = useMessageContext();
+  const { addUnread, updateLastMessage, incrementUnread, markAsRead  } = useMessageContext();
   const { addNotification } = useNotificationContext();
 
   // Track processed message IDs to prevent duplication
@@ -187,6 +187,32 @@ useEffect(() => {
       socket.off("receiveMessage", handleReceiveMessage);
     };
   }, [socket, user, addUnread, updateLastMessage]);
+
+  // Listen for messages marked as read by recipients
+// Listen for messages marked as read by recipients
+useEffect(() => {
+  if (!socket || !user) return;
+
+  const handleMessageRead = ({ messageId, chatId, from_user_id }) => {
+    console.log("✅ Message read:", messageId, "from", from_user_id);
+
+    // 1️⃣ Update MessageContext: remove from unread
+    markAsRead(from_user_id);
+
+    // 2️⃣ Dispatch global event for UI-specific components
+    window.dispatchEvent(
+      new CustomEvent("messageRead", {
+        detail: { messageId, chatId, from_user_id },
+      })
+    );
+  };
+
+  socket.on("messageRead", handleMessageRead);
+
+  return () => socket.off("messageRead", handleMessageRead);
+}, [socket, user, markAsRead]);
+
+
 
   // 🟢 Join personal room for notifications
 useEffect(() => {

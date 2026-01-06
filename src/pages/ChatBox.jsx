@@ -77,11 +77,18 @@ const ChatBox = () => {
   // Track if user is near bottom
 
 
-const scrollToBottom = (behavior = "smooth") => {
+const scrollToBottom = (options = "smooth") => {
   requestAnimationFrame(() => {
-    bottomRef.current?.scrollIntoView({ behavior });
+    if (!bottomRef.current) return;
+
+    // If options is string, convert to object
+    const scrollOptions =
+      typeof options === "string" ? { behavior: options, block: "end" } : options;
+
+    bottomRef.current.scrollIntoView(scrollOptions);
   });
 };
+
 
 
   const isUserNearBottom = useRef(true);
@@ -565,7 +572,7 @@ useEffect(() => {
 
     // When messages exist
     return (
-      <div className="flex items-center justify-between p-2 bg-[var(--white)] text-[var(--primary)]">
+      <div className="flex items-center justify-between p-2 bg-[var(--hover-subtle-bg)] text-[var(--primary)]">
 <div className="flex title items-center gap-3">
   <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
   <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer">
@@ -575,7 +582,16 @@ useEffect(() => {
 <p className="font-medium text-[0.9rem] text-[var(--primary)]">
   {receiver.username}
 </p>
-{onlineUsers.has(receiver._id) ? (
+{typingUser && typingUserFromId === receiver._id ? (
+ <span className="glassy-typing">
+  Typing
+  <span className="typing-dots">
+    <span></span>
+    <span></span>
+    <span></span>
+  </span>
+</span>
+) : onlineUsers.has(receiver._id) ? (
   <span className="inline-flex items-center gap-2 px-2 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full transition-all duration-300 ease-in-out">
     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
     Online
@@ -583,9 +599,9 @@ useEffect(() => {
 ) : lastActive ? (
   <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-[0.8rem] font-medium rounded-lg transition-colors duration-300 ease-in-out hover:bg-gray-200">
     Active {moment(lastActive).fromNow()}
-     <span className="hidden sm:inline text-gray-400">
+    <span className="hidden sm:inline text-gray-400">
       ({moment(lastActive).format("ddd D MMMM  h:mma")})
-      </span>
+    </span>
   </span>
 ) : (
   <span className="inline-flex items-center gap-2 px-2 py-1 bg-gray-50 text-gray-400 text-sm font-medium rounded-full">
@@ -593,6 +609,7 @@ useEffect(() => {
     Offline
   </span>
 )}
+
 
           </div>
         </div>

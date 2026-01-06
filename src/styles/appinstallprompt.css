@@ -9,7 +9,7 @@
 }
 
 .install-modal {
-  background: var(--bg-light);
+  background: var(--white);
   border-radius: var(--radius);
   padding: 2rem;
   width: 90%;
@@ -17,24 +17,26 @@
   text-align: center;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   animation: scaleIn 0.25s ease;
-  color: var(--text-main);
+  color: var(--text-dark);
 }
 
 .install-modal img {
   width: 72px;
   height: 72px;
-  margin-bottom: 1rem;
+  margin-bottom: .1rem;
+  margin: auto;
 }
 
 .install-modal h2 {
   margin: 0.5rem 0;
+  margin-top: -.4rem;
   font-size: 1.3rem;
   color: var(--primary);
 }
 
 .install-modal p {
   font-size: 0.95rem;
-  color: var(--text-secondary);
+  color: var(--secondary);
   margin-bottom: 1.5rem;
 }
 
@@ -65,13 +67,13 @@
 
 .no-btn {
   background: transparent;
-  color: var(--text-main);
+  color: var(--primary);
   border: 1px solid var(--text-secondary);
 }
 
 .no-btn:hover {
   background: var(--hover-light);
-  color: var(--primary);
+  
 }
 
 @keyframes scaleIn {

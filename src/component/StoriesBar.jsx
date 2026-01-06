@@ -137,7 +137,7 @@ export default function StoriesBar() {
               </div>
             )}
           </div>
-          <p className="text-[11px] font-medium text-slate-400">Your Story</p>
+          <p className="text-[11px] font-medium text-[var(--secondary)]">Your Story</p>
         </div>
 
         {/* Loading Skeletons */}
@@ -168,7 +168,7 @@ export default function StoriesBar() {
                   />
                 </div>
               </div>
-              <p className="text-[11px] font-medium text-slate-200 truncate w-full text-center">
+              <p className="text-[11px] font-medium text-[var(--secondary)] truncate w-full text-center">
                 {displayName.split(" ")[0]}
               </p>
             </div>
