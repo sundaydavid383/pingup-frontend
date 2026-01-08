@@ -156,53 +156,62 @@ useEffect(() => {
   };
 }, []);
 
-  useEffect(() => {
-    if (!autoPlayOnView) return;
-    const el = containerRef.current;
-    const vid = videoRef.current;
-    if (!el || !vid) return;
+useEffect(() => {
+  if (!autoPlayOnView) return;
 
-const observer = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      const vid = videoRef.current;
-      if (!vid) return;
+  const el = containerRef.current;
+  const vid = videoRef.current;
+  if (!el || !vid) return;
 
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-        // 🎯 claim ownership
-        videoState.activeVideo = vid;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const vid = videoRef.current;
 
-        // 🔔 notify others
-        videoManager.dispatchEvent(
-          new CustomEvent("video-play", { detail: vid })
-        );
+        // 👀 ENTER viewport
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
 
-        // 🔑 autoplay logic
-        // If user never unmuted, browser policy may require muted first
-        vid.muted = !videoState.userHasUnmuted;
-        if (videoState.userHasUnmuted) {
-          vid.volume = volume || 0.8;
+          // ❌ respect manual pause
+          if (userPaused) return;
+
+          // 🎯 claim ownership
+          videoState.activeVideo = vid;
+
+          // 🔔 notify others
+          videoManager.dispatchEvent(
+            new CustomEvent("video-play", { detail: vid })
+          );
+
+          // 🔑 autoplay rules
+          vid.muted = !videoState.userHasUnmuted;
+          if (videoState.userHasUnmuted) {
+            vid.volume = volume || 0.8;
+          }
+
+          // ▶️ play only if not already playing
+          if (vid.paused) {
+            vid.play().catch(() => {});
+          }
+
+        } 
+        // 🚪 LEAVE viewport
+        else {
+          if (videoState.activeVideo === vid) {
+            videoState.activeVideo = null;
+          }
+
+          vid.pause();
         }
+      });
+    },
+    { threshold: 0.5 }
+  );
 
-        // always play when visible
-        vid.play().catch(() => {});
-      } else {
-        // leaving viewport: pause video
-        if (videoState.activeVideo === vid) {
-          videoState.activeVideo = null;
-        }
+  observer.observe(el);
+  return () => observer.disconnect();
 
-        vid.pause();
-      }
-    });
-  },
-  { threshold: 0.5 }
-);
+}, [autoPlayOnView, userPaused, volume]);
 
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [autoPlayOnView, userPaused]);
 
   // keyboard shortcutsF
   useEffect(() => {
@@ -274,20 +283,32 @@ const observer = new IntersectionObserver(
   }
 
   // play/pause click handler (accept optional event)
-  function handlePlayPause(e) {
-    if (e && e.stopPropagation) e.stopPropagation();
-    const vid = videoRef.current;
-    if (!vid) return;
-    if (vid.paused) {
-        videoManager.dispatchEvent(new CustomEvent("video-play", { detail: vid }));
+function handlePlayPause() {
+  const vid = videoRef.current;
+  if (!vid) return;
+
+  videoState.activeVideo = vid;
+
+  let newUserPaused;
+  if (vid.paused) {
       vid.play().catch(() => {});
-      setUserPaused(false);
-    } else {
+      newUserPaused = false;
+  } else {
       vid.pause();
-      setUserPaused(true);
-    }
-    resetHideTimer();
+      newUserPaused = true;
   }
+
+  setUserPaused(newUserPaused);
+  console.log("USER CLICK PAUSE TOGGLED:", newUserPaused); // always log
+
+  videoManager.dispatchEvent(new CustomEvent("video-play", { detail: vid }));
+  resetHideTimer();
+}
+
+
+useEffect(() => {
+  console.log("USER PAUSED CHANGED:", userPaused);
+}, [userPaused]);
 
   // seeking
   function handleSeek(e) {
@@ -348,20 +369,23 @@ return (
   onMouseEnter={() => setShowControls(true)}
   onMouseLeave={() => setTimeout(() => setShowControls(false), 3000)}
 >
-  <video
-    ref={videoRef}
-    src={src}
-    poster={poster}
-    className="vp-video"
-    playsInline
-    preload="metadata"
-    muted={muted}
-    style={{
-      width: "100%",
-      height: "100%",     // ✅ fill container height
-      objectFit: "contain", // ✅ maintain aspect ratio
-    }}
-  />
+<video
+  ref={videoRef}
+  src={src}
+  poster={poster}
+  className="vp-video"
+  playsInline
+  preload="metadata"
+  muted={muted}
+  style={{
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    cursor: "pointer", // ✅ shows user it’s clickable
+  }}
+  onClick={handleCenterClick} // ← toggle play/pause
+/>
+
 
 
     {loading && (

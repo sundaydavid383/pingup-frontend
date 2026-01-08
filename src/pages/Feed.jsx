@@ -192,13 +192,11 @@ useEffect(() => {
         setShowShareModal(true);
       }}
       // single click on image
-      onImageClick={() => handleClick("image")}
+      onImageClick={(index) => handleClick("image", index)}
       // double click on header
       onHeaderClick={() => handleClick("header")}
       sharedBy={post.sharedForMe ? post.sharedBy : null}
       sharedMessage={post.sharedForMe ? post.sharedMessage : null}
-      setViewerIndex={setViewerIndex}
-      setSelectedMediaIndex={setSelectedMediaIndex}
       showAlert={showAlert}
     />
   )}

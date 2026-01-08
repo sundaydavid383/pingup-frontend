@@ -64,11 +64,11 @@ export default function Verse({ verse, isChapterVerse, handleVerseSeen }) {
     );
   }
 };
-
+const safeBookId = verse.book.replace(/\s+/g, "-").toLowerCase();
 
   return (
 <div
-  id={`v-${verse.book}-${verse.chapter}-${verse.verse}`}
+  id={`v-${safeBookId}-${verse.chapter}-${verse.verse}`}
   className={`verse-text-paragraph ${isChapterVerse ? "chapter-verse" : "random-verse"}`}
   ref={isChapterVerse ? ref : null}
   style={{

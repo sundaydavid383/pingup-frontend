@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ActionNotifier from './shared/ActionNotifier';
+import ProfileAvatar from "../component/shared/ProfileAvatar";
+
+
 
 const UserProfileButton = () => {
   const { user, setModalOpen, logout } = useAuth();
@@ -22,32 +25,24 @@ const UserProfileButton = () => {
     <div className="flex items-center justify-between w-full p-2">
       
       {/* Profile (Clickable Area) */}
-      <div
-        className="flex items-center gap-3 cursor-pointer min-w-0"
-        onClick={() => setModalOpen(true)}
-      >
-        {user?.profilePicUrl ? (
-          <img
-            src={user.profilePicUrl}
-            alt={user.name}
-            className="w-10 h-10 rounded-full object-cover border border-[var(--input-border)] flex-shrink-0"
-          />
-        ) : (
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--primary)] text-white font-semibold border border-[var(--input-border)] flex-shrink-0"
-          >
-            {getFirstLetterOfNameForFallbackAvatar(user?.name)}
-          </div>
-        )}
-        <div className="flex flex-col overflow-hidden min-w-0">
-          <p className="text-sm font-semibold truncate text-[var(--text-main)] capitalize">
-            {user.name}
-          </p>
-          <p className="text-xs text-[var(--text-secondary)] truncate">
-            {user.email}
-          </p>
-        </div>
-      </div>
+<div className="flex items-center gap-3 cursor-pointer min-w-0">
+  <ProfileAvatar
+    user={user}
+    size={40} // double size
+    className="flex-shrink-0 flex-grow-0 m-3" // prevents squashing
+  />
+
+  <div className="flex flex-col overflow-hidden min-w-0">
+    <p className="text-sm font-semibold truncate text-[var(--text-main)] capitalize">
+      {user.name}
+    </p>
+    <p className="text-xs text-[var(--text-secondary)] truncate">
+      {user.email}
+    </p>
+  </div>
+</div>
+
+
 
       {/* Logout Icon */}
       <button

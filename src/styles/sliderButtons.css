@@ -69,8 +69,8 @@
 /* Close Button */
 .close-btn {
   position: absolute;
-  top: .4rem;        /* top spacing */
-  right: 2rem;      /* right spacing */
+  top: .9rem;        /* top spacing */
+  right: .3rem;      /* right spacing */
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
@@ -83,7 +83,7 @@
   font-size: 1.8rem;
   opacity: 1;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-
+  z-index: 1000;
   /* Smooth animation for hover effects */
   transition: 
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),

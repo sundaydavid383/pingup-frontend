@@ -1,5 +1,7 @@
 import React from "react";
 import assets from "../../assets/assets";
+import { Send, Loader2 } from "lucide-react";
+
 
 const StoryReplies = ({
   visibleReplies,
@@ -24,7 +26,7 @@ const StoryReplies = ({
   className="absolute bottom-17 left-0 right-0
    px-4 z-[9998] max-h-48 flex flex-col space-y-2
     overflow-y-auto
-    bg-[var(--form-bg)]/70 m-auto max-w-[700px]
+    bg-[var(--form-bg)]/40 m-auto max-w-[700px]
      rounded-[var(--radius)] shadow-md
       backdrop-blur-md border p-2"
 >
@@ -47,10 +49,10 @@ const StoryReplies = ({
                       alt={r.userName}
                     />
                     <div className="flex-1 relative">
-                      <span className="font-semibold text-sm text-[var(--primary)]">
+                      <span className="font-semibold text-sm text-[var(--text-secondary)]">
                         {r.userName}
                       </span>
-                      <p className="text-xs text-[var(--text-secondary)]">
+                      <p className="text-xs text-[var(--white)]">
                         {r.replyText}
                       </p>
                       {isMine && (
@@ -78,7 +80,7 @@ const StoryReplies = ({
             {/* --- Expand Button --- */}
             {visibleReplies.length > 1 && (
               <button
-                className="self-start text-xs text-[var(--primary)] hover:underline transition-[var(--transition-default)] mt-1"
+                className="self-start text-xs text-[var(--white)] hover:underline transition-[var(--transition-default)] mt-1"
                 onClick={() => setShowAllReplies((prev) => !prev)}
               >
                 {showAllReplies
@@ -178,22 +180,30 @@ const StoryReplies = ({
             }}
           />
 
-          <button
-            onClick={submitReply}
-            disabled={isSubmitting}
-            className={`btn flex items-center gap-2 ${
-              isSubmitting ? "opacity-60 cursor-not-allowed" : ""
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-                Sending…
-              </>
-            ) : (
-              "Send"
-            )}
-          </button>
+<button
+  onClick={submitReply}
+  disabled={isSubmitting}
+  className={`
+    flex items-center justify-center
+    w-10 h-10 rounded-full
+    bg-[var(--primary)]
+    text-[var(--white)]
+    shadow-md
+    transition-all duration-200
+    active:scale-90
+    hover:brightness-110
+    disabled:opacity-60
+    disabled:cursor-not-allowed
+  `}
+>
+  {isSubmitting ? (
+    <Loader2 className="w-5 h-5 animate-spin" />
+  ) : (
+    <Send className="w-5 h-5" />
+  )}
+</button>
+
+
         </div>
       )}
     </>

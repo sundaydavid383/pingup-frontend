@@ -9,7 +9,7 @@ import useMediaQuery from "../hooks/useMediaQuery";
 const MenuItems = ({ setSidebarOpen }) => {
   const { user, unreadCount: unreadNotifications } = useAuth(); // 🔹 get notification unread count
   const { unreadMessages, getTotalUnread } = useMessageContext();
-  const isSmallScreen = useMediaQuery("(max-width: 768px)");
+     const activeWidth = 658;
 
   // ✅ Compute total unread for messages + notifications
   const [totalUnread, setTotalUnread] = useState(getTotalUnread() + unreadNotifications);
@@ -47,7 +47,7 @@ const menuItems = [
       }
       onClick={() => {
         // only close on small screens
-        if (typeof setSidebarOpen === "function" && isSmallScreen) {
+        if (typeof setSidebarOpen === "function" && window.innerWidth < activeWidth) {
           setSidebarOpen(false);
         }
       }}

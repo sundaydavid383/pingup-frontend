@@ -1,156 +1,154 @@
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import VideoPlayer from "./VideoPlayer";
-import "../../styles/sliderButtons.css";
 
 const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
+  const containerRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [isPortrait, setIsPortrait] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
-  const [textVisible, setTextVisible] = useState(true); // toggle entire text block
+  const [textVisible, setTextVisible] = useState(true);
 
   const attachments = Array.isArray(post?.attachments) ? post.attachments : [];
   const videos = Array.isArray(post?.video_urls) ? post.video_urls : [];
   const allMedia = [...attachments, ...videos].filter(Boolean);
-  const currentItem = allMedia[currentIndex];
-
-  const isVideo =
-    typeof currentItem === "string"
-      ? currentItem.includes(".mp4") || currentItem.includes("youtube")
-      : currentItem.url?.includes(".mp4") || currentItem.url?.includes("youtube");
-
-  useEffect(() => {
-    if (!currentItem || isVideo) return;
-    const img = new Image();
-    img.src = currentItem.url || currentItem;
-    img.onload = () => setIsPortrait(img.height > img.width * 1.2);
-  }, [currentItem, isVideo]);
-
-  const goPrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? allMedia.length - 1 : prev - 1));
-    setShowFullText(false);
-  };
-
-  const goNext = () => {
-    setCurrentIndex((prev) => (prev === allMedia.length - 1 ? 0 : prev + 1));
-    setShowFullText(false);
-  };
-
-  if (!currentItem) return null;
 
   const content = post.content || "";
-  const MAX_LENGTH = 150;
-  const shouldTruncate = content.length > MAX_LENGTH;
-  const displayText = showFullText ? content : content.slice(0, MAX_LENGTH);
+const TEXT_LIMIT = 120;
+
+const isLongText = content.length > TEXT_LIMIT;
+
+const truncatedText = content.slice(0, TEXT_LIMIT) + "...";
+
+const displayText = showFullText || !isLongText
+  ? content
+  : truncatedText;
+
+  /* 🔹 Scroll to initial index on mount */
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const width = containerRef.current.clientWidth;
+    containerRef.current.scrollLeft = width * initialIndex;
+  }, [initialIndex]);
+
+  /* 🔹 Update index based on scroll position */
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollLeft, clientWidth } = containerRef.current;
+    const index = Math.round(scrollLeft / clientWidth);
+    setCurrentIndex(index);
+    setShowFullText(false);
+  };
+
+  if (!allMedia.length) return null;
 
   return (
-    <div className="absolute inset-0 z-[5550] flex flex-col items-center justify-center bg-black/95 p-4 overflow-auto">
-      {/* Close Button */}
-      <button
-        onClick={onClose}
-        className="close-btn"
-      >
+    <div className="fixed inset-0 z-[995550] bg-black/95">
+
+      {/* ❌ Close */}
+      <button onClick={onClose} className="close-btn">
         <X className="w-5 h-5" />
       </button>
 
-      {/* Counter */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 text-gray-300 text-sm font-semibold z-[60]">
-        {currentIndex + 1} / {allMedia.length}
-      </div>
-
-      {/* Navigation Buttons */}
-      {allMedia.length > 1 && (
-        <>
-          <button
-            onClick={goPrev}
-            className="nav-btn nav-btn-prev"
-          >
-            <ChevronLeft className="w-8 h-8 sm:w-10 sm:h-10" />
-          </button>
-          <button
-            onClick={goNext}
-            className="nav-btn nav-btn-next"
-          >
-            <ChevronRight className="w-8 h-8 sm:w-10 sm:h-10" />
-          </button>
-        </>
-      )}
-
-      {/* Media */}
-      <div className="w-full flex justify-center items-center my-4">
-        {isVideo ? (
-          <div className="w-full max-w-4xl">
-            <VideoPlayer
-              src={currentItem.url || currentItem}
-              poster={currentItem.poster}
-              maxHeight="80vh"
-              autoPlayOnView={false}
-              unmuteOnView={false}
-            />
-          </div>
-        ) : (
-          <img
-            src={currentItem.url || currentItem}
-            alt="media"
-            className={`rounded-lg shadow-lg ${
-              isPortrait
-                ? "max-h-[80vh] max-w-[60vw] object-contain"
-                : "max-h-[80vh] max-w-full object-contain"
+      {/* 🔹 WhatsApp-style progress */}
+      <div className="fixed top-3 left-3 right-3 z-[6] flex gap-1">
+        {allMedia.map((_, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-all ${
+              i < currentIndex
+                ? "bg-white"
+                : i === currentIndex
+                ? "bg-white/80"
+                : "bg-white/30"
             }`}
           />
-        )}
+        ))}
       </div>
 
-      {/* Always-visible toggle button */}
+      {/* 🔹 Horizontal swipe container */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="
+          flex h-full w-full overflow-x-scroll overflow-y-hidden
+          snap-x snap-mandatory scroll-smooth
+          touch-pan-x
+        "
+      >
+        {allMedia.map((item, index) => {
+          const isVideo =
+            typeof item === "string"
+              ? item.includes(".mp4") || item.includes("youtube")
+              : item.url?.includes(".mp4") || item.url?.includes("youtube");
+
+          return (
+            <div
+              key={index}
+              className="w-screen h-full flex-shrink-0 snap-center flex items-center justify-center"
+            >
+              {isVideo ? (
+                <div className="w-full max-w-4xl px-4">
+                  <VideoPlayer
+                    src={item.url || item}
+                    poster={item.poster}
+                    maxHeight="80vh"
+                    autoPlayOnView={index === currentIndex}
+                    unmuteOnView={false}
+                  />
+                </div>
+              ) : (
+                <img
+                  src={item.url || item}
+                  alt="media"
+                  className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-lg"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 🔹 Toggle text */}
       {content && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60]">
           <button
-            className="text-[var(--primary)] font-semibold text-sm hover:underline bg-black/50 px-2 py-1 rounded"
-            onClick={() => setTextVisible((prev) => !prev)}
+            className="text-[var(--primary)] text-sm bg-black/50 px-3 py-1 rounded"
+            onClick={() => setTextVisible((p) => !p)}
           >
             {textVisible ? "" : "Show Text"}
           </button>
         </div>
       )}
 
-      {/* Text Overlay */}
-      {textVisible && content && (
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[90%] max-w-3xl bg-black/80 p-4 text-gray-100 rounded-xl z-[50] flex flex-col items-center">
-  {/* Text content */}
-  <p
-    className={`text-center text-sm leading-relaxed ${
-      !showFullText ? "line-clamp-2" : ""
-    }`}
-  >
-    {displayText}
-  </p>
+      {/* 🔹 Text overlay */}
+ {textVisible && content && (
+  <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-3xl bg-black/80 p-4 rounded-xl text-gray-100 z-[50]">
+    
+<p className="text-center text-sm font-normal leading-loose">
+  {displayText}
+</p>
 
-  {/* Buttons */}
-  <div className="flex items-center gap-4 mt-2 flex-wrap justify-center w-full">
-    {/* Show more / Show less */}
-    {shouldTruncate && (
-      <button
-        className="text-[var(--primary)] font-semibold hover:underline text-sm"
-        onClick={() => setShowFullText((prev) => !prev)}
-      >
-        {showFullText ? "Show less" : "See more"}
-      </button>
+
+    {isLongText && (
+      <div className="flex justify-center mt-2">
+        <button
+          className="text-[var(--primary)] text-sm font-semibold hover:underline"
+          onClick={() => setShowFullText((prev) => !prev)}
+        >
+          {showFullText ? "See less" : "See more"}
+        </button>
+      </div>
     )}
 
-    {/* Cancel hides the overlay */}
-   <button
-    className="absolute top-2 right-2 text-white text-xs bg-red-600 px-2 py-0.5 rounded hover:bg-red-700"
-    onClick={() => setTextVisible(false)}
-  >
-    ✕
-  </button>
-
+    <button
+      className="absolute top-[-0.5rem] right-2 text-xs bg-red-600 px-4 py-1 rounded"
+      onClick={() => setTextVisible(false)}
+    >
+      ✕
+    </button>
   </div>
-</div>
+)}
 
-      )}
-
-      <div className="h-8" />
     </div>
   );
 };

@@ -3,10 +3,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
+
 import { FaSearch, FaBook } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
-import useVerseVisibility from "../../hooks/useVerseVisibility";
 import axiosBase from "../../utils/axiosBase";
 import Verse from "../../component/shared/Verse"
 import Fuse from "fuse.js";
@@ -100,6 +100,8 @@ export default function BibleReader() {
   const searchRef = useRef(null);
   const [selectorsVisible, setSelectorsVisible] = useState(false);
   const selectorsRef = useRef(null);
+  const [pendingHighlight, setPendingHighlight] = useState(null);
+
   const { book, chapter, verse } = useParams();
 
 
@@ -167,19 +169,58 @@ const normalizeBookName = (input) => {
         );
 
         // Map top seen verses to full verse objects
-        const topVerses = sorted
-          .map((v) =>
-            versesWithFullNames.find(
-              (vv) =>
-                vv.book === v.book &&
-                vv.chapter === v.chapter &&
-                vv.verse === v.verse
-            )
-          )
-          .filter(Boolean);
+const topVerses = [];
+const seenBookChapters = new Set();
 
-        // If less than 3, fill with random
-        if (topVerses.length >= 3) return topVerses.slice(0, 3);
+// ---------- PASS 1: enforce different book+chapter ----------
+for (let v of sorted) {
+  const key = `${v.book}:${v.chapter}`;
+
+  if (seenBookChapters.has(key)) continue;
+
+  const fullVerse = allVerses.find(
+    vv =>
+      vv.book === v.book &&
+      vv.chapter === v.chapter &&
+      vv.verse === v.verse
+  );
+
+  if (fullVerse) {
+    topVerses.push(fullVerse);
+    seenBookChapters.add(key);
+  }
+
+  if (topVerses.length === 3) break;
+}
+
+// ---------- PASS 2: relax rule if needed ----------
+if (topVerses.length < 3) {
+  for (let v of sorted) {
+    const alreadyPicked = topVerses.some(
+      tv =>
+        tv.book === v.book &&
+        tv.chapter === v.chapter &&
+        tv.verse === v.verse
+    );
+
+    if (alreadyPicked) continue;
+
+    const fullVerse = allVerses.find(
+      vv =>
+        vv.book === v.book &&
+        vv.chapter === v.chapter &&
+        vv.verse === v.verse
+    );
+
+    if (fullVerse) {
+      topVerses.push(fullVerse);
+    }
+
+    if (topVerses.length === 3) break;
+  }
+}
+
+
         return [
           ...topVerses,
           ...getRandomVerses(3 - topVerses.length, versesWithFullNames, topVerses),
@@ -249,46 +290,28 @@ const normalizeBookName = (input) => {
 
 useEffect(() => {
   if (!allVerses.length) return;
-
-  // If no params → normal behavior
-  if (!book || !chapter) return;
+  if (!book || !chapter || !verse) return;
 
   const normalizedBook = normalizeBookName(book);
-  const chapterNum = Number(chapter);
-
-  if (!normalizedBook || !chapterNum) return;
-
-  // Exit search mode
-  exitSearchMode();
 
   setSelectedBookName(normalizedBook);
-  setSelectedChapterNumber(chapterNum);
+  setSelectedChapterNumber(Number(chapter));
 
   const chapterVerses = allVerses.filter(
-    (v) => v.book === normalizedBook && v.chapter === chapterNum
+    (v) => v.book === normalizedBook && v.chapter === Number(chapter)
   );
 
   setDisplayedVerses(chapterVerses);
 
-  // If verse exists → scroll to it
   if (verse) {
-    setTimeout(() => {
-      const el = document.getElementById(
-        `v-${normalizedBook}-${chapterNum}-${verse}`
-      );
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-        el.classList.add("verse-highlight");
-       setTimeout(()=>{
-          el.classList.remove("verse-highlight");
-        }, 1000)
-      }
-    }, 400);
+    setPendingHighlight({
+      book: normalizedBook,
+      chapter: Number(chapter),
+      verse: Number(verse)
+    });
   }
 }, [allVerses, book, chapter, verse]);
+
 
 
   // Helper to pick random verses excluding an optional "exclude" array
@@ -458,26 +481,37 @@ const exitSearchMode = () => {
       );
 
       setDisplayedVerses(chapterVerses);
-
-      // ✅ Scroll to exact verse
-      setTimeout(() => {
-        const el = document.getElementById(`v-${book}-${chapter}-${verse}`);
-        if (el) {
-          el.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-          el.classList.add("verse-highlight");
-          setTimeout(()=>{
-            el.classList.remove("verse-highlight");
-        }, 2000)
-        }
-      }, 300);
+      setPendingHighlight({ book, chapter, verse });
     };
 
     window.addEventListener("go-to-verse", handler);
     return () => window.removeEventListener("go-to-verse", handler);
   }, [allVerses]);
+
+useEffect(() => {
+  if (!pendingHighlight || !displayedVerses.length) return;
+
+  const { book, chapter, verse } = pendingHighlight;
+  const safeBookId = book.replace(/\s+/g, "-").toLowerCase();
+
+  // Wait until the verse exists in the DOM
+  const interval = setInterval(() => {
+    const el = document.getElementById(`v-${safeBookId}-${chapter}-${verse}`);
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("verse-highlight");
+
+    setTimeout(() => el.classList.remove("verse-highlight"), 3000);
+
+    clearInterval(interval);
+    setPendingHighlight(null);
+  }, 50);
+
+  return () => clearInterval(interval);
+}, [pendingHighlight, displayedVerses]);
+
+
 
 
 
@@ -571,7 +605,7 @@ const exitSearchMode = () => {
 
       {/* Display verses */}
       {isSearching && (
-        <div className="search-loading-bar">
+        <div className="search-loading-bar fixed-loading">
           <div className="search-loading-progress" />
         </div>
       )}

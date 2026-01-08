@@ -25,12 +25,12 @@ import DislikeButton from "./DislikeButton";
 import ActionNotifier from "./shared/ActionNotifier";
 import Loading from "./shared/Loading";
 
-const PostCard = ({ post, setFeeds,
-setViewerIndex,
-  onShare, 
-onMediaView, setSelectedMediaIndex,
-onOpenMedia,
-showAlert }) => {
+const PostCard = ({   post,
+  setFeeds,
+  onShare,
+  onImageClick,
+  onHeaderClick,
+  showAlert }) => {
   const navigate = useNavigate();
   const { user: currentUser, token } = useAuth() || {};
   const userId = currentUser?._id;
@@ -289,7 +289,8 @@ const meDisliked = (serverPost.recentDislikes || []).some(
       <div className="flex justify-between items-center w-full ">
         {/* LEFT: user details */}
         <div
-          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"  >
+            className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+              onDoubleClick={onHeaderClick}  >
           <div onClick={() => navigate(`/profile/${post.user?._id}`)}>
             <ProfileAvatar
 
@@ -340,7 +341,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
     {shouldTruncate && (
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-primary mt-1 inline-block"
+        className="text-xs text-[var(--primary)] mt-1 inline-block"
       >
         {isExpanded ? "Read Less" : "Read More"}
       </button>
@@ -398,15 +399,9 @@ const meDisliked = (serverPost.recentDislikes || []).some(
             return (
               <div
                 key={index}
-               onClick={() => {
-  if (isImage) {
-    onMediaView();          // open the viewer
-    setViewerIndex(index);  // set the clicked image
-    setSelectedMediaIndex(index);
-    setCurrentPost(post);   // make sure viewer knows which post
-    console.log("Image clicked:", index, post);
-  }
-  // videos / YouTube do nothing
+onClick={(e) => {
+  e.stopPropagation();
+  if (isImage) onImageClick(index);
 }}
                 className={`relative cursor-pointer overflow-hidden ${widthClass} ${single ? "rounded-lg" : "rounded-sm"
                   } bg-gray-100`}

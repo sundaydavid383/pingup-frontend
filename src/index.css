@@ -49,7 +49,7 @@ body{
   --inverse-dark-indigo-gradient: linear-gradient(to right, var(--secondary), var(--input-bg));
   --hover-gradient: linear-gradient(to right, var(--hover-light), var(--hover-dark));
   --inverse-hover-gradient: linear-gradient(to right, var(--hover-dark), var(--hover-light));
-  --chat-custom-gradient: linear-gradient(to right, var(--color-6) , var(--white));
+  --chat-custom-gradient: linear-gradient(to right, var(--color-6), var(--white));
 
   --scripture-custom-gradient: conic-gradient(
     from 90deg,
@@ -91,9 +91,10 @@ body{
 /* ===== Global Scrollbar Styling ===== */
 .story-wrapper {
   position: relative;
-  width: 68px;
-  height: 68px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
+  margin-bottom: 1.5rem;
 }
 
 /* Gradient ring OUTSIDE */

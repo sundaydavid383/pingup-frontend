@@ -12,10 +12,12 @@ const Layout = () => {
   const sidebarRef = useRef(null);
   const menuButtonRef = useRef(null);
   const activeWidth = 658;
-
+  const mode = import.meta.env.MODE;
+  const testLayout = false
   // Handle clicks outside sidebar (only on mobile)
 useEffect(() => {
   const handleClickOutside = (event) => {
+    if (mode === "development" && testLayout) {
     console.log("handleClickOutside fired:", {
     
       sidebarOpen,
@@ -24,6 +26,7 @@ useEffect(() => {
       menuButtonContains: menuButtonRef.current?.contains(event.target),
     });
     console.log("Window width:", window.innerWidth);
+  }
 
     if (window.innerWidth >= activeWidth) return;
     if (!sidebarOpen) return;

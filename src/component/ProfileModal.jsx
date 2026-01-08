@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, X} from "lucide-react";
 import axios from "axios";
 import assets from "../assets/assets";
 import CustomAlert from "./shared/CustomAlert";
@@ -256,6 +256,12 @@ useEffect(() => {
     <div className="fixed inset-0 z-[51110] h-screen overflow-y-auto bg-black/50">
       <div className="max-w-2xl sm:py-6 mx-auto">
         <div className="bg-white rounded-lg shadow p-6">
+              <button
+ className="fixed top-4 right-4 text-xl bg-[var(--primary)] text-[var(--white)] hover:bg-gray-200/50 px-3 py-1 rounded-full z-[51120] backdrop-blur-sm"
+      onClick={() => setShowEdit(false)}
+    >
+      ✕
+    </button>
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Edit Profile</h1>
 
           {alert.show && (
@@ -269,6 +275,7 @@ useEffect(() => {
           <form className="space-y-4" onSubmit={handleSaveProfile}>
             {/* Profile Picture */}
             <div className="flex flex-col items-center">
+              
            <label className="group/profile relative cursor-pointer">
   <ProfileAvatar
     user={{

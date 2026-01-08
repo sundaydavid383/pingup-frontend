@@ -72,7 +72,7 @@ React.useEffect(() => {
         >
           {/* Mobile close button */}
           <X
-            className="absolute top-3 right-3 w-8 h-8 p-1.5 rounded-md text-gray-700 bg-white shadow-md md:hidden cursor-pointer hover:bg-gray-100 transition"
+            className="absolute top-3 right-3 w-8 h-8 p-1.5 rounded-md text-gray-700 bg-white shadow-md sm:hidden cursor-pointer hover:bg-gray-100 transition"
             onClick={() => setSidebarOpen(false)}
           />
 
