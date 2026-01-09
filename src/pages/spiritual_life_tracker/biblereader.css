@@ -110,7 +110,7 @@
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
   width: 300px;
   max-width: 90vw;
-  z-index: 300;
+  z-index: 9999990;
 }
 
 /* Search Input */
@@ -124,6 +124,7 @@
   background: rgba(255,255,255,0.1);
   color: var(--text-main);
   box-sizing: border-box;
+
 }
 
 .search-dropdown input::placeholder {
@@ -145,6 +146,47 @@
 .search-dropdown button:hover {
   background: #3f51b5;
 }
+
+/* ======== play and pause buttons ======== */
+.chapter-restart-btn,
+.chapter-play-btn {
+  position: absolute;
+  bottom: 70px;
+  width: 3rem;
+  height: 3rem;
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* backdrop blur */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.chapter-restart-btn {
+  background: rgba(255, 0, 0, 0.4); /* semi-transparent red */
+  right: 90px;
+}
+
+.chapter-play-btn {
+  background: rgba(0, 123, 255, 0.4); /* semi-transparent blue */
+  right: 10px;
+}
+
+.chapter-restart-btn:hover,
+.chapter-play-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+
+
+
 
 /* Loading Bar */
 .search-loading-bar {
@@ -224,7 +266,8 @@
   .search-dropdown {
     width: 75vw;       /* almost full width on small screens */
     right: 2.5%;      /* center it with some margin */
-    max-width: none;  /* remove max-width restriction */
+    max-width: none; 
+    /* remove max-width restriction */
   }
 
   .search-dropdown input,

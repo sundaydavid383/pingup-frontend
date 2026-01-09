@@ -165,7 +165,7 @@ export default function StoriesBar() {
     className="story-img"
   />
   </div>
-                <p className="text-[11px] font-medium text-[var(--secondary)] truncate w-full text-center">
+                <p className="text-[11px] font-medium text-[var(--secondary)] truncate w-full text-center mt-2">
                 {displayName.split(" ")[0]}
               </p>
 </div>

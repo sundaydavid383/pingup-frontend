@@ -270,7 +270,7 @@ const Messages = () => {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[var(--primary)] truncate">@{usr.username}</p>
+                    <p className="text-[var(--primary)] truncate">{usr.username}</p>
                     <p className="font-medium text-slate-700 truncate">{usr.full_name}</p>
 
                     {last && (

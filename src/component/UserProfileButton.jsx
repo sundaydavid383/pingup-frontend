@@ -26,13 +26,13 @@ const UserProfileButton = () => {
       
       {/* Profile (Clickable Area) */}
 <div className="flex items-center gap-3 cursor-pointer min-w-0">
-  <ProfileAvatar
+ <div className="w-5"> <ProfileAvatar
     user={user}
     size={40} // double size
     className="flex-shrink-0 flex-grow-0 m-3" // prevents squashing
-  />
+  /></div>
 
-  <div className="flex flex-col overflow-hidden min-w-0">
+  <div className="flex flex-col overflow-hidden min-w-0 ml-3">
     <p className="text-sm font-semibold truncate text-[var(--text-main)] capitalize">
       {user.name}
     </p>

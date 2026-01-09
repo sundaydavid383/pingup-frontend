@@ -4,13 +4,14 @@ import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
-import { FaSearch, FaBook } from "react-icons/fa";
+import { FaSearch, FaBook, } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import axiosBase from "../../utils/axiosBase";
 import Verse from "../../component/shared/Verse"
 import Fuse from "fuse.js";
 import { useSwipeable } from "react-swipeable"; //
+import ChapterTTS from "../../component/shared/ChapterTTS";
 // Map of short names or abbreviations to full book names
 const BOOK_FULL_NAMES = {
   gn: "Genesis",
@@ -101,33 +102,35 @@ export default function BibleReader() {
   const [selectorsVisible, setSelectorsVisible] = useState(false);
   const selectorsRef = useRef(null);
   const [pendingHighlight, setPendingHighlight] = useState(null);
+  const utteranceRef = useRef(null);
+
 
   const { book, chapter, verse } = useParams();
 
 
-// Close dropdown if clicked outside
-useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (searchRef.current && !searchRef.current.contains(event.target)) {
-      setSearchVisible(false);
-    }
-    if(selectorsRef.current && !selectorsRef.current.contains(event.target)){
-      setSelectorsVisible(false);
-    }
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchVisible(false);
+      }
+      if (selectorsRef.current && !selectorsRef.current.contains(event.target)) {
+        setSelectorsVisible(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+  const normalizeBookName = (input) => {
+    if (!input) return null;
+
+    const key = input.toLowerCase().replace(/\s+/g, "");
+    return BOOK_FULL_NAMES[key] || input;
   };
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
-
-
-const normalizeBookName = (input) => {
-  if (!input) return null;
-
-  const key = input.toLowerCase().replace(/\s+/g, "");
-  return BOOK_FULL_NAMES[key] || input;
-};
 
 
 
@@ -169,56 +172,56 @@ const normalizeBookName = (input) => {
         );
 
         // Map top seen verses to full verse objects
-const topVerses = [];
-const seenBookChapters = new Set();
+        const topVerses = [];
+        const seenBookChapters = new Set();
 
-// ---------- PASS 1: enforce different book+chapter ----------
-for (let v of sorted) {
-  const key = `${v.book}:${v.chapter}`;
+        // ---------- PASS 1: enforce different book+chapter ----------
+        for (let v of sorted) {
+          const key = `${v.book}:${v.chapter}`;
 
-  if (seenBookChapters.has(key)) continue;
+          if (seenBookChapters.has(key)) continue;
 
-  const fullVerse = allVerses.find(
-    vv =>
-      vv.book === v.book &&
-      vv.chapter === v.chapter &&
-      vv.verse === v.verse
-  );
+          const fullVerse = allVerses.find(
+            vv =>
+              vv.book === v.book &&
+              vv.chapter === v.chapter &&
+              vv.verse === v.verse
+          );
 
-  if (fullVerse) {
-    topVerses.push(fullVerse);
-    seenBookChapters.add(key);
-  }
+          if (fullVerse) {
+            topVerses.push(fullVerse);
+            seenBookChapters.add(key);
+          }
 
-  if (topVerses.length === 3) break;
-}
+          if (topVerses.length === 3) break;
+        }
 
-// ---------- PASS 2: relax rule if needed ----------
-if (topVerses.length < 3) {
-  for (let v of sorted) {
-    const alreadyPicked = topVerses.some(
-      tv =>
-        tv.book === v.book &&
-        tv.chapter === v.chapter &&
-        tv.verse === v.verse
-    );
+        // ---------- PASS 2: relax rule if needed ----------
+        if (topVerses.length < 3) {
+          for (let v of sorted) {
+            const alreadyPicked = topVerses.some(
+              tv =>
+                tv.book === v.book &&
+                tv.chapter === v.chapter &&
+                tv.verse === v.verse
+            );
 
-    if (alreadyPicked) continue;
+            if (alreadyPicked) continue;
 
-    const fullVerse = allVerses.find(
-      vv =>
-        vv.book === v.book &&
-        vv.chapter === v.chapter &&
-        vv.verse === v.verse
-    );
+            const fullVerse = allVerses.find(
+              vv =>
+                vv.book === v.book &&
+                vv.chapter === v.chapter &&
+                vv.verse === v.verse
+            );
 
-    if (fullVerse) {
-      topVerses.push(fullVerse);
-    }
+            if (fullVerse) {
+              topVerses.push(fullVerse);
+            }
 
-    if (topVerses.length === 3) break;
-  }
-}
+            if (topVerses.length === 3) break;
+          }
+        }
 
 
         return [
@@ -232,6 +235,17 @@ if (topVerses.length < 3) {
 
     setDisplayedVerses(displayThreeVerses());
   }, [verseSeen]);
+
+  // combining verses to create a chapter text
+  const buildChapterText = () => {
+    if (!displayedVerses.length) return "";
+
+    return displayedVerses
+      .map(v => v.text)
+      .join(" ");
+  };
+ 
+
 
   // Initialize Fuse.js for fuzzy search
   useEffect(() => {
@@ -288,29 +302,29 @@ if (topVerses.length < 3) {
     }, 300);
   };
 
-useEffect(() => {
-  if (!allVerses.length) return;
-  if (!book || !chapter || !verse) return;
+  useEffect(() => {
+    if (!allVerses.length) return;
+    if (!book || !chapter || !verse) return;
 
-  const normalizedBook = normalizeBookName(book);
+    const normalizedBook = normalizeBookName(book);
 
-  setSelectedBookName(normalizedBook);
-  setSelectedChapterNumber(Number(chapter));
+    setSelectedBookName(normalizedBook);
+    setSelectedChapterNumber(Number(chapter));
 
-  const chapterVerses = allVerses.filter(
-    (v) => v.book === normalizedBook && v.chapter === Number(chapter)
-  );
+    const chapterVerses = allVerses.filter(
+      (v) => v.book === normalizedBook && v.chapter === Number(chapter)
+    );
 
-  setDisplayedVerses(chapterVerses);
+    setDisplayedVerses(chapterVerses);
 
-  if (verse) {
-    setPendingHighlight({
-      book: normalizedBook,
-      chapter: Number(chapter),
-      verse: Number(verse)
-    });
-  }
-}, [allVerses, book, chapter, verse]);
+    if (verse) {
+      setPendingHighlight({
+        book: normalizedBook,
+        chapter: Number(chapter),
+        verse: Number(verse)
+      });
+    }
+  }, [allVerses, book, chapter, verse]);
 
 
 
@@ -338,12 +352,12 @@ useEffect(() => {
     setSelectedChapterNumber(1);
     displayChapterVerses(bookName, 1);
   };
-// 🔴 Exit search mode and return to reading mode
-const exitSearchMode = () => {
-  setSearchResults([]);
-  setHasSearched(false);
-  setSearchQuery("");
-};
+  // 🔴 Exit search mode and return to reading mode
+  const exitSearchMode = () => {
+    setSearchResults([]);
+    setHasSearched(false);
+    setSearchQuery("");
+  };
 
   const handleChapterSelection = (chapterNumber) => {
     exitSearchMode();
@@ -441,6 +455,8 @@ const exitSearchMode = () => {
         console.debug("keydown -> ArrowLeft");
         moveChapter("prev");
       }
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -488,28 +504,28 @@ const exitSearchMode = () => {
     return () => window.removeEventListener("go-to-verse", handler);
   }, [allVerses]);
 
-useEffect(() => {
-  if (!pendingHighlight || !displayedVerses.length) return;
+  useEffect(() => {
+    if (!pendingHighlight || !displayedVerses.length) return;
 
-  const { book, chapter, verse } = pendingHighlight;
-  const safeBookId = book.replace(/\s+/g, "-").toLowerCase();
+    const { book, chapter, verse } = pendingHighlight;
+    const safeBookId = book.replace(/\s+/g, "-").toLowerCase();
 
-  // Wait until the verse exists in the DOM
-  const interval = setInterval(() => {
-    const el = document.getElementById(`v-${safeBookId}-${chapter}-${verse}`);
-    if (!el) return;
+    // Wait until the verse exists in the DOM
+    const interval = setInterval(() => {
+      const el = document.getElementById(`v-${safeBookId}-${chapter}-${verse}`);
+      if (!el) return;
 
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("verse-highlight");
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("verse-highlight");
 
-    setTimeout(() => el.classList.remove("verse-highlight"), 3000);
+      setTimeout(() => el.classList.remove("verse-highlight"), 3000);
 
-    clearInterval(interval);
-    setPendingHighlight(null);
-  }, 50);
+      clearInterval(interval);
+      setPendingHighlight(null);
+    }, 50);
 
-  return () => clearInterval(interval);
-}, [pendingHighlight, displayedVerses]);
+    return () => clearInterval(interval);
+  }, [pendingHighlight, displayedVerses]);
 
 
 
@@ -523,151 +539,154 @@ useEffect(() => {
   return (
     <div className="bible-reader-container">
       <div className="bible-reader-inner">
-      {/* --- Replace your fixed-header block with this --- */}
-  <div className="fixed-header">
-  <div className="header-inner">
-    {/* Left: Title */}
-    <h2 className="bible-title">Bible Reader</h2>
+        {/* --- Replace your fixed-header block with this --- */}
+        <div className="fixed-header">
+          <div className="header-inner">
+            {/* Left: Title */}
+            <h2 className="bible-title">Bible Reader</h2>
 
-    {/* Center: Chapter */}
-    {selectedBookName && (
-      <div className="chapter-center">
-        {selectedBookName} {selectedChapterNumber}
-      </div>
-    )}
-
-    {/* Right: Search & Selectors */}
-    <div className="header-right">
-      {/* Search Dropdown */}
-      <div className="search-container" ref={searchRef}>
-        <FaSearch
-          className="search-toggle-icon"
-          onClick={() => setSearchVisible(prev => !prev)}
-        />
-        {searchVisible && (
-          <div className="search-dropdown">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search scripture, book, or phrase"
-              className="bible-search-input"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
-            />
-            <button
-              onClick={() => handleSearchClick()}
-            >
-              Search
-            </button>
-            {/* Loading bar appears inside dropdown */}
-            {isSearching && (
-              <div className="search-loading-bar">
-                <div className="search-loading-progress" />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Book/Chapter Selectors */}
-      <div className="selectors-container" ref={selectorsRef}>
-        <FaBook
-          className="selectors-toggle-icon"
-          onClick={() => setSelectorsVisible(prev => !prev)}
-        />
-        {selectorsVisible && (
-          <div className="selectors-dropdown">
-            <CustomSelect
-              options={bookNames}
-              value={selectedBookName}
-              onChange={handleBookSelection}
-              placeholder="Book"
-            />
+            {/* Center: Chapter */}
             {selectedBookName && (
-              <CustomSelect
-                options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
-                value={selectedChapterNumber}
-                onChange={handleChapterSelection}
-                placeholder="Chapter"
-              />
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+  <div className="chapter-center flex items-center gap-3">
+    <span>
+      {selectedBookName} {selectedChapterNumber}
+    </span>
   </div>
-</div>
+)}
 
 
-
-
-
-
-      {/* Display verses */}
-      {isSearching && (
-        <div className="search-loading-bar fixed-loading">
-          <div className="search-loading-progress" />
-        </div>
-      )}
-
-      <div
-        className="verses-container"
-        onTouchStart={(e) => {
-          if (selectedBookName) touchStartX.current = e.touches[0].clientX;
-        }}
-        onTouchEnd={(e) => {
-          if (!selectedBookName) return;
-          const touchEndX = e.changedTouches[0].clientX;
-          const diff = touchStartX.current - touchEndX;
-          if (diff > 50) moveChapter("next");
-          else if (diff < -50) moveChapter("prev");
-        }}
-      >
-        {isLoadingVerses ? (
-          <div className="verse-skeleton-wrapper">
-            {[1, 2, 3, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="verse-skeleton">
-                <div className="skeleton-line short"></div>
-                <div className="skeleton-line"></div>
-                <div className="skeleton-line"></div>
+            {/* Right: Search & Selectors */}
+            <div className="header-right">
+              {/* Search Dropdown */}
+              <div className="search-container" ref={searchRef}>
+                <FaSearch
+                  className="search-toggle-icon"
+                  onClick={() => setSearchVisible(prev => !prev)}
+                />
+                {searchVisible && (
+                  <div className="search-dropdown">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search scripture, book, or phrase"
+                      className="bible-search-input"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+                    />
+                    <button
+                      onClick={() => handleSearchClick()}
+                    >
+                      Search
+                    </button>
+                    {/* Loading bar appears inside dropdown */}
+                    {isSearching && (
+                      <div className="search-loading-bar">
+                        <div className="search-loading-progress" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        ) : searchResults.length > 0 && hasSearched  ? (
-          // Search results (Verse component styling preserved)
-          searchResults.map((v, index) => (
-            <Verse
-              key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
-              verse={v}
-              isChapterVerse={false}
-              handleVerseSeen={handleVerseSeen}
-            />
-          ))
-        ) : hasSearched && !isSearching ? (
-          // No search results message
-          <p className="text-gray-400 text-center py-8">
-            No results found for “{searchQuery}”
-          </p>
-        ) : displayedVerses.length > 0 ? (
-          // Normal chapter / random verses
-          displayedVerses.map((v, index) => (
-            <Verse
-              key={
-                isReadingChapter
-                  ? `${v.book}-${v.chapter}-${v.verse}`
-                  : `${v.book}-${v.chapter}-${v.verse}-${index}`
-              }
-              verse={v}
-              isChapterVerse={isReadingChapter}
-              handleVerseSeen={handleVerseSeen}
-            />
-          ))
-        ) : (
-          <p className="text-gray-400 text-center py-8">No verses to display</p>
-        )}
-      </div>
 
-     </div>
+              {/* Book/Chapter Selectors */}
+              <div className="selectors-container" ref={selectorsRef}>
+                <FaBook
+                  className="selectors-toggle-icon"
+                  onClick={() => setSelectorsVisible(prev => !prev)}
+                />
+                {selectorsVisible && (
+                  <div className="selectors-dropdown">
+                    <CustomSelect
+                      options={bookNames}
+                      value={selectedBookName}
+                      onChange={handleBookSelection}
+                      placeholder="Book"
+                    />
+                    {selectedBookName && (
+                      <CustomSelect
+                        options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
+                        value={selectedChapterNumber}
+                        onChange={handleChapterSelection}
+                        placeholder="Chapter"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+       {isReadingChapter && <ChapterTTS text={buildChapterText()} />}
+
+
+
+        {/* Display verses */}
+        {isSearching && (
+          <div className="search-loading-bar fixed-loading">
+            <div className="search-loading-progress" />
+          </div>
+        )}
+
+        <div
+          className="verses-container"
+          onTouchStart={(e) => {
+            if (selectedBookName) touchStartX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            if (!selectedBookName) return;
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX.current - touchEndX;
+            if (diff > 50) moveChapter("next");
+            else if (diff < -50) moveChapter("prev");
+          }}
+        >
+          {isLoadingVerses ? (
+            <div className="verse-skeleton-wrapper">
+              {[1, 2, 3, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="verse-skeleton">
+                  <div className="skeleton-line short"></div>
+                  <div className="skeleton-line"></div>
+                  <div className="skeleton-line"></div>
+                </div>
+              ))}
+            </div>
+          ) : searchResults.length > 0 && hasSearched ? (
+            // Search results (Verse component styling preserved)
+            searchResults.map((v, index) => (
+              <Verse
+                key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
+                verse={v}
+                isChapterVerse={false}
+                handleVerseSeen={handleVerseSeen}
+              />
+            ))
+          ) : hasSearched && !isSearching ? (
+            // No search results message
+            <p className="text-gray-400 text-center py-8">
+              No results found for “{searchQuery}”
+            </p>
+          ) : displayedVerses.length > 0 ? (
+            // Normal chapter / random verses
+            displayedVerses.map((v, index) => (
+              <Verse
+                key={
+                  isReadingChapter
+                    ? `${v.book}-${v.chapter}-${v.verse}`
+                    : `${v.book}-${v.chapter}-${v.verse}-${index}`
+                }
+                verse={v}
+                isChapterVerse={isReadingChapter}
+                handleVerseSeen={handleVerseSeen}
+              />
+            ))
+          ) : (
+            <p className="text-gray-400 text-center py-8">No verses to display</p>
+          )}
+        </div>
+
+      </div>
 
     </div>
   );
