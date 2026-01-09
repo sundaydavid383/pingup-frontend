@@ -307,17 +307,38 @@ export default function ScriptureAssistant({ currentUser }) {
       />
 
       <div className="flex flex-col items-center w-full gap-5 mt-4">
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={handleChange}
-          placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
-          disabled={!currentUser}
-          rows={1}
-          className="w-full max-w-[600px] rounded border p-4 text-sm resize-none overflow-hidden"
-        />
+      <textarea
+  ref={inputRef}
+  value={text}
+  onChange={handleChange}
+  placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
+  disabled={!currentUser}
+  rows={1}
+  className="
+    w-full
+    max-w-[650px]
+    rounded-xl
+    border
+    border-[var(--primary)]-400/40
+    bg-[var(--primary)]-500/10
+    p-4
+    text-sm
+    text-white
+    placeholder:text-[var(--primary)]-200/70
+    resize-none
+    overflow-hidden
+    transition
+    focus:outline-none
+    focus:ring-2
+    focus:ring-[var(--primary)]-500
+    focus:border-[var(--primary)]-500
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+  "
+/>
 
-        <div className="space-y-4 w-full flex flex-col justify-center items-center">
+
+        <div className="space-y-4 w-full flex flex-col items-center">
           {loading ? <div>Loading...</div> : matchedVerses.map((v, idx) => (
             <VerseCard
               key={idx}

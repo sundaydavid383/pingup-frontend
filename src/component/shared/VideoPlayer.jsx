@@ -383,7 +383,10 @@ return (
     objectFit: "contain",
     cursor: "pointer", // ✅ shows user it’s clickable
   }}
-  onClick={handleCenterClick} // ← toggle play/pause
+  onClick={handleCenterClick} 
+   controlsList="nodownload"
+  onContextMenu={(e) => e.preventDefault()}
+  draggable={false}
 />
 
 

@@ -32,24 +32,28 @@ const handleNavigateToVerse = () => {
 };
 
   return (
-    <div
-    onClick={handleNavigateToVerse}
-      className="
-        verse-card
-        group
-        relative
-        rounded-xl
-        max-w-[600px]
-        px-5
-        py-4
-        shadow-sm
-        border
-        border-white/10
-        transition-[var(--transition-default)]
-        hover:shadow-md
-        hover:border-[var(--primary)]
-      "
-    >
+<div
+  onClick={handleNavigateToVerse}
+  className="
+    verse-card
+    group
+    relative
+    w-full
+    max-w-[650px]
+    min-h-[120px]
+    rounded-xl
+    px-6
+    py-5
+    shadow-sm
+    border
+    border-white/10
+    bg-[var(--bg-card)]
+    transition-[var(--transition-default)]
+    hover:shadow-md
+    hover:border-[var(--primary)]
+  "
+>
+
       {/* Accent bar */}
       <div
         className="

@@ -424,7 +424,10 @@ onClick={(e) => {
                       maxHeight,
                       width: isMobileShaped ? "75%" : "100%",
                       margin: "auto",
+                      userSelect: "none",
                     }}
+                    onContextMenu={(e) => e.preventDefault()}
+                    draggable={false}
                   />
                 )}
 

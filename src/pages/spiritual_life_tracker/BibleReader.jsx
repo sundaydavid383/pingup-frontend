@@ -548,7 +548,7 @@ export default function BibleReader() {
             {/* Center: Chapter */}
             {selectedBookName && (
   <div className="chapter-center flex items-center gap-3">
-    <span>
+    <span className="text-[var(--hover-light)]">
       {selectedBookName} {selectedChapterNumber}
     </span>
   </div>
