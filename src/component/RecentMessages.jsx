@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Image as ImageIcon, File, MessageSquare } from "lucide-react";
+import { Image as ImageIcon, Mic, MessageSquare } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import moment from "moment";
 import axios from "../utils/axiosBase";
@@ -229,7 +229,7 @@ useEffect(() => {
         Recent Messages
       </h3>
 
-      <div className="flex flex-col max-h-[70%] overflow-y-scroll no-scrollbar">
+      <div className="flex flex-col max-h-[45vh] overflow-y-scroll">
         {loading ? (
          <RecentMessagesSkeleton />
         ) : sortedConnections.length === 0 ? (
@@ -275,7 +275,7 @@ useEffect(() => {
                         </>
                       ) : last?.type === "audio" ? (
                         <>
-                          <File className="w-4 h-4 text-gray-400" />
+                          <Mic className="w-4 h-4 text-gray-400" />
                           <span>Audio</span>
                         </>
                       ) : (

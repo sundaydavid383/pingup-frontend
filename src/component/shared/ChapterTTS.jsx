@@ -10,63 +10,75 @@ export default function ChapterTTS({ text }) {
   const utteranceRef = useRef(null);
   const [alert, setAlert] = useState(null); // { message: "", type: "info" }
   
+  useEffect(() => {
+  window.speechSynthesis.cancel();
+  setIsSpeaking(false);
+  utteranceRef.current = null;
+}, [text]);
 
-  const handlePlayChapter = () => {
-if (!window.speechSynthesis) {
-  setAlert({ message: "Text-to-speech not supported in this browser", type: "error" });
-  return;
-}
 
-
-      // Always cancel existing speech before starting new
-  if (window.speechSynthesis.speaking) {
-    window.speechSynthesis.cancel();
+const handlePlayChapter = () => {
+  if (!window.speechSynthesis) {
+    setAlert({ message: "Text-to-speech not supported in this browser", type: "error" });
+    return;
   }
 
-    // Pause if already speaking
-    if (isSpeaking) {
-      window.speechSynthesis.pause();
-      setIsSpeaking(false);
-      return;
-    }
-
-    // Resume if paused
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-      setIsSpeaking(true);
-      return;
-    }
-
-    // Fresh start
-    if (!text) return;
-
-    setIsLoadingTTS(true); // start loading
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onstart = () => {
-      setIsLoadingTTS(false);
-      setIsSpeaking(true);
-    };
-
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      setIsLoadingTTS(false);
-    };
-
-    utteranceRef.current = utterance;
-    window.speechSynthesis.cancel(); // stop other TTS
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
+  // Pause if currently speaking
+  if (isSpeaking) {
+    window.speechSynthesis.pause();
     setIsSpeaking(false);
+    return;
+  }
+
+  // Resume ONLY if paused and utterance still exists
+  if (
+    window.speechSynthesis.paused &&
+    utteranceRef.current
+  ) {
+    window.speechSynthesis.resume();
+    setIsSpeaking(true);
+    return;
+  }
+
+  // Fresh play (new utterance)
+  if (!text) return;
+
+  window.speechSynthesis.cancel(); // hard reset
+
+  setIsLoadingTTS(true);
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  utterance.onstart = () => {
+    setIsLoadingTTS(false);
+    setIsSpeaking(true);
   };
+
+  utterance.onend = () => {
+    setIsSpeaking(false);
+    utteranceRef.current = null;
+  };
+
+  utterance.onerror = () => {
+    setIsSpeaking(false);
+    setIsLoadingTTS(false);
+    utteranceRef.current = null;
+  };
+
+  utteranceRef.current = utterance;
+  window.speechSynthesis.speak(utterance);
+};
+
+
+const stopSpeaking = () => {
+  window.speechSynthesis.cancel();
+  utteranceRef.current = null;
+  setIsSpeaking(false);
+};
+
 
 useEffect(() => {
   const stopTTS = () => window.speechSynthesis.cancel();

@@ -241,6 +241,7 @@ const handleSubmit = async () => {
             value={content}
             onChange={handleTextChange}
             onPaste={handlePaste}
+            disabled={loading}
           />
           <div className="text-xs text-gray-500 text-right">{content.length}/{MAX_TEXT_LENGTH}</div>
 

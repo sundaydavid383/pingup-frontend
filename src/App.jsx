@@ -38,6 +38,28 @@ const App = () => {
 
 
   useEffect(() => {
+    const disableImageContextMenu = (e) => {
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+      }
+  };
+
+   const disableImageDrag = (e) => {
+    if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+   }
+
+  document.addEventListener("contextMenu", disableImageContextMenu);
+  document.addEventListener("dragstart", disableImageDrag);
+
+  return () => {
+    document.removeEventListener("contextMenu", disableImageContextMenu);
+    document.removeEventListener("dragstart", disableImageDrag);
+  }
+}, []);
+
+  useEffect(() => {
     document.title = modalOpen ? toTitleCase(user?.name) : "SpringsConnect – News Feed";
     document.body.style.overflow = modalOpen ? 'hidden' : 'auto';
     return () => (document.body.style.overflow = 'auto');

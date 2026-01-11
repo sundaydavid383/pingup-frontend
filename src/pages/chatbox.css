@@ -48,7 +48,9 @@ html, body {
     height: 90%;
   }
 }
-
+.image_composer{
+  background-color: red;
+}
 /* -----------------------------
    FIXED INPUT BAR
    (we use left + right from inline style)
@@ -132,6 +134,20 @@ html, body {
   background: var(--input-bg, #fff);
   color: var(--input-text-color, #000);
   font-size: 0.95rem;
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.25s ease-out;
 }
 
 /* -----------------------------

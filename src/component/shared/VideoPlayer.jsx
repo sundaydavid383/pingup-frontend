@@ -124,6 +124,12 @@ useEffect(() => {
 
   // NEW: call onEnded if provided
   const handleEnded = () => {
+    const vid = videoRef.current
+    if(!vid) return;
+
+    vid.currentTime = 0
+    vid.play().catch(() => {});
+    
     if (typeof onEnded === "function") onEnded();
   };
   vid.addEventListener("ended", handleEnded);

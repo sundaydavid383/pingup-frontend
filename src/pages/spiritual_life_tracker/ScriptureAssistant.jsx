@@ -8,6 +8,8 @@ import "./biblereader.css";
 import assets from "../../assets/assets";
 import IntroModal from "./IntroModal";
 import VerseCard from "../../component/shared/VerseCard";
+import { parseVerseRange } from "../../utils/VerseRangeParser"; // create this as shown before
+import { processCommand } from "../../utils/CommandProcessor"; // create this as shown before
 
 // ---------------- Debounce helper ----------------
 const debounce = (func, delay) => {
@@ -17,6 +19,8 @@ const debounce = (func, delay) => {
     timer = setTimeout(() => func(...args), delay);
   };
 };
+
+
 
 // ---------------- Stop words ----------------
 const STOP_WORDS = new Set([
@@ -107,9 +111,9 @@ function scoreVerse(queryTokens, verse, invertedIndex, totalVerses) {
   // 5️⃣ Combine
   const wTFIDF = 0.4, wProx = 0.2, wPhrase = 0.2, wSpeech = 0.2;
   const finalScore = wTFIDF * tfidfScore
-                   + wProx * proximityScore
-                   + wPhrase * phraseBoost
-                   + wSpeech * speechScore;
+    + wProx * proximityScore
+    + wPhrase * phraseBoost
+    + wSpeech * speechScore;
 
   return finalScore;
 }
@@ -192,6 +196,43 @@ export default function ScriptureAssistant({ currentUser }) {
     window.speechSynthesis.speak(utterance);
   };
 
+
+  //==----------------- Navigate verses/chapter -----------------
+  const navigateVerse = (action, payload = {}) => {
+    let { currentBook, currentChapter, currentVerse } = currentContext;
+
+    switch (action) {
+      case "nextVerse":
+        currentVerse++;
+        break;
+      case "prevVerse":
+        currentVerse = Math.max(1, currentVerse - 1);
+        break;
+      case "jumpVerse":
+        currentBook = payload.book;
+        currentChapter = payload.chapter;
+        currentVerse = payload.verse;
+        break;
+      case "jumpChapter":
+        currentBook = payload.book;
+        currentChapter = payload.chapter;
+        currentVerse = 1;
+        break;
+      default:
+        return;
+    }
+
+    const key = `${currentBook}|${currentChapter}|${currentVerse}`;
+    const id = bookChapterMapRef.current.get(key);
+    const verse = id ? verseByIdRef.current.get(id) : null;
+    if (verse) {
+      setCurrentContext({ currentBook, currentChapter, currentVerse });
+      setMatchedVerses([verse]);
+      toggleSpeakVerse(verse);
+    }
+  };
+
+
   const handleIntroComplete = () => {
     localStorage.setItem("SpringsConnectSeenIntro", "true");
     setShowIntro(false);
@@ -215,6 +256,12 @@ export default function ScriptureAssistant({ currentUser }) {
 
   // ----------------- Run local search -----------------
   const runLocalSearch = async (query) => {
+    const cmdResult = processCommand(query, currentContext);
+    if (cmdResult.type === "navigation") {
+      navigateVerse(cmdResult.action, cmdResult);
+      setLoading(false);
+      return;
+    }
     if (!query.trim() || !localIndexReady.current) return;
     setLoading(true);
     voiceInputRef.current?.stop();
@@ -307,24 +354,24 @@ export default function ScriptureAssistant({ currentUser }) {
       />
 
       <div className="flex flex-col items-center w-full gap-5 mt-4">
-      <textarea
-  ref={inputRef}
-  value={text}
-  onChange={handleChange}
-  placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
-  disabled={!currentUser}
-  rows={1}
-  className="
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={handleChange}
+          placeholder={currentUser ? "Speak or type your scripture..." : "Sign in to use"}
+          disabled={!currentUser}
+          rows={1}
+          className="
     w-full
     max-w-[650px]
     rounded-xl
     border
-    border-[var(--primary)]-400/40
+    border-[var(--primary)]
     bg-[var(--primary)]-500/10
     p-4
     text-sm
     text-white
-    placeholder:text-[var(--primary)]-200/70
+    placeholder:text-slate-200/70
     resize-none
     overflow-hidden
     transition
@@ -335,7 +382,7 @@ export default function ScriptureAssistant({ currentUser }) {
     disabled:opacity-50
     disabled:cursor-not-allowed
   "
-/>
+        />
 
 
         <div className="space-y-4 w-full flex flex-col items-center">

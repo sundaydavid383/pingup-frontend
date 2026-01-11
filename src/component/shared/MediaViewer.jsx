@@ -7,6 +7,7 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showFullText, setShowFullText] = useState(false);
   const [textVisible, setTextVisible] = useState(true);
+  const [ready, setReady] = useState(false);
 
   const attachments = Array.isArray(post?.attachments) ? post.attachments : [];
   const videos = Array.isArray(post?.video_urls) ? post.video_urls : [];
@@ -24,20 +25,37 @@ const displayText = showFullText || !isLongText
   : truncatedText;
 
   /* 🔹 Scroll to initial index on mount */
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const width = containerRef.current.clientWidth;
-    containerRef.current.scrollLeft = width * initialIndex;
-  }, [initialIndex]);
+
+useEffect(() => {
+  if (!containerRef.current) return;
+  const width = containerRef.current.clientWidth;
+  containerRef.current.scrollLeft = width * initialIndex;
+  requestAnimationFrame(() => {
+    setReady(true);
+  });
+}, [initialIndex]);
+
 
   /* 🔹 Update index based on scroll position */
-  const handleScroll = () => {
+const handleScroll = () => {
+  if (!containerRef.current) return;
+
+  // Use each item width instead of clientWidth
+  const itemWidth = containerRef.current.firstChild?.clientWidth || containerRef.current.clientWidth;
+  const { scrollLeft } = containerRef.current;
+  const index = Math.round(scrollLeft / itemWidth); // precise per item
+  setCurrentIndex(index);
+  setShowFullText(false);
+};
+useEffect(() => {
+  const handleResize = () => {
     if (!containerRef.current) return;
-    const { scrollLeft, clientWidth } = containerRef.current;
-    const index = Math.round(scrollLeft / clientWidth);
-    setCurrentIndex(index);
-    setShowFullText(false);
+    containerRef.current.scrollLeft = currentIndex * containerRef.current.clientWidth;
   };
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, [currentIndex]);
+
 
   if (!allMedia.length) return null;
 
@@ -66,47 +84,51 @@ const displayText = showFullText || !isLongText
       </div>
 
       {/* 🔹 Horizontal swipe container */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="
-          flex h-full w-full overflow-x-scroll overflow-y-hidden
-          snap-x snap-mandatory scroll-smooth
-          touch-pan-x
-        "
-      >
-        {allMedia.map((item, index) => {
-          const isVideo =
-            typeof item === "string"
-              ? item.includes(".mp4") || item.includes("youtube")
-              : item.url?.includes(".mp4") || item.url?.includes("youtube");
+<div
+  ref={containerRef}
+  onScroll={handleScroll}
+  className={`flex h-full w-full overflow-x-scroll overflow-y-hidden snap-x snap-mandatory touch-pan-x
+    transition-opacity duration-200
+    ${ready ? "opacity-100" : "opacity-40"}
+  `}
+>
 
-          return (
-            <div
-              key={index}
-              className="w-screen h-full flex-shrink-0 snap-center flex items-center justify-center"
-            >
-              {isVideo ? (
-                <div className="w-full max-w-4xl px-4">
-                  <VideoPlayer
-                    src={item.url || item}
-                    poster={item.poster}
-                    maxHeight="80vh"
-                    autoPlayOnView={index === currentIndex}
-                    unmuteOnView={false}
-                  />
-                </div>
-              ) : (
-                <img
-                  src={item.url || item}
-                  alt="media"
-                  className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-lg"
-                />
-              )}
-            </div>
-          );
-        })}
+  {allMedia.map((item, index) => {
+    const isVideo = typeof item === "string"
+      ? item.includes(".mp4") || item.includes("youtube")
+      : item.url?.includes(".mp4") || item.url?.includes("youtube");
+
+    return (
+      <div
+        key={index}
+        className="flex-shrink-0 snap-start flex items-center justify-center"
+        style={{ width: `${containerRef.current?.clientWidth || window.innerWidth}px`, height: "100%" }}
+      >
+        {isVideo ? (
+          <VideoPlayer
+            src={item.url || item}
+            poster={item.poster}
+            maxHeight="80vh"
+            autoPlayOnView={index === currentIndex}
+            unmuteOnView={false}
+          />
+        ) : (
+          <img
+            src={item.url || item}
+            alt="media"
+            onContextMenu={(e)=> e.preventDefault()}
+            draggable={false}
+            style={{
+              userSelect: "none"
+            }}
+            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-lg"
+          />
+        )}
       </div>
+    );
+  })}
+</div>
+
 
       {/* 🔹 Toggle text */}
       {content && (

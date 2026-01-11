@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck, Send  } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
+import MediaViewer from "./shared/MediaViewer";
 import BackButton from "./shared/BackButton";
 
 const ChatMessagesFull = ({
@@ -11,7 +12,9 @@ const ChatMessagesFull = ({
   resendMessage,
   imageMessages,
   setCurrentImageIndex,
+  currentImageIndex,
   setShowMediaViewer,
+  showMediaViewer,
   formatTime,
   typingUser,
   typingUserFromId,
@@ -19,7 +22,7 @@ const ChatMessagesFull = ({
   scrollToBottom
 }) => {
  
-
+   const [imageloaded, setImageLoaded] = useState(false);
   // Group messages by day
   const groupedMessages = messages.reduce((acc, msg) => {
     const dateKey = new Date(msg.createdAt).toDateString();
@@ -77,7 +80,7 @@ const ChatMessagesFull = ({
                 >
                   <div
                     data-id={msg._id}
-                    className={`p-2 text-sm max-w-[400px] rounded-xl shadow break-words relative transition-all duration-200
+                    className={`p-2 text-sm max-w-[300px] rounded-xl shadow break-words relative transition-all duration-200
                       ${sentByUser
                         ? msg.failed
                           ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"
@@ -86,20 +89,24 @@ const ChatMessagesFull = ({
                       }`}
                   >
                     {msg.message_type === "text" && <p>{msg.text}</p>}
-                    {msg.message_type === "image" && msg.media_url && (
-                      <img
-                        src={msg.media_url}
-                        alt="chat media"
-                        className="w-full max-w-xs rounded-lg mb-1 object-cover cursor-pointer transition-transform hover:scale-[1.02]"
-                        onClick={() => {
-                          const index = imageMessages.findIndex(
-                            (img) => img.media_url === msg.media_url
-                          );
-                          setCurrentImageIndex(index);
-                          setShowMediaViewer(true);
-                        }}
-                      />
-                    )}
+                 {msg.message_type === "image" && msg.media_url && (
+  <img
+    src={msg.media_url}
+    alt="chat media"
+     onLoad={() => setImageLoaded(true)}
+    className={`w-[100%] max-w-xs rounded-lg mb-1
+       object-cover cursor-pointer transition-transform
+        hover:scale-[1.02] ${imageloaded ? "blur-0 scale-100" : "blur-md scale-105"}`}
+    onClick={() => {
+      const index = imageMessages.findIndex(
+        (img) => img.media_url === msg.media_url
+      );
+      setCurrentImageIndex(index);
+      setShowMediaViewer(true);
+    }}
+  />
+)}
+
                     {msg.message_type === "audio" && msg.media_url && (
                       <AudioMessage msg={msg} />
                     )}
@@ -161,6 +168,15 @@ const ChatMessagesFull = ({
           </div>
         )}
       </div>
+
+      {showMediaViewer && (
+  <MediaViewer
+    post={{ attachments: imageMessages.map((img) => ({ url: img.media_url })), content: "" }}
+    initialIndex={currentImageIndex}
+    onClose={() => setShowMediaViewer(false)}
+  />
+)}
+
 
       {/* Scroll-to-bottom button */}
       {showScrollButton && (

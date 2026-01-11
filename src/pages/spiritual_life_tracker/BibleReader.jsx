@@ -102,7 +102,8 @@ export default function BibleReader() {
   const [selectorsVisible, setSelectorsVisible] = useState(false);
   const selectorsRef = useRef(null);
   const [pendingHighlight, setPendingHighlight] = useState(null);
-  const utteranceRef = useRef(null);
+  const touchStartY = useRef(0);
+
 
 
   const { book, chapter, verse } = useParams();
@@ -386,9 +387,10 @@ export default function BibleReader() {
         .map((v) => v.chapter)
     )
     : 1;
+   
 
-  // Move to next or previous chapter/book
-  // Move to next or previous chapter/book — now updates state and logs
+
+
   const moveChapter = (direction) => {
     if (!selectedBookName) {
       console.debug("moveChapter: no selectedBookName (we're on random view) - ignoring");
@@ -409,10 +411,7 @@ export default function BibleReader() {
         newChapter = selectedChapterNumber + 1;
       } else if (bookIndex < bookNames.length - 1) {
         newBook = bookNames[bookIndex + 1];
-        // compute last chapter of next book
-        newChapter = Math.max(...allVerses.filter(v => v.book === newBook).map(v => v.chapter));
-        // ensure we go to chapter 1 if something weird occurs
-        if (!newChapter || newChapter < 1) newChapter = 1;
+        newChapter = 1;
       } else {
         console.debug("moveChapter: already at last book and last chapter");
         return;
@@ -443,21 +442,32 @@ export default function BibleReader() {
     displayChapterVerses(newBook, newChapter);
   };
 
+    let speechBlocked = false;
+
+const navigateChapter = (direction) => {
+  speechBlocked = true;
+  window.speechSynthesis.cancel();
+  moveChapter(direction);
+
+  setTimeout(() => {
+    speechBlocked = false;
+  }, 300);
+};
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (!selectedBookName) return; // only navigate when reading a chapter
-      if (e.key === "ArrowRight") {
-        console.debug("keydown -> ArrowRight");
-        moveChapter("next");
-      }
-      if (e.key === "ArrowLeft") {
-        console.debug("keydown -> ArrowLeft");
-        moveChapter("prev");
-      }
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-    };
+  if (!selectedBookName) return;
+
+  if (e.key === "ArrowRight") {
+    navigateChapter("next");
+  }
+
+  if (e.key === "ArrowLeft") {
+    window.speechSynthesis.cancel();
+    navigateChapter("prev");
+  }
+};
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [selectedBookName, selectedChapterNumber, allVerses, bookNames]); // include bookNames & allVerses
@@ -543,7 +553,7 @@ export default function BibleReader() {
         <div className="fixed-header">
           <div className="header-inner">
             {/* Left: Title */}
-            <h2 className="bible-title">Bible Reader</h2>
+            <h2 className="bible-title"><span>Bible</span> <span>Reader</span></h2>
 
             {/* Center: Chapter */}
             {selectedBookName && (
@@ -631,16 +641,25 @@ export default function BibleReader() {
 
         <div
           className="verses-container"
-          onTouchStart={(e) => {
-            if (selectedBookName) touchStartX.current = e.touches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            if (!selectedBookName) return;
-            const touchEndX = e.changedTouches[0].clientX;
-            const diff = touchStartX.current - touchEndX;
-            if (diff > 50) moveChapter("next");
-            else if (diff < -50) moveChapter("prev");
-          }}
+         onTouchStart={(e) => {
+  if (!selectedBookName) return;
+  const touch = e.touches[0];
+  touchStartX.current = touch.clientX;
+  touchStartY.current = touch.clientY; // add vertical reference
+}}
+onTouchEnd={(e) => {
+  if (!selectedBookName) return;
+  const touch = e.changedTouches[0];
+  const diffX = touchStartX.current - touch.clientX;
+  const diffY = touchStartY.current - touch.clientY;
+
+  // Only consider horizontal swipe if horizontal movement is bigger than vertical
+  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+    if (diffX > 0) navigateChapter("next");
+    else navigateChapter("prev");
+  }
+}}
+
         >
           {isLoadingVerses ? (
             <div className="verse-skeleton-wrapper">

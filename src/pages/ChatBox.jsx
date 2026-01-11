@@ -1,7 +1,7 @@
 // src/pages/ChatBox.jsx
 import React, { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ImageIcon, SendHorizonal, Mic, Square, Check, CheckCheck } from "lucide-react";
+import { ImageIcon, SendHorizonal, Mic, Square, Check, CheckCheck, Trash2} from "lucide-react";
 import axiosBase from "../utils/axiosBase";
 import moment from "moment";
 import ProfileAvatar from "../component/shared/ProfileAvatar";
@@ -22,6 +22,7 @@ import { ArrowLeft } from "lucide-react";
 import ChatboxHeader from "../component/shared/ChatboxHeader";
 import ChatboxInput from "../component/shared/ChatboxInput";
 import HeaderArrow from "../component/shared/HeaderArrow";
+import ImageComposer from "../component/shared/ImageComposer";
 
 
 
@@ -36,7 +37,8 @@ const ChatBox = () => {
   // use the connected flag from context 
   const { unreadMessages, addUnread, clearUnread, getTotalUnread, incrementUnread } = useMessageContext();
   const [messages, setMessages] = useState([]);
-  const [showScrollButton, setShowScrollButton] = useState(true); const [text, setText] = useState(""); const [image, setImage] = useState(null);
+  const [showScrollButton, setShowScrollButton] = useState(true); const [text, setText] = useState(""); 
+  const [image, setImage] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
@@ -385,52 +387,69 @@ const handleTypingFrom = ({ from_user_id }) => {
     }
   };
   // ========================= AUDIO RECORD ==========================
-  const startRecording = async () => {
-    setRecording(true); // <-- immediately show the recording UI
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+const startRecording = async () => {
+  setRecording(true); // show recording UI
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/wav")
-          ? "audio/wav"
-          : "audio/mp3";
-
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-      audioChunksRef.current = [];
-      setRecordTime(0);
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log("🎤 Recorded blob:", blob, "size:", blob.size);
-        if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
-        else console.error("❌ Audio blob is empty!");
-      };
-
-      mediaRecorderRef.current.start();
-
-      const start = Date.now();
-      recordTimerRef.current = setInterval(() => {
-        const sec = Math.floor((Date.now() - start) / 1000);
-        setRecordTime(sec);
-        if (sec >= MAX_RECORD_TIME) stopRecording();
-      }, 500);
-    } catch (err) {
-      console.error("Mic error:", err);
-      setRecording(false); // reset UI if mic fails
+  try {
+    // Stop previous recorder and tracks if any
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
     }
-  };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    clearInterval(recordTimerRef.current);
-    setRecording(false);
-  };
+    // Always request a fresh audio stream
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // Choose MIME type based on platform
+    const mimeType = isIOS
+      ? "audio/mp4"           // safest for iOS Safari
+      : MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : MediaRecorder.isTypeSupported("audio/wav")
+      ? "audio/wav"
+      : "audio/mp3";
+
+    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+    audioChunksRef.current = [];
+    setRecordTime(0);
+
+    mediaRecorderRef.current.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    mediaRecorderRef.current.onstop = () => {
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      console.log("🎤 Recorded blob:", blob, "size:", blob.size);
+      if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
+      else console.error("❌ Audio blob is empty!");
+    };
+
+    mediaRecorderRef.current.start();
+
+    const start = Date.now();
+    recordTimerRef.current = setInterval(() => {
+      const sec = Math.floor((Date.now() - start) / 1000);
+      setRecordTime(sec);
+      if (sec >= MAX_RECORD_TIME) stopRecording();
+    }, 500);
+  } catch (err) {
+    console.error("Mic error:", err);
+    setRecording(false); // reset UI if mic fails
+  }
+};
+
+const stopRecording = () => {
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    mediaRecorderRef.current.stop();
+    // Stop the tracks to release mic for iOS
+    mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+  }
+  clearInterval(recordTimerRef.current);
+  setRecording(false);
+};
+
 
 
   useEffect(() => {
@@ -798,14 +817,16 @@ useEffect(() => {
                   user={user}
                   resendMessage={resendMessage}
                   imageMessages={imageMessages}
+                  currentImageIndex={currentImageIndex}
                   setCurrentImageIndex={setCurrentImageIndex}
                   setShowMediaViewer={setShowMediaViewer}
+                  showMediaViewer={showMediaViewer}
                   formatTime={formatTime}
                   typingUser={typingUser}
                   typingUserFromId={typingUserFromId}
                   scrollToBottom={scrollToBottom}
                   showScrollButton={showScrollButton}
-
+                  
                 />
               )
                 :
@@ -842,55 +863,7 @@ useEffect(() => {
               <FaArrowDown />
             </button>
           )}
-          {
-            showMediaViewer && (
-              <div
-  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999000]"
-  onClick={() => setShowMediaViewer(false)} // Click outside closes modal
->
-  {/* Close button */}
-  <button
-    className="absolute top-5 right-5 text-white text-2xl font-bold bg-black/40 hover:bg-black/60 p-2 rounded-full transition"
-    onClick={(e) => { 
-      e.stopPropagation(); // Prevent click from reaching overlay
-      setShowMediaViewer(false); 
-    }}
-  >
-    ✕
-  </button>
-
-  {/* Previous button */}
-  <button
-    className="absolute left-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
-    onClick={(e) => {
-      e.stopPropagation();
-      setCurrentImageIndex((prev) => prev === 0 ? imageMessages.length - 1 : prev - 1);
-    }}
-  >
-    ‹
-  </button>
-
-  {/* Image */}
-  <img
-    src={imageMessages[currentImageIndex]?.media_url}
-    alt="Viewer"
-    className="rounded-lg shadow-2xl object-contain transition-transform duration-300 max-h-[75vh] md:max-h-[85vh] max-w-[85vw] md:max-w-[80vw] lg:max-w-[65vw]"
-    onClick={(e) => e.stopPropagation()} // Prevent modal close when clicking the image
-  />
-
-  {/* Next button */}
-  <button
-    className="absolute right-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
-    onClick={(e) => {
-      e.stopPropagation();
-      setCurrentImageIndex((prev) => prev === imageMessages.length - 1 ? 0 : prev + 1);
-    }}
-  >
-    ›
-  </button>
-</div>
-)
-          }
+          
             <div ref={bottomRef} style={{ height: 1 }} />
         </div >
 
@@ -900,7 +873,7 @@ useEffect(() => {
 <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
 
   {/* Textarea (only show if not recording) */}
- {!recording && !audioURL && (
+ {!recording && !audioURL && !image && (
     <textarea
       id="chatInput"
       className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
@@ -938,40 +911,40 @@ useEffect(() => {
     />
   )}
 
+<ImageComposer
+  image={image}
+  setImage={setImage}
+  caption={text}
+  setCaption={setText}
+  onSend={sendMessage}
+  sending={sending}
+/>
+
+
+
 
   <div className="flex items-end gap-2">
   {/* Image preview or upload */}
-  {!recording && !audioURL && (
+  {!recording && !audioURL && !image && (
     <>
-      {image instanceof File ? (
-        <div className="relative w-12 h-12">
-          <img
-            src={URL.createObjectURL(image)}
-            alt="preview"
-            className="w-full h-full object-cover rounded-md"
-          />
-          <button
-            onClick={() => setImage(null)}
-            className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition"
-            title="Cancel"
-          >
-            ×
-          </button>
-        </div>
-      ) : (
+      { (
         <label htmlFor="image" className="cursor-pointer relative">
           <ImageIcon className="text-gray-500" />
-          <input
-            type="file"
-            id="image"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              if (f instanceof File) setImage(f);
-              e.target.value = "";
-            }}
-          />
+<input
+  type="file"
+  id="image"
+  accept="image/*"
+  hidden
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file); // <-- correctly sets the single image
+      console.log("Selected file:", file.name);
+    }
+    e.target.value = "";
+  }}
+/>
+
         </label>
       )}
     </>
@@ -981,17 +954,20 @@ useEffect(() => {
 {(audioURL || recording) && (
   <div className="flex flex-col items-center w-full gap-3">
     {audioURL ? (
-      <div className="relative inline-block w-full">
+    <div className="w-full max-w-md">
+      <div className="group flex items-center justify-between bg-gray-100 rounded-xl px-3 py-2">
         <AudioMessage msg={{ media_url: audioURL }} />
-        <button
-          onClick={() => setAudioURL(null)}
-          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
-          title="Cancel audio"
-        >
-          ×
-        </button>
+
+<button
+  onClick={() => setAudioURL(null)}
+  className="ml-2 text-red-300 hover:text-red-500 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+  title="Delete audio"
+>
+  <Trash2 size={25} />
+</button>
       </div>
-    ) : (
+    </div>
+  ) : (
       <div className="flex items-center w-full gap-3">
         {/* Range-style progress bar filling all available space */}
         <div className="flex-1">
@@ -1030,7 +1006,7 @@ useEffect(() => {
 
   {/* Send button (shows if text, image, or audio exist) */}
 
-{(!recording && (text?.trim() || image || audioURL)) && (
+{(!recording && (text?.trim() || image || audioURL)) && !image && (
   <button
     onClick={() =>{scrollToBottom(); sendMessage()}}
     style={{ backgroundColor: "var(--input-primary)" }}
@@ -1070,7 +1046,7 @@ useEffect(() => {
   {!recording && !text?.trim() && !image && !audioURL && (
     <button
       onClick={startRecording}
-      className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+      className="flex items-center justify-center p-3 mt-2 rounded-full transition-all duration-200 bg-[var(--input-accent)] text-[white] hover:bg-gray-300"
       title="Start Recording"
     >
       <Mic size={18} />
