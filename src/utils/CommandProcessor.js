@@ -1,36 +1,29 @@
-// CommandProcessor.js
+// utils/CommandProcessor.js
 import { parseVerseRange } from "./VerseRangeParser";
 
+const NAV_WORDS = ["next", "previous", "prev", "back"];
+
 export function processCommand(input, context = {}) {
+  if (!input || typeof input !== "string") {
+    return { type: "none" };
+  }
+
   const cmd = input.toLowerCase().trim();
 
-  // Navigation keywords
-  if (cmd === "next") {
+  // 1️⃣ Hard navigation commands (highest priority)
+  if (NAV_WORDS.includes(cmd)) {
     return {
       type: "navigation",
-      action: "nextVerse"
-    };
-  }
-  if (cmd === "previous" || cmd === "prev") {
-    return {
-      type: "navigation",
-      action: "prevVerse"
+      action: cmd === "next" ? "nextVerse" : "prevVerse"
     };
   }
 
-  // Detect structured verse/chapter command
-  const range = parseVerseRange(input, context);
+  // 2️⃣ Try structured verse/chapter parsing
+  const range = parseVerseRange(cmd, context);
+
   if (range) {
-    // Determine if full range or just chapter/verse jump
-    if (range.startVerse === 1 && range.endVerse === 1 && !input.match(/verse/)) {
-      // only chapter specified
-      return {
-        type: "navigation",
-        action: "jumpChapter",
-        book: range.book,
-        chapter: range.chapter
-      };
-    } else {
+    // Verse jump
+    if (range.startVerse) {
       return {
         type: "navigation",
         action: "jumpVerse",
@@ -39,8 +32,19 @@ export function processCommand(input, context = {}) {
         verse: range.startVerse
       };
     }
+
+    // Chapter jump
+    return {
+      type: "navigation",
+      action: "jumpChapter",
+      book: range.book,
+      chapter: range.chapter
+    };
   }
 
-  // Not a command
-  return { type: "search", query: input };
+  // 3️⃣ Not a command → allow search
+  return {
+    type: "search",
+    query: input
+  };
 }

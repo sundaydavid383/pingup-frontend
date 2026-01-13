@@ -1,8 +1,14 @@
 // VerseRangeParser.js
 import assets from "../assets/assets"; // bibleBooks2 array
 
-const normalize = (s) =>
-  s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+const normalize = (s) => {
+  if (typeof s !== "string") return "";
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
 
 const CHAPTER_WORDS = [
   "chapter", "chaptar", "chaper", "after", "matte", "chapt", "chap", "afterch"
@@ -28,15 +34,27 @@ function fuzzyMatch(input, candidates) {
   let score = 0;
 
   candidates.forEach(c => {
-    const n = normalize(c);
-    if (n === input) { best = c; score = 1; }
-    else if (n.includes(input) || input.includes(n)) {
-      if (0.7 > score) { best = c; score = 0.7; }
+    // Ensure c is a book object with name and aliases
+    const namesToCheck = [c.name, ...(c.aliases || [])];
+    for (const nRaw of namesToCheck) {
+      const n = normalize(nRaw);
+      if (n === input) { 
+        best = c; 
+        score = 1; 
+        break; 
+      } 
+      else if (n.includes(input) || input.includes(n)) {
+        if (0.7 > score) { 
+          best = c; 
+          score = 0.7; 
+        }
+      }
     }
   });
 
   return best;
 }
+
 
 export function parseVerseRange(input, context = {}) {
   if (!input) return null;
@@ -89,8 +107,14 @@ export function parseVerseRange(input, context = {}) {
   if (chapter && !startVerse && !endVerse) startVerse = endVerse = 1;
   if (!book && context.currentBook) book = context.currentBook;
   if (!chapter && context.currentChapter) chapter = context.currentChapter;
+if (!book && !context.currentBook) return null;
+if (!chapter && !context.currentChapter) return null;
 
-  if (!book || !chapter || !startVerse || !endVerse) return null;
+return {
+  book: book || context.currentBook,
+  chapter: chapter || context.currentChapter,
+  startVerse: startVerse || context.currentVerse || 1,
+  endVerse: endVerse || startVerse || context.currentVerse || 1
+};
 
-  return { book, chapter, startVerse, endVerse };
 }

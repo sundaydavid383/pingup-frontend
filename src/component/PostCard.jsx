@@ -410,18 +410,20 @@ if (count === 2) {
 
 
       return (
-        <div
-          key={index}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isImage) onImageClick(index);
-          }}
-          className={`relative overflow-hidden cursor-pointer bg-gray-100
-            ${single ? "rounded-lg" : "rounded-sm"}
-            ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
-          `}
-          style={{ aspectRatio }}
-        >
+<div
+  key={index}
+  onClick={(e) => {
+    e.stopPropagation();
+    if (isImage) onImageClick(index);
+  }}
+  className={`relative overflow-hidden cursor-pointer
+    ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
+    ${single ? "rounded-lg" : "rounded-sm"}
+    ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+  `}
+  style={{ aspectRatio }}
+>
+
           {/* ✅ IMAGE */}
           {isImage && (
           <img
@@ -441,16 +443,21 @@ if (count === 2) {
           )}
 
           {/* ✅ VIDEO */}
-          {isVideo && (
-            <VideoPlayer
-              src={file.url}
-              poster={file.poster || ""}
-              maxHeight={maxHeight}
-              primaryColor="#FF4D4F"
-              autoPlayOnView={true}
-              sectionId="feed-1"
-            />
-          )}
+
+{isVideo && (
+  <div className="w-full h-full flex items-center justify-center bg-black">
+    <VideoPlayer
+      src={file.url}
+      poster={file.poster || ""}
+      maxHeight="90%"
+      primaryColor="#FF4D4F"
+      autoPlayOnView={true}
+      sectionId="feed-1"
+    />
+  </div>
+
+)}
+
 
           {/* ✅ YOUTUBE */}
           {isYouTube && (
@@ -556,7 +563,7 @@ setDislikesCount={setDislikesCount}
       </div>
 
 
-      {showCommentsSection && <CommentSection postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
+      {showCommentsSection && <CommentSection commentsCount={commentsCount} postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
       {showConfirm && (<ActionNotifier action="delete this post" onConfirm={onConfirmDelete} onCancel={onCancelDelete} />)}
        {deleting && <Loading text="Deleting post..." />}
 

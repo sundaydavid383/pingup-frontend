@@ -4,14 +4,14 @@ import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axiosBase from "../utils/axiosBase";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, SendHorizonal, Loader2  } from "lucide-react";
 import CommentText from "./shared/CommentText";
 import CommentSkeleton from "./skeleton/CommentSkeleton";
 import ProfileAvatar from "./shared/ProfileAvatar";
 
 
 
-export default function CommentSection({ postId, initial = [], onCommentAdded }) {
+export default function CommentSection({postId, commentsCount, initial = [], onCommentAdded }) {
   const { user: currentUser, token } = useAuth() || {};
   const navigate = useNavigate();
 
@@ -160,7 +160,7 @@ useEffect(() => {
       <div className="mb-3 space-y-2 max-h-64 overflow-y-auto">
         {loading ? (
          <>
-    {Array.from({ length: 3 }).map((_, i) => (
+    {Array.from({ length: commentsCount }).map((_, i) => (
       <CommentSkeleton key={i} />
     ))}
   </> ) : displayedComments.length === 0 ? (
@@ -211,7 +211,7 @@ const handleDelete = async () => {
     >
       <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
         {c.user?.profilePicUrl ? (
-          <img src={c.user.profilePicUrl} alt="user" className="w-full h-full object-cover" />
+          <ProfileAvatar user={c.user} size={36} />
         ) : (
           <div className="text-sm font-semibold text-gray-600 flex items-center justify-center h-full">
             {(c.user?.full_name || c.user?.username || "U")[0].toUpperCase()}
@@ -440,13 +440,21 @@ const handleDelete = async () => {
 
 
 
-  <button
-    onClick={handlePost}
-    disabled={!currentUser || posting || !text.trim()}
-    className={`bg-blue-500 flex-shrink-0 btn ${posting ? "opacity-50" : ""}`}
-  >
-    Send
-  </button>
+<button
+  onClick={handlePost}
+  disabled={!currentUser || posting || !text.trim()}
+  className={`bg-[var(--primary)] flex-shrink-0 p-2 rounded-full text-white 
+    disabled:opacity-50 disabled:cursor-not-allowed
+    hover:bg-[var(--btn-hover)] transition`}
+  aria-label="Send message"
+>
+ {posting ? (
+  <Loader2 size={18} className="animate-spin" />
+) : (
+  <SendHorizonal size={18} />
+)}
+</button>
+
 </div>
 
 
