@@ -7,93 +7,110 @@ import { useTheme } from "../context/ThemeContext";
 // Theme map  
 const THEMES = {
   Default: {
-    name: "Default",
-    vars: {
-      "--input-primary": "#1e40af",
-      "--input-accent": "#0f172a",
-      "--input-bg-color": "#f8fafc",
-      "--input-text-color": "#0f172a",
-      "--input-shadow": "0 2px 2px 2px rgba(20, 50, 87, 0.5)",
-      "--input-chatbox-bg-gradient": "linear-gradient(90deg,#d1d1d8ff 0%,#d3bbfaff 50%,#c4d9ddff 100%)",
-      "--input-bubble-sender": "#ffffff",
-      "--input-bubble-receiver": "#7c3aed",
-      "--input-ui-overlay": "rgba(255,255,255,0.9)",
-      // Sent status colors
-      "--input-error": "#ef4444",          // red for failed
-      "--input-sending": "#524202ff",        // yellow for sending
-      "--input-sent-check": "#6b7280",     // gray for sent
-      "--input-delivered-check": "#1854b3ff",// blue for delivered
-      "--input-seen-check": "#09a772ff"      // green for seen
-    }
-  },
-  Dark: {
-    name: "Dark",
-    vars: {
-      "--input-primary": "#0ea5a4",
-      "--input-accent": "#349273ff",
-      "--input-bg-color": "#0b1220",
-      "--input-text-color": "#f1ededff",
-      "--input-shadow": "0 2px 2px 2px rgba(198, 215, 236, 0.5)",
-      "--input-chatbox-bg-gradient": "linear-gradient(90deg,#0e1f3bff 0%,#102029ff 50%,#181f24ff 100%)",
-      "--input-bubble-sender": "#0f1724",
-      "--input-bubble-receiver": "#3f6cb6ff",
-      "--input-ui-overlay": "rgba(10,10,10,0.85)",
-      "--col1": "#0e1f3bff",
-      "--col2": "#102029ff",
-      "col3": "#181f24ff",
-  
-      // Sent status colors
-      "--input-error": "#f87171",          
-      "--input-sending": "#facc15",        
-      "--input-sent-check": "#9ca3af",     
-      "--input-delivered-check": "#3b82f6",
-      "--input-seen-check": "#34d399"
-    }
-  },
+  name: "Light",
+  vars: {
+    "--input-primary": "#ffffffff",        // indigo-500 (modern, trusted)
+    "--input-accent": "#2451bbff",         // slate-900
+    "--input-bg-color": "#f9fafb",       // softer than pure white
+    "--input-text-color": "#0f172a",
+    "--input-shadow": "0 8px 24px rgba(15, 23, 42, 0.08)",
 
+    "--input-chatbox-bg-gradient":
+      "linear-gradient(180deg, #f9fafb 0%, #eef2ff 100%)",
+
+    "--input-bubble-sender": "#ffffff",
+    "--input-bubble-receiver": "#6366f1",
+
+    "--input-ui-overlay": "rgba(255,255,255,0.75)",
+
+    "--input-error": "#ef4444",
+    "--input-sending": "#f59e0b",
+    "--input-sent-check": "#64748b",
+    "--input-delivered-check": "#6366f1",
+    "--input-seen-check": "#22c55e"
+  }
+},
+
+  Dark: {
+  name: "Dark",
+  vars: {
+    "--input-primary": "#000000ff",        // soft indigo
+    "--input-accent": "#596170ff",
+    "--input-bg-color": "#020617",       // true deep navy
+    "--input-text-color": "#e5e7eb",
+
+    "--input-shadow": "0 10px 30px rgba(0,0,0,0.6)",
+
+    "--input-chatbox-bg-gradient":
+      "linear-gradient(180deg, #020617 0%, #020617 60%, #030a1a 100%)",
+
+    "--input-bubble-sender": "#020617",
+    "--input-bubble-receiver": "#4f46e5",
+
+    "--input-ui-overlay": "rgba(2,6,23,0.85)",
+
+    "--input-error": "#f87171",
+    "--input-sending": "#facc15",
+    "--input-sent-check": "#94a3b8",
+    "--input-delivered-check": "#818cf8",
+    "--input-seen-check": "#34d399"
+  }
+}
+,
   // Add these inside your THEMES object
 
-  Sunset: {
-    name: "Sunset",
-    vars: {
-      "--input-primary": "#f97316",
-      "--input-accent": "#b45309",
-      "--input-bg-color": "#fff7ed",
-      "--input-text-color": "#7c2d12",
-      "--input-shadow": "0 2px 2px 2px rgba(249, 115, 22, 0.4)",
-      "--input-chatbox-bg-gradient": "linear-gradient(90deg,#ffedd5 0%,#fdba74 50%,#fb923c 100%)",
-      "--input-bubble-sender": "#fed7aa",
-      "--input-bubble-receiver": "#f97316",
-      "--input-ui-overlay": "rgba(255, 247, 237, 0.9)",
-"--input-error": "#dc2626",          // deeper warm red
-"--input-sending": "#fbbf24",        // warm amber
-"--input-sent-check": "#92400e",     // dark orange-brown for contrast
-"--input-delivered-check": "#f97316",// uses theme primary
-"--input-seen-check": "#059669"      // warm green
+  Lavender: {
+  name: "Lavender Glow",
+  vars: {
+    "--input-primary": "#8b5cf6",
+    "--input-accent": "#ede9fe",
+    "--input-bg-color": "#fafafa",
+    "--input-text-color": "#1e1b4b",
 
-    }
-  },
+    "--input-shadow": "0 10px 30px rgba(139,92,246,0.25)",
+
+    "--input-chatbox-bg-gradient":
+      "linear-gradient(180deg, #fafafa 0%, #f5f3ff 100%)",
+
+    "--input-bubble-sender": "#ffffff",
+    "--input-bubble-receiver": "#8b5cf6",
+
+    "--input-ui-overlay": "rgba(245,243,255,0.8)",
+
+    "--input-error": "#ef4444",
+    "--input-sending": "#f59e0b",
+    "--input-sent-check": "#6b7280",
+    "--input-delivered-check": "#8b5cf6",
+    "--input-seen-check": "#22c55e"
+  }
+},
 
   Ocean: {
-    name: "Ocean",
-    vars: {
-      "--input-primary": "#0284c7",
-      "--input-accent": "#0369a1",
-      "--input-bg-color": "#e0f2fe",
-      "--input-text-color": "#0369a1",
-      "--input-shadow": "0 2px 2px 2px rgba(2, 132, 199, 0.4)",
-      "--input-chatbox-bg-gradient": "linear-gradient(90deg,#bae6fd 0%,#7dd3fc 50%,#0284c7 100%)",
-      "--input-bubble-sender": "#dbeafe",
-      "--input-bubble-receiver": "#0284c7",
-      "--input-ui-overlay": "rgba(224, 242, 254, 0.9)",
- "--input-error": "#dc2626",          // universal readable red
-"--input-sending": "#facc15",        // soft yellow on blue
-"--input-sent-check": "#475569",     // cool gray
-"--input-delivered-check": "#0284c7",// theme primary blue
-"--input-seen-check": "#16a34a"      // cool sea-green
+  name: "Ocean",
+  vars: {
+    "--input-primary": "#0ea5e9",
+    "--input-accent": "#8bb1caff",
+    "--input-bg-color": "#f8fafc",
+    "--input-text-color": "#0f172a",
 
-    }
-  },
+    "--input-shadow": "0 8px 26px rgba(14,165,233,0.25)",
+
+    "--input-chatbox-bg-gradient":
+      "linear-gradient(180deg, #f8fafc 0%, #e0f2fe 100%)",
+
+    "--input-bubble-sender": "#ffffff",
+    "--input-bubble-receiver": "#0ea5e9",
+
+    "--input-ui-overlay": "rgba(224,242,254,0.8)",
+
+    "--input-error": "#ef4444",
+    "--input-sending": "#facc15",
+    "--input-sent-check": "#64748b",
+    "--input-delivered-check": "#0ea5e9",
+    "--input-seen-check": "#22c55e"
+  }
+},
+
 
   Forest: {
     name: "Forest",
@@ -175,6 +192,7 @@ const ThemeDropdown = ({
   onChange = () => {},
   currentTheme: externalTheme,
   containerRef = { current: null },   // <-- safe default
+  items = [], // optional settings items: [{ label, onClick }]
 }) => {
   const hostRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -264,6 +282,19 @@ const ThemeDropdown = ({
       aria-hidden={!open}
     >
       <div className="theme-dropdown-panel" role="list">
+        {items && items.length > 0 && (
+          <div className="theme-settings-section" style={{ padding: 8 }}>
+            {items.map((it, i) => (
+              <button key={`s-${i}`} className="theme-dropdown-item" onClick={() => { it.onClick && it.onClick(); setOpen(false); }}>
+                <div className="theme-preview">
+                  <span className="theme-name">{it.label}</span>
+                </div>
+              </button>
+            ))}
+            <div style={{ height: 8 }} />
+          </div>
+        )}
+
         {Object.keys(THEMES).map((key) => {
           const theme = THEMES[key];
           const selected = currentTheme === key;
@@ -298,23 +329,40 @@ const ThemeDropdown = ({
   return (
     <>
       <div ref={hostRef} className="chatbox-theme-picker" style={{ display: "inline-block" }}>
-        <button
-          type="button"
-          className="theme-trigger"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => toggleOpen()}
-        >
-          <FaArrowDown
-            style={{
-              marginLeft: 6,
-              fontSize: 11,
-              transform: open ? "rotate(180deg)" : "none",
-              transition: "transform .18s",
-            }}
-          />
-          <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 600 }}>Theme</span>
-        </button>
+       <button
+  type="button"
+  className="p-2 hover:brightness-110 active:scale-95 transition"
+  aria-label="Change Theme"
+  onClick={() => toggleOpen()}
+  style={{
+    backgroundColor: THEMES[currentTheme]?.vars["--input-primary"] || "#6366f1",
+    color: "black",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontWeight: "500",
+    fontSize: "14px",
+    padding: "6px 12px",
+  }}
+>
+  Theme
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    className="w-5 h-5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 3v1m0 16v1m8.66-10h-1M4.34 12h-1m15.07 6.07l-.7-.7M6.34 6.34l-.7-.7m12.73 12.73l-.7-.7M6.34 17.66l-.7-.7M12 5a7 7 0 000 14 7 7 0 000-14z"
+    />
+  </svg>
+</button>
+
       </div>
       {open && typeof document !== "undefined" ? createPortal(Menu, document.body) : null}
     </>

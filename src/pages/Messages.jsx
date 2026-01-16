@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ChatBox from "../pages/ChatBox.jsx";
 import { useNavigate } from "react-router-dom";
 import { Eye, MessageSquare, ImageIcon, Mic } from "lucide-react";
 import axios from "../utils/axiosBase";
@@ -11,6 +12,7 @@ import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 
 const Messages = () => {
+  const [activeChatId, setActiveChatId] = useState(null);
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadMap, setUnreadMap] = useState({});
@@ -107,20 +109,28 @@ const Messages = () => {
 
   // Handle messages sent by self
   useEffect(() => {
-    const handleSelfMessage = (e) => {
-      const detail = e?.detail;
-      if (!detail) return;
-      const { to_user_id, message } = detail;
-      if (!to_user_id || !message) return;
+  const handleSelfMessage = (e) => {
+  const detail = e?.detail;
+  if (!detail) return;
 
-      const text = message.text || "[media]";
-      const createdAt = message.createdAt || new Date().toISOString();
+  const { to_user_id, message } = detail;
+  if (!to_user_id) return;
 
-      setLastMessages((prev) => ({
-        ...prev,
-        [to_user_id]: { text, createdAt, type: message.message_type, senderId: user._id },
-      }));
-    };
+  const createdAt = message?.createdAt || new Date().toISOString();
+  const text = message?.text || "[media]";
+
+  setLastMessages((prev) => ({
+  ...prev,
+  [otherUserId]: {
+    text,
+    createdAt: new Date().toISOString(), // ✅ activity time
+    type,
+    senderId: from_user_id,
+  },
+}));
+
+};
+
 
     window.addEventListener("selfMessageSent", handleSelfMessage);
     return () => window.removeEventListener("selfMessageSent", handleSelfMessage);
@@ -210,27 +220,41 @@ const Messages = () => {
     };
   }, [socket, addUnread, clearUnread, user._id]);
 
-  const sortedConnections = [...connections].sort((a, b) => {
-    const aTime = new Date(lastMessages[a._id]?.createdAt || 0).getTime();
-    const bTime = new Date(lastMessages[b._id]?.createdAt || 0).getTime();
-    return bTime - aTime;
-  });
+const getLastMessageTime = (userId) => {
+  const msg = lastMessages[userId];
+  return msg ? new Date(msg.createdAt).getTime() : 0;
+};
+
+const sortedConnections = [...connections].sort((a, b) => {
+  return getLastMessageTime(b._id) - getLastMessageTime(a._id);
+});
+
+
 
   const handleOpenChat = (userId) => {
-    clearUnread(userId);
-    setUnreadMap((prev) => {
-      const updated = { ...prev };
-      delete updated[userId];
-      localStorage.setItem("unreadMap", JSON.stringify(updated));
-      return updated;
-    });
-    socket?.emit("markAsRead", { userId });
+  clearUnread(userId);
+
+  setUnreadMap((prev) => {
+    const updated = { ...prev };
+    delete updated[userId];
+    localStorage.setItem("unreadMap", JSON.stringify(updated));
+    return updated;
+  });
+
+  socket?.emit("markAsRead", { userId });
+
+  setActiveChatId(userId);
+
+  if (window.innerWidth < 768) {
     navigate(`/chatbox/${userId}`);
-  };
+  }
+};
+
+
 
   return (
-    <div className="min-h-screen relative flex mr-5 bg-slate-50 overflow-x-hidden"> {/* ✅ Prevent horizontal scroll */}
-      <div className="flex-1 p-6 box-border"> {/* ✅ Add box-border to prevent width overflow */}
+<div className="min-h-screen w-full flex bg-slate-50 overflow-hidden">
+    <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r">
         <BackButton />
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900 mb-1 title">Messages</h1>
@@ -252,12 +276,18 @@ const Messages = () => {
             sortedConnections.map((usr) => {
               const last = lastMessages[usr._id];
               const unreadCount = unreadMap[usr._id] || 0;
+              const isActive = activeChatId === usr._id;
+
 
               return (
                 <div
-                  key={usr._id}
-                  className="flex flex-wrap gap-5 px-3 py-2 bg-white shadow rounded-md items-center overflow-hidden"
-                >
+  key={usr._id}
+  onClick={() => handleOpenChat(usr._id)}
+  className={`flex flex-wrap gap-5 px-3 py-2 rounded-md items-center overflow-hidden cursor-pointer transition
+    ${isActive ? "bg-violet-100" : "bg-white hover:bg-slate-100"}
+  `}
+>
+
                   <div onClick={() => navigate(`/profile/${usr._id}`)} className="cursor-pointer">
                     <ProfileAvatar
                       user={{
@@ -312,7 +342,7 @@ const Messages = () => {
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-2 mt-2 sm:mt-0">
+                  {/* <div className="flex flex-col gap-2 mt-2 sm:mt-0">
                     <button
                       onClick={() => handleOpenChat(usr._id)}
                       className="w-8 h-8 flex items-center justify-center rounded bg-[var(--primary)] text-[var(--white)] hover:bg-[var(--primary-dark)] hover:text-[var(--primary)] transition"
@@ -325,7 +355,7 @@ const Messages = () => {
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                  </div>
+                  </div> */}
                 </div>
               );
             })
@@ -334,11 +364,21 @@ const Messages = () => {
           )}
         </div>
       </div>
-           {/* Sidebar */}
-      <RightSidebar sponsors={sponsors} loading={!sponsors} />
 
-        {/* Sidebar toggle (medium screens) */}
-  <MediumSidebarToggle sponsors={sponsors} />
+
+     <div className="hidden md:flex flex-1 bg-white">
+  {activeChatId ? (
+    <ChatBox userId={activeChatId} />
+  ) : (
+    <div className="flex flex-1 items-center justify-center text-slate-400">
+      Select a conversation
+    </div>
+  )}
+</div>
+
+
+
+      
     </div>
   );
 };
