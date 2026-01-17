@@ -4,8 +4,8 @@ import { FaArrowDown } from "react-icons/fa";
 import "./themeDropdown.css";
 import { useTheme } from "../context/ThemeContext";
 
-// Theme map  
-const THEMES = {
+// Theme map
+export const THEMES = {
   Default: {
   name: "Light",
   vars: {
@@ -180,7 +180,7 @@ const THEMES = {
 
 
 // Apply theme variables locally to container
-const applyThemeVars = (themeVars, container) => {
+export const applyThemeVars = (themeVars, container) => {
   if (!container) return;
   Object.entries(themeVars).forEach(([k, v]) => {
     container.style.setProperty(k, v);
