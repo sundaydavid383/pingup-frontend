@@ -133,27 +133,6 @@ export const THEMES = {
     }
   },
 
-  Lavender: {
-    name: "Lavender",
-    vars: {
-      "--input-primary": "#8b5cf6",
-      "--input-accent": "#7c3aed",
-      "--input-bg-color": "#f5f3ff",
-      "--input-text-color": "#4c1d95",
-      "--input-shadow": "0 2px 2px 2px rgba(139, 92, 246, 0.4)",
-      "--input-chatbox-bg-gradient": "linear-gradient(90deg,#ede9fe 0%,#c4b5fd 50%,#8b5cf6 100%)",
-      "--input-bubble-sender": "#ede9fe",
-      "--input-bubble-receiver": "#8b5cf6",
-      "--input-ui-overlay": "rgba(245, 243, 255, 0.9)",
-"--input-error": "#dc2626",          // readable red on purple bg
-"--input-sending": "#eab308",        // gold contrasts purple
-"--input-sent-check": "#6b7280",     // neutral gray for clarity
-"--input-delivered-check": "#8b5cf6",// theme primary purple
-"--input-seen-check": "#10b981"      // mint green looks clean on purple
-
-    }
-  },
-
   Candy: {
     name: "Candy",
     vars: {
@@ -214,6 +193,7 @@ const ThemeDropdown = ({
       );
     }
   }, [containerRef]);   // re‑run if the ref changes
+  
 
   // Sync externalTheme if parent changes it
   useEffect(() => {
