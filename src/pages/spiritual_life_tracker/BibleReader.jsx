@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
-import { FaSearch, FaBook, } from "react-icons/fa";
+import { FaSearch, FaBook, FaRocketchat, FaSlidersH} from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import axiosBase from "../../utils/axiosBase";
@@ -12,6 +12,8 @@ import Verse from "../../component/shared/Verse"
 import Fuse from "fuse.js";
 import { useSwipeable } from "react-swipeable"; //
 import ChapterTTS from "../../component/shared/ChapterTTS";
+import BibleControls from "../../component/shared/BibleControls";
+import "../../styles/biblecontrols.css"
 // Map of short names or abbreviations to full book names
 const BOOK_FULL_NAMES = {
   gn: "Genesis",
@@ -91,11 +93,16 @@ export default function BibleReader() {
   const [displayedVerses, setDisplayedVerses] = useState([]);
   const [isLoadingVerses, setIsLoadingVerses] = useState(false);
   const [verseSeen, setVerseSeen] = useState([]);
+  const [ttsSpeed, setTtsSpeed] = useState(0.7);
+  const [moodSearchQuery, setMoodSearchQuery] = useState("");
+  const [seeControls, setSeeControls] = useState(false)
+
   const touchStartX = React.useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [progress, setProgress] = useState(0);
   const fuseRef = useRef(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const searchRef = useRef(null);
@@ -108,22 +115,6 @@ export default function BibleReader() {
 
   const { book, chapter, verse } = useParams();
 
-
-  // Close dropdown if clicked outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setSearchVisible(false);
-      }
-      if (selectorsRef.current && !selectorsRef.current.contains(event.target)) {
-        setSelectorsVisible(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
 
   const normalizeBookName = (input) => {
@@ -245,7 +236,7 @@ export default function BibleReader() {
       .map(v => v.text)
       .join(" ");
   };
- 
+
 
 
   // Initialize Fuse.js for fuzzy search
@@ -387,7 +378,7 @@ export default function BibleReader() {
         .map((v) => v.chapter)
     )
     : 1;
-   
+
 
 
 
@@ -442,31 +433,31 @@ export default function BibleReader() {
     displayChapterVerses(newBook, newChapter);
   };
 
-    let speechBlocked = false;
+  let speechBlocked = false;
 
-const navigateChapter = (direction) => {
-  speechBlocked = true;
-  window.speechSynthesis.cancel();
-  moveChapter(direction);
+  const navigateChapter = (direction) => {
+    speechBlocked = true;
+    window.speechSynthesis.cancel();
+    moveChapter(direction);
 
-  setTimeout(() => {
-    speechBlocked = false;
-  }, 300);
-};
+    setTimeout(() => {
+      speechBlocked = false;
+    }, 300);
+  };
 
   useEffect(() => {
     const handleKey = (e) => {
-  if (!selectedBookName) return;
+      if (!selectedBookName) return;
 
-  if (e.key === "ArrowRight") {
-    navigateChapter("next");
-  }
+      if (e.key === "ArrowRight") {
+        navigateChapter("next");
+      }
 
-  if (e.key === "ArrowLeft") {
-    window.speechSynthesis.cancel();
-    navigateChapter("prev");
-  }
-};
+      if (e.key === "ArrowLeft") {
+        window.speechSynthesis.cancel();
+        navigateChapter("prev");
+      }
+    };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -538,7 +529,29 @@ const navigateChapter = (direction) => {
   }, [pendingHighlight, displayedVerses]);
 
 
+  const controlsRef = useRef(null);
+  const ttsRef = useRef(null);
 
+  // Close BibleControls if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        controlsRef.current &&
+        !controlsRef.current.contains(event.target)
+      ) {
+        setSeeControls(false); // ✅ hide the controls
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchVisible(false);
+      }
+    };
+
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [controlsRef]);
 
 
 
@@ -557,12 +570,12 @@ const navigateChapter = (direction) => {
 
             {/* Center: Chapter */}
             {selectedBookName && (
-  <div className="chapter-center flex items-center gap-3">
-    <span className="text-[var(--hover-light)]">
-      {selectedBookName} {selectedChapterNumber}
-    </span>
-  </div>
-)}
+              <div className="chapter-center flex items-center gap-3">
+                <span className="text-[var(--hover-light)]">
+                  {selectedBookName} {selectedChapterNumber}
+                </span>
+              </div>
+            )}
 
 
             {/* Right: Search & Selectors */}
@@ -628,37 +641,55 @@ const navigateChapter = (direction) => {
         </div>
 
 
-       {isReadingChapter && <ChapterTTS text={buildChapterText()} />}
 
 
+        {isReadingChapter && <>
+          <ChapterTTS
+            ref={ttsRef}
+            text={buildChapterText()}
+            speed={ttsSpeed}
+            progress={progress}
+            setProgress={setProgress} />
 
-        {/* Display verses */}
-        {isSearching && (
-          <div className="search-loading-bar fixed-loading">
-            <div className="search-loading-progress" />
-          </div>
-        )}
+            {!seeControls && <div 
+            onClick={()=>setSeeControls(prev=>!prev)}
+            className="bible_controls_toggler">
+              <FaSlidersH/>
+            </div>
+         }
+         {seeControls && <div ref={controlsRef}>
+          <BibleControls
+            ttsSpeed={ttsSpeed}
+            setTtsSpeed={setTtsSpeed}
+            // moodSearchQuery={moodSearchQuery}
+            // setMoodSearchQuery={setMoodSearchQuery}
+            // handleSearchClick={handleSearchClick}
+            progress={progress}
+            setProgress={setProgress}
+            ttsRef={ttsRef}
+          /></div>}
+        </>}
 
         <div
           className="verses-container"
-         onTouchStart={(e) => {
-  if (!selectedBookName) return;
-  const touch = e.touches[0];
-  touchStartX.current = touch.clientX;
-  touchStartY.current = touch.clientY; // add vertical reference
-}}
-onTouchEnd={(e) => {
-  if (!selectedBookName) return;
-  const touch = e.changedTouches[0];
-  const diffX = touchStartX.current - touch.clientX;
-  const diffY = touchStartY.current - touch.clientY;
+          onTouchStart={(e) => {
+            if (!selectedBookName) return;
+            const touch = e.touches[0];
+            touchStartX.current = touch.clientX;
+            touchStartY.current = touch.clientY; // add vertical reference
+          }}
+          onTouchEnd={(e) => {
+            if (!selectedBookName) return;
+            const touch = e.changedTouches[0];
+            const diffX = touchStartX.current - touch.clientX;
+            const diffY = touchStartY.current - touch.clientY;
 
-  // Only consider horizontal swipe if horizontal movement is bigger than vertical
-  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-    if (diffX > 0) navigateChapter("next");
-    else navigateChapter("prev");
-  }
-}}
+            // Only consider horizontal swipe if horizontal movement is bigger than vertical
+            if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+              if (diffX > 0) navigateChapter("next");
+              else navigateChapter("prev");
+            }
+          }}
 
         >
           {isLoadingVerses ? (
