@@ -78,8 +78,7 @@ const ChatBox = () => {
     return () => clearInterval(interval);
   }, []);
 
-<<<<<<< HEAD
-=======
+
   // Apply theme on change
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -94,7 +93,6 @@ const ChatBox = () => {
     if (type === "video" && videoInputRef.current) videoInputRef.current.click();
   };
 
->>>>>>> 03d2807 (Fix: persist theme across page reload in ChatBox)
 
   // Track if user is near bottom
 

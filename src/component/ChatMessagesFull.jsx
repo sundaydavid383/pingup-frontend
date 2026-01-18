@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import AudioMessage from "./shared/AudioMessage";
-import { Check, CheckCheck, Send  } from "lucide-react";
+import { Check, CheckCheck } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import BackButton from "./shared/BackButton";
 
@@ -19,7 +19,6 @@ const ChatMessagesFull = ({
   showScrollButton,
   scrollToBottom,
 }) => {
- 
 
   // Group messages by day
   const groupedMessages = messages.reduce((acc, msg) => {
@@ -57,30 +56,27 @@ const ChatMessagesFull = ({
       <div className="space-y-6 max-w-4xl mx-auto w-full px-4 pt-4">
         {sortedDates.map((date) => (
           <div key={date} className="flex flex-col">
-            
-            {/* Clean Date Separator with Border Radius */}
-            {/* Clean Date Separator with Forced Border Radius */}
-<div className="flex justify-center my-4 sticky top-4 z-10 pointer-events-none">
-      <span 
-        className="px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-sm border border-white/40 text-gray-500 transition-all duration-300 pointer-events-auto"
-        style={{
-          borderRadius: "100px",          // Absolute pill shape
-          backgroundColor: "rgba(255, 255, 255, 0.6)", 
-          backdropFilter: "blur(8px)",   // Subtle glass effect
-          WebkitBackdropFilter: "blur(8px)",
-          display: "inline-flex",
-          alignItems: "center",
-          height: "22px"                  // Fixed reduced height
-        }}
-      >
-        {date}
-      </span>
-</div>
 
+            {/* Date Separator */}
+            <div className="flex justify-center my-4 sticky top-4 z-10 pointer-events-none">
+              <span
+                className="px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-sm border border-white/40 text-gray-500 transition-all duration-300 pointer-events-auto"
+                style={{
+                  borderRadius: "100px",
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  height: "22px",
+                }}
+              >
+                {date}
+              </span>
             </div>
 
             {/* Messages for this date */}
-            {groupedMessages[date].map((msg, idx) => {
+            {groupedMessages[date].map((msg) => {
               const sentByUser = msg.from_user_id === user._id;
               return (
                 <div
@@ -94,7 +90,7 @@ const ChatMessagesFull = ({
                         ? msg.failed
                           ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"
                           : "bg-white text-gray-900 rounded-br-none chat-custom-gradient"
-                        : "bg-[var(--input-accent)] text-white rounded-bl-none "
+                        : "bg-[var(--input-accent)] text-white rounded-bl-none"
                       }`}
                   >
                     {msg.message_type === "text" && <p>{msg.text}</p>}
@@ -115,10 +111,7 @@ const ChatMessagesFull = ({
                     {msg.message_type === "audio" && msg.media_url && (
                       <AudioMessage msg={msg} />
                     )}
-
-                    </div>
-
-                  
+                  </div>
 
                   <div
                     className="flex items-center gap-1 mt-1 text-xs"
@@ -126,30 +119,28 @@ const ChatMessagesFull = ({
                   >
                     <span>{formatTime(msg.createdAt)}</span>
 
-{sentByUser && (
-  <span className="ml-1 flex items-center gap-1 text-xs">
-    {msg.status === "sending" && (
-      <span className="text-gray-500 animate-pulse">Sending...</span>
-    )}
-    {msg.failed && (
-      <>
-        <button onClick={() => resendMessage(msg)}>↻ Retry</button>
-        <button onClick={() => { /* optional cancel */ }}>✖ Cancel</button>
-      </>
-    )}
-    {msg.status === "sent" && (
-      <Check size={14} className="text-[var(--input-sent-check)]" />
-    )}
-    {msg.status === "delivered" && (
-      <CheckCheck size={14} className="text-[var(--input-delivered-check)]" />
-    )}
-    {msg.status === "seen" && (
-      <CheckCheck size={14} className="text-[var(--input-seen-check)]" />
-    )}
-  </span>
-)}
-
-
+                    {sentByUser && (
+                      <span className="ml-1 flex items-center gap-1 text-xs">
+                        {msg.status === "sending" && (
+                          <span className="text-gray-500 animate-pulse">Sending...</span>
+                        )}
+                        {msg.failed && (
+                          <>
+                            <button onClick={() => resendMessage(msg)}>↻ Retry</button>
+                            <button onClick={() => {}}>✖ Cancel</button>
+                          </>
+                        )}
+                        {msg.status === "sent" && (
+                          <Check size={14} className="text-[var(--input-sent-check)]" />
+                        )}
+                        {msg.status === "delivered" && (
+                          <CheckCheck size={14} className="text-[var(--input-delivered-check)]" />
+                        )}
+                        {msg.status === "seen" && (
+                          <CheckCheck size={14} className="text-[var(--input-seen-check)]" />
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -157,6 +148,7 @@ const ChatMessagesFull = ({
           </div>
         ))}
 
+        {/* Typing Indicator */}
         {typingUser && (
           <div className={`flex ${typingUserFromId === user._id ? "justify-end" : "justify-start"} px-4 mb-2`}>
             <div className={`typing-indicator ${typingUserFromId === user._id ? "sender" : "receiver"}`}>
@@ -165,37 +157,33 @@ const ChatMessagesFull = ({
               <span className="typing-dot"></span>
             </div>
           </div>
-        ))}
+        )}
       </div>
 
+      {/* Media Viewer */}
       {showMediaViewer && (
-  <MediaViewer
-    post={{ attachments: imageMessages.map((img) => ({ url: img.media_url })), content: "" }}
-    initialIndex={currentImageIndex}
-    onClose={() => setShowMediaViewer(false)}
-  />
-)}
+        <MediaViewer
+          post={{ attachments: imageMessages.map((img) => ({ url: img.media_url })), content: "" }}
+          initialIndex={currentImageIndex}
+          onClose={() => setShowMediaViewer(false)}
+        />
+      )}
 
-
-      {/* FaArrowDown positioned at Bottom-Right */}
-      {/* Glassmorphism Scroll Button */}
-{showScrollButton && (
-  <button
-    onClick={scrollToBottom}
-    className="fixed bottom-28 right-8 flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-all duration-300 z-50 cursor-pointer border border-white/40 hover:scale-110 active:scale-95"
-    style={{
-      background: "rgba(255, 255, 255, 0.2)", // Translucent white
-      backdropFilter: "blur(12px)",           // Deep blur effect
-      WebkitBackdropFilter: "blur(12px)",     // Safari support
-      boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)", // Soft depth shadow
-    }}
-  >
-    <FaArrowDown 
-      size={16} 
-      className="text-gray-800 drop-shadow-sm" 
-    />
-  </button>
-)}
+      {/* Scroll Button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="fixed bottom-28 right-8 flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-all duration-300 z-50 cursor-pointer border border-white/40 hover:scale-110 active:scale-95"
+          style={{
+            background: "rgba(255, 255, 255, 0.2)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+          }}
+        >
+          <FaArrowDown size={16} className="text-gray-800 drop-shadow-sm" />
+        </button>
+      )}
     </div>
   );
 };
