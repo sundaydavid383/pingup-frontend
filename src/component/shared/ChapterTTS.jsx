@@ -13,21 +13,58 @@ import CustomAlert from "./CustomAlert";
 /* ------------------------------
    Safe text chunker (core fix)
 ------------------------------ */
+/* ------------------------------
+   Word-safe text chunker
+------------------------------ */
 const chunkText = (text, size = 160) => {
   if (!text) return [];
+
   const chunks = [];
   let i = 0;
 
   while (i < text.length) {
-    chunks.push(text.slice(i, i + size));
-    i += size;
+    let end = i + size;
+
+    // If we're at the end, take the rest
+    if (end >= text.length) {
+      chunks.push(text.slice(i).trim());
+      break;
+    }
+
+    // 🔹 Walk backward to find a safe break
+    let safeEnd = end;
+    while (
+      safeEnd > i &&
+      !/[.,!?;:]/.test(text[safeEnd])
+    ) {
+      safeEnd--;
+    }
+
+    // Fallback (very long word)
+    if (safeEnd === i) {
+      safeEnd = end;
+    }
+
+    chunks.push(text.slice(i, safeEnd).trim());
+    i = safeEnd;
   }
 
   return chunks.filter(Boolean);
 };
 
+
 const ChapterTTS = forwardRef(
-  ({ text, speed = 0.7, progress, setProgress, moodVolume = 0.3 }, ref) => {
+  (
+    {
+      text,
+      speed = 0.7,
+      progress,
+      setProgress,
+      moodVolume = 0.9,
+      verseOffsetsRef
+    },
+    ref
+  ) => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isLoadingTTS, setIsLoadingTTS] = useState(false);
     const [alert, setAlert] = useState(null);
@@ -103,12 +140,39 @@ const ChapterTTS = forwardRef(
       utterance.volume = moodVolume;
 
       utterance.onstart = () => {
-        setIsLoadingTTS(false);
-        setIsSpeaking(true);
+  setIsLoadingTTS(false);
+  setIsSpeaking(true);
 
-        const percent = Math.round((index / chunks.length) * 100);
-        setProgress(percent);
-      };
+  // 🔹 Progress
+  const percent = Math.round((index / chunks.length) * 100);
+  setProgress(percent);
+
+  // 🔹 Verse highlighting
+  if (verseOffsetsRef?.current?.length) {
+    const charOffset = index * 160; // chunk size
+
+    const verseMeta = [...verseOffsetsRef.current]
+      .reverse()
+      .find(v => charOffset >= v.start);
+
+    if (verseMeta) {
+      const safeBookId = verseMeta.book.replace(/\s+/g, "-").toLowerCase();
+      const el = document.getElementById(
+        `v-${safeBookId}-${verseMeta.chapter}-${verseMeta.verse}`
+      );
+
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("verse-highlight");
+
+        setTimeout(() => {
+          el.classList.remove("verse-highlight");
+        }, 1200);
+      }
+    }
+  }
+};
+
 
       utterance.onend = () => {
         if (!shouldSpeakRef.current) return;

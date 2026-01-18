@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
-import { FaSearch, FaBook, FaRocketchat, FaSlidersH} from "react-icons/fa";
+import { FaSearch, FaBook, FaRocketchat, FaSlidersH } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import axiosBase from "../../utils/axiosBase";
@@ -110,7 +110,9 @@ export default function BibleReader() {
   const selectorsRef = useRef(null);
   const [pendingHighlight, setPendingHighlight] = useState(null);
   const touchStartY = useRef(0);
-
+  const controlsRef = useRef(null);
+  const ttsRef = useRef(null);
+  const verseOffsetsRef = useRef([]);
 
 
   const { book, chapter, verse } = useParams();
@@ -232,10 +234,22 @@ export default function BibleReader() {
   const buildChapterText = () => {
     if (!displayedVerses.length) return "";
 
-    return displayedVerses
-      .map(v => v.text)
-      .join(" ");
+    let offset = 0;
+    verseOffsetsRef.current = displayedVerses.map((v, i) => {
+      const start = offset;
+      offset += v.text.length + 1; // + space
+      return {
+        index: i,
+        start,
+        book: v.book,
+        chapter: v.chapter,
+        verse: v.verse
+      };
+    });
+
+    return displayedVerses.map(v => v.text).join(" ");
   };
+
 
 
 
@@ -529,8 +543,8 @@ export default function BibleReader() {
   }, [pendingHighlight, displayedVerses]);
 
 
-  const controlsRef = useRef(null);
-  const ttsRef = useRef(null);
+
+
 
   // Close BibleControls if clicked outside
   useEffect(() => {
@@ -649,25 +663,28 @@ export default function BibleReader() {
             text={buildChapterText()}
             speed={ttsSpeed}
             progress={progress}
-            setProgress={setProgress} />
-
-            {!seeControls && <div 
-            onClick={()=>setSeeControls(prev=>!prev)}
-            className="bible_controls_toggler">
-              <FaSlidersH/>
-            </div>
-         }
-         {seeControls && <div ref={controlsRef}>
-          <BibleControls
-            ttsSpeed={ttsSpeed}
-            setTtsSpeed={setTtsSpeed}
-            // moodSearchQuery={moodSearchQuery}
-            // setMoodSearchQuery={setMoodSearchQuery}
-            // handleSearchClick={handleSearchClick}
-            progress={progress}
             setProgress={setProgress}
-            ttsRef={ttsRef}
-          /></div>}
+            verseOffsetsRef={verseOffsetsRef}
+          />
+
+
+          {!seeControls && <div
+            onClick={() => setSeeControls(prev => !prev)}
+            className="bible_controls_toggler">
+            <FaSlidersH />
+          </div>
+          }
+          {seeControls && <div ref={controlsRef}>
+            <BibleControls
+              ttsSpeed={ttsSpeed}
+              setTtsSpeed={setTtsSpeed}
+              // moodSearchQuery={moodSearchQuery}
+              // setMoodSearchQuery={setMoodSearchQuery}
+              // handleSearchClick={handleSearchClick}
+              progress={progress}
+              setProgress={setProgress}
+              ttsRef={ttsRef}
+            /></div>}
         </>}
 
         <div
