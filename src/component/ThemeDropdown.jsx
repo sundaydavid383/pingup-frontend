@@ -59,32 +59,6 @@ export const THEMES = {
 ,
   // Add these inside your THEMES object
 
-  Lavender: {
-  name: "Lavender Glow",
-  vars: {
-    "--input-primary": "#8b5cf6",
-    "--input-accent": "#ede9fe",
-    "--input-bg-color": "#fafafa",
-    "--input-text-color": "#1e1b4b",
-
-    "--input-shadow": "0 10px 30px rgba(139,92,246,0.25)",
-
-    "--input-chatbox-bg-gradient":
-      "linear-gradient(180deg, #fafafa 0%, #f5f3ff 100%)",
-
-    "--input-bubble-sender": "#ffffff",
-    "--input-bubble-receiver": "#8b5cf6",
-
-    "--input-ui-overlay": "rgba(245,243,255,0.8)",
-
-    "--input-error": "#ef4444",
-    "--input-sending": "#f59e0b",
-    "--input-sent-check": "#6b7280",
-    "--input-delivered-check": "#8b5cf6",
-    "--input-seen-check": "#22c55e"
-  }
-},
-
   Ocean: {
   name: "Ocean",
   vars: {

@@ -1,16 +1,14 @@
-// utils/CommandProcessor.js
+// processCommand.js
 import { parseVerseRange } from "./VerseRangeParser";
 
 const NAV_WORDS = ["next", "previous", "prev", "back"];
 
 export function processCommand(input, context = {}) {
-  if (!input || typeof input !== "string") {
-    return { type: "none" };
-  }
+  if (!input || typeof input !== "string") return { type: "none" };
 
   const cmd = input.toLowerCase().trim();
 
-  // 1️⃣ Hard navigation commands (highest priority)
+  // 1️⃣ Hard navigation commands
   if (NAV_WORDS.includes(cmd)) {
     return {
       type: "navigation",
@@ -22,27 +20,29 @@ export function processCommand(input, context = {}) {
   const range = parseVerseRange(cmd, context);
 
   if (range) {
-    // Verse jump
-    if (range.startVerse) {
-      return {
-        type: "navigation",
-        action: "jumpVerse",
-        book: range.book,
-        chapter: range.chapter,
-        verse: range.startVerse
-      };
-    }
+    // Decide type: chapter jump vs verse jump
+const bookId = typeof range.book === "object" ? range.book.abbrev : range.book;
 
-    // Chapter jump
-    return {
-      type: "navigation",
-      action: "jumpChapter",
-      book: range.book,
-      chapter: range.chapter
-    };
+if (range.startVerse && range.startVerse !== 1) {
+  return {
+    type: "navigation",
+    action: "jumpVerse",
+    book: bookId,
+    chapter: range.chapter,
+    verse: range.startVerse
+  };
+}
+
+// Chapter jump
+return {
+  type: "navigation",
+  action: "jumpChapter",
+  book: bookId,
+  chapter: range.chapter
+};
   }
 
-  // 3️⃣ Not a command → allow search
+  // 3️⃣ If no book/chapter mentioned → treat as search
   return {
     type: "search",
     query: input

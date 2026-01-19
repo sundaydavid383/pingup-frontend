@@ -312,9 +312,9 @@ const meDisliked = (serverPost.recentDislikes || []).some(
                 style={{ color: "var(--primary)" }}
               />
             </div>
-            <div className="flex flex-col text-xs text-gray-500 truncate">
+            <div className="flex flex-col text-[13px] text-gray-500 truncate">
               @{post.user?.username}
-              <p className="text-[11px] mt-1 font-light">
+              <p className="text-[12px] font-light">
                 {moment(post.createdAt).fromNow()}
               </p>
             </div>
@@ -336,7 +336,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
       {/* Content */}
  {post.content && (
-  <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+  <div className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">
     <div dangerouslySetInnerHTML={{ __html: processedContent }} />
     {shouldTruncate && (
       <button
