@@ -591,8 +591,7 @@ useEffect(() => {
     if (!receiver) {
   return (
     <div className="flex items-center justify-center p-4 text-gray-700 gap-3">
-      <span>loading latest Messages...</span>
-      <div className="loader"></div>
+      <span><div className="loader"></div></span>
     </div>
   );
 }
@@ -859,12 +858,11 @@ useEffect(() => {
       </ChatboxHeader>
         <div
         ref={containerRef}
-          className="flex flex-col chatbox-wrapper 
-          chatbox-messages bg-[var(--input-chatbox-bg-gradient)]"
+          className="flex-1 flex flex-col chatbox-wrapper 
+          chatbox-messages bg-[var(--input-chatbox-bg-gradient)] overflow-y-auto"
          style={{
             background: "var(--input-chatbox-bg-gradient)",
             color: "var(--input-text-color)",
-            paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
           }}>
           {loading ?
             (

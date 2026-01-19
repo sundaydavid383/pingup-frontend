@@ -14,10 +14,13 @@ const Layout = () => {
   // Detect if we are on the messages page to match Sidebar's mini-width
   const isMessageTab = location.pathname.startsWith('/messages');
 
+  // Hide mobile navbar on messages and chatbox pages
+  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox');
+
   return user ? (
     <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      <MobileNavbar setSidebarOpen={setSidebarOpen} />
+      {!hideMobileNavbar && <MobileNavbar setSidebarOpen={setSidebarOpen} />}
 
       <div
         className={`flex-1 bg-slate-50 transition-all duration-300

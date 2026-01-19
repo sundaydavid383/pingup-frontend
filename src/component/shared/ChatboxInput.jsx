@@ -7,6 +7,9 @@ const ChatboxInput = ({
   style: extraStyle = {},
 }) => {
   const inputStyle = {
+    position: "sticky",
+    bottom: 0,
+    zIndex: 40,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

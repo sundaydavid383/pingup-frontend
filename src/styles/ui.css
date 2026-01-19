@@ -1,0 +1,30 @@
+/* Chat empty-state loader */
+.chat-loader {
+  width: 75px;
+  aspect-ratio: 1;
+  display: grid;
+}
+
+.chat-loader::before,
+.chat-loader::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 35px;
+  aspect-ratio: 1;
+  box-shadow: 0 0 0 3px #94a3b8 inset;
+  filter: drop-shadow(40px 40px 0 #94a3b8);
+  animation: chatLoader 2s infinite alternate;
+}
+
+.chat-loader::after {
+  margin-left: auto;
+  filter: drop-shadow(-40px 40px 0 #94a3b8);
+  animation-delay: -1s;
+}
+
+@keyframes chatLoader {
+  0%, 10%   { border-radius: 0 }
+  30%, 40%  { border-radius: 50% 0 }
+  60%, 70%  { border-radius: 50% }
+  90%, 100% { border-radius: 0 50% }
+}

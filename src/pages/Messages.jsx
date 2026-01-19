@@ -219,8 +219,18 @@ const Messages = () => {
             </div>
         </div>
         <div className="hidden md:flex flex-1 bg-white">
-            {activeChatId ? <ChatBox userId={activeChatId} /> : <div className="flex flex-1 items-center justify-center text-slate-400">Select a conversation</div>}
-        </div>
+  {activeChatId ? (
+    <ChatBox userId={activeChatId} />
+  ) : (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 text-slate-400">
+      <div className="chat-loader" />
+      <span className="text-sm tracking-wide">
+        Select a conversation
+      </span>
+    </div>
+  )}
+</div>
+
     </div>
   );
 };
