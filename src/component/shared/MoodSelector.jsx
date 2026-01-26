@@ -18,7 +18,8 @@ const CALM_VOLUME = 0.6;
 const DEFAULT_VOLUME = 0.3;
 
 export default function MoodSelector({ moodVolume, setMoodVolume }) {
-  const [selectedMood, setSelectedMood] = useState("");
+
+const [selectedMood, setSelectedMood] = useState("");
   const [searchText, setSearchText] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -34,13 +35,13 @@ export default function MoodSelector({ moodVolume, setMoodVolume }) {
   const playMood = (mood) => {
     if (!mood?.file) return;
 
-    // SAME mood → toggle
+  // SAME mood → toggle
     if (globalMoodAudio && globalMoodName === mood.name) {
       if (globalMoodAudio.paused) {
         globalMoodAudio.play().catch(() => {});
         setIsPlaying(true);
         setIsLoading(false);
-      } else {
+   } else {
         globalMoodAudio.pause();
         setIsPlaying(false);
       }
@@ -68,13 +69,13 @@ export default function MoodSelector({ moodVolume, setMoodVolume }) {
     };
 
     audio.onended = () => setIsPlaying(false);
-
-    globalMoodAudio = audio;
+   globalMoodAudio = audio;
     globalMoodName = mood.name;
 
     setSelectedMood(mood.name);
     setSearchText(mood.name);
-    setIsDropdownOpen(false);
+
+ setIsDropdownOpen(false);
 
     localStorage.setItem("selectedMood", mood.name);
   };
@@ -103,32 +104,31 @@ const toggleInputPlay = () => {
   }
 };
 
-
-  useEffect(() => {
+useEffect(() => {
     const savedMood = localStorage.getItem("selectedMood");
     const savedVolume = localStorage.getItem("moodVolume");
-
     if (savedVolume !== null) setMoodVolume(Number(savedVolume));
 
-    if (globalMoodAudio && globalMoodName) {
+ if (globalMoodAudio && globalMoodName) {
       setSelectedMood(globalMoodName);
       setSearchText(globalMoodName);
       setIsPlaying(!globalMoodAudio.paused);
       return;
     }
 
-    if (savedMood) {
+ if (savedMood) {
       setSelectedMood(savedMood);
       setSearchText(savedMood);
     }
   }, []);
+
 
   useEffect(() => {
     if (globalMoodAudio) globalMoodAudio.volume = moodVolume;
     localStorage.setItem("moodVolume", moodVolume);
   }, [moodVolume]);
 
-  useEffect(() => {
+ useEffect(() => {
     const handleClickOutside = (e) => {
       if (
         dropdownRef.current &&
@@ -139,11 +139,11 @@ const toggleInputPlay = () => {
         setIsDropdownOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  return (
+ return (
     <div className="mood-selector-container">
       <label className="mood-label">Mood</label>
 
@@ -177,7 +177,7 @@ const toggleInputPlay = () => {
             ) : (
               <span className="text-[var(--gold)]">▶</span> // play button
             )}
-          </button>
+     </button>
         )}
       </div>
 
@@ -193,7 +193,7 @@ const toggleInputPlay = () => {
                 onClick={() => playMood(m)}
               >
                 <span className="mood-name">{m.name}</span>
-                <span
+   <span
                   className={`mood-play-btn ${
                     active && isPlaying ? "playing" : ""
                   }`}
@@ -207,7 +207,7 @@ const toggleInputPlay = () => {
                   ) : (
                     <span>▶</span>
                   )}
-                </span>
+       </span>
               </li>
             );
           })}

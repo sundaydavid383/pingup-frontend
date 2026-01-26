@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Trash2, SendHorizonal, X } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
 
 /**
  * PROPS:

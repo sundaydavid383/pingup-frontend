@@ -74,7 +74,7 @@ export default function BibleControls({
     left: sidebarOpen ? "20rem" : ".1rem", // shifts with sidebar
     transition: "left 0.3s ease",         // smooth animation
   }}>
-      <div className="dropdown speed-dropdown" ref={speedRef}>
+ <div className="dropdown speed-dropdown" ref={speedRef}>
         {/* Progress */}
         <label className="speed-label">Chapter Progress</label>
         <div className="speed-control horizontal" style={{ marginTop: "10px" }}>

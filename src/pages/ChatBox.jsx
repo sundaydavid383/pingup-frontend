@@ -8,10 +8,10 @@ import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ui.css";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import { useSocket } from "../context/useSocket";
+import { useSocket } from "../context/SocketContext";
 import { useMessageContext } from "../context/MessageContext";
 import { FaArrowDown } from "react-icons/fa";
-import ThemeDropdown from "../component/ThemeDropdown";
+import ThemeDropdown, { THEMES, applyThemeVars } from "../component/ThemeDropdown";
 import BackButton from "../component/shared/BackButton";
 import "../component/themeDropdown.css";
 import './chatbox.css'
@@ -68,12 +68,30 @@ const ChatBox = () => {
   const hasInitialScrolledRef = useRef(false);
 
   //==================chnage placeholderfs ===============
+
+
+  
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex(prev => (prev + 1) % placeholders.length);
     }, 20000);
     return () => clearInterval(interval);
   }, []);
+
+
+  // Apply theme on change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      applyThemeVars(THEMES[currentTheme]?.vars || THEMES.Default.vars, chatContainerRef.current);
+    }
+  }, [currentTheme]);
+
+  const handleMediaSelect = (type) => {
+    setShowMediaDropdown(false);
+    if (type === "image" && imageInputRef.current) imageInputRef.current.click();
+    if (type === "file" && fileInputRef.current) fileInputRef.current.click();
+    if (type === "video" && videoInputRef.current) videoInputRef.current.click();
+  };
 
 
   // Track if user is near bottom
@@ -663,6 +681,9 @@ useEffect(() => {
     };
 
     updateSidebarWidth();
+
+
+    
 
     // ResizeObserver will pick up sidebar width changes (animations, responsive)
     try {

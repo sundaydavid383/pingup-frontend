@@ -1,3 +1,4 @@
+// ChapterTTS.jsx
 import React, {
   useState,
   useRef,
@@ -9,6 +10,33 @@ import { FaPlay, FaPause, FaStop } from "react-icons/fa";
 import { Loader } from "lucide-react";
 import CustomAlert from "./CustomAlert";
 
+// ------------------------------
+// Safe text chunker (word-boundary)
+// ------------------------------
+const chunkText = (text, size = 160) => {
+  if (!text) return [];
+  const chunks = [];
+  let i = 0;
+
+  while (i < text.length) {
+    let end = i + size;
+    if (end >= text.length) {
+      chunks.push(text.slice(i).trim());
+      break;
+    }
+
+    // walk backward to nearest punctuation
+    let safeEnd = end;
+    while (safeEnd > i && !/[.,!?;:]/.test(text[safeEnd])) safeEnd--;
+
+    if (safeEnd === i) safeEnd = end; // fallback
+    chunks.push(text.slice(i, safeEnd).trim());
+    i = safeEnd;
+  }
+
+  return chunks.filter(Boolean);
+};
+
 const ChapterTTS = forwardRef(
   ({ text, speed = 0.7, progress, setProgress, moodVolume = 0.9, verseOffsetsRef }, ref) => {
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -16,43 +44,9 @@ const ChapterTTS = forwardRef(
     const [alert, setAlert] = useState(null);
 
     const utteranceRef = useRef(null);
+    const chunkIndexRef = useRef(0);
     const shouldSpeakRef = useRef(false);
     const readingSpeedRef = useRef(speed);
-
-/* ------------------------------
-   Build verse units safely
------------------------------- */
-const verseUnits = React.useMemo(() => {
-  if (!verseOffsetsRef?.current?.length || !text) return [];
-
-  const offsets = verseOffsetsRef.current;
-  const units = offsets.map((v, i) => {
-    const safeBookId = v.book.replace(/\s+/g, "-").toLowerCase();
-
-    // Start is always within text bounds
-    const start = Math.max(0, Math.min(v.start ?? 0, text.length - 1));
-
-    // End is either the given end, or next verse's start, or end of text
-    const nextStart = offsets[i + 1]?.start ?? text.length;
-    const rawEnd = v.end ?? nextStart;
-    const end = Math.max(start + 1, Math.min(rawEnd, nextStart, text.length));
-
-    const verseText = text.slice(start, end).trim();
-
-    return {
-      id: `v-${safeBookId}-${v.chapter}-${v.verse}`,
-      text: verseText || "[empty verse]",
-      start,
-      end,
-      verse: v.verse,
-      chapter: v.chapter,
-    };
-  });
-
-  console.log("Verse units built safely:", units);
-  return units;
-}, [text, verseOffsetsRef]);
-
 
     // ------------------------------
     // Keep speed ref in sync
@@ -62,11 +56,33 @@ const verseUnits = React.useMemo(() => {
     }, [speed]);
 
     // ------------------------------
+    // Build verse units if available
+    // ------------------------------
+    const verseUnits = React.useMemo(() => {
+      if (!verseOffsetsRef?.current?.length || !text) return [];
+      return verseOffsetsRef.current.map((v, i) => {
+        const safeBookId = v.book.replace(/\s+/g, "-").toLowerCase();
+        const start = Math.max(0, Math.min(v.start ?? 0, text.length - 1));
+        const nextStart = verseOffsetsRef.current[i + 1]?.start ?? text.length;
+        const end = Math.max(start + 1, Math.min(v.end ?? nextStart, nextStart, text.length));
+        return {
+          id: `v-${safeBookId}-${v.chapter}-${v.verse}`,
+          text: text.slice(start, end).trim() || "[empty verse]",
+          start,
+          end,
+          chapter: v.chapter,
+          verse: v.verse,
+        };
+      });
+    }, [text, verseOffsetsRef]);
+
+    // ------------------------------
     // Reset on text change
     // ------------------------------
     useEffect(() => {
       window.speechSynthesis.cancel();
       utteranceRef.current = null;
+      chunkIndexRef.current = 0;
       shouldSpeakRef.current = false;
       setIsSpeaking(false);
       setIsLoadingTTS(false);
@@ -74,15 +90,13 @@ const verseUnits = React.useMemo(() => {
     }, [text, setProgress]);
 
     // ------------------------------
-    // Play a verse
+    // Play a chunk (or verse if available)
     // ------------------------------
-    const playVerse = (index) => {
-      if (!verseUnits[index] || !shouldSpeakRef.current) return;
+    const playChunk = (index) => {
+      const chunks = verseUnits.length ? verseUnits.map(v => v.text) : chunkText(text);
+      if (!chunks[index] || !shouldSpeakRef.current) return;
 
-      const verse = verseUnits[index];
-      console.log(`Playing verse ${verse.verse}: "${verse.text}" [${verse.start}, ${verse.end}]`);
-
-      const utterance = new SpeechSynthesisUtterance(verse.text || " ");
+      const utterance = new SpeechSynthesisUtterance(chunks[index]);
       utterance.rate = readingSpeedRef.current;
       utterance.volume = moodVolume;
 
@@ -90,25 +104,27 @@ const verseUnits = React.useMemo(() => {
         setIsLoadingTTS(false);
         setIsSpeaking(true);
 
-        const percent = Math.round(((index + 1) / verseUnits.length) * 100);
-        setProgress(percent);
+        setProgress(Math.round(((index + 1) / chunks.length) * 100));
 
-        const el = document.getElementById(verse.id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.classList.add("verse-highlight");
+        // highlight verse if available
+        if (verseUnits[index]) {
+          const el = document.getElementById(verseUnits[index].id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("verse-highlight");
+            setTimeout(() => el.classList.remove("verse-highlight"), 1200);
+          }
         }
       };
 
       utterance.onend = () => {
-        const el = document.getElementById(verse.id);
-        if (el) el.classList.remove("verse-highlight");
-
         if (!shouldSpeakRef.current) return;
 
         const nextIndex = index + 1;
-        if (nextIndex < verseUnits.length) {
-          playVerse(nextIndex);
+        chunkIndexRef.current = nextIndex;
+
+        if (nextIndex < chunks.length) {
+          playChunk(nextIndex);
         } else {
           shouldSpeakRef.current = false;
           setIsSpeaking(false);
@@ -117,9 +133,7 @@ const verseUnits = React.useMemo(() => {
       };
 
       utterance.onerror = (e) => {
-        if (e.error !== "interrupted") {
-          console.error("❌ Verse TTS error:", e);
-        }
+        if (e.error !== "interrupted") console.error("❌ TTS error:", e);
       };
 
       utteranceRef.current = utterance;
@@ -127,7 +141,7 @@ const verseUnits = React.useMemo(() => {
     };
 
     // ------------------------------
-    // Play / Pause
+    // Play / pause chapter
     // ------------------------------
     const handlePlayChapter = () => {
       if (!window.speechSynthesis) {
@@ -145,18 +159,16 @@ const verseUnits = React.useMemo(() => {
         window.speechSynthesis.cancel();
       }
 
-      if (!verseUnits.length) return;
+      const chunks = verseUnits.length ? verseUnits.map(v => v.text) : chunkText(text);
+      if (!chunks.length) return;
 
       shouldSpeakRef.current = true;
       setIsLoadingTTS(true);
 
-      const startIndex = Math.min(
-        verseUnits.length - 1,
-        Math.floor((progress / 100) * verseUnits.length)
-      );
+      const startIndex = Math.floor((progress / 100) * chunks.length);
+      chunkIndexRef.current = startIndex;
 
-      window.speechSynthesis.cancel();
-      playVerse(startIndex);
+      playChunk(startIndex);
     };
 
     // ------------------------------
@@ -165,6 +177,7 @@ const verseUnits = React.useMemo(() => {
     const stopSpeaking = () => {
       window.speechSynthesis.cancel();
       utteranceRef.current = null;
+      chunkIndexRef.current = 0;
       shouldSpeakRef.current = false;
       setIsSpeaking(false);
       setIsLoadingTTS(false);
@@ -172,23 +185,21 @@ const verseUnits = React.useMemo(() => {
     };
 
     // ------------------------------
-    // Exposed API
+    // Expose API
     // ------------------------------
     useImperativeHandle(ref, () => ({
       jumpToPercent(percent) {
-        if (!verseUnits.length) return;
+        const chunks = verseUnits.length ? verseUnits.map(v => v.text) : chunkText(text);
+        if (!chunks.length) return;
 
-        const index = Math.min(
-          verseUnits.length - 1,
-          Math.floor((percent / 100) * verseUnits.length)
-        );
+        const index = Math.floor((percent / 100) * chunks.length);
+        console.log("🎚 Progress jump → chunk:", index);
 
-        console.log("🎚 Jump to verse:", index);
         window.speechSynthesis.cancel();
         shouldSpeakRef.current = true;
-        playVerse(index);
+        chunkIndexRef.current = index;
+        playChunk(index);
       },
-
       pauseForSpeedChange(newSpeed) {
         readingSpeedRef.current = newSpeed;
         if (isSpeaking) {
@@ -200,15 +211,12 @@ const verseUnits = React.useMemo(() => {
     }));
 
     // ------------------------------
-    // Cleanup
+    // Cleanup on unload
     // ------------------------------
     useEffect(() => {
       const stop = () => window.speechSynthesis.cancel();
       window.addEventListener("beforeunload", stop);
-      return () => {
-        window.removeEventListener("beforeunload", stop);
-        stop();
-      };
+      return () => window.removeEventListener("beforeunload", stop);
     }, []);
 
     // ------------------------------

@@ -99,7 +99,7 @@ export default function BibleReader() {
   const [seeControls, setSeeControls] = useState(false)
 
   const touchStartX = useRef(0);
-  const [searchQuery, setSearchQuery] = useState("");
+ const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -676,14 +676,14 @@ export default function BibleReader() {
               left: sidebarOpen ? "20rem" : "0.1rem",
               transition: "left 0.3s ease",
             }}>
-            <FaSlidersH />
+         <FaSlidersH />
           </div>
           }
           {seeControls && <div ref={controlsRef}>
             <BibleControls
               ttsSpeed={ttsSpeed}
               setTtsSpeed={setTtsSpeed}
-              progress={progress}
+          progress={progress}
               setProgress={setProgress}
               ttsRef={ttsRef}
             /></div>}

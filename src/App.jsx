@@ -23,6 +23,7 @@ import ScriptureAssistant from './pages/spiritual_life_tracker/ScriptureAssistan
 import BibleReader from './pages/spiritual_life_tracker/BibleReader';
 import AppInstallPrompt from './pages/AppInstallPrompt';
 import AuthSuccess from "./pages/AuthSuccess";
+import "./styles/ui.css"
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location  = useLocation();
