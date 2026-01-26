@@ -124,40 +124,127 @@ const PostViewer = ({ feed, currentIndex, onClose, onNavigate, currentUser }) =>
         )}
 
         {/* Attachments */}
-{post.attachments?.length > 0 && (
-  <div className="p-4 grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 w-full">
-    {post.attachments.map((file, i) => (
-      <div
-        key={i}
-        onClick={() => {
-          if (file.type === "image") {
-            setViewerMediaIndex(i);
-            setViewerOpen(true);
-          }
-        }}
-        className="cursor-pointer w-full"
-      >
-        {file.type === "image" && (
-          <div className="w-full overflow-hidden rounded-md bg-gray-100">
-            <img
-              src={file.url}
-              alt={`attachment-${i}`}
-              className="w-full h-auto object-contain"
+  {post.attachments?.length > 0 && (
+  <div
+    className={`w-full grid gap-2
+      ${post.attachments.length === 1 && "flex justify-center"}
+      ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
+      ${post.attachments.length === 3 && "grid-cols-2"}
+      ${post.attachments.length >= 4 && "grid-cols-2"}
+    `}
+  >
+    {post.attachments.map((file, index) => {
+      const count = post.attachments.length;
+      const single = count === 1;
+
+      const isImage = file.type === "image";
+      const isVideo = file.type === "video";
+      const isYouTube = file.type === "youtube";
+
+      // ✅ Detect portrait / mobile-shaped images
+      const isMobileShaped = isImage && file?.aspect === "tall" && !single;
+
+      // ✅ Special case: last item in 3 attachments
+      const isLastOfThree = count === 3 && index === 2;
+
+      // ✅ Dynamic max height (GRID SAFE)
+      let maxHeight;
+    
+if (single) {
+  maxHeight = "450px"; // 1 image
+} else if (count === 4) {
+  maxHeight = "520px"; // 2x2 grid
+} else if (count === 3) {
+  maxHeight = 520; // 🔥 same as 4-image logic for balance
+} else if (isMobileShaped) {
+  maxHeight = "1000px"; // tall portrait
+} else {
+  maxHeight = "750px"; // landscape
+}
+
+let widthClass = "w-full";
+if (count === 2) {
+  widthClass = "w-1/2"; // 2 side-by-side
+} else if (count === 3) {
+  widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
+} else if (count === 4) {
+  widthClass = "w-1/2"; // 2x2 grid
+}
+
+
+      // ✅ Aspect ratio (controls shape, not image)
+    const aspectRatio = single
+  ? "auto"
+  : isMobileShaped
+    ? "3 / 5"
+    : count === 4 || count === 3
+      ? "4 / 5"  
+      : "5 / 3";
+
+
+      return (
+<div
+  key={index}
+  onClick={(e) => {
+    e.stopPropagation();
+    if (isImage) onImageClick(index);
+  }}
+  className={`relative overflow-hidden cursor-pointer
+    ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
+    ${single ? "rounded-lg" : "rounded-sm"}
+    ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+  `}
+  style={{ aspectRatio }}
+>
+
+          {/* ✅ IMAGE */}
+          {isImage && (
+          <img
+  src={file.url}
+  alt={`attachment-${index}`}
+  className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
+  style={{
+    maxHeight,
+    width: isMobileShaped || count === 3 && index === 2 ? "auto" : "100%",
+    margin: "auto",
+    userSelect: "none",
+  }}
+  draggable={false}
+  onContextMenu={(e) => e.preventDefault()}
+/>
+
+          )}
+
+          {/* ✅ VIDEO */}
+
+{isVideo && (
+  <div className="w-full h-full flex items-center justify-center bg-black">
+    <VideoPlayer
+      src={file.url}
+      poster={file.poster || ""}
+      maxHeight="90%"
+      primaryColor="#FF4D4F"
+      autoPlayOnView={true}
+      sectionId="feed-1"
+    />
+  </div>
+
+)}
+
+
+          {/* ✅ YOUTUBE */}
+          {isYouTube && (
+            <iframe
+              src={`https://www.youtube.com/embed/${file.youtubeId}`}
+              title={`youtube-${index}`}
+              className="w-full h-full rounded-md"
+              allowFullScreen
+              style={{ maxHeight }}
             />
-          </div>
-        )}
-        {file.type === "video" && (
-          <div className="w-full rounded-md overflow-hidden">
-            <VideoPlayer
-              src={file.url}
-              poster={file.poster}
-              maxHeight="480px"
-              autoPlayOnView={false} // optional, prevent autoplay here
-            />
-          </div>
-        )}
-      </div>
-    ))}
+          )}
+        </div>
+      );
+    })}
   </div>
 )}
 

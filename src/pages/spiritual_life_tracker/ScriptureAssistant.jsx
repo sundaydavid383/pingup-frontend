@@ -19,8 +19,6 @@ const debounce = (func, delay) => {
   };
 };
 
-
-
 // ---------------- Stop words ----------------
 const STOP_WORDS = new Set([
   "the", "who", "was", "an", "is", "to", "and", "in", "he", "she", "of", "a"
@@ -279,18 +277,30 @@ const runLocalSearch = async (query) => {
   console.log("Incoming query:", query);
   console.log("Current context:", currentContext);
 
+  // 1️⃣ Process command (navigation vs search)
   const cmdResult = processCommand(query, currentContext);
   console.log("COMMAND RESULT:", cmdResult);
 
   if (cmdResult.type === "navigation") {
     console.log("Navigation command detected. Executing jump...");
-    navigateVerse(cmdResult.action, cmdResult);
-    setLoading(false);
 
+    // Execute the jump (verse or chapter)
+    navigateVerse(cmdResult.action, cmdResult);
+
+    // Update context based on jump
+    const newContext = {
+      currentBook: cmdResult.book || currentContext.currentBook,
+      currentChapter: cmdResult.chapter || currentContext.currentChapter,
+      currentVerse: cmdResult.verse || currentContext.currentVerse,
+    };
+    setCurrentContext(newContext);
+
+    setLoading(false);
     console.log("Navigation done. Skipping search for this chunk.");
-    return "commandHandled"; 
+    return "commandHandled";
   }
 
+  // 2️⃣ If not a navigation command, treat as search
   console.log("No navigation command. Proceeding to search...");
   setLoading(true);
   voiceInputRef.current?.stop();
@@ -299,8 +309,13 @@ const runLocalSearch = async (query) => {
   const tokens = tokenize(cleaned).filter(t => !STOP_WORDS.has(t));
   console.log("Tokens for search:", tokens);
 
-  let tokenSets = tokens.map(t => invertedIndexRef.current.get(t)).filter(Boolean);
-  if (!tokenSets.length) tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
+  let tokenSets = tokens
+    .map(t => invertedIndexRef.current.get(t))
+    .filter(Boolean);
+
+  if (!tokenSets.length) {
+    tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
+  }
 
   const candidateIds = new Set(tokenSets.flatMap(s => [...s]));
   console.log("Candidate IDs count:", candidateIds.size);
@@ -310,6 +325,7 @@ const runLocalSearch = async (query) => {
     const score = scoreVerse(tokens, v, invertedIndexRef.current, versesRef.current.length);
     return { ...v, _score: score };
   });
+
   scored.sort((a, b) => b._score - a._score);
   const top3 = scored.slice(0, 3);
 
@@ -317,9 +333,17 @@ const runLocalSearch = async (query) => {
 
   if (top3.length) {
     const verse = top3[0];
-    setMatchedVerses(top3);
-    setCurrentContext({ currentBook: verse.book, currentChapter: verse.chapter, currentVerse: verse.verse });
 
+    setMatchedVerses(top3);
+
+    // ✅ Update context only if search produced a clear match
+    setCurrentContext({
+      currentBook: verse.book,
+      currentChapter: verse.chapter,
+      currentVerse: verse.verse
+    });
+
+    // ✅ Speak verse only if it is new
     const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
     if (lastSpokenVerseRef.current !== verseKey) {
       lastSpokenVerseRef.current = verseKey;
@@ -333,6 +357,7 @@ const runLocalSearch = async (query) => {
   setLoading(false);
   voiceInputRef.current?.start?.();
 };
+
 
 
 

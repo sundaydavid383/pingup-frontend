@@ -8,7 +8,7 @@ import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
 import "../styles/ui.css";
 import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../context/useSocket";
 import { useMessageContext } from "../context/MessageContext";
 import { FaArrowDown } from "react-icons/fa";
 import ThemeDropdown from "../component/ThemeDropdown";

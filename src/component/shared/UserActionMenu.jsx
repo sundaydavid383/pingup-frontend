@@ -57,67 +57,107 @@ const UserActionMenu = ({
 
       {/* Dropdown Action Menu */}
       {showActionBar && (
-        <div
-          className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border border-gray-200 z-50 animate-fadeIn overflow-hidden"
-        >
-          {/* Follow / Unfollow (only for non-owner) */}
-          {!isOwnPost && (
-            <button
-              onClick={() => handleAction("follow")}
-              disabled={loadingAction === "follow"}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition disabled:opacity-50"
-            >
-              {loadingAction === "follow" ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />
-              ) : isFollowing ? (
-                <UserMinus className="w-4 h-4 text-[var(--primary)]" />
-              ) : (
-                <UserPlus className="w-4 h-4 text-[var(--primary)]" />
-              )}
-              <span>{isFollowing ? "Unfollow" : "Follow"}</span>
-            </button>
-          )}
+  <div
+    className="
+      absolute right-0 mt-3 w-48 z-50 overflow-hidden
+      rounded-2xl px-2 py-1
+      bg-white/90 backdrop-blur-xl
+      border border-gray-200/60
+      shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+      animate-scaleFade
+    "
+  >
+    {/* Follow / Unfollow */}
+    {!isOwnPost && (
+      <button
+        onClick={() => handleAction("follow")}
+        disabled={loadingAction === "follow"}
+        className="
+          group w-full flex items-center gap-3
+          px-4 py-3 text-sm font-medium
+          text-gray-800
+          transition-all duration-200
+          hover:bg-gray-100/70
+          active:scale-[0.98]
+          disabled:opacity-50 rounded-xl
+          
+        "
+      >
+        {loadingAction === "follow" ? (
+          <Loader2 className="w-4 h-4 animate-spin text-[var(--primary)]" />
+        ) : isFollowing ? (
+          <UserMinus className="w-4 h-4 text-[var(--primary)] group-hover:scale-110 transition" />
+        ) : (
+          <UserPlus className="w-4 h-4 text-[var(--primary)] group-hover:scale-110 transition" />
+        )}
+        <span>{isFollowing ? "Unfollow" : "Follow"}</span>
+      </button>
+    )}
 
-          {/* Block / Unblock (only for non-owner) */}
-          {!isOwnPost && (
-            <button
-              onClick={() => handleAction("block")}
-              disabled={loadingAction === "block"}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition disabled:opacity-50"
-            >
-              {loadingAction === "block" ? (
-                <Loader2 className="w-4 h-4 animate-spin text-red-500" />
-              ) : isBlocked ? (
-                <ShieldX className="w-4 h-4 text-red-500" />
-              ) : (
-                <Ban className="w-4 h-4 text-red-500" />
-              )}
-              <span>{isBlocked ? "Unblock" : "Block"}</span>
-            </button>
-          )}
+    {/* Block / Unblock */}
+    {!isOwnPost && (
+      <button
+        onClick={() => handleAction("block")}
+        disabled={loadingAction === "block"}
+        className="
+          group w-full flex items-center gap-3
+          px-4 py-3 text-sm font-medium
+          text-gray-800
+          transition-all duration-200
+          hover:bg-red-50
+          active:scale-[0.98]
+          disabled:opacity-50 rounded-xl
+        "
+      >
+        {loadingAction === "block" ? (
+          <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+        ) : isBlocked ? (
+          <ShieldX className="w-4 h-4 text-red-500 group-hover:scale-110 transition" />
+        ) : (
+          <Ban className="w-4 h-4 text-red-500 group-hover:scale-110 transition" />
+        )}
+        <span>{isBlocked ? "Unblock" : "Block"}</span>
+      </button>
+    )}
 
-          {/* Delete Post (only for owner) */}
-          {isOwnPost && handleDeletePost && (
-            <button
-              onClick={() => handleAction("delete")}
-              disabled={loadingAction === "delete"}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-            >
-              <Slash className="w-4 h-4" />
-              <span>Delete Post</span>
-            </button>
-          )}
+    {/* Delete Post */}
+    {isOwnPost && handleDeletePost && (
+      <button
+        onClick={() => handleAction("delete")}
+        disabled={loadingAction === "delete"}
+        className="
+          group w-full flex items-center gap-3
+          px-4 py-3 text-sm font-semibold
+          text-red-600
+          hover:bg-red-50
+          transition-all
+          active:scale-[0.98]
+          disabled:opacity-50 rounded-xl
+        "
+      >
+        <Slash className="w-4 h-4 group-hover:scale-110 transition" />
+        <span>Delete Post</span>
+      </button>
+    )}
 
-          {/* Cancel */}
-          <button
-            onClick={() => setShowActionBar(false)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 border-t"
-          >
-            <X className="w-4 h-4" />
-            <span>Cancel</span>
-          </button>
-        </div>
-      )}
+    {/* Cancel */}
+    <button
+      onClick={() => setShowActionBar(false)}
+      className="
+        w-full flex items-center justify-center gap-2
+        px-4 py-3 text-sm font-medium
+        text-gray-500
+        hover:bg-gray-100
+        border-t border-gray-200/60
+        transition
+      "
+    >
+      <X className="w-4 h-4" />
+      <span>Cancel</span>
+    </button>
+  </div>
+)}
+
     </div>
   );
 };

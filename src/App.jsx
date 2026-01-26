@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import "./styles/ui.css"
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate  } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
 import Feed from './pages/Feed';
@@ -22,11 +22,12 @@ import SinglePostPage from "./pages/SinglePostPage";
 import ScriptureAssistant from './pages/spiritual_life_tracker/ScriptureAssistant';
 import BibleReader from './pages/spiritual_life_tracker/BibleReader';
 import AppInstallPrompt from './pages/AppInstallPrompt';
+import AuthSuccess from "./pages/AuthSuccess";
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
-
-
-
+  const location  = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const oauthError = searchParams.get('error');
 
   const toTitleCase = (str) => {
     return str
@@ -80,7 +81,9 @@ const App = () => {
       <Routes>
 
         {/* Public or Auth route */}
-    <Route path="/" element={!user ? <AuthContainer /> : <Layout />}>
+        <Route path="/auth/success" element={<AuthSuccess />} />
+
+    <Route path="/" element={!user ? <AuthContainer initialError={oauthError} /> : <Layout />}>
   <Route index element={<Feed />} />
   <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />
   <Route path="bible">

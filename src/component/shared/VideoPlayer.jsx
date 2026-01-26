@@ -40,11 +40,16 @@ export default function VideoPlayer({
 
   // hide controls after inactivity
   const hideTimerRef = useRef(null);
-  const resetHideTimer = useCallback(() => {
-    setShowControls(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setShowControls(false), 2500);
-  }, []);
+const MIN_SHOW_TIME = 4000; // 4 seconds
+
+const resetHideTimer = useCallback(() => {
+  setShowControls(true);
+  if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+  hideTimerRef.current = setTimeout(() => {
+    setShowControls(false);
+  }, MIN_SHOW_TIME);
+}, []);
+
 
 
 
@@ -331,10 +336,12 @@ useEffect(() => {
     resetHideTimer();
   }
 
-  function handleCenterClick(e) {
-    if (e && e.stopPropagation) e.stopPropagation();
-    handlePlayPause();
-  }
+function handleCenterClick(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  handlePlayPause();
+  resetHideTimer(); // ✅ ensures controls stay visible after tap
+}
+
 
   // IMPORTANT: stop propagation on the container so clicks inside player don't bubble to parent wrappers
  // compute played percent (place this in the component body, right before return)
@@ -363,7 +370,7 @@ return (
 <div
   ref={containerRef}
   className="vp-container"
-  onClick={(e) => e.stopPropagation()}
+  onClick={(e) => {e.stopPropagation(); resetHideTimer();}}
   style={{
     maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
     height: "80vh",   // ✅ increase from 50vh
@@ -371,9 +378,8 @@ return (
     "--vp-primary": "var(--primary)",
     "--vp-played-pct": `${playedPct}%`,
   }}
-  onMouseMove={handleMouseMove}
-  onMouseEnter={() => setShowControls(true)}
-  onMouseLeave={() => setTimeout(() => setShowControls(false), 3000)}
+onMouseMove={resetHideTimer}
+onTouchStart={resetHideTimer} // 👈 mobile tap also resets timer
 >
 <video
   ref={videoRef}
@@ -467,20 +473,22 @@ return (
           <BsFillVolumeUpFill className="vp-icon vp-icon-bigger" />}
         </button>
 
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={volume}
-          onChange={(e) => {
-            const val = parseFloat(e.target.value);
-            setVolume(val);
-            setMuted(val === 0);
-          }}
-          className="vp-volume"
-          aria-label="Volume"
-        />
+    <input
+  type="range"
+  min={0}
+  max={1}
+  step={0.01}
+  value={volume}
+  onChange={(e) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    setMuted(val === 0);
+  }}
+  className="vp-volume"
+  style={{ "--vol": `${volume * 100}%` }}
+  aria-label="Volume"
+/>
+
 
         {/* Fullscreen button */}
         <button className="vp-btn vp-btn-large" onClick={toggleFullscreen} aria-label="Fullscreen">

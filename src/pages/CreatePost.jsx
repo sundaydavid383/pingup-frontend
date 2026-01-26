@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { X, Image, Video as VideoIcon } from "lucide-react";
@@ -21,6 +21,8 @@ const CreatePost = () => {
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 const [uploadState, setUploadState] = useState(""); 
+const textareaRef = useRef(null);
+
 
   const MAX_TEXT_LENGTH = 500;
   const MAX_IMAGES = 4;
@@ -30,6 +32,25 @@ const [uploadState, setUploadState] = useState("");
   const MAX_VIDEO_DURATION = 1040; // seconds
 
   const showAlert = (message, type = "info") => setAlert({ message, type });
+    
+  const autoResizeTextarea = () => {
+  const textarea = textareaRef.current;
+  if (!textarea) return;
+
+  textarea.style.height = "auto";
+
+  const maxHeight = window.innerHeight * 0.49; // 49vh
+  const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+
+  textarea.style.height = `${newHeight}px`;
+  textarea.style.overflowY =
+    textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+};
+useEffect(() => {
+  autoResizeTextarea();
+}, [content]);
+
+
 
   // Clean and validate text input
   const handleTextChange = (e) => {
@@ -38,6 +59,7 @@ const [uploadState, setUploadState] = useState("");
       return showAlert(`Text cannot exceed ${MAX_TEXT_LENGTH} characters.`, "warning");
     }
     setContent(value);
+    autoResizeTextarea();
   };
 
   const handlePaste = (e) => {
@@ -235,14 +257,26 @@ const handleSubmit = async () => {
           </div>
 
           {/* Textarea */}
-          <textarea
-            className="w-full resize-none min-h-20 max-h-60 overflow-y-auto text-sm outline-none placeholder-gray-400 border-b pb-1"
-            placeholder="What's on your mind?"
-            value={content}
-            onChange={handleTextChange}
-            onPaste={handlePaste}
-            disabled={loading}
-          />
+        <textarea
+  ref={textareaRef}
+  className="
+    w-full resize-none
+    text-sm outline-none placeholder-gray-400
+    border-b pb-1
+    overflow-hidden
+    transition-[height] duration-150
+  "
+  style={{
+    minHeight: "80px",
+    maxHeight: "49vh",
+  }}
+  placeholder="What's on your mind?"
+  value={content}
+  onChange={handleTextChange}
+  onPaste={handlePaste}
+  disabled={loading}
+/>
+
           <div className="text-xs text-gray-500 text-right">{content.length}/{MAX_TEXT_LENGTH}</div>
 
           {/* Visibility */}

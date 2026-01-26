@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import "../styles/userstate.css"; // Make sure to create this CSS file
 
 const UserStats = () => {
   const [totalUsers, setTotalUsers] = useState(0);
@@ -26,23 +27,18 @@ const UserStats = () => {
 
   // Format large numbers nicely
   const formatNumber = (num) => {
-    if (num >= 1000) {
-      return Math.floor(num / 1000) + "k+";
-    } else if (num >= 100) {
-      return Math.floor(num / 100) * 100 + "+";
-    } else if (num >= 20) {
-      return Math.floor(num / 10) * 10 + "+";
-    } else {
-      return num.toString();
-    }
+    if (num >= 1000) return Math.floor(num / 1000) + "k+";
+    if (num >= 100) return Math.floor(num / 100) * 100 + "+";
+    if (num >= 20) return Math.floor(num / 10) * 10 + "+";
+    return num.toString();
   };
 
   return (
     <div>
       {loading ? (
-        // 🔥 Uses your global shimmer + root color system
+        // Shimmer loading bar
         <div
-          className="relative overflow-hidden rounded-full"
+          className="relative overflow-hidden rounded-full user-shimmer-container"
           style={{
             height: "0.9rem",
             width: "10rem",
@@ -50,14 +46,7 @@ const UserStats = () => {
             boxShadow: "inset 0 0 4px rgba(255,255,255,0.05)",
           }}
         >
-          <div
-            className="absolute inset-0 shimmer"
-            style={{
-              background:
-                "linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%)",
-              animation: "shimmer 3s infinite",
-            }}
-          ></div>
+          <div className="absolute shimmer-layer"></div>
         </div>
       ) : (
         <p className="text-xs md:text-sm text-[var(--hover-dark)] animate-fadeIn">

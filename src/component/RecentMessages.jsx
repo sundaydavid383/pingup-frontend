@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import moment from "moment";
 import axios from "../utils/axiosBase";
 import { useAuth } from "../context/AuthContext";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../context/useSocket";
 import { useMessageContext } from "../context/MessageContext";
 import ProfileAvatar from "./shared/ProfileAvatar";
 import RecentMessagesSkeleton from "./skeleton/RecentMessagesSkeleton";

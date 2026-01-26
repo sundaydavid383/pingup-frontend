@@ -279,6 +279,10 @@ const meDisliked = (serverPost.recentDislikes || []).some(
   };
 
 
+  const hasVideoAttachment = post.attachments?.some(
+    (file) => file.type === "video" || file.type === "youtube" 
+  )
+
 
 
   return (
@@ -353,7 +357,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
       {/* Attachments */}
   {post.attachments?.length > 0 && (
   <div
-    className={`w-full grid gap-2
+    className={`w-full grid gap-2  ${hasVideoAttachment ? "bg-black" : ""}
       ${post.attachments.length === 1 && "flex justify-center"}
       ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
       ${post.attachments.length === 3 && "grid-cols-2"}
@@ -424,6 +428,7 @@ if (count === 2) {
   style={{ aspectRatio }}
 >
 
+
           {/* ✅ IMAGE */}
           {isImage && (
           <img
@@ -446,17 +451,19 @@ if (count === 2) {
 
 {isVideo && (
   <div className="w-full h-full flex items-center justify-center bg-black">
-    <VideoPlayer
-      src={file.url}
-      poster={file.poster || ""}
-      maxHeight="90%"
-      primaryColor="#FF4D4F"
-      autoPlayOnView={true}
-      sectionId="feed-1"
-    />
+    <div className="w-full h-full max-h-full flex items-center justify-center">
+      <VideoPlayer
+        src={file.url}
+        poster={file.poster || ""}
+        className="max-h-full max-w-full"
+        primaryColor="#FF4D4F"
+        autoPlayOnView={true}
+        sectionId="feed-1"
+      />
+    </div>
   </div>
-
 )}
+
 
 
           {/* ✅ YOUTUBE */}
