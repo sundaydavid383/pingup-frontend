@@ -82,14 +82,14 @@ const ChatMessagesFull = ({
               return (
                 <div
                   key={msg._id}
-                  className={`flex flex-col ${
+                  className={`flex flex-col  ${
                     sentByUser ? "items-end" : "items-start"
                   }`}
                 >
                   {/* Message bubble */}
                   <div
                     data-id={msg._id}
-                    className={`p-2 text-sm max-w-[70%] rounded-xl shadow break-words relative transition-all duration-200
+                    className={`p-2 text-sm max-w-[400px] rounded-xl shadow break-words relative transition-all duration-200
                       ${
                         sentByUser
                           ? msg.failed

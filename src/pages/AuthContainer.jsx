@@ -225,8 +225,12 @@ const handleGoogleSignup = () => {
            {/* Google OAuth Button */}
 <div className="mt-4 w-full">
   <a
-    href={`${import.meta.env.VITE_SERVER}api/auth/google/login`}
-    className="
+    onClick={() => {
+    setLoading(true);
+    setLoadingText("google signup")
+    window.location.href =
+      `${import.meta.env.VITE_SERVER}api/auth/google/login`;
+  }} className="
       w-full flex items-center justify-center gap-3
       py-3 px-4
       bg-white text-[#1f1f1f]

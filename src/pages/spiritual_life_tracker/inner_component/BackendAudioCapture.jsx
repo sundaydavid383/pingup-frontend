@@ -1,3 +1,4 @@
+
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import axiosBase from "../../../utils/axiosBase";
 
@@ -74,21 +75,24 @@ const stop = () => {
      Helpers
   ============================= */
 
-  async function sendToBackend(base64Audio) {
+async function sendToBackend(base64Audio) {
+  try {
     const res = await axiosBase.post("/api/stt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        audio: base64Audio,
-        format: "wav",
-        sampleRate: TARGET_SAMPLE_RATE,
-      }),
+      userId,
+      sessionId: "session-" + Date.now(),
+      audio: base64Audio,
+      format: "wav",
+      sampleRate: TARGET_SAMPLE_RATE,
+      mode: "vosk",
     });
 
-    const data = await res.json();
-    if (onResult) onResult(data);
+    if (onResult) onResult(res.data);
+  } catch (err) {
+    console.error("❌ Error sending audio to backend:", err);
+    if (onResult) onResult({ transcript: "" });
   }
+}
+
 });
 
 /* =============================

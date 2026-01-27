@@ -375,9 +375,7 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
     )}
   </div>
 
-  {/* RIGHT SIDEBAR */}
-  <RightSidebar sponsors={sponsors} loading={!sponsors} />
-  <MediumSidebarToggle sponsors={sponsors} />
+
 </div>
   );
 };

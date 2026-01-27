@@ -178,10 +178,7 @@ return (
     clearUnread(usr._id);
   }}
   className="flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
-  style={{
-    background: activeChatId === usr._id ? "var(--form-bg)" : "var(--white)",
-    border: `1px solid none`,
-  }}
+  
 >
   {/* Profile Avatar */}
   <ProfileAvatar user={usr} size={44} />
@@ -204,7 +201,7 @@ return (
     </div>
 
     {/* Bottom row: last message + unread */}
-    <div className="flex justify-between mt-[-5] items-center mt-1">
+    <div className="flex justify-between -mt-3 items-center mt-1">
       <span
         className="truncate text-xs"
         style={{ color: "var(--text-secondary)" }}
@@ -233,26 +230,41 @@ return (
       </div>
 
       {pipOpen && activeChatId && (
-        <div className="fixed bottom-6 right-6 z-[100] w-80 h-[450px]  rounded-2xl shadow-2xl border flex flex-col overflow-hidden"
-        style={{
-          background: "rgba(255, 255, 255, 0.48)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderRadius: "18px",
-          border: "1px solid rgba(255, 255, 255, 0.5)",
-          boxShadow:
-            "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-        }}
-        >
-          <div className="flex items-center gap-2 px-3 py-3 border-b">
-            <button onClick={() => setPipOpen(false)}><X size={18} /></button>
-            <ProfileAvatar user={activeUser} size={32} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate">{activeUser?.username}</p>
-              <p className="text-[10px] leading-none">{getStatusDisplay(activeUser)}</p>
-            </div>
-            <button onClick={() => navigate(`/chatbox/${activeChatId}`)}><Maximize2 size={16} /></button>
-          </div>
+     <div
+    className="fixed bottom-6 right-6 z-[100] w-80 max-w-full h-[450px] rounded-2xl shadow-xl border flex flex-col overflow-hidden"
+    style={{
+      background: "rgba(255, 255, 255, 0.48)",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      border: "1px solid rgba(255, 255, 255, 0.5)",
+      boxShadow:
+        "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+    }}
+  >
+    {/* HEADER */}
+    <div className="flex items-center gap-2 px-3 py-3 border-b bg-white/50 backdrop-blur-md">
+      <button
+        onClick={() => setPipOpen(false)}
+        className="p-1 rounded-full hover:bg-red-100 transition"
+        title="Close"
+      >
+        <X size={18} />
+      </button>
+
+      <ProfileAvatar user={activeUser} size={32} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold truncate">{activeUser?.username}</p>
+        <p className="text-[10px] text-gray-500 truncate">{getStatusDisplay(activeUser)}</p>
+      </div>
+
+      <button
+        onClick={() => navigate(`/chatbox/${activeChatId}`)}
+        className="p-1 rounded-full hover:bg-gray-200 transition"
+        title="Maximize"
+      >
+        <Maximize2 size={16} />
+      </button>
+    </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]">
             {activeChatHistory.map((msg, i) => (
@@ -266,24 +278,28 @@ return (
             ))}
           </div>
 
-          <div className="p-3 bg-white border-t">
-            <div 
-  className="flex items-center gap-2 bg-gray-100 px-3 py-1.5" 
-  style={{ borderRadius: '50px' }}
->
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Message..."
-                className="flex-1 bg-transparent border-none outline-none text-sm"
-              />
-              <button onClick={handleSend} disabled={!draft.trim()} className="text-black">
-                <Send size={18} fill="currentColor" />
-              </button>
-            </div>
-          </div>
-        </div>
+           <div className="p-3 bg-white border-t">
+      <div
+        className="flex items-center gap-2 bg-gray-100 px-3 py-2"
+        style={{ borderRadius: "50px" }}
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Message..."
+          className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-400"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!draft.trim()}
+          className={`p-1 rounded-full transition ${draft.trim() ? "text-black hover:bg-gray-200" : "text-gray-300 cursor-not-allowed"}`}
+        >
+          <Send size={18} fill="currentColor" />
+        </button>
+      </div>
+    </div>
+  </div>
       )}
     </div>
   );
