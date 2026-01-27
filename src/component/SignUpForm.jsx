@@ -8,7 +8,7 @@ import './signUpForm.css';
 import axios from 'axios';
 import { useAuth } from "../context/AuthContext";
 import location from "../utils/location"
-
+import { Eye, EyeOff } from "lucide-react";
 
 const steps = [
   'Basic Info',
@@ -426,35 +426,39 @@ if (step === 1) {
                   className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
                 />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transform bg-[var(--accent)] px-3 py-1 rounded-full text-white text-sm hover:bg-opacity-90 transition"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
+  type="button"
+  onClick={() => setShowPassword((prev) => !prev)}
+  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
+  aria-label={showPassword ? "Hide password" : "Show password"}
+>
+  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+</button>
               </div>
-              <div className="password-validation" style={{ marginTop: '10px' }}>
-                <ValidationItem
-                  isValid={formData.password.length >= 8}
-                  label="Minimum 8 characters"
-                />
-                <ValidationItem
-                  isValid={/[A-Z]/.test(formData.password)}
-                  label="At least 1 uppercase letter"
-                />
-                <ValidationItem
-                  isValid={/[a-z]/.test(formData.password)}
-                  label="At least 1 lowercase letter"
-                />
-                <ValidationItem
-                  isValid={/\d/.test(formData.password)}
-                  label="At least 1 number"
-                />
-                <ValidationItem
-                  isValid={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)}
-                  label="At least 1 special character"
-                />
-              </div>
+             {/* Only show validation when the user has started typing */}
+{formData.password.length > 0 && (
+  <div className="password-validation" style={{ marginTop: '10px' }}>
+    <ValidationItem
+      isValid={formData.password.length >= 8}
+      label="Minimum 8 characters"
+    />
+    <ValidationItem
+      isValid={/[A-Z]/.test(formData.password)}
+      label="At least 1 uppercase letter"
+    />
+    <ValidationItem
+      isValid={/[a-z]/.test(formData.password)}
+      label="At least 1 lowercase letter"
+    />
+    <ValidationItem
+      isValid={/\d/.test(formData.password)}
+      label="At least 1 number"
+    />
+    <ValidationItem
+      isValid={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)}
+      label="At least 1 special character"
+    />
+  </div>
+)}
               <input
                 type="password"
                 name="confirmPassword"
@@ -755,7 +759,7 @@ if (step === 1) {
           <p className="text-sm text-center text-white/60">
             Step {step + 1} of {steps.length}
           </p>
-          <p className="text-center text-sm text-white/70">
+           <p className="text-center text-sm text-white/70">
             Already have an account?{" "}
             <button
               type="button"
@@ -764,7 +768,7 @@ if (step === 1) {
             >
               Log in here
             </button>
-          </p>
+          </p> 
         </motion.form>
       </AnimatePresence>
     </div>

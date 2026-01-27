@@ -3,6 +3,7 @@ import CustomAlert from "./shared/CustomAlert";
 import Loading from "./shared/Loading";
 import { useAuth } from "../context/AuthContext";
 import location from "../utils/location"
+import { Eye, EyeOff } from 'lucide-react';
 
 const LoginForm = ({ onSwitchToSignUp }) => {
   const { login } = useAuth();
@@ -108,12 +109,12 @@ const LoginForm = ({ onSwitchToSignUp }) => {
             className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
           />
           <button
-            type="button"
-            onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 transform bg-[var(--accent)] px-3 py-1 rounded-full text-white text-sm hover:bg-opacity-90 transition"
-          >
-            {showPassword ? "Hide" : "Show"}
-          </button>
+  type="button"
+  onClick={() => setShowPassword((prev) => !prev)}
+  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
+>
+  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+</button>
         </div>
 
 
@@ -124,7 +125,7 @@ const LoginForm = ({ onSwitchToSignUp }) => {
           Login
         </button>
 
-        <p className="text-center text-sm text-white/70">
+         <p className="text-center text-sm text-white/70">
           Don’t have an account?{" "}
           <button
             type="button"
@@ -133,7 +134,7 @@ const LoginForm = ({ onSwitchToSignUp }) => {
           >
             Sign up here
           </button>
-        </p>
+        </p> 
       </form>
     </div>
   );
