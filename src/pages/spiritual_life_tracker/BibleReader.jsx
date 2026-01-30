@@ -99,7 +99,7 @@ export default function BibleReader() {
   const [seeControls, setSeeControls] = useState(false)
 
   const touchStartX = useRef(0);
- const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -276,6 +276,7 @@ export default function BibleReader() {
     setSearchResults([]);
     setSearchVisible(false)
 
+
     // Small delay to allow loading bar to show (UX polish)
     setTimeout(() => {
       const results = fuseRef.current.search(searchQuery.trim());
@@ -333,7 +334,9 @@ export default function BibleReader() {
     }
   }, [allVerses, book, chapter, verse]);
 
-
+  useEffect(() => {
+    console.log("isSearching is:", isSearching);
+  }, [isSearching])
 
   // Helper to pick random verses excluding an optional "exclude" array
   const getRandomVerses = (count, versesArray, exclude = []) => {
@@ -617,14 +620,15 @@ export default function BibleReader() {
                       Search
                     </button>
                     {/* Loading bar appears inside dropdown */}
-                    {isSearching && (
-                      <div className="search-loading-bar">
-                        <div className="search-loading-progress" />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
+              {isSearching && (
+                <div className="search-loading-bar fixed-loading">
+                  <div className="search-loading-progress" />
+                </div>
+
+              )}
 
               {/* Book/Chapter Selectors */}
               <div className="selectors-container" ref={selectorsRef}>
@@ -672,18 +676,18 @@ export default function BibleReader() {
           {!seeControls && <div
             onClick={() => setSeeControls(prev => !prev)}
             className="bible_controls_toggler"
-             style={{
+            style={{
               left: sidebarOpen ? "20rem" : "0.1rem",
               transition: "left 0.3s ease",
             }}>
-         <FaSlidersH />
+            <FaSlidersH />
           </div>
           }
           {seeControls && <div ref={controlsRef}>
             <BibleControls
               ttsSpeed={ttsSpeed}
               setTtsSpeed={setTtsSpeed}
-          progress={progress}
+              progress={progress}
               setProgress={setProgress}
               ttsRef={ttsRef}
             /></div>}

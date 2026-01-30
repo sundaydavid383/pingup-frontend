@@ -56,7 +56,7 @@ const errorRef = useRef(null);
 
 
   // chunking config
-  const MIN_CHUNK_WORDS = 10; 
+  const MIN_CHUNK_WORDS = 5; 
   const MAX_CHUNK_WORDS = 20; 
   const PAUSE_MS = 200; 
   const bibleBooks = assets.bibleBooks
@@ -173,24 +173,35 @@ const checkAvailability = async () => {
   });
 };
 
-  const handleBackendChunk = (text) => {
- console.log("📝 handleBackendChunk called with:", text);
+const handleBackendChunk = (text) => {
   if (!text) return;
 
-  const combined = (leftoverRef.current + " " + text).trim().replace(/\s+/g, " ");
-  const words = combined.split(/\s+/).filter(Boolean);
+  console.log("📝 Vosk transcript:", text);
 
-  if (words.length >= MIN_CHUNK_WORDS) {
-    const take = Math.min(MAX_CHUNK_WORDS, words.length);
-    const chunk = words.slice(0, take).join(" ");
-    const leftover = words.slice(take).join(" ");
-    leftoverRef.current = leftover;
-    onTranscribe(chunk, leftover, { live: true });
-  } else {
-    leftoverRef.current = combined;
-    onTranscribe(null, leftoverRef.current, { live: true });
-  }
+  // 🚫 IMPORTANT: Vosk should NEVER use leftover
+  leftoverRef.current = "";
+
+  // 1️⃣ Update textarea ONLY with current speech
+  onTranscribe(null, text, {
+    live: true,
+    source: "vosk",
+    replace: true, // 🔑 parent textarea must replace, not append
+  });
+
+  const words = text.trim().split(/\s+/);
+
+  // 2️⃣ Only search if enough words
+  if (words.length < MIN_CHUNK_WORDS) return;
+
+  const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
+
+  // 3️⃣ Trigger search with ONLY this speech
+  onTranscribe(chunk, "", {
+    forceSearch: true,
+    source: "vosk",
+  });
 };
+
 
 
 
@@ -469,7 +480,11 @@ return (
         ref={backendRef}
         userId={user._id}
         mode={speechEngineRef.current}
-        onChunk={handleBackendChunk}
+        onResult={(data)=>{
+         if(!data?.transcript) return;
+         handleBackendChunk(data.transcript)
+        }}
+        toggleListening={toggleListening}
       />
     )}
 

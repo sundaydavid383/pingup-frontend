@@ -410,10 +410,11 @@ const processChunks = debounce(async (inputText) => {
 
 
   const handleChange = (e) => {
-    setText(e.target.value);
-    autoGrowTextarea();
-    processChunks(e.target.value);
-  };
+  const value = e.target.value;
+  setText(value);
+  autoGrowTextarea();
+  processChunks(value); // 👈 SAME pipeline as voice
+};
 
   // ----------------- Render -----------------
   return (
@@ -430,18 +431,51 @@ const processChunks = debounce(async (inputText) => {
         </span>
       </div>
 
-      <VoiceInput
-        ref={voiceInputRef}
-        onTranscribe={async (sentChunk, leftover, meta = {}) => {
-          if (!sentChunk) return;
-          setText(sentChunk);
-          if (!processedChunksRef.current.includes(sentChunk)) {
-            processedChunksRef.current.push(sentChunk);
-            setProcessedChunks([...processedChunksRef.current]);
-            await runLocalSearch(sentChunk);
-          }
-        }}
-      />
+<VoiceInput
+  ref={voiceInputRef}
+  onTranscribe={(sentChunk, leftover, meta = {}) => {
+
+    /*
+      =========================
+      1️⃣ LIVE UPDATES
+      =========================
+    */
+
+    if (meta.live && leftover) {
+      // 🔴 Vosk → replace
+      // 🔵 WebSpeech → safe to display as-is
+      setText(leftover);
+      return;
+    }
+
+    /*
+      =========================
+      2️⃣ NO FINAL RESULT
+      =========================
+    */
+
+    if (!sentChunk) return;
+
+    /*
+      =========================
+      3️⃣ FINAL RESULT
+      =========================
+    */
+
+    // BOTH engines end here
+    setText(sentChunk);
+
+    /*
+      =========================
+      4️⃣ PROCESS FINAL TEXT
+      =========================
+    */
+
+    processChunks(sentChunk);
+  }}
+/>
+
+
 
       <div className="flex flex-col items-center w-full gap-5 mt-4">
       <textarea

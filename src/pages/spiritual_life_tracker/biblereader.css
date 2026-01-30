@@ -190,37 +190,37 @@
   opacity: 1;
 }
 
-
-
-
-
 /* Loading Bar */
 .search-loading-bar {
   width: 100%;
-  height: 4px;
-  background: rgba(255,255,255,0.2);
-  margin-top: 0.25rem;
+  height: 8px; /* keep visible */
+  background: rgba(255, 255, 255, 0.2); 
   border-radius: 4px;
   overflow: hidden;
+  position: relative; /* ensure children animate properly */
+  z-index: 9999999;
 }
+
 .fixed-loading {
-  position: sticky; /* stays just below header */
-  top: 60px; /* height of your header, adjust as needed */
+  position: fixed; /* sticky is tricky inside nested containers */
+  top: 70px;
+  left:0px;
   width: 100%;
-  z-index: 999; /* above verses */
-  background-color: transparent; /* or match header bg if needed */
-  height: 4px;
+  z-index: 9999999;
 }
+
 .search-loading-progress {
   height: 100%;
   width: 40%;
-  background: var(--primary);
-  animation: search-loading 1s infinite ease-in-out;
+  background: var(--primary, blue); /* fallback to blue */
+  animation: search-loading 1s infinite linear;
 }
+
 @keyframes search-loading {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(250%); }
 }
+
 
 /* ===== Selectors Dropdown ===== */
 .selectors-container {

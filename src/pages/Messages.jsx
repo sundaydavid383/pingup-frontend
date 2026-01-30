@@ -369,8 +369,11 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
     {activeChatId ? (
       <ChatBox userId={activeChatId} />
     ) : (
-      <div className="flex flex-1 items-center justify-center text-slate-400">
+      <div className="flex flex-1 flex-column items-center justify-center text-slate-400">
+           <div className="chat-loader" />
+      <span className="text-sm tracking-wide">
         Select a conversation
+      </span>
       </div>
     )}
   </div>
