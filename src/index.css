@@ -1071,6 +1071,22 @@ img, video {
   }
 }
 
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-bounce-slow {
+  animation: bounceSlow 2s infinite;
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.05); }
+}
+.animate-pulse-slow {
+  animation: pulseSlow 3s infinite;
+}
 /* ===============================
    Generic app layout helpers
    These provide a consistent responsive structure across pages.

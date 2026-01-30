@@ -20,6 +20,7 @@ import RightSidebar from "../component/RightSidebar";
 import { runOncePerSession } from "../utils/runOncePerSession";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import CustomAlert from "../component/shared/CustomAlert";
+import { EmptyFeed } from "../component/staterep/EmptyFeed";
 
 
 const Feed = () => {
@@ -170,7 +171,9 @@ useEffect(() => {
           <div className="space-y-6 py-5 no-scrollbar pb-25 relative">
             {loadingInitial ? (
       <PostCardSkeleton />
-    ) :     feeds.map((post, i) => (
+    ) :    feeds.length === 0 ? (
+  <EmptyFeed />
+): feeds.map((post, i) => (
   <PostWrapper
   key={post._id}
   index={i}
