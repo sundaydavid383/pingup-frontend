@@ -27,6 +27,7 @@ const ProfileModal = ({ setShowEdit }) => {
 
   const [formData, setFormData] = useState({ ...baseUser });
   const [preview, setPreview] = useState(baseUser.profilePicUrl || "");
+  const [coverPreview, setCoverPreview] = useState(baseUser.coverPhotoUrl || "");
   const [alert, setAlert] = useState({ show: false, message: "", type: "" });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -45,6 +46,14 @@ useEffect(() => {
   setFormData((p) => ({ ...p, phone: phoneValue }));
   setPhoneInput(phoneValue);
 }, [baseUser.phone, baseUser.phoneNumber]);
+
+
+//handle cancle const 
+const handleCancel = () => {
+  setPreview(baseUser.profilePicUrl || "");
+  setCoverPreview(baseUser.coverPhotoUrl || "");
+  setShowEdit(false);
+};
 
 
   // 🟢 Handle alert message
@@ -99,6 +108,37 @@ useEffect(() => {
     // Can't safely guess for other local formats
     return null;
   };
+
+
+
+
+const handleCoverUpload = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!/^image\//.test(file.type)) return setMsg("Please select a valid image.", "error");
+  if (file.size > 5 * 1024 * 1024) return setMsg("Cover image too large (max 5MB).", "error");
+
+  const fd = new FormData();
+  fd.append("coverPhoto", file);
+
+  try {
+    setUploading(true);
+    const { data } = await axiosBase.post("/api/auth/upload-image", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const url = data?.url || data?.imageUrl || data?.imageUrlFull || "";
+    if (!url) throw new Error("No image URL returned from server.");
+
+    setFormData((p) => ({ ...p, coverPhotoUrl: url }));
+    setCoverPreview(url);
+    setMsg("Cover photo uploaded.", "success");
+  } catch (err) {
+    setMsg(err?.response?.data?.message || err.message || "Cover photo upload failed.", "error");
+  } finally {
+    setUploading(false);
+  }
+};
 
   // -------------------------
   // File upload handler
@@ -201,6 +241,8 @@ useEffect(() => {
 };
 
 
+
+
   // -------------------------
   // Save profile
   // -------------------------
@@ -237,7 +279,7 @@ useEffect(() => {
       setFormData(updatedUser);
       setPhoneInput(updatedUser.phone || "");
 
-      setTimeout(() => setShowEdit(false), 900);
+      setTimeout(() => hanld, 900);
     } catch (err) {
       setMsg(err?.response?.data?.message || "Update failed.", "error");
     } finally {
@@ -252,16 +294,17 @@ useEffect(() => {
     return (parts[0]?.[0] || "") + (parts[1]?.[0] || "");
   }, [formData.name]);
 
-  return (
-    <div className="fixed inset-0 z-[51110] h-screen overflow-y-auto bg-black/50">
-      <div className="max-w-2xl sm:py-6 mx-auto">
-        <div className="bg-white rounded-lg shadow p-6">
-              <button
+  return (<>
+   <button
  className="fixed top-4 right-4 text-xl bg-[var(--primary)] text-[var(--white)] hover:bg-gray-200/50 px-3 py-1 rounded-full z-[51120] backdrop-blur-sm"
-      onClick={() => setShowEdit(false)}
+      onClick={() => handleCancel()}
     >
       ✕
-    </button>
+    </button> 
+<div className="fixed inset-0 z-[51110] h-screen overflow-y-auto bg-black/50 backdrop-blur-md">
+                  <div className="max-w-2xl sm:py-6 mx-auto">
+        <div className="bg-white rounded-lg shadow p-6">
+
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Edit Profile</h1>
 
           {alert.show && (
@@ -273,6 +316,35 @@ useEffect(() => {
           )}
 
           <form className="space-y-4" onSubmit={handleSaveProfile}>
+
+            {/* Cover Photo */}
+<div className="flex flex-col items-center mb-4">
+  <label className="relative w-full h-40 cursor-pointer">
+    {coverPreview ? (
+      <img
+        src={coverPreview}
+        alt="Cover"
+        className="w-full h-full object-cover rounded-lg"
+      />
+    ) : (
+      <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+        <span className="text-gray-500">Click to upload cover photo</span>
+      </div>
+    )}
+
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleCoverUpload}
+      className="hidden"
+    />
+
+    <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 hover:opacity-100 rounded-lg transition">
+      <Pencil className="w-5 h-5 text-white" />
+    </div>
+  </label>
+</div>
+
             {/* Profile Picture */}
             <div className="flex flex-col items-center">
               
@@ -419,7 +491,7 @@ useEffect(() => {
             <div className="flex justify-end space-x-3 pt-6">
               <button
                 type="button"
-                onClick={() => setShowEdit(false)}
+                onClick={() => handleCancel()}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Cancel
@@ -435,7 +507,7 @@ useEffect(() => {
           </form>
         </div>
       </div>
-    </div>
+    </div></>
   );
 };
 

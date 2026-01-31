@@ -31,6 +31,8 @@ input, textarea, select {
   --accent: var(--primary);
   --gold: rgb(223, 190, 61);
   --opaque-secondary: rgba(5, 13, 58, 0.6);
+  --glassy-white: rgba(232, 228, 228, 0.4);
+  --really-bright-glass: rgba(255, 255, 255, 0.4);
 
     --color-1: #fdfcfb;
   --color-2: #e2d1c3;
@@ -922,7 +924,25 @@ img, video {
   scrollbar-width: none !important;
 }
 
+.card-shadow {
+  /* Background + blur */
+  background: rgba(232, 228, 228, 0.4); /* var(--glassy-white) */
+  backdrop-filter: blur(15px);
+  border-radius: 1.5rem; /* matches rounded-3xl */
+  overflow: hidden;
+  padding: 2.5rem; /* matches p-10 in Tailwind */
 
+  /* Outer shadow (thin gray border-like) + inset shadow */
+  box-shadow:
+    0px 12px 30px rgba(15, 23, 42, 0.15),   /* main elevation shadow */
+    0px 0px 0px 1px rgba(148, 163, 184, 0.35) inset; /* subtle inner border */
+
+  /* Optional ring */
+  ring: 4px inset rgba(255, 255, 255, 0.4);
+
+  /* Smooth animation when appearing */
+  animation: fadeIn 0.5s ease forwards;
+}
 /* Makes the calendar icon white for any input with .date-white */
 .date-white::-webkit-calendar-picker-indicator {
   filter: invert(1);
