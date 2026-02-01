@@ -342,6 +342,12 @@ function handleCenterClick(e) {
   resetHideTimer(); // ✅ ensures controls stay visible after tap
 }
 
+useEffect(() => {
+  const vid = videoRef.current;
+  if (!vid) return;
+  vid.load(); // starts buffering
+}, [src]);
+
 
   // IMPORTANT: stop propagation on the container so clicks inside player don't bubble to parent wrappers
  // compute played percent (place this in the component body, right before return)
@@ -387,7 +393,7 @@ onTouchStart={resetHideTimer} // 👈 mobile tap also resets timer
   poster={poster}
   className="vp-video"
   playsInline
-  preload="metadata"
+  preload= "metadata"
   muted={muted}
   style={{
     width: "100%",

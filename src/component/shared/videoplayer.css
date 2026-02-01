@@ -85,15 +85,19 @@
   right: 0;
   bottom: 0;
   padding: 8px 10px;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--vp-bg) 60%);
   display: flex;
   flex-direction: column;
+  background-color: var(--glassy-white);
+  backdrop-filter: blur(30px);
   align-items: center;
   gap: var(--vp-gap);
-  z-index: 530;
+  z-index: 1001; /* must be higher than overlays (like captions) but lower than modals if any) */
+  pointer-events: auto;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--vp-bg) 60%);
   transition: transform 160ms ease, opacity 160ms ease;
   transform: translateY(0);
 }
+
 .vp-controls.hidden { opacity: 0; transform: translateY(10px); pointer-events: none; }
 .vp-controls.visible { opacity: 1; pointer-events: auto; }
 .vp-bottom{

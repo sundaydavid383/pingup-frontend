@@ -33,7 +33,8 @@ const AuthContainer = ({ initialError }) => {
     <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center animate-in fade-in duration-500">
       <p className="text-gray-400 text-xs mb-4 uppercase tracking-widest font-semibold">Or connect with</p>
       <a
-        href={`${import.meta.env.VITE_SERVER}api/auth/google/login`}
+         href={`${import.meta.env.VITE_SERVER}api/auth/google/login?origin=${window.location.origin}`}
+         onClick={()=> console.log('window.location.origin', window.location.origin)}
         className="w-12 h-12 flex items-center justify-center bg-white rounded-2xl border border-[#dadce0] shadow-sm transition hover:bg-[#f7f8f8] active:scale-[0.95]"
         title="Continue with Google"
       >
