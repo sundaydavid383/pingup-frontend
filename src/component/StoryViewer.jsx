@@ -200,23 +200,86 @@ const handleEditReply = async (reply) => {
     }
   }, [viewStory, isPaused]);
 
-  const handleNextStory = () => {
-    const globalIndex = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
-    if (globalIndex !== -1 && globalIndex < stories.length - 1) {
-      setViewStory(stories[globalIndex + 1]);
-      resetProgress();
-    } else {
-      setViewStory(null);
-    }
-  };
+const handleNextStory = () => {
+  if (!viewStory) return;
 
-  const handlePrevStory = () => {
-    const globalIndex = stories.findIndex(s => (s._id || s.id) === (viewStory._id || viewStory.id));
-    if (globalIndex > 0) {
-      setViewStory(stories[globalIndex - 1]);
-      resetProgress();
+  const currentSubIndex = userStories.findIndex(
+    s => (s._id || s.id) === (viewStory._id || viewStory.id)
+  );
+
+  // 1️⃣ Move to next story of the same user if it exists
+  if (currentSubIndex !== -1 && currentSubIndex < userStories.length - 1) {
+    setViewStory(userStories[currentSubIndex + 1]);
+    resetProgress();
+    return;
+  }
+
+  // 2️⃣ If no more stories for this user, move to next user's first story
+  const currentGlobalIndex = stories.findIndex(
+    s => (s._id || s.id) === (viewStory._id || viewStory.id)
+  );
+
+  for (let i = currentGlobalIndex + 1; i < stories.length; i++) {
+    const nextStory = stories[i];
+    const nextUserId = nextStory.user?.userId || nextStory.user?._id || nextStory.user?.id;
+    if (nextUserId && nextUserId !== storyUserId) {
+      // Find the first story of the next user
+      const nextUserStories = stories.filter(s => {
+        const sUid = s.user?.userId || s.user?._id || s.user?.id;
+        return String(sUid) === String(nextUserId);
+      });
+      if (nextUserStories.length > 0) {
+        setViewStory(nextUserStories[0]);
+        resetProgress();
+        return;
+      }
     }
-  };
+  }
+
+  // 3️⃣ If no next user, close viewer
+  setViewStory(null);
+};
+
+const handlePrevStory = () => {
+  if (!viewStory) return;
+
+  const currentSubIndex = userStories.findIndex(
+    s => (s._id || s.id) === (viewStory._id || viewStory.id)
+  );
+
+  // 1️⃣ Move to previous story of the same user if it exists
+  if (currentSubIndex > 0) {
+    setViewStory(userStories[currentSubIndex - 1]);
+    resetProgress();
+    return;
+  }
+
+  // 2️⃣ If no previous story for this user, move to previous user's last story
+  const currentGlobalIndex = stories.findIndex(
+    s => (s._id || s.id) === (viewStory._id || viewStory.id)
+  );
+
+  for (let i = currentGlobalIndex - 1; i >= 0; i--) {
+    const prevStory = stories[i];
+    const prevUserId = prevStory.user?.userId || prevStory.user?._id || prevStory.user?.id;
+    if (prevUserId && prevUserId !== storyUserId) {
+      // Find all stories of that previous user
+      const prevUserStories = stories.filter(s => {
+        const sUid = s.user?.userId || s.user?._id || s.user?.id;
+        return String(sUid) === String(prevUserId);
+      });
+      if (prevUserStories.length > 0) {
+        // Go to last story of previous user
+        setViewStory(prevUserStories[prevUserStories.length - 1]);
+        resetProgress();
+        return;
+      }
+    }
+  }
+
+  // 3️⃣ If no previous user, stay at first story
+};
+
 
   const resetProgress = () => {
     setProgress(0);
@@ -247,7 +310,7 @@ const handleEditReply = async (reply) => {
   if (!viewStory) return null;
 
   return (
-    <div className="fixed inset-0 h-screen w-full z-[1000000001] flex items-center justify-center bg-black/95 backdrop-blur-xl overflow-hidden p-4">
+    <div className="fixed inset-0 h-screen w-full z-[1001] flex items-center justify-center bg-black/95 backdrop-blur-xl overflow-hidden p-4">
       <div className="absolute inset-0 z-0" onClick={() => setViewStory(null)} />
 
       {/* Navigation Arrows */}
@@ -349,13 +412,31 @@ const handleEditReply = async (reply) => {
           </div>
 
           {/* Caption Overlay */}
-          {viewStory.media_url && viewStory.content && (
-            <div className="absolute bottom-10 left-0 w-full px-6 text-center z-40">
-               <p className="bg-black/60 backdrop-blur-md text-white py-2.5 px-4 rounded-xl text-sm inline-block shadow-2xl border border-white/10">
-                {viewStory.content}
-               </p>
-            </div>
-          )}
+{viewStory.media_url && viewStory.content && (
+  <div
+    className={`absolute left-0 px-6 w-full z-40 ${
+      viewStory.media_type === "video" ? "top-0" : "bottom-10"
+    } flex justify-center`}
+    style={{
+      pointerEvents: "none", // so clicks go through
+      backgroundColor: "rgba(0,0,0,0.25)", // helps the blur show
+      backdropFilter: "blur(28px)", // actual blur
+    }}
+  >
+    <p
+      className="text-white py-2.5 px-4 rounded-xl text-sm inline-block shadow-2xl"
+      style={{
+        border: "1px solid rgba(255,255,255,0.25)", // more visible border
+        pointerEvents: "auto", // allow text selection if needed
+        backgroundColor: "rgba(0,0,0,0.6)", // keeps dark background
+      }}
+    >
+      {viewStory.content}
+    </p>
+  </div>
+)}
+
+
         </div>
 
         {/* Navigation Touch Zones */}

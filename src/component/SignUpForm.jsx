@@ -8,7 +8,7 @@ import './signUpForm.css';
 import axios from 'axios';
 import { useAuth } from "../context/AuthContext";
 import location from "../utils/location"
-
+import { Eye, EyeOff } from "lucide-react";
 
 const steps = [
   'Basic Info',
@@ -388,7 +388,7 @@ if (step === 1) {
           onSubmit={(e) => e.preventDefault()}
           className="relative z-10 w-full p-2 sm:p-3 text-[var(--text-main)] space-y-2"
         >
-          <h2 className="text-2xl font-bold text-center" style={{ color: 'var(--color-text)' }}>
+          <h2 className="text-2xl font-bold mt[-6] text-center" style={{ color: 'var(--color-text)' }}>
             {steps[step]}
           </h2>
 
@@ -426,35 +426,39 @@ if (step === 1) {
                   className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
                 />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transform bg-[var(--accent)] px-3 py-1 rounded-full text-white text-sm hover:bg-opacity-90 transition"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
+  type="button"
+  onClick={() => setShowPassword((prev) => !prev)}
+  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
+  aria-label={showPassword ? "Hide password" : "Show password"}
+>
+  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+</button>
               </div>
-              <div className="password-validation" style={{ marginTop: '10px' }}>
-                <ValidationItem
-                  isValid={formData.password.length >= 8}
-                  label="Minimum 8 characters"
-                />
-                <ValidationItem
-                  isValid={/[A-Z]/.test(formData.password)}
-                  label="At least 1 uppercase letter"
-                />
-                <ValidationItem
-                  isValid={/[a-z]/.test(formData.password)}
-                  label="At least 1 lowercase letter"
-                />
-                <ValidationItem
-                  isValid={/\d/.test(formData.password)}
-                  label="At least 1 number"
-                />
-                <ValidationItem
-                  isValid={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)}
-                  label="At least 1 special character"
-                />
-              </div>
+             {/* Only show validation when the user has started typing */}
+{formData.password.length > 0 && (
+  <div className="password-validation" style={{ marginTop: '10px' }}>
+    <ValidationItem
+      isValid={formData.password.length >= 8}
+      label="Minimum 8 characters"
+    />
+    <ValidationItem
+      isValid={/[A-Z]/.test(formData.password)}
+      label="At least 1 uppercase letter"
+    />
+    <ValidationItem
+      isValid={/[a-z]/.test(formData.password)}
+      label="At least 1 lowercase letter"
+    />
+    <ValidationItem
+      isValid={/\d/.test(formData.password)}
+      label="At least 1 number"
+    />
+    <ValidationItem
+      isValid={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)}
+      label="At least 1 special character"
+    />
+  </div>
+)}
               <input
                 type="password"
                 name="confirmPassword"
@@ -470,20 +474,59 @@ if (step === 1) {
           {/* Step 2: Profile Details */}
           {step === 1 && (
             <>
-            {!formData.profilePicUrl && (<input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="w-full p-3 rounded-xl bg-white text-black shadow-[var(--input-shadow)] focus:outline-none"
-                />)}
+{/* ---------- Google-style File Upload with Reset ---------- */}
+<div className="w-full mt-4">
+  <label className="block mb-2 text-white/80 font-medium">
+    Upload Profile Picture (optional)
+  </label>
 
-                {formData.profilePicUrl && (
-                  <img
-                    src={formData.profilePicUrl}
-                    alt="Preview"
-                    className="w-24 h-24 rounded-full mx-auto mt-4 object-cover shadow-md"
-                />
-                )}
+  {!formData.profilePicUrl ? (
+    <div
+      className="relative w-full cursor-pointer border-2 border-dashed border-white/50 rounded-xl
+                 p-4 flex flex-col items-center justify-center
+                 hover:border-blue-500 hover:bg-white/5 transition-colors duration-300"
+      onClick={() => document.getElementById('profilePicInput').click()}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-10 w-10 text-blue-500 mb-2"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12v6m0-6l-3 3m3-3l3 3" />
+      </svg>
+      <span className="text-white/70 text-sm">Click to upload</span>
+      <span className="text-white/50 text-xs mt-1">PNG, JPG, GIF (max 5MB)</span>
+
+      <input
+        id="profilePicInput"
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
+    </div>
+  ) : (
+    <div className="relative w-24 h-24 mx-auto mt-4">
+      <img
+        src={formData.profilePicUrl}
+        alt="Preview"
+        className="w-24 h-24 rounded-full object-cover shadow-md border-2 border-white"
+      />
+      <button
+        type="button"
+        onClick={() => setFormData(prev => ({ ...prev, profilePicUrl: '' }))}
+        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600 transition"
+        title="Remove Image"
+      >
+        ×
+      </button>
+    </div>
+  )}
+</div>
+
               <input
                 name="occupation"
                 placeholder="Occupation (optional)"
@@ -494,12 +537,23 @@ if (step === 1) {
 <input
   name="dob"
   type="date"
-  placeholder="Date of Birth"
   value={formData.dob}
   onChange={handleChange}
-  className="date-white w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] 
-             placeholder-white/70 focus:outline-none"
+  required
+  style={{
+    color: '#fff',            // text color visible on dark bg
+    backgroundColor: '#0c112b', // solid background to avoid transparency issues
+    padding: '0.75rem 1rem',
+    borderRadius: '1rem',
+    border: '1px solid #555',
+    boxShadow: 'inset 0 0 4px rgba(0,0,0,0.3)',
+    fontSize: '1rem',
+    width: '100%',
+    WebkitAppearance: 'menulist-button', // forces proper dropdown rendering on Android
+    appearance: 'auto',
+  }}
 />
+
 
               <select
                 name="gender"
@@ -705,7 +759,7 @@ if (step === 1) {
           <p className="text-sm text-center text-white/60">
             Step {step + 1} of {steps.length}
           </p>
-          <p className="text-center text-sm text-white/70">
+           <p className="text-center text-sm text-white/70">
             Already have an account?{" "}
             <button
               type="button"
@@ -714,7 +768,7 @@ if (step === 1) {
             >
               Log in here
             </button>
-          </p>
+          </p> 
         </motion.form>
       </AnimatePresence>
     </div>

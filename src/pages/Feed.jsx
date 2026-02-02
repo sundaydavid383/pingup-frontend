@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Megaphone, X, Globe} from "lucide-react";
+import { Megaphone, X, Globe, PenLine} from "lucide-react";
 import axios from "axios";
 import Loading from "../component/shared/Loading";
 import StoriesBar from "../component/StoriesBar";
-
+import { useNavigate } from "react-router-dom";
 import PostCard from "../component/PostCard";
 import RecentMessages from "../component/RecentMessages";
 import location from "../utils/location";
@@ -20,6 +20,8 @@ import RightSidebar from "../component/RightSidebar";
 import { runOncePerSession } from "../utils/runOncePerSession";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import CustomAlert from "../component/shared/CustomAlert";
+import { EmptyFeed } from "../component/staterep/EmptyFeed";
+import CreatePostTrigger from "../component/shared/CreatePostTrigger";
 
 
 const Feed = () => {
@@ -40,6 +42,7 @@ const Feed = () => {
   const [viewerIndex, setViewerIndex] = useState(0);
   const pageRef = useRef(1);
   const [ref, inView] = useInView();
+  const navigate = useNavigate()
   const [currentPost, setCurrentPost] = useState(null)
   const [showLiveMap, setShowLiveMap] = useState(false);
   const [sharesCount, setSharesCount] = useState(0);
@@ -145,7 +148,7 @@ useEffect(() => {
               {error}
             </div>
           )}
- <p
+ {/* <p
   className="
     inline-block
     btn
@@ -164,13 +167,16 @@ useEffect(() => {
   onClick={() => setShowLiveMap(true)}
 >
   Live Location <Globe className="ml-4"/>
-</p> 
+</p>  */}
+<CreatePostTrigger />
 
 
           <div className="space-y-6 py-5 no-scrollbar pb-25 relative">
             {loadingInitial ? (
       <PostCardSkeleton />
-    ) :     feeds.map((post, i) => (
+    ) :    feeds.length === 0 ? (
+  <EmptyFeed />
+): feeds.map((post, i) => (
   <PostWrapper
   key={post._id}
   index={i}

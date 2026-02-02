@@ -21,6 +21,7 @@ import ChatMessagesFull from "../component/ChatMessagesFull";
 import { ArrowLeft } from "lucide-react";
 import ChatboxHeader from "../component/shared/ChatboxHeader";
 import ChatboxInput from "../component/shared/ChatboxInput";
+import MediaDropdown from "../component/MediaDropdown";
 import HeaderArrow from "../component/shared/HeaderArrow";
 
 
@@ -28,26 +29,45 @@ import HeaderArrow from "../component/shared/HeaderArrow";
 
 
 
-const ChatBox = () => {
-  const { userId } = useParams();
+const ChatBox = ({ userId: propUserId }) => {
+  const [replyTo, setReplyTo] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const params = useParams();
+  const userId = propUserId || params.userId;
   const navigate = useNavigate();
   const { user, sidebarOpen } = useAuth();
   const { socket, connected, onlineUsers } = useSocket();
   // use the connected flag from context 
   const { unreadMessages, addUnread, clearUnread, getTotalUnread, incrementUnread } = useMessageContext();
-  const [messages, setMessages] = useState([]);
-  const [showScrollButton, setShowScrollButton] = useState(true); const [text, setText] = useState(""); const [image, setImage] = useState(null);
+  // 1. INITIALIZE FROM LOCAL STORAGE
+  const [messages, setMessages] = useState(() => {
+    const cached = localStorage.getItem(`chat_history_${userId}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  // Only show loading if we have zero cached messages
+/*   const [loading, setLoading] = useState(messages.length === 0);
+ */  const [sending, setSending] = useState(false);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false); // loading now only affects empty fetch, not initial display
+
+  // ... other states (image, audio, etc.)
+  
+  const [showScrollButton, setShowScrollButton] = useState(true); 
+  /* const [text, setText] = useState("");  */
+  const [image, setImage] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [typingUser, setTypingUser] = useState(false);
   const [chatId, setChatId] = useState(null);
   const [receiver, setReceiver] = useState(null);
-  const [loading, setLoading] = useState(true);
+  /* const [loading, setLoading] = useState(true); */
   const [typingUserFromId, setTypingUserFromId] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [showMediaDropdown, setShowMediaDropdown] = useState(false);
   const { currentTheme, setCurrentTheme } = useTheme();
    const [lastActive, setLastActive] = useState(receiver?.lastActiveAt || null);
   const sendSound = useRef(new Audio("/sounds/send.mp3"));
@@ -58,11 +78,13 @@ const ChatBox = () => {
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const bottomRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [sending, setSending] = useState(false);
+  /* const [sending, setSending] = useState(false); */
   const hasInitialScrolledRef = useRef(false);
 
   //==================chnage placeholderfs ===============
@@ -73,23 +95,30 @@ const ChatBox = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleMediaSelect = (type) => {
+    setShowMediaDropdown(false);
+    if (type === "image" && imageInputRef.current) imageInputRef.current.click();
+    if (type === "file" && fileInputRef.current) fileInputRef.current.click();
+    if (type === "video" && videoInputRef.current) videoInputRef.current.click();
+  };
+
 
   // Track if user is near bottom
 
 
-const scrollToBottom = (options = "smooth") => {
-  requestAnimationFrame(() => {
-    if (!bottomRef.current) return;
-
-    // If options is string, convert to object
-    const scrollOptions =
-      typeof options === "string" ? { behavior: options, block: "end" } : options;
-
-    bottomRef.current.scrollIntoView(scrollOptions);
-  });
-};
-
-
+  // Scroll-to-bottom when clicking the scroll button
+  const scrollToBottom = () => {
+    if (containerRef.current){
+      const container = containerRef.current;
+      const paddingBottom = parseFloat(
+        getComputedStyle(container).paddingBottom
+      );
+      container.scrollTo({
+        top: container.scrollHeight - container.clientHeight + paddingBottom,
+        behavior: "smooth"
+      })
+    }
+  };
 
   const isUserNearBottom = useRef(true);
 
@@ -117,33 +146,54 @@ const scrollToBottom = (options = "smooth") => {
 
   // eslint-disable-line //======================== FETCH RECEIVER + CHAT =========================== 
   useEffect(() => {
-    if (!user || !userId) return; const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [receiverRes, chatRes] = await Promise.all([
-          axiosBase.get(`/api/user/${userId}`),
-          axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),]);
-          
-        setReceiver(receiverRes.data.user || null);
-         setLastActive(receiverRes.data.user?.lastActiveAt || null);
-        if (chatRes.data?.room) setChatId(chatRes.data.room._id);
-        if (Array.isArray(chatRes.data?.messages)) {
-          const uniqueMsgs = [...new Map(
-            chatRes.data.messages.map((m) => [m._id, m]))
-            .values(),]; setMessages(uniqueMsgs);
-        }
-        clearUnread(userId);
-      }
-      catch (err) {
-        console.error("❌ Error fetching chat:", err);
-      }
-      finally {
-        setLoading(false);
+  if (!user || !userId) return;
 
+  const fetchData = async () => {
+    try {
+      const [receiverRes, chatRes] = await Promise.all([
+        axiosBase.get(`/api/user/${userId}`),
+        axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),
+      ]);
+
+      setReceiver(receiverRes.data.user || null);
+      setLastActive(receiverRes.data.user?.lastActiveAt || null);
+
+      if (chatRes.data?.room) setChatId(chatRes.data.room._id);
+
+      if (Array.isArray(chatRes.data?.messages)) {
+        setMessages(prev => {
+          const merged = [...prev]; // start from local messages
+
+          chatRes.data.messages.forEach(msg => {
+            const existsIndex = merged.findIndex(m => m._id === msg._id);
+            if (existsIndex !== -1) {
+              // Update if different
+              if (JSON.stringify(merged[existsIndex]) !== JSON.stringify(msg)) {
+                merged[existsIndex] = msg;
+              }
+            } else {
+              merged.push(msg); // add new
+            }
+          });
+
+          merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+          // save to localStorage
+          localStorage.setItem(`chat_history_${userId}`, JSON.stringify(merged));
+
+          return merged;
+        });
       }
-    };
-    fetchData();
-  }, [user, userId]);
+
+      clearUnread(userId);
+    } catch (err) {
+      console.error("❌ Error fetching chat:", err);
+    }
+  };
+
+  fetchData();
+}, [user, userId]);
+
   
   // eslint-disable-line // =========================== SOCKET CONNECTION =========================== 
   useEffect(() => {
@@ -160,31 +210,12 @@ const scrollToBottom = (options = "smooth") => {
           m)));
     };
 const handleReceiveMessage = (newMsg) => {
-  setMessages(prev => {
-    // 1️⃣ Ignore exact duplicates
-    if (prev.some(m => m._id === newMsg._id)) return prev;
+ setMessages(prev => {
+  const updated = [...prev, serverMsg]; // or whatever logic
+  localStorage.setItem(`chat_history_${userId}`, JSON.stringify(updated));
+  return updated;
+});
 
-    // 2️⃣ Ignore your own messages coming from the socket
-    if (newMsg.from_user_id === user._id) return prev;
-
-    // 3️⃣ Replace temp message if it exists (optimistic UI)
-    const tempIndex = prev.findIndex(m =>
-      m._id.startsWith("temp_") &&
-      m.from_user_id === newMsg.from_user_id &&
-      m.to_user_id === newMsg.to_user_id &&
-      m.text === newMsg.text &&
-      (!newMsg.media_url || m.media_url === newMsg.media_url) // check media match
-    );
-
-    if (tempIndex !== -1) {
-      const updated = [...prev];
-      updated[tempIndex] = newMsg;
-      return updated;
-    }
-
-    // 4️⃣ Otherwise append the new message
-    return [...prev, newMsg];
-  });
 };
 
 
@@ -280,10 +311,21 @@ const handleTypingFrom = ({ from_user_id }) => {
     const message_type = audioURL ? "audio" : image ? "image" : "text";
     const tempId = "temp_" + Date.now();
     const tempMsg = {
-      _id: tempId, chatId, from_user_id: user._id, to_user_id: userId, text: currentText || "",
-      message_type, media_url: audioURL || (image ? URL.createObjectURL(image) : ""),
-      createdAt: new Date().toISOString(), sending: true, status: "sending",
-    };
+  _id: tempId,
+  chatId,
+  from_user_id: user._id,
+  to_user_id: userId,
+  text: currentText || "",
+  replyTo: replyTo ? { _id: replyTo._id, text: replyTo.text } : null,
+  message_type,
+  media_url: audioURL || (image ? URL.createObjectURL(image) : ""),
+  createdAt: new Date().toISOString(),
+  sending: true,
+  status: "sending",
+};
+
+setReplyTo(null); // reset reply state
+
     // optimistic UI
     setMessages((p) => [...p, tempMsg]);
 
@@ -465,9 +507,6 @@ const handleTypingFrom = ({ from_user_id }) => {
 }, [loading, sortedMessages.length]);
 
 
-
-
-
   //================disconnect user================
   useEffect(() => {
     if (!socket || !user) return;
@@ -550,12 +589,13 @@ useEffect(() => {
     }
 
     if (!receiver) {
-      return (
-        <div className="flex items-center justify-center p-4 text-gray-700">
-          ❌ Unable to fetch user
-        </div>
-      );
-    }
+  return (
+    <div className="flex items-center justify-center p-4 text-gray-700 gap-3">
+      <span><div className="loader"></div></span>
+    </div>
+  );
+}
+
 
     // When chat is empty
     if (receiver && sortedMessages.length === 0) {
@@ -572,49 +612,179 @@ useEffect(() => {
 
     // When messages exist
     return (
-      <div className="flex items-center justify-between p-2 bg-[var(--hover-subtle-bg)] text-[var(--primary)]">
-<div className="flex title items-center gap-3">
-  <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
-  <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer">
-    <ProfileAvatar user={receiver} size={48} />
+      <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-20">
+  <div className="flex items-center gap-3">
+    <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
+    <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer relative">
+      <ProfileAvatar user={receiver} size={48} />
+      {onlineUsers.has(receiver._id) && (
+        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></span>
+      )}
+    </div>
+    <div className="flex flex-col">
+      <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
+      <span className="text-xs text-gray-500">{onlineUsers.has(receiver._id) ? "Online" : `Active ${moment(lastActive).fromNow()}`}</span>
+    </div>
   </div>
-  <div>
-<p className="font-medium text-[0.9rem] text-[var(--primary)]">
-  {receiver.username}
-</p>
-{typingUser && typingUserFromId === receiver._id ? (
- <span className="glassy-typing">
-  Typing
-  <span className="typing-dots">
-    <span></span>
-    <span></span>
-    <span></span>
-  </span>
-</span>
-) : onlineUsers.has(receiver._id) ? (
-  <span className="inline-flex items-center gap-2 px-2 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full transition-all duration-300 ease-in-out">
-    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-    Online
-  </span>
-) : lastActive ? (
-  <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-[0.8rem] font-medium rounded-lg transition-colors duration-300 ease-in-out hover:bg-gray-200">
-    Active {moment(lastActive).fromNow()}
-    <span className="hidden sm:inline text-gray-400">
-      ({moment(lastActive).format("ddd D MMMM  h:mma")})
-    </span>
-  </span>
-) : (
-  <span className="inline-flex items-center gap-2 px-2 py-1 bg-gray-50 text-gray-400 text-sm font-medium rounded-full">
-    <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-    Offline
-  </span>
-)}
+<div className="flex items-center gap-2 relative">
+  {/* Three-dot button */}
+  <button
+    onClick={(e) => {
+  e.stopPropagation();
+  setShowMenu(true);
+}}
+
+    className="p-2.5 rounded-full transition-all duration-200 hover:bg-black/5 active:scale-90 text-gray-600"
+    aria-label="More options"
+  >
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  </button>
+
+  {/* Dropdown */}
+  {showMenu && (
+    <>
+      {/* click-outside overlay */}
+      <div
+  className="fixed inset-0 z-40"
+  onClick={(e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+  }}
+/>
 
 
-          </div>
-        </div>
-        <ThemeDropdown containerRef={chatContainerRef} />
+      <div
+        className="absolute right-0 top-full mt-2 w-56 z-50 overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
+        style={{
+          background: "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          borderRadius: "18px",
+          border: "1px solid rgba(255, 255, 255, 0.5)",
+          boxShadow:
+            "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <div className="p-1.5 flex flex-col gap-1">
+
+  {/* ================= Appearance ================= */}
+  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+    Appearance
+  </div>
+
+  <div className="rounded-xl hover:bg-white/40 transition-colors">
+    <ThemeDropdown containerRef={chatContainerRef} />
+  </div>
+
+  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
+
+  {/* ================= Chat Actions ================= */}
+  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+    Chat
+  </div>
+
+  {/* View Profile */}
+  <button
+    onClick={() => {
+      navigate(`/profile/${receiver._id}`);
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+    View Profile
+  </button>
+
+  {/* Search Chat */}
+  <button
+    onClick={() => {
+      // TODO: open search modal
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-purple-400" />
+    Search in Chat
+  </button>
+
+  {/* Clear Chat */}
+  <button
+    onClick={() => {
+      // TODO: clear messages logic
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-blue-400" />
+    Clear Chat
+  </button>
+
+  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
+
+  {/* ================= Privacy & Safety ================= */}
+  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+    Privacy
+  </div>
+
+  {/* Mute Notifications */}
+  <button
+    onClick={() => {
+      // TODO: mute logic
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-yellow-400" />
+    Mute Notifications
+  </button>
+
+  {/* Block User */}
+  <button
+    onClick={() => {
+      // TODO: block user logic
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50/50 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-red-500" />
+    Block User
+  </button>
+
+  {/* Report User */}
+  <button
+    onClick={() => {
+      // TODO: report logic
+      setShowMenu(false);
+    }}
+    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50/50 rounded-xl transition"
+  >
+    <span className="w-2 h-2 rounded-full bg-red-400" />
+    Report User
+  </button>
+  
+
+</div>
+
       </div>
+    </>
+  )}
+  
+</div>
+</div>
+
     );
   };
 
@@ -677,8 +847,9 @@ useEffect(() => {
   // =========================== RETURN UI =========================== 
   return (
     <div
-     ref={chatContainerRef} 
-      className="flex flex-col mt-15 h-[84%] mobilenav_intervention_inverse w-full relative">
+    ref={chatContainerRef} 
+    className="flex flex-col h-screen w-full overflow-hidden bg-[var(--bg-main)]"
+  >
 
       
 
@@ -687,12 +858,11 @@ useEffect(() => {
       </ChatboxHeader>
         <div
         ref={containerRef}
-          className="flex flex-col chatbox-wrapper 
-          chatbox-messages bg-[var(--input-chatbox-bg-gradient)]"
+          className="flex-1 flex flex-col chatbox-wrapper 
+          chatbox-messages bg-[var(--input-chatbox-bg-gradient)] overflow-y-auto"
          style={{
             background: "var(--input-chatbox-bg-gradient)",
             color: "var(--input-text-color)",
-            paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
           }}>
           {loading ?
             (
@@ -700,42 +870,65 @@ useEffect(() => {
               {/* Top bar shimmer */}
               {/* Messages shimmer */}
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-5 max-w-4xl mx-auto px-4">
-                  {[...Array(10)].map((_, idx) => {
-                    const isSender = idx % 2 === 0;
-                    const type = ["text", "image", "audio"][Math.floor(Math.random() * 3)];
-                    let content;
-                    // Determine background based on theme variables
-                    const senderBg = "var(--input-bubble-sender, #ffffff)";
-                    const receiverBg = "var(--input-bubble-receiver, #7c3aed)";
-                    if (type === "text") {
-                      const bubbleWidth = [100, 160, 240, 120][Math.floor(Math.random() * 4)];
-                      const bubbleHeight = [16, 24, 36][Math.floor(Math.random() * 3)];
-                      content = (<div className={`shockwave rounded-xl ${isSender ? "rounded-br-none" : "rounded-bl-none"}`}
-                        style={{ width: bubbleWidth + "px", height: bubbleHeight + "px", backgroundColor: isSender ? senderBg : receiverBg, }} />
-                      );
-                    } else if (type === "image") {
-                      const imgWidth = [160, 200, 250][Math.floor(Math.random() * 3)];
-                      const imgHeight = [120, 160][Math.floor(Math.random() * 2)];
-                      content = (<div className="shockwave rounded-2xl"
-                        style={{ width: imgWidth + "px", height: imgHeight + "px", backgroundColor: isSender ? senderBg : receiverBg, }} />
-                      );
-                    }
-                    else if (type === "audio") {
-                      content = (<div className="flex items-center gap-2 px-4 py-2 rounded-full shockwave"
-                        style={{ width: 180, height: 44, backgroundColor: isSender ? senderBg : receiverBg, }} >
-                        <div className="w-5 h-5 rounded-full shimmer" />
-                        <div className="flex-1 h-2 shimmer rounded" />
-                        <div className="w-3 h-3 rounded-full shimmer" />
-                      </div>);
-                    }
-                    return (<div key={idx} className={`flex ${isSender ? "justify-end" : "justify-start"}`}>
-                      {content} </div>);
-                  }
-                )
-                  } 
-                  </div>
-                   </div> 
+  <div className="space-y-5 max-w-4xl mx-auto px-4">
+    {[...Array(10)].map((_, idx) => {
+      const isSender = idx % 2 === 0;
+      const type = ["text", "image", "audio"][Math.floor(Math.random() * 3)];
+
+      let content;
+      const senderBg = "var(--input-bubble-sender, #ffffff)";
+      const receiverBg = "var(--input-bubble-receiver, #7c3aed)";
+
+      // Bubble content
+      if (type === "text") {
+        const bubbleWidth = [100, 160, 240, 120][Math.floor(Math.random() * 4)];
+        const bubbleHeight = [16, 24, 36][Math.floor(Math.random() * 3)];
+        content = (
+          <div
+            className={`shockwave rounded-xl ${isSender ? "rounded-br-none" : "rounded-bl-none"}`}
+            style={{ width: bubbleWidth + "px", height: bubbleHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
+          />
+        );
+      } else if (type === "image") {
+        const imgWidth = [160, 200, 250][Math.floor(Math.random() * 3)];
+        const imgHeight = [120, 160][Math.floor(Math.random() * 2)];
+        content = (
+          <div
+            className="shockwave rounded-2xl"
+            style={{ width: imgWidth + "px", height: imgHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
+          />
+        );
+      } else if (type === "audio") {
+        content = (
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-full shockwave"
+            style={{ width: 180, height: 44, backgroundColor: isSender ? senderBg : receiverBg }}
+          >
+            <div className="w-5 h-5 rounded-full shimmer" />
+            <div className="flex-1 h-2 shimmer rounded" />
+            <div className="w-3 h-3 rounded-full shimmer" />
+          </div>
+        );
+      }
+
+      // Return the message bubble with Reply button
+      return (
+        <div key={idx} className={`flex ${isSender ? "justify-end" : "justify-start"} group relative`}>
+          {content}
+
+          {/* Reply button */}
+          <button
+            onClick={() => setReplyTo({ id: idx, text: type === "text" ? "Text message" : type === "image" ? "Image" : "Audio" })}
+            className="absolute -top-3 right-0 hidden group-hover:flex text-xs px-2 py-1 bg-white shadow rounded-full text-gray-600 hover:text-black"
+          >
+            Reply
+          </button>
+        </div>
+      );
+    })}
+  </div>
+</div>
+ 
                   {/* Input bar shimmer */}
               <div className="p-3 border-t shadow-inner fixed bottom-0 left-0 right-0"
                 style={{ backgroundColor: "var(--input-bg-color, #ffffff)" }} >
@@ -811,19 +1004,13 @@ useEffect(() => {
                 :
                 (
                   // ❌ FETCH ERROR
-         <div className="
-          flex flex-col items-center justify-center
-          h-[92vh]
-          bg-gradient-to-br from-gray-100 to-gray-200
-          text-center px-6 animate-fadeIn
-        ">
-
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
+              from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
                     <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
                       <div className="flex justify-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
                       </div>
-                      <h2 className="text-lg font-semibold text-gray-800 mb-2">
-                         Unable to fetch your messages 😔
+                      <h2 className="text-lg font-semibold text-gray-800 mb-2"> Unable to fetch your messages 😔
                       </h2>
                       <p className="text-sm text-gray-600 mb-6"> It seems there was a problem connecting to the server. Please check your internet connection or try refreshing this page. </p>
                       <button onClick={() => window.location.reload()}
@@ -834,18 +1021,12 @@ useEffect(() => {
                       )
           }
 
-          {showScrollButton && (
-            <button
-              onClick={scrollToBottom}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center justify-center w-11 h-11 rounded-full shadow-lg transition-all duration-300 bg-blue-500/70 hover:bg-blue-600/90 backdrop-blur-md text-white z-50 cursor-pointer"
-            >
-              <FaArrowDown />
-            </button>
-          )}
+       {/* Find this block near the bottom of ChatBox.jsx */}
+
           {
             showMediaViewer && (
               <div
-  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999000]"
+  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000]"
   onClick={() => setShowMediaViewer(false)} // Click outside closes modal
 >
   {/* Close button */}
@@ -891,15 +1072,20 @@ useEffect(() => {
 </div>
 )
           }
-            <div ref={bottomRef} style={{ height: 1 }} />
         </div >
 
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
 <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
+{replyTo && (
+  <div className="px-3 py-2 mb-1 rounded-lg bg-gray-100 text-sm text-gray-700 flex justify-between items-center">
+    <span>Replying to: {replyTo.text}</span>
+    <button onClick={() => setReplyTo(null)} className="text-red-500 font-bold">×</button>
+  </div>
+)}
 
-  {/* Textarea (only show if not recording) */}
+
  {!recording && !audioURL && (
     <textarea
       id="chatInput"
@@ -959,9 +1145,24 @@ useEffect(() => {
           </button>
         </div>
       ) : (
-        <label htmlFor="image" className="cursor-pointer relative">
-          <ImageIcon className="text-gray-500" />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
+            className="p-2 rounded-md text-gray-500 hover:bg-gray-100"
+            title="Attach media"
+          >
+            <ImageIcon className="text-gray-500" />
+          </button>
+
+          <MediaDropdown
+            open={showMediaDropdown}
+            onClose={() => setShowMediaDropdown(false)}
+            onSelect={handleMediaSelect}
+          />
+
           <input
+            ref={imageInputRef}
             type="file"
             id="image"
             accept="image/*"
@@ -972,7 +1173,32 @@ useEffect(() => {
               e.target.value = "";
             }}
           />
-        </label>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            id="file"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0];
+              if (f instanceof File) setImage(f);
+              e.target.value = "";
+            }}
+          />
+
+          <input
+            ref={videoInputRef}
+            type="file"
+            id="video"
+            accept="video/*"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0];
+              if (f instanceof File) setImage(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
       )}
     </>
   )}
@@ -1081,4 +1307,5 @@ useEffect(() => {
 
       </div>
       );
+      
 }; export default ChatBox;

@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [modalOpen, setModalOpen] = useState(false);
 const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sponsors, setSponsors] = useState(null);
+  
 
 
   const { resetUnread } = useMessageContext(); // 🟩 get resetUnread from MessageContext

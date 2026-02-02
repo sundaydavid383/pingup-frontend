@@ -3,14 +3,19 @@ import { Mic, MicOff } from "lucide-react";
 import MicButton from "./MicButton";
 import Toast from "../../component/shared/Toast";
 import assets from '../../assets/assets'
+import BackendAudioCapture from "./inner_component/BackendAudioCapture";
+import { useAuth } from "../../context/AuthContext";
 
 
-
-const VoiceInput = forwardRef(({ onTranscribe, disabled }, ref) => {
+const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => {
   const [listening, setListening] = useState(false);
   const [micAvailable, setMicAvailable] = useState(true);
   const [speechAvailable, setSpeechAvailable] = useState(true);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const { user } = useAuth();
+  const [currentMode, setCurrentMode] = useState("web");
+
+
   const VOICE_STATE = {
   IDLE: "idle",
   READY: "ready",
@@ -45,11 +50,13 @@ const statusMessage = (() => {
   const pauseTimer = useRef(null);
   const isPausedRef = useRef(false);
   const listeningRef = useRef(false);
+  const backendRef = useRef(null);
+  const speechEngineRef = useRef("web"); // "web" | "vosk" | "hybrid"
 const errorRef = useRef(null);
 
 
   // chunking config
-  const MIN_CHUNK_WORDS = 10; 
+  const MIN_CHUNK_WORDS = 5; 
   const MAX_CHUNK_WORDS = 20; 
   const PAUSE_MS = 200; 
   const bibleBooks = assets.bibleBooks
@@ -97,6 +104,9 @@ const errorRef = useRef(null);
     }
   };
 
+useEffect(() => {
+  speechEngineRef.current = mode;
+}, [mode]);
 
 const checkAvailability = async () => {
   // 1️⃣ Check mic availability
@@ -163,6 +173,35 @@ const checkAvailability = async () => {
   });
 };
 
+const handleBackendChunk = (text) => {
+  if (!text) return;
+
+  console.log("📝 Vosk transcript:", text);
+
+  // 🚫 IMPORTANT: Vosk should NEVER use leftover
+  leftoverRef.current = "";
+
+  // 1️⃣ Update textarea ONLY with current speech
+  onTranscribe(null, text, {
+    live: true,
+    source: "vosk",
+    replace: true, // 🔑 parent textarea must replace, not append
+  });
+
+  const words = text.trim().split(/\s+/);
+
+  // 2️⃣ Only search if enough words
+  if (words.length < MIN_CHUNK_WORDS) return;
+
+  const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
+
+  // 3️⃣ Trigger search with ONLY this speech
+  onTranscribe(chunk, "", {
+    forceSearch: true,
+    source: "vosk",
+  });
+};
+
 
 
 
@@ -183,6 +222,7 @@ const checkAvailability = async () => {
 
 
   useEffect(() => {
+      if (speechEngineRef.current !== "web") return;
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       console.warn("SpeechRecognition API not supported in this browser.");
       return;
@@ -292,48 +332,66 @@ useEffect(() => {
 
 // Start microphone listening
 const startListening = async () => {
-  if (disabled || listening || !recognitionRef.current) return;
+  if (disabled || listening) return;
 
   setError(null); // clear old error
   leftoverRef.current = "";
   isPausedRef.current = false;
 
+  // WebSpeech
+  if (speechEngineRef.current === "web") {
     const ok = await checkAvailability();
-      if (!ok) {
-    setVoiceState(VOICE_STATE.ERROR);
-    return;
+    if (!ok) {
+      setVoiceState(VOICE_STATE.ERROR);
+      return;
+    }
+
+    if (navigator.vibrate) navigator.vibrate(45); // light tap feedback
+
+    try {
+      recognitionRef.current.start();
+      setVoiceState(VOICE_STATE.READY);
+    } catch (e) {
+      console.error(e);
+      setError("Error starting WebSpeech");
+      setVoiceState(VOICE_STATE.ERROR);
+    }
   }
 
-
-    if (navigator.vibrate) {
-    navigator.vibrate(25); // light tap feedback
+  // Backend capture (vosk/hybrid)
+ else if (backendRef.current) {
+    leftoverRef.current = "";
+    backendRef.current.start();
+    setVoiceState(VOICE_STATE.READY);
   }
 
-  try {
-    recognitionRef.current.start();
-  setVoiceState(VOICE_STATE.READY);
-    setListening(true);
-  } catch (e) {
-    console.error(e);
-       setError("Error starting WebSpeech")
-       setVoiceState(VOICE_STATE.ERROR);
-  }
+  setListening(true);
 };
+
 
 
 const stopListening = () => {
-  if (!listening || !recognitionRef.current) return;
+  if (!listening) return;
 
-  leftoverRef.current = "";
-  isPausedRef.current = true;
-  recognitionRef.current.stop();
+  // WebSpeech
+  if (speechEngineRef.current === "web" && recognitionRef.current) {
+    leftoverRef.current = "";
+    isPausedRef.current = true;
+    recognitionRef.current.stop();
+  }
+
+  // Backend capture
+ else if (backendRef.current) {
+    leftoverRef.current = "";
+    backendRef.current.stop();
+  }
 
   setIsTranscribing(false);
   setVoiceState(VOICE_STATE.IDLE);
-
   listeningRef.current = false;
   setListening(false);
 };
+
 
 
 
@@ -351,7 +409,31 @@ const toggleListening = () => (listening ? stopListening() : startListening());
   stop: stopListening,
   toggle: toggleListening,
   isListening: () => listening,
+  setMode: (m) => { speechEngineRef.current = m; }
 }));
+// When switching modes:
+const switchMode = async (newMode) => {
+  // Stop current engine
+  if (listeningRef.current) {
+    if (speechEngineRef.current === "web") recognitionRef.current?.stop();
+    else backendRef.current?.stop();
+    setListening(false);
+  }
+
+  // Update ref and state
+  speechEngineRef.current = newMode;
+  setCurrentMode(newMode); // ✅ triggers re-render
+
+  setVoiceState(VOICE_STATE.IDLE);
+
+  // Start backend if needed
+  if ((newMode === "vosk" || newMode === "hybrid") && backendRef.current) {
+    await backendRef.current.start();
+    setVoiceState(VOICE_STATE.READY);
+    setListening(true);
+  }
+};
+
 
 return (
   <>
@@ -362,18 +444,62 @@ return (
       disabled={false}
       statusMessage={statusMessage}
     />
-  {error && (
-  <Toast
-    message={error}
-    type="error"
-    duration={4000}
-    onClose={() => setError(null)}
-  />
-)}
 
+<div className="mode-buttons">
+  <button
+    onClick={() => switchMode("web")}
+    disabled={currentMode === "web"}
+  >
+    {currentMode === "web" ? "WebSpeech" : "W"}
+  </button>
+
+  <button
+    onClick={() => switchMode("vosk")}
+    disabled={currentMode === "vosk"}
+  >
+    {currentMode === "vosk" ? "Vosk" : "V"}
+  </button>
+
+  <button
+    onClick={() => switchMode("hybrid")}
+    disabled={currentMode === "hybrid"}
+  >
+    {currentMode === "hybrid" ? "Hybrid" : "H"}
+  </button>
+</div>
+
+
+
+
+
+
+
+    {/* Backend capture */}
+    {speechEngineRef.current !== "web" && (
+      <BackendAudioCapture
+        ref={backendRef}
+        userId={user._id}
+        mode={speechEngineRef.current}
+        onResult={(data)=>{
+         if(!data?.transcript) return;
+         handleBackendChunk(data.transcript)
+        }}
+        toggleListening={toggleListening}
+      />
+    )}
+
+    {/* Error Toast */}
+    {error && (
+      <Toast
+        message={error}
+        type="error"
+        duration={4000}
+        onClose={() => setError(null)}
+      />
+    )}
   </>
 );
 
+
 });
 export default VoiceInput;
-

@@ -8,6 +8,7 @@ import "./biblereader.css";
 import assets from "../../assets/assets";
 import IntroModal from "./IntroModal";
 import VerseCard from "../../component/shared/VerseCard";
+import { processCommand } from "../../utils/CommandProcessor"; // create this as shown before
 
 // ---------------- Debounce helper ----------------
 const debounce = (func, delay) => {
@@ -107,9 +108,9 @@ function scoreVerse(queryTokens, verse, invertedIndex, totalVerses) {
   // 5️⃣ Combine
   const wTFIDF = 0.4, wProx = 0.2, wPhrase = 0.2, wSpeech = 0.2;
   const finalScore = wTFIDF * tfidfScore
-                   + wProx * proximityScore
-                   + wPhrase * phraseBoost
-                   + wSpeech * speechScore;
+    + wProx * proximityScore
+    + wPhrase * phraseBoost
+    + wSpeech * speechScore;
 
   return finalScore;
 }
@@ -192,6 +193,61 @@ export default function ScriptureAssistant({ currentUser }) {
     window.speechSynthesis.speak(utterance);
   };
 
+
+  //==----------------- Navigate verses/chapter -----------------
+// ----------------- Navigate verses/chapter -----------------
+const navigateVerse = (action, payload = {}) => {
+  console.log("=== NAVIGATE VERSE ===");
+  console.log("Action:", action, "Payload:", payload);
+  console.log("Current context before nav:", currentContext);
+
+  let { currentBook, currentChapter, currentVerse } = currentContext;
+
+  switch (action) {
+    case "nextVerse":
+      currentVerse++;
+      break;
+    case "prevVerse":
+      currentVerse = Math.max(1, currentVerse - 1);
+      break;
+    case "jumpVerse":
+      currentBook = payload.book;
+      currentChapter = payload.chapter;
+      currentVerse = payload.verse;
+      break;
+    case "jumpChapter":
+      currentBook = payload.book;
+      currentChapter = payload.chapter;
+      currentVerse = 1;
+      break;
+    default:
+      console.warn("Unknown navigation action:", action);
+      return;
+  }
+
+  const key = `${currentBook}|${currentChapter}|${currentVerse}`;
+  console.log("Constructed verse key:", key);
+
+  const id = bookChapterMapRef.current.get(key);
+  const verse = id ? verseByIdRef.current.get(id) : null;
+
+  if (verse) {
+    console.log("Found verse:", verse);
+    setCurrentContext({ currentBook, currentChapter, currentVerse });
+    setMatchedVerses([verse]);
+    toggleSpeakVerse(verse);
+  } else {
+    console.warn("Verse not found for key:", key);
+    // Optionally, reset context to previous safe state
+    setCurrentContext(currentContext);
+    setMatchedVerses([]);
+  }
+};
+
+
+
+
+
   const handleIntroComplete = () => {
     localStorage.setItem("SpringsConnectSeenIntro", "true");
     setShowIntro(false);
@@ -214,40 +270,96 @@ export default function ScriptureAssistant({ currentUser }) {
   };
 
   // ----------------- Run local search -----------------
-  const runLocalSearch = async (query) => {
-    if (!query.trim() || !localIndexReady.current) return;
-    setLoading(true);
-    voiceInputRef.current?.stop();
+const runLocalSearch = async (query) => {
+  if (!query.trim() || !localIndexReady.current) return;
 
-    const cleaned = clean(query);
-    const tokens = tokenize(cleaned).filter(t => !STOP_WORDS.has(t));
-    let tokenSets = tokens.map(t => invertedIndexRef.current.get(t)).filter(Boolean);
-    if (!tokenSets.length) tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
+  console.log("=== RUN LOCAL SEARCH ===");
+  console.log("Incoming query:", query);
+  console.log("Current context:", currentContext);
 
-    // Score all candidates
-    const candidateIds = new Set(tokenSets.flatMap(s => [...s]));
-    const scored = [...candidateIds].map(id => {
-      const v = verseByIdRef.current.get(id);
-      return { ...v, _score: scoreVerse(tokens, v, invertedIndexRef.current, versesRef.current.length) };
-    });
-    scored.sort((a, b) => b._score - a._score);
-    const top3 = scored.slice(0, 3);
+  // 1️⃣ Process command (navigation vs search)
+  const cmdResult = processCommand(query, currentContext);
+  console.log("COMMAND RESULT:", cmdResult);
 
-    if (top3.length) {
-      const verse = top3[0];
-      setMatchedVerses(top3);
-      setCurrentContext({ currentBook: verse.book, currentChapter: verse.chapter, currentVerse: verse.verse });
+  if (cmdResult.type === "navigation") {
+    console.log("Navigation command detected. Executing jump...");
 
-      const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
-      if (lastSpokenVerseRef.current !== verseKey) {
-        lastSpokenVerseRef.current = verseKey;
-        toggleSpeakVerse(verse);
-      }
-    } else setMatchedVerses([]);
+    // Execute the jump (verse or chapter)
+    navigateVerse(cmdResult.action, cmdResult);
+
+    // Update context based on jump
+    const newContext = {
+      currentBook: cmdResult.book || currentContext.currentBook,
+      currentChapter: cmdResult.chapter || currentContext.currentChapter,
+      currentVerse: cmdResult.verse || currentContext.currentVerse,
+    };
+    setCurrentContext(newContext);
 
     setLoading(false);
-    voiceInputRef.current?.start?.();
-  };
+    console.log("Navigation done. Skipping search for this chunk.");
+    return "commandHandled";
+  }
+
+  // 2️⃣ If not a navigation command, treat as search
+  console.log("No navigation command. Proceeding to search...");
+  setLoading(true);
+  voiceInputRef.current?.stop();
+
+  const cleaned = clean(query);
+  const tokens = tokenize(cleaned).filter(t => !STOP_WORDS.has(t));
+  console.log("Tokens for search:", tokens);
+
+  let tokenSets = tokens
+    .map(t => invertedIndexRef.current.get(t))
+    .filter(Boolean);
+
+  if (!tokenSets.length) {
+    tokenSets = tokens.map(() => new Set(verseByIdRef.current.keys()));
+  }
+
+  const candidateIds = new Set(tokenSets.flatMap(s => [...s]));
+  console.log("Candidate IDs count:", candidateIds.size);
+
+  const scored = [...candidateIds].map(id => {
+    const v = verseByIdRef.current.get(id);
+    const score = scoreVerse(tokens, v, invertedIndexRef.current, versesRef.current.length);
+    return { ...v, _score: score };
+  });
+
+  scored.sort((a, b) => b._score - a._score);
+  const top3 = scored.slice(0, 3);
+
+  console.log("Top 3 scored verses:", top3.map(v => `${v.book} ${v.chapter}:${v.verse} (${v._score.toFixed(2)})`));
+
+  if (top3.length) {
+    const verse = top3[0];
+
+    setMatchedVerses(top3);
+
+    // ✅ Update context only if search produced a clear match
+    setCurrentContext({
+      currentBook: verse.book,
+      currentChapter: verse.chapter,
+      currentVerse: verse.verse
+    });
+
+    // ✅ Speak verse only if it is new
+    const verseKey = `${verse.book}-${verse.chapter}-${verse.verse}`;
+    if (lastSpokenVerseRef.current !== verseKey) {
+      lastSpokenVerseRef.current = verseKey;
+      toggleSpeakVerse(verse);
+    }
+  } else {
+    console.log("No matching verses found for this query.");
+    setMatchedVerses([]);
+  }
+
+  setLoading(false);
+  voiceInputRef.current?.start?.();
+};
+
+
+
 
   // ----------------- Sliding window chunks -----------------
   const getChunksSliding = (input, windowSize = 10, stride = 5) => {
@@ -262,21 +374,47 @@ export default function ScriptureAssistant({ currentUser }) {
     return chunks;
   };
 
-  const processChunks = debounce(async (inputText) => {
-    if (!inputText.trim()) return;
-    const chunks = getChunksSliding(inputText).filter(c => !processedChunksRef.current.includes(c));
-    for (const chunk of chunks) {
-      await runLocalSearch(chunk);
-      processedChunksRef.current.push(chunk);
+// ----------------- Process chunks with logging -----------------
+const processChunks = debounce(async (inputText) => {
+  if (!inputText.trim()) return;
+
+  const chunks = getChunksSliding(inputText).filter(
+    (c) => !processedChunksRef.current.includes(c)
+  );
+  console.log("=== PROCESS CHUNKS ===");
+  console.log("Input text:", inputText);
+  console.log("Chunks to process:", chunks);
+
+  for (const chunk of chunks) {
+    console.log("Processing chunk:", chunk);
+
+    const result = await runLocalSearch(chunk);
+    console.log("runLocalSearch result:", result);
+
+    // Mark this chunk as processed regardless of result
+    processedChunksRef.current.push(chunk);
+
+    if (result === "commandHandled") {
+      console.log(
+        "Chunk was a navigation command. Skipping further chunks in this batch."
+      );
+      break; // stops further chunks in THIS batch
     }
-    setProcessedChunks([...processedChunksRef.current]);
-  }, 250);
+  }
+
+  setProcessedChunks([...processedChunksRef.current]);
+  console.log("Processed chunks ref updated:", processedChunksRef.current);
+}, 250);
+
+
+
 
   const handleChange = (e) => {
-    setText(e.target.value);
-    autoGrowTextarea();
-    processChunks(e.target.value);
-  };
+  const value = e.target.value;
+  setText(value);
+  autoGrowTextarea();
+  processChunks(value); // 👈 SAME pipeline as voice
+};
 
   // ----------------- Render -----------------
   return (
@@ -293,18 +431,51 @@ export default function ScriptureAssistant({ currentUser }) {
         </span>
       </div>
 
-      <VoiceInput
-        ref={voiceInputRef}
-        onTranscribe={async (sentChunk, leftover, meta = {}) => {
-          if (!sentChunk) return;
-          setText(sentChunk);
-          if (!processedChunksRef.current.includes(sentChunk)) {
-            processedChunksRef.current.push(sentChunk);
-            setProcessedChunks([...processedChunksRef.current]);
-            await runLocalSearch(sentChunk);
-          }
-        }}
-      />
+<VoiceInput
+  ref={voiceInputRef}
+  onTranscribe={(sentChunk, leftover, meta = {}) => {
+
+    /*
+      =========================
+      1️⃣ LIVE UPDATES
+      =========================
+    */
+
+    if (meta.live && leftover) {
+      // 🔴 Vosk → replace
+      // 🔵 WebSpeech → safe to display as-is
+      setText(leftover);
+      return;
+    }
+
+    /*
+      =========================
+      2️⃣ NO FINAL RESULT
+      =========================
+    */
+
+    if (!sentChunk) return;
+
+    /*
+      =========================
+      3️⃣ FINAL RESULT
+      =========================
+    */
+
+    // BOTH engines end here
+    setText(sentChunk);
+
+    /*
+      =========================
+      4️⃣ PROCESS FINAL TEXT
+      =========================
+    */
+
+    processChunks(sentChunk);
+  }}
+/>
+
+
 
       <div className="flex flex-col items-center w-full gap-5 mt-4">
       <textarea
@@ -319,23 +490,25 @@ export default function ScriptureAssistant({ currentUser }) {
     max-w-[650px]
     rounded-xl
     border
-    border-[var(--primary)]-400/40
-    bg-[var(--primary)]-500/10
+    border-slate-300
+    bg-white
     p-4
     text-sm
-    text-white
-    placeholder:text-[var(--primary)]-200/70
+    text-slate-900
+    placeholder:text-slate-400
     resize-none
     overflow-hidden
     transition
-    focus:outline-none
+    outline-none
+    focus:border-[var(--primary)]
     focus:ring-2
-    focus:ring-[var(--primary)]-500
-    focus:border-[var(--primary)]-500
-    disabled:opacity-50
+    focus:ring-[var(--primary)]/20
+    disabled:bg-slate-100
+    disabled:text-slate-400
     disabled:cursor-not-allowed
   "
 />
+
 
 
         <div className="space-y-4 w-full flex flex-col items-center">

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { X, Image, Video as VideoIcon } from "lucide-react";
@@ -21,6 +21,8 @@ const CreatePost = () => {
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 const [uploadState, setUploadState] = useState(""); 
+const textareaRef = useRef(null);
+
 
   const MAX_TEXT_LENGTH = 500;
   const MAX_IMAGES = 4;
@@ -30,6 +32,25 @@ const [uploadState, setUploadState] = useState("");
   const MAX_VIDEO_DURATION = 1040; // seconds
 
   const showAlert = (message, type = "info") => setAlert({ message, type });
+    
+  const autoResizeTextarea = () => {
+  const textarea = textareaRef.current;
+  if (!textarea) return;
+
+  textarea.style.height = "auto";
+
+  const maxHeight = window.innerHeight * 0.49; // 49vh
+  const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+
+  textarea.style.height = `${newHeight}px`;
+  textarea.style.overflowY =
+    textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+};
+useEffect(() => {
+  autoResizeTextarea();
+}, [content]);
+
+
 
   // Clean and validate text input
   const handleTextChange = (e) => {
@@ -38,6 +59,7 @@ const [uploadState, setUploadState] = useState("");
       return showAlert(`Text cannot exceed ${MAX_TEXT_LENGTH} characters.`, "warning");
     }
     setContent(value);
+    autoResizeTextarea();
   };
 
   const handlePaste = (e) => {
@@ -217,33 +239,55 @@ const handleSubmit = async () => {
         <h1 className="text-2xl font-bold mb-2 text-slate-900 title">Create Post</h1>
         <p className="text-gray-600 mb-4">Share your thoughts with the world</p>
 
-        <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 space-y-4">
-          {/* User Info */}
-          <div className="flex items-center gap-3">
-             <ProfileAvatar
-              user={{
-                name: user?.name || "User",
-                profilePicUrl: user?.profilePicUrl,
-                profilePicBackground: user?.profilePicBackground,
-              }}
-              size={48}
-            />
-            <div>
-              <h2 className="font-semibold">{user.full_name}</h2>
-              <p className="text-sm text-gray-500">@{user.username}</p>
-            </div>
-          </div>
+ <div className="relative bg-[var(--really-bright-glass)] rounded-xl shadow-md p-4 sm:p-6 space-y-4 overflow-hidden">
+  
+  {/* Blurry background highlight */}
+<div
+  className="
+    absolute -inset-10
+    rounded-full
+    blur-[120px]
+    opacity-40
+    pointer-events-none
+    z-0
+  "
+  style={{
+    background: "radial-gradient(circle, rgba(53, 70, 129, 0.3) 0%, rgba(30, 64, 175, 0.25) 40%, rgba(79, 95, 161, 0.3) 70%, transparent 90%)"
+  }}
+></div>
 
-          {/* Textarea */}
-          <textarea
-            className="w-full resize-none min-h-20 max-h-60 overflow-y-auto text-sm outline-none placeholder-gray-400 border-b pb-1"
-            placeholder="What's on your mind?"
-            value={content}
-            onChange={handleTextChange}
-            onPaste={handlePaste}
-          />
-          <div className="text-xs text-gray-500 text-right">{content.length}/{MAX_TEXT_LENGTH}</div>
 
+  {/* User Info */}
+  <div className="relative z-10 flex items-center gap-3">
+    <ProfileAvatar
+      user={{
+        name: user?.name || "User",
+        profilePicUrl: user?.profilePicUrl,
+        profilePicBackground: user?.profilePicBackground,
+      }}
+      size={48}
+    />
+    <div>
+      <h2 className="font-semibold">{user.full_name}</h2>
+      <p className="text-sm text-gray-500">@{user.username}</p>
+    </div>
+  </div>
+
+  {/* Textarea */}
+  <textarea
+    ref={textareaRef}
+    className="relative z-10 w-full resize-none text-sm outline-none placeholder-gray-400 border-b pb-1 overflow-hidden transition-[height] duration-150"
+    style={{ minHeight: "80px", maxHeight: "49vh" }}
+    placeholder="What's on your mind?"
+    value={content}
+    onChange={handleTextChange}
+    onPaste={handlePaste}
+    disabled={loading}
+  />
+
+  <div className="relative z-10 text-xs text-gray-500 text-right">
+    {content.length}/{MAX_TEXT_LENGTH}
+  </div>
           {/* Visibility */}
           <div className="flex items-center gap-2 mt-2 text-sm">
             <label className="font-semibold text-gray-700">Visibility:</label>

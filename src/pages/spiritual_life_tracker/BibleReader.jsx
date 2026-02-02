@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
-import { FaSearch, FaBook, } from "react-icons/fa";
+import { FaSearch, FaBook, FaRocketchat, FaSlidersH } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import axiosBase from "../../utils/axiosBase";
@@ -12,6 +12,9 @@ import Verse from "../../component/shared/Verse"
 import Fuse from "fuse.js";
 import { useSwipeable } from "react-swipeable"; //
 import ChapterTTS from "../../component/shared/ChapterTTS";
+import BibleControls from "../../component/shared/BibleControls";
+import "../../styles/biblecontrols.css"
+import { useAuth } from "../../context/AuthContext";
 // Map of short names or abbreviations to full book names
 const BOOK_FULL_NAMES = {
   gn: "Genesis",
@@ -91,38 +94,30 @@ export default function BibleReader() {
   const [displayedVerses, setDisplayedVerses] = useState([]);
   const [isLoadingVerses, setIsLoadingVerses] = useState(false);
   const [verseSeen, setVerseSeen] = useState([]);
-  const touchStartX = React.useRef(0);
+  const [ttsSpeed, setTtsSpeed] = useState(0.7);
+  const { sidebarOpen } = useAuth();
+  const [seeControls, setSeeControls] = useState(false)
+
+  const touchStartX = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [progress, setProgress] = useState(0);
   const fuseRef = useRef(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const searchRef = useRef(null);
   const [selectorsVisible, setSelectorsVisible] = useState(false);
   const selectorsRef = useRef(null);
   const [pendingHighlight, setPendingHighlight] = useState(null);
-  const utteranceRef = useRef(null);
+  const touchStartY = useRef(0);
+  const controlsRef = useRef(null);
+  const ttsRef = useRef(null);
+  const verseOffsetsRef = useRef([]);
 
 
   const { book, chapter, verse } = useParams();
 
-
-  // Close dropdown if clicked outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setSearchVisible(false);
-      }
-      if (selectorsRef.current && !selectorsRef.current.contains(event.target)) {
-        setSelectorsVisible(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
 
   const normalizeBookName = (input) => {
@@ -240,11 +235,23 @@ export default function BibleReader() {
   const buildChapterText = () => {
     if (!displayedVerses.length) return "";
 
-    return displayedVerses
-      .map(v => v.text)
-      .join(" ");
+    let offset = 0;
+    verseOffsetsRef.current = displayedVerses.map((v, i) => {
+      const start = offset;
+      offset += v.text.length + 1; // + space
+      return {
+        index: i,
+        start,
+        book: v.book,
+        chapter: v.chapter,
+        verse: v.verse
+      };
+    });
+
+    return displayedVerses.map(v => v.text).join(" ");
   };
- 
+
+
 
 
   // Initialize Fuse.js for fuzzy search
@@ -268,6 +275,7 @@ export default function BibleReader() {
     setHasSearched(true);
     setSearchResults([]);
     setSearchVisible(false)
+
 
     // Small delay to allow loading bar to show (UX polish)
     setTimeout(() => {
@@ -326,7 +334,9 @@ export default function BibleReader() {
     }
   }, [allVerses, book, chapter, verse]);
 
-
+  useEffect(() => {
+    console.log("isSearching is:", isSearching);
+  }, [isSearching])
 
   // Helper to pick random verses excluding an optional "exclude" array
   const getRandomVerses = (count, versesArray, exclude = []) => {
@@ -387,8 +397,9 @@ export default function BibleReader() {
     )
     : 1;
 
-  // Move to next or previous chapter/book
-  // Move to next or previous chapter/book — now updates state and logs
+
+
+
   const moveChapter = (direction) => {
     if (!selectedBookName) {
       console.debug("moveChapter: no selectedBookName (we're on random view) - ignoring");
@@ -409,10 +420,7 @@ export default function BibleReader() {
         newChapter = selectedChapterNumber + 1;
       } else if (bookIndex < bookNames.length - 1) {
         newBook = bookNames[bookIndex + 1];
-        // compute last chapter of next book
-        newChapter = Math.max(...allVerses.filter(v => v.book === newBook).map(v => v.chapter));
-        // ensure we go to chapter 1 if something weird occurs
-        if (!newChapter || newChapter < 1) newChapter = 1;
+        newChapter = 1;
       } else {
         console.debug("moveChapter: already at last book and last chapter");
         return;
@@ -443,21 +451,32 @@ export default function BibleReader() {
     displayChapterVerses(newBook, newChapter);
   };
 
+  let speechBlocked = false;
+
+  const navigateChapter = (direction) => {
+    speechBlocked = true;
+    window.speechSynthesis.cancel();
+    moveChapter(direction);
+
+    setTimeout(() => {
+      speechBlocked = false;
+    }, 300);
+  };
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (!selectedBookName) return; // only navigate when reading a chapter
+      if (!selectedBookName) return;
+
       if (e.key === "ArrowRight") {
-        console.debug("keydown -> ArrowRight");
-        moveChapter("next");
+        navigateChapter("next");
       }
+
       if (e.key === "ArrowLeft") {
-        console.debug("keydown -> ArrowLeft");
-        moveChapter("prev");
-      }
         window.speechSynthesis.cancel();
-        setIsSpeaking(false);
+        navigateChapter("prev");
+      }
     };
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [selectedBookName, selectedChapterNumber, allVerses, bookNames]); // include bookNames & allVerses
@@ -531,6 +550,28 @@ export default function BibleReader() {
 
 
 
+  // Close BibleControls if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        controlsRef.current &&
+        !controlsRef.current.contains(event.target)
+      ) {
+        setSeeControls(false); // ✅ hide the controls
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchVisible(false);
+      }
+    };
+
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [controlsRef]);
+
+
 
 
 
@@ -543,16 +584,16 @@ export default function BibleReader() {
         <div className="fixed-header">
           <div className="header-inner">
             {/* Left: Title */}
-            <h2 className="bible-title">Bible Reader</h2>
+            <h2 className="bible-title"><span>Bible</span> <span>Reader</span></h2>
 
             {/* Center: Chapter */}
             {selectedBookName && (
-  <div className="chapter-center flex items-center gap-3">
-    <span className="text-[var(--hover-light)]">
-      {selectedBookName} {selectedChapterNumber}
-    </span>
-  </div>
-)}
+              <div className="chapter-center flex items-center gap-3">
+                <span className="text-[var(--hover-light)]">
+                  {selectedBookName} {selectedChapterNumber}
+                </span>
+              </div>
+            )}
 
 
             {/* Right: Search & Selectors */}
@@ -579,14 +620,15 @@ export default function BibleReader() {
                       Search
                     </button>
                     {/* Loading bar appears inside dropdown */}
-                    {isSearching && (
-                      <div className="search-loading-bar">
-                        <div className="search-loading-progress" />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
+              {isSearching && (
+                <div className="search-loading-bar fixed-loading">
+                  <div className="search-loading-progress" />
+                </div>
+
+              )}
 
               {/* Book/Chapter Selectors */}
               <div className="selectors-container" ref={selectorsRef}>
@@ -618,29 +660,60 @@ export default function BibleReader() {
         </div>
 
 
-       {isReadingChapter && <ChapterTTS text={buildChapterText()} />}
 
 
+        {isReadingChapter && <>
+          <ChapterTTS
+            ref={ttsRef}
+            text={buildChapterText()}
+            speed={ttsSpeed}
+            progress={progress}
+            setProgress={setProgress}
+            verseOffsetsRef={verseOffsetsRef}
+          />
 
-        {/* Display verses */}
-        {isSearching && (
-          <div className="search-loading-bar fixed-loading">
-            <div className="search-loading-progress" />
+
+          {!seeControls && <div
+            onClick={() => setSeeControls(prev => !prev)}
+            className="bible_controls_toggler"
+            style={{
+              left: sidebarOpen ? "20rem" : "0.1rem",
+              transition: "left 0.3s ease",
+            }}>
+            <FaSlidersH />
           </div>
-        )}
+          }
+          {seeControls && <div ref={controlsRef}>
+            <BibleControls
+              ttsSpeed={ttsSpeed}
+              setTtsSpeed={setTtsSpeed}
+              progress={progress}
+              setProgress={setProgress}
+              ttsRef={ttsRef}
+            /></div>}
+        </>}
 
         <div
           className="verses-container"
           onTouchStart={(e) => {
-            if (selectedBookName) touchStartX.current = e.touches[0].clientX;
+            if (!selectedBookName) return;
+            const touch = e.touches[0];
+            touchStartX.current = touch.clientX;
+            touchStartY.current = touch.clientY; // add vertical reference
           }}
           onTouchEnd={(e) => {
             if (!selectedBookName) return;
-            const touchEndX = e.changedTouches[0].clientX;
-            const diff = touchStartX.current - touchEndX;
-            if (diff > 50) moveChapter("next");
-            else if (diff < -50) moveChapter("prev");
+            const touch = e.changedTouches[0];
+            const diffX = touchStartX.current - touch.clientX;
+            const diffY = touchStartY.current - touch.clientY;
+
+            // Only consider horizontal swipe if horizontal movement is bigger than vertical
+            if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+              if (diffX > 0) navigateChapter("next");
+              else navigateChapter("prev");
+            }
           }}
+
         >
           {isLoadingVerses ? (
             <div className="verse-skeleton-wrapper">

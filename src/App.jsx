@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import "./styles/ui.css"
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate  } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
 import Feed from './pages/Feed';
@@ -22,11 +22,13 @@ import SinglePostPage from "./pages/SinglePostPage";
 import ScriptureAssistant from './pages/spiritual_life_tracker/ScriptureAssistant';
 import BibleReader from './pages/spiritual_life_tracker/BibleReader';
 import AppInstallPrompt from './pages/AppInstallPrompt';
+import AuthSuccess from "./pages/AuthSuccess";
+import "./styles/ui.css"
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
-
-
-
+  const location  = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const oauthError = searchParams.get('error');
 
   const toTitleCase = (str) => {
     return str
@@ -36,6 +38,28 @@ const App = () => {
       .join(" ")
   };
 
+
+  useEffect(() => {
+    const disableImageContextMenu = (e) => {
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+      }
+  };
+
+   const disableImageDrag = (e) => {
+    if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+   }
+
+  document.addEventListener("contextMenu", disableImageContextMenu);
+  document.addEventListener("dragstart", disableImageDrag);
+
+  return () => {
+    document.removeEventListener("contextMenu", disableImageContextMenu);
+    document.removeEventListener("dragstart", disableImageDrag);
+  }
+}, []);
 
   useEffect(() => {
     document.title = modalOpen ? toTitleCase(user?.name) : "SpringsConnect – News Feed";
@@ -58,7 +82,9 @@ const App = () => {
       <Routes>
 
         {/* Public or Auth route */}
-    <Route path="/" element={!user ? <AuthContainer /> : <Layout />}>
+        <Route path="/auth/success" element={<AuthSuccess />} />
+
+    <Route path="/" element={!user ? <AuthContainer initialError={oauthError} /> : <Layout />}>
   <Route index element={<Feed />} />
   <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />
   <Route path="bible">

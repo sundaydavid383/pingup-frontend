@@ -279,6 +279,10 @@ const meDisliked = (serverPost.recentDislikes || []).some(
   };
 
 
+  const hasVideoAttachment = post.attachments?.some(
+    (file) => file.type === "video" || file.type === "youtube" 
+  )
+
 
 
   return (
@@ -312,9 +316,9 @@ const meDisliked = (serverPost.recentDislikes || []).some(
                 style={{ color: "var(--primary)" }}
               />
             </div>
-            <div className="flex flex-col text-xs text-gray-500 truncate">
+            <div className="flex flex-col text-[13px] text-gray-500 truncate">
               @{post.user?.username}
-              <p className="text-[11px] mt-1 font-light">
+              <p className="text-[12px] font-light">
                 {moment(post.createdAt).fromNow()}
               </p>
             </div>
@@ -336,7 +340,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
       {/* Content */}
  {post.content && (
-  <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+  <div className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">
     <div dangerouslySetInnerHTML={{ __html: processedContent }} />
     {shouldTruncate && (
       <button
@@ -351,135 +355,133 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
 
       {/* Attachments */}
-      {post.attachments?.length > 0 && (
-        <div
-          className={`w-full flex flex-wrap justify-center gap-2 ${post.attachments.length === 3 ? "three-layout" : ""
-            } ${post.attachments.length === 2 ? "max-w-[800px] mx-auto" : ""}`} // center and constrain width
-        >
+  {post.attachments?.length > 0 && (
+  <div
+    className={`w-full grid gap-2  ${hasVideoAttachment ? "bg-black" : ""}
+      ${post.attachments.length === 1 && "flex justify-center"}
+      ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
+      ${post.attachments.length === 3 && "grid-cols-2"}
+      ${post.attachments.length >= 4 && "grid-cols-2"}
+    `}
+  >
+    {post.attachments.map((file, index) => {
+      const count = post.attachments.length;
+      const single = count === 1;
 
-          {post.attachments.map((file, index) => {
-            const count = post.attachments.length;
-            const single = count === 1;
-            const isVideo = file.type === "video";
-            const isImage = file.type === "image";
-            const isYouTube = file.type === "youtube";
+      const isImage = file.type === "image";
+      const isVideo = file.type === "video";
+      const isYouTube = file.type === "youtube";
 
-            // ✅ Detect tall (portrait) mobile-shaped image
-            const isMobileShaped =
-              isImage && file?.aspect === "tall" && !single;
+      // ✅ Detect portrait / mobile-shaped images
+      const isMobileShaped = isImage && file?.aspect === "tall" && !single;
 
-            // ✅ Dynamic height for each type
-            const maxHeight = single
-              ? "450px"
-              : isMobileShaped
-                ? "1100px"
-                : "800px";
+      // ✅ Special case: last item in 3 attachments
+      const isLastOfThree = count === 3 && index === 2;
 
-            // ✅ Dynamic aspect ratio
-            const aspectRatio = single
-              ? "auto"
-              : isMobileShaped
-                ? "3/5"
-                : "5/3";
+      // ✅ Dynamic max height (GRID SAFE)
+      let maxHeight;
+    
+if (single) {
+  maxHeight = "450px"; // 1 image
+} else if (count === 4) {
+  maxHeight = "520px"; // 2x2 grid
+} else if (count === 3) {
+  maxHeight = 520; // 🔥 same as 4-image logic for balance
+} else if (isMobileShaped) {
+  maxHeight = "1000px"; // tall portrait
+} else {
+  maxHeight = "750px"; // landscape
+}
 
-            // ✅ Responsive width logic
-            let widthClass = "w-full";
-            if (count === 2) {
-              widthClass = "w-1/2"; // ✅ always side-by-side
-            } else if (count === 3) {
-              widthClass =
-                index < 2
-                  ? "w-1/2"
-                  : "w-full lg:w-[70%] mx-auto"; // last one centered
-            } else if (count === 4) {
-              widthClass = "w-1/2"; // 2x2 grid
-            }
+let widthClass = "w-full";
+if (count === 2) {
+  widthClass = "w-1/2"; // 2 side-by-side
+} else if (count === 3) {
+  widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
+} else if (count === 4) {
+  widthClass = "w-1/2"; // 2x2 grid
+}
 
 
-            return (
-              <div
-                key={index}
-onClick={(e) => {
-  e.stopPropagation();
-  if (isImage) onImageClick(index);
-}}
-                className={`relative cursor-pointer overflow-hidden ${widthClass} ${single ? "rounded-lg" : "rounded-sm"
-                  } bg-gray-100`}
-                style={{
-                  aspectRatio,
-                  marginInline: single ? "auto" : 0,
-                }}
-              >
-                {/* ✅ IMAGE */}
-                {isImage && (
-                  <img
-                    src={file.url}
-                    alt={`attachment-${index}`}
-                    className={`w-full h-full ${file?.aspect === "tall"
-                        ? "object-contain"
-                        : "object-cover"
-                      } rounded-md`}
-                    style={{
-                      objectFit: "contain",
-                      maxHeight,
-                      width: isMobileShaped ? "75%" : "100%",
-                      margin: "auto",
-                      userSelect: "none",
-                    }}
-                    onContextMenu={(e) => e.preventDefault()}
-                    draggable={false}
-                  />
-                )}
+      // ✅ Aspect ratio (controls shape, not image)
+    const aspectRatio = single
+  ? "auto"
+  : isMobileShaped
+    ? "3 / 5"
+    : count === 4 || count === 3
+      ? "4 / 5"  
+      : "5 / 3";
 
-                {/* ✅ VIDEO */}
-                {/* ✅ CUSTOM VIDEO */}
-                {isVideo && (
-                  <div
-                    key={index}
-                    onClick={(e) => {
-                      if (isVideo || isYouTube) return; // 🚀 stop viewer for videos
-                      // setViewerOpen(true);
-                      // setViewerIndex(index);
-                      // setSelectedMediaIndex(index);
-                      setCurrentPost(post)
-                      console.log("this is the new selelcted index", index)
-                      console.log(post)
-                    }}
-                    className={`relative cursor-pointer overflow-hidden ${widthClass} ${single ? "rounded-lg" : "rounded-sm"
-                      } bg-gray-100`}
-                    style={{
-                      aspectRatio,
-                      marginInline: single ? "auto" : 0,
-                    }}
-                  >
-                    <VideoPlayer
-                      src={file.url}
-                      poster={file.poster || ""}
-                      maxHeight={maxHeight}
-                      primaryColor="#FF4D4F" // your theme color
-                      autoPlayOnView={true}
-                      sectionId="feed-1"
-                    />
-                  </div>
-                )}
+
+      return (
+<div
+  key={index}
+  onClick={(e) => {
+    e.stopPropagation();
+    if (isImage) onImageClick(index);
+  }}
+  className={`relative overflow-hidden cursor-pointer
+    ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
+    ${single ? "rounded-lg" : "rounded-sm"}
+    ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+  `}
+  style={{ aspectRatio }}
+>
+
+
+          {/* ✅ IMAGE */}
+          {isImage && (
+          <img
+  src={file.url}
+  alt={`attachment-${index}`}
+  className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
+  style={{
+    maxHeight,
+    width: isMobileShaped || count === 3 && index === 2 ? "auto" : "100%",
+    margin: "auto",
+    userSelect: "none",
+  }}
+  draggable={false}
+  onContextMenu={(e) => e.preventDefault()}
+/>
+
+          )}
+
+          {/* ✅ VIDEO */}
+
+{isVideo && (
+  <div className="w-full h-full flex items-center justify-center bg-black">
+    <div className="w-full h-full max-h-full flex items-center justify-center">
+      <VideoPlayer
+        src={file.url}
+        poster={file.poster || ""}
+        className="max-h-full max-w-full"
+        primaryColor="#FF4D4F"
+        autoPlayOnView={true}
+        sectionId="feed-1"
+      />
+    </div>
+  </div>
+)}
 
 
 
-                {/* ✅ YOUTUBE */}
-                {isYouTube && (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${file.youtubeId}`}
-                    title={`youtube-${index}`}
-                    className="w-full h-full rounded-md"
-                    allowFullScreen
-                    style={{ maxHeight }}
-                  />
-                )}
-              </div>
-            );
-          })}
+          {/* ✅ YOUTUBE */}
+          {isYouTube && (
+            <iframe
+              src={`https://www.youtube.com/embed/${file.youtubeId}`}
+              title={`youtube-${index}`}
+              className="w-full h-full rounded-md"
+              allowFullScreen
+              style={{ maxHeight }}
+            />
+          )}
         </div>
-      )}
+      );
+    })}
+  </div>
+)}
+
 
 
 
@@ -568,7 +570,7 @@ setDislikesCount={setDislikesCount}
       </div>
 
 
-      {showCommentsSection && <CommentSection postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
+      {showCommentsSection && <CommentSection commentsCount={commentsCount} postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
       {showConfirm && (<ActionNotifier action="delete this post" onConfirm={onConfirmDelete} onCancel={onCancelDelete} />)}
        {deleting && <Loading text="Deleting post..." />}
 

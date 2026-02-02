@@ -98,7 +98,7 @@ const Notification = () => {
 
       {/* Bottom bar */}
 {sortedNotifications.length > 0 && (
-  <div className="sticky bottom-4 left-0  z-[999] w-[100%] px-4">
+  <div className="sticky bottom-4 left-0  z-[99] w-[100%] px-4">
     <NotificationRemovalBar />
   </div>
 )}

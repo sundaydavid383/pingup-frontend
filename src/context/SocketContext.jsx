@@ -5,7 +5,7 @@ import { useMessageContext } from "./MessageContext";
 import { useNotificationContext } from "./NotificationContext";
 
 
-const SocketContext = createContext(null);
+export const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
