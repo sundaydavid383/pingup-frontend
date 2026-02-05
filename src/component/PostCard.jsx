@@ -24,6 +24,9 @@ import VideoPlayer from "./shared/VideoPlayer";
 import DislikeButton from "./DislikeButton";
 import ActionNotifier from "./shared/ActionNotifier";
 import Loading from "./shared/Loading";
+import VoiceNoteCard from "./shared/VoiceNoteCard";
+import { useGlobalVideo } from "../context/GlobalVideoContext";
+
 
 const PostCard = ({   post,
   setFeeds,
@@ -62,6 +65,7 @@ const PostCard = ({   post,
   })();
 
   const [liked, setLiked] = useState(initialLiked);
+  const { setVideoState } = useGlobalVideo();
   const [likesCount, setLikesCount] = useState(post.likesCount ?? post.recentReactions?.length ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
   const [showCommentsSection, setShowCommentsSection] = useState(false);
@@ -99,6 +103,7 @@ const [dislikesCount, setDislikesCount] = useState(
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const audioRefs = useRef({});
   const isOwnPost = String(post.user?._id) === String(userId);
 
   const highlightHashtags = (text) =>
@@ -371,6 +376,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
       const isImage = file.type === "image";
       const isVideo = file.type === "video";
       const isYouTube = file.type === "youtube";
+      const isAudio = file.type === "audio";
 
       // ✅ Detect portrait / mobile-shaped images
       const isMobileShaped = isImage && file?.aspect === "tall" && !single;
@@ -453,15 +459,35 @@ if (count === 2) {
   <div className="w-full h-full flex items-center justify-center bg-black">
     <div className="w-full h-full max-h-full flex items-center justify-center">
       <VideoPlayer
-        src={file.url}
-        poster={file.poster || ""}
-        className="max-h-full max-w-full"
-        primaryColor="#FF4D4F"
-        autoPlayOnView={true}
-        sectionId="feed-1"
-      />
+  src={file.url}
+  poster={file.poster || ""}
+  className="max-h-full max-w-full"
+  primaryColor="#FF4D4F"
+  autoPlayOnView={true}
+  sectionId={`feed-${post._id}`}
+  ref={(ref) => {
+    if (ref?.videoRef?.current) {
+      setVideoState({
+        src: file.url,
+        poster: file.poster || "",
+        inlineRef: ref.videoRef.current,
+        playing: !ref.videoRef.current.paused,
+        currentTime: ref.videoRef.current.currentTime,
+      });
+    }
+  }}
+/>
+
     </div>
   </div>
+)}
+
+{isAudio && (
+  <VoiceNoteCard
+   audioUrl={file.url}
+   ref={(el) => {
+  if (el) audioRefs.current[file.url] = el;
+}}/>
 )}
 
 

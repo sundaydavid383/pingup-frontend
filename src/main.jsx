@@ -11,7 +11,8 @@ import { SocketProvider } from './context/SocketContext.jsx';
 import { MessageProvider } from "./context/MessageContext";
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
-
+import { AudioPlayerProvider } from "./context/AudioPlayerContext";
+import { GlobalVideoProvider } from "./context/GlobalVideoContext";
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
@@ -27,7 +28,11 @@ createRoot(document.getElementById('root')).render(
             <SocketProvider>
               <ThemeProvider>
                 <BrowserRouter>
+                  <AudioPlayerProvider>
+                <GlobalVideoProvider>
                   <App />
+                    </GlobalVideoProvider>
+                </AudioPlayerProvider>
                 </BrowserRouter>
               </ThemeProvider>
             </SocketProvider>

@@ -8,20 +8,22 @@ import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/useSocket";
 import { useMessageContext } from "../context/MessageContext";
+import "../styles/message.css"
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 
 const Messages = () => {
 
   const [activeChatId, setActiveChatId] = useState(null);
-  
+
   // 1. IMMEDIATE LOAD: Initialize state directly from localStorage
   const [connections, setConnections] = useState(() => {
     const cached = localStorage.getItem("springsconnect_connections");
     return cached ? JSON.parse(cached) : [];
   });
   const [syncProgress, setSyncProgress] = useState(0);
-const [syncing, setSyncing] = useState(false); // optional, to show/hide the progress bar
+  const [searchTerm, setSearchTerm] = useState("");
+  const [syncing, setSyncing] = useState(false); // optional, to show/hide the progress bar
 
 
   const [lastMessages, setLastMessages] = useState(() => {
@@ -31,12 +33,13 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
 
   // Only show loading skeleton if we have NO cached data at all
   const [loading, setLoading] = useState(connections.length === 0);
-  
+
   const [unreadMap, setUnreadMap] = useState({});
   const { user, sponsors } = useAuth();
   const { unreadMessages, addUnread, clearUnread, getTotalUnread } = useMessageContext();
   const { socket } = useSocket();
   const navigate = useNavigate();
+  const hasSyncedRef = useRef(false);
   const processedMessages = useRef(new Set());
 
   /*** 1️⃣ Load cached data on mount ***/
@@ -52,62 +55,64 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
     setLoading(false); // only stop skeleton after initial render
   }, []);
 
- const syncData = async () => {
-  try {
-    setSyncing(true);
-    setSyncProgress(20); // started
+  const syncData = async () => {
+    try {
+      setSyncing(true);
+      setSyncProgress(20); // started
 
-    // Fetch both connections and last messages
-    const [connRes, msgRes] = await Promise.allSettled([
-      axios.get("api/user/connections"),
-      axios.get("api/messages/last")
-    ]);
+      // Fetch both connections and last messages
+      const [connRes, msgRes] = await Promise.allSettled([
+        axios.get("api/user/connections"),
+        axios.get("api/messages/last")
+      ]);
 
-    setSyncProgress(50); // mid-progress
+      setSyncProgress(50); // mid-progress
 
-    // Sync Connections
-    if (connRes.status === 'fulfilled') {
-      const data = connRes.value.data.data;
-      const acceptedConnections = data?.connections?.length ? data.connections : (data?.followers || []);
-      
-      setConnections(acceptedConnections);
-      localStorage.setItem("springsconnect_connections", JSON.stringify(acceptedConnections));
-    }
+      // Sync Connections
+      if (connRes.status === 'fulfilled') {
+        const data = connRes.value.data.data;
+        const acceptedConnections = data?.connections?.length ? data.connections : (data?.followers || []);
 
-    setSyncProgress(70); // more progress
+        setConnections(acceptedConnections);
+        localStorage.setItem("springsconnect_connections", JSON.stringify(acceptedConnections));
+      }
 
-    // Sync Last Messages
-    if (msgRes.status === 'fulfilled' && msgRes.value.data.success) {
-      const incomingMsgs = msgRes.value.data.data;
-      setLastMessages(prev => {
-        const merged = { ...prev };
-        let hasChange = false;
+      setSyncProgress(70); // more progress
 
-        Object.keys(incomingMsgs).forEach(id => {
-          const current = prev[id];
-          const incoming = incomingMsgs[id];
+      // Sync Last Messages
+      if (msgRes.status === 'fulfilled' && msgRes.value.data.success) {
+        const incomingMsgs = msgRes.value.data.data;
+        setLastMessages(prev => {
+          const merged = { ...prev };
+          let hasChange = false;
 
-          if (!current || new Date(incoming.createdAt) > new Date(current.createdAt)) {
-            merged[id] = incoming;
-            hasChange = true;
-          }
+          Object.keys(incomingMsgs).forEach(id => {
+            const current = prev[id];
+            const incoming = incomingMsgs[id];
+
+            if (!current || new Date(incoming.createdAt) > new Date(current.createdAt)) {
+              merged[id] = incoming;
+              hasChange = true;
+            }
+          });
+
+          if (hasChange) localStorage.setItem("lastMessages", JSON.stringify(merged));
+          return merged;
         });
+      }
 
-        if (hasChange) localStorage.setItem("lastMessages", JSON.stringify(merged));
-        return merged;
-      });
+      setSyncProgress(100); // done
+    } catch (err) {
+      console.error("Background sync failed", err);
+    } finally {
+      setSyncing(false);
     }
-
-    setSyncProgress(100); // done
-  } catch (err) {
-    console.error("Background sync failed", err);
-  } finally {
-    setSyncing(false);
-  }
-};
+  };
 
 
   useEffect(() => {
+  if (hasSyncedRef.current) return;
+    hasSyncedRef.current = true;
     syncData();
     // Optional: Refresh background data every 60 seconds
     const interval = setInterval(syncData, 60000);
@@ -223,13 +228,24 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
   }, [socket, addUnread, clearUnread, user._id]);
 
   /*** 8️⃣ Sorting connections by last message ***/
- const getLastMessageTime = (userId) => {
+  const getLastMessageTime = (userId) => {
     const msg = lastMessages[userId];
     return msg ? new Date(msg.createdAt).getTime() : 0;
   };
   const sortedConnections = [...connections].sort((a, b) => {
     return getLastMessageTime(b._id) - getLastMessageTime(a._id);
   });
+
+
+const filteredConnections = sortedConnections.filter((usr) => {
+  if(!searchTerm) return true;
+  const term = searchTerm.toLowerCase();
+  return (
+    usr.name.toLowerCase().includes(term) ||
+    usr.username.toLowerCase().includes(term) ||
+    (usr.full_name && usr.full_name.toLowerCase().includes(term))
+  );
+});
 
   /*** 9️⃣ Open chat ***/
   const handleOpenChat = (userId) => {
@@ -250,136 +266,177 @@ const [syncing, setSyncing] = useState(false); // optional, to show/hide the pro
   )}, 50, 1)`;
 
   return (
-<div className="min-h-screen w-full flex bg-slate-50 overflow-hidden relative">
-  {/* LEFT: Conversation list */}
-  <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r">
-    <BackButton />
+    <div className="min-h-screen w-full flex bg-slate-50 overflow-hidden relative">
+      {/* LEFT: Conversation list */}
+      <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r relative"
+      style={{
+        borderRightColor: "var(--hover-light)",
+        borderRightStyle: "solid",
+        borderRightWidth: "1px",}}>
+        <BackButton />
 
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold text-slate-900 mb-1 title">
-        Messages
-      </h1>
-      <p className="text-slate-600">People you’ve connected with</p>
-    </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1 title">
+            Messages
+          </h1>
+          <p className="text-slate-600">People you’ve connected with</p>
+        </div>
 
-    {/* 🔄 Sync progress bar */}
-    {syncing && (
+        {/* 🔄 Sync progress bar */}
+                  {syncing && (
+  <div className="absolute top-5 z-50 right-0 -translate-x-1/2">
+    <div
+      className="relative w-12 h-12 rounded-full flex items-center justify-center"
+      style={{
+        background: `conic-gradient(
+          var(--primary) ${syncProgress * 3.6}deg,
+          var(--hover-light) 0deg
+        )`,
+      }}
+    >
+      {/* Inner circle (creates the border effect) */}
       <div
-        className="fixed top-14 z-50 left-1/2 transform -translate-x-1/2 w-11/12 max-w-xl h-4 rounded-full overflow-hidden border"
+        className="absolute w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium"
         style={{
-          borderColor: "var(--input-border)",
-          backgroundColor: "var(--hover-subtle-bg)",
+          backgroundColor: "var(--white)",
+          color: "var(--secondary)",
         }}
       >
-        <div
-          className="h-full transition-all duration-500"
-          style={{
-            width: `${syncProgress}%`,
-            background:
-              "linear-gradient(to right, var(--primary), var(--btn-hover))",
-          }}
-        />
+        {syncProgress}%
       </div>
-    )}
-
-    <div className="flex flex-col gap-3">
-      {loading ? (
-        Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex gap-4 p-4 bg-white rounded shadow animate-pulse"
-          >
-            <div className="w-12 h-12 bg-gray-300 rounded-full" />
-            <div className="flex-1 space-y-2 py-1">
-              <div className="h-4 bg-gray-300 rounded w-1/2" />
-              <div className="h-3 bg-gray-300 rounded w-1/3" />
-            </div>
-          </div>
-        ))
-      ) : sortedConnections.length > 0 ? (
-        sortedConnections.map((usr) => {
-          const last = lastMessages[usr._id];
-          const unreadCount = unreadMap[usr._id] || 0;
-          const isActive = activeChatId === usr._id;
-
-          return (
-            <div
-              key={usr._id}
-              onClick={() => handleOpenChat(usr._id)}
-              className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition
-                ${
-                  isActive
-                    ? "bg-violet-100"
-                    : "bg-white hover:bg-slate-100"
-                }`}
-            >
-              <ProfileAvatar
-                user={{
-                  name: usr.name || "User",
-                  profilePicUrl: usr.profilePicUrl,
-                  profilePicBackground: usr.profilePicBackground,
-                }}
-                size={48}
-              />
-
-              <div className="flex-1 min-w-0">
-                <p className="text-[var(--primary)] truncate">
-                  @{usr.username}
-                </p>
-                <p className="font-medium text-slate-700 truncate">
-                  {usr.full_name}
-                </p>
-
-                {last && (
-                  <p
-                    className={`text-sm truncate ${
-                      unreadCount > 0
-                        ? "text-[var(--error)]"
-                        : "text-slate-600"
-                    }`}
-                  >
-                    {last.senderId === user._id ? "You: " : ""}
-                    {last.type === "image"
-                      ? "📷 Image"
-                      : last.type === "audio"
-                      ? "🎤 Audio"
-                      : last.text}
-                  </p>
-                )}
-
-                {unreadCount > 0 && (
-                  <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <p className="text-center text-slate-500">
-          No accepted connections yet.
-        </p>
-      )}
     </div>
   </div>
-
-  {/* RIGHT: Chat box (desktop only) */}
-  <div className="hidden md:flex flex-1 bg-white">
-    {activeChatId ? (
-      <ChatBox userId={activeChatId} />
-    ) : (
-      <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
-           <div className="chat-loader" />
-      <span className="text-sm tracking-wide">
-        Select a conversation
-      </span>
-      </div>
-    )}
-  </div>
+)}
 
 
+
+<div className="mb-4 flex items-center gap-2 search-input">
+<input
+  type="text"
+  placeholder="Search users..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") e.target.blur();
+  }}
+  className=" bg-[var(--color-1)] flex-1 outline-none border-none focus:ring-0"
+/>
+
+
+  {searchTerm && (
+    <button
+      onClick={() => setSearchTerm("")}
+      className="px-3 py-1 text-sm  rounded-xl bg-[var(--hover-light)]  hover:bg-[var(--hover-dark)] cursor-pointer transition"
+    >
+      ✕
+    </button>
+  )}
 </div>
+
+
+
+        <div className="flex flex-col gap-3">
+
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex gap-4 p-4 bg-white rounded shadow animate-pulse"
+              >
+                <div className="w-12 h-12 bg-gray-300 rounded-full" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 bg-gray-300 rounded w-1/2" />
+                  <div className="h-3 bg-gray-300 rounded w-1/3" />
+                </div>
+              </div>
+            ))
+          ) : sortedConnections.length > 0 ? (
+            filteredConnections.map((usr) => {
+              const last = lastMessages[usr._id];
+              const unreadCount = unreadMap[usr._id] || 0;
+              const isActive = activeChatId === usr._id;
+
+              return (
+                <div
+                  key={usr._id}
+                  onClick={() => handleOpenChat(usr._id)}
+                  className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition
+                ${isActive
+                      ? "bg-violet-100"
+                      : "bg-[var(--white)] hover:bg-[var(--hover-light)]"
+                    }`}
+                >
+                  <ProfileAvatar
+                    user={{
+                      name: usr.name || "User",
+                      profilePicUrl: usr.profilePicUrl,
+                      profilePicBackground: usr.profilePicBackground,
+                    }}
+                    size={48}
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[var(--primary)] truncate">
+                      @{usr.username}
+                    </p>
+                    <p className="font-medium text-slate-700 truncate">
+                      {usr.full_name}
+                    </p>
+
+                    {last && (
+                      <span
+                        className={`text-sm truncate flex items-center gap-1 ${unreadCount > 0 ? "text-[var(--error)]" : "text-slate-600"
+                          }`}
+                      >
+                        {last.senderId === user._id && "You: "}
+                        {last.type === "image" ? (
+                          <>
+                            <ImageIcon size={16} className="text-[var(--primary)]" /> Image
+                          </>
+                        ) : last.type === "audio" ? (
+                          <>
+                            <Mic size={16} className="text-[var(--primary)]" /> Audio
+                          </>
+                        ) : (
+                          last.text
+                        )}
+                      </span>
+                    )}
+
+
+                    {unreadCount > 0 && (
+                      <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-center text-slate-500">
+              {searchTerm ? "No users found." : "No accepted connections yet."}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT: Chat box (desktop only) */}
+      <div className="hidden md:flex flex-1 bg-white">
+        {activeChatId ? (
+          <ChatBox userId={activeChatId} />
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
+            <div className="chat-loader" />
+            <span className="text-sm tracking-wide">
+              Select a conversation
+            </span>
+          </div>
+        )}
+      </div>
+
+
+    </div>
   );
 };
 

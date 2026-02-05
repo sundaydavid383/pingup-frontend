@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import "./styles/ui.css"
 import { Routes, Route, useLocation, useNavigate  } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
@@ -24,6 +23,8 @@ import BibleReader from './pages/spiritual_life_tracker/BibleReader';
 import AppInstallPrompt from './pages/AppInstallPrompt';
 import AuthSuccess from "./pages/AuthSuccess";
 import "./styles/ui.css"
+import GlobalAudioModal from './component/shared/GlobalAudioModal';
+import GlobalVideoModal from './component/shared/GlobalVideoModal';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location  = useLocation();
@@ -52,11 +53,11 @@ const App = () => {
     }
    }
 
-  document.addEventListener("contextMenu", disableImageContextMenu);
+  document.addEventListener("contextmenu", disableImageContextMenu);
   document.addEventListener("dragstart", disableImageDrag);
 
   return () => {
-    document.removeEventListener("contextMenu", disableImageContextMenu);
+    document.removeEventListener("contextmenu", disableImageContextMenu);
     document.removeEventListener("dragstart", disableImageDrag);
   }
 }, []);
@@ -78,6 +79,8 @@ const App = () => {
       {/* <ReloadNotice /> */}
 
       <AppInstallPrompt />
+      <GlobalAudioModal/>
+ 
 
       <Routes>
 

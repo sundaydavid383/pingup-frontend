@@ -22,6 +22,94 @@
   animation-delay: -1s;
 }
 
+.tooltip-wrapper {
+  position: absolute;
+  top: -2.5rem; /* adjust vertical position */
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 50;
+}
+
+.tooltip-show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Blurry background */
+.tooltip-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  background: var(--opaque-primary); /* semi-transparent primary color */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 1;
+}
+
+/* Text on top, sharp */
+.tooltip-text {
+  position: relative;
+  color: white;
+  font-size: 0.75rem;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.group:hover .tooltip-wrapper {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+
+
+/* === Glass Icon Button === */
+.icon-glass-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+
+  background: var(--opaque-primary);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: var(--transition-default);
+}
+
+/* icon default */
+.icon-glass-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--white);
+  transition: var(--transition-default);
+}
+
+/* hover effects (desktop) */
+@media (hover: hover) {
+  .icon-glass-btn:hover {
+    background: var(--glassy-white);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .icon-glass-btn:hover .icon-glass-icon {
+    color: var(--primary);
+  }
+}
+
+
 @keyframes chatLoader {
   0%, 10%   { border-radius: 0 }
   30%, 40%  { border-radius: 50% 0 }

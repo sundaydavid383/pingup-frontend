@@ -201,7 +201,9 @@ const ChatMessagesFull = ({
       {/* Scroll to bottom button */}
       {showScrollButton && (
         <button
-          onClick={scrollToBottom}
+          onClick={()=>{requestAnimationFrame(() => {
+  scrollToBottom();
+});}}
           className="fixed bottom-35 right-8 flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-all duration-300 z-50 cursor-pointer border border-white/40 hover:scale-110 active:scale-95 z-[999999]"
           style={{
             background: "rgba(255, 255, 255, 0.2)",

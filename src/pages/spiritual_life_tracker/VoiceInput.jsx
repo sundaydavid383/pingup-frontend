@@ -25,23 +25,7 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => 
   TTS: "tts",
   ERROR: "error",
 };
-  const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
-const statusMessage = (() => {
-  switch (voiceState) {
-    case VOICE_STATE.READY:
-      return "Speak now, I am listening";
-    case VOICE_STATE.TRANSCRIBING:
-      return "Loading text...";
-    case VOICE_STATE.PROCESSING:
-      return "Searching scripture...";
-    case VOICE_STATE.TTS:
-      return "Speaking...";
-    case VOICE_STATE.ERROR:
-      return error || "Voice error";
-    default:
-      return "";
-  }
-})();
+
 
 
   const [error, setError] = useState(null);
@@ -61,6 +45,24 @@ const errorRef = useRef(null);
   const PAUSE_MS = 200; 
   const bibleBooks = assets.bibleBooks
 
+
+    const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
+const statusMessage = (() => {
+  switch (voiceState) {
+    case VOICE_STATE.READY:
+      return "Speak now, I am listening";
+    case VOICE_STATE.TRANSCRIBING:
+      return "Loading text...";
+    case VOICE_STATE.PROCESSING:
+      return "Searching scripture...";
+    case VOICE_STATE.TTS:
+      return "Speaking...";
+    case VOICE_STATE.ERROR:
+      return error || "Voice error";
+    default:
+      return "";
+  }
+})();
   // Bible books array with common abbreviations
 
 

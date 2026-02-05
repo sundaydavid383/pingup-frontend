@@ -55,6 +55,7 @@ export default function ImageComposer({ image, setImage, caption, setCaption, on
             disabled={sending}
             style={{ backgroundColor: "var(--input-primary)" }}
             className="text-white p-2 rounded-full flex items-center justify-center"
+            title="send"
           >
             {sending ? <Spinner /> : <SendHorizonal size={16} />}
           </button>

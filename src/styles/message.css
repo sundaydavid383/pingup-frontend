@@ -1,0 +1,34 @@
+.search-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 5rem;
+
+  background: var(--color-1);
+  color: var(--secondary);
+
+  border: 1px solid var(--input-border);
+  outline: none;
+
+  font-size: 0.95rem;
+  line-height: 1.4;
+  height: 3rem;
+
+  transition: var(--transition-default);
+}
+
+/* Placeholder */
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Focus state (ChatGPT-like glow) */
+.search-input:focus {
+  background: var(--white);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15); /* soft indigo glow */
+}
+
+/* Subtle hover */
+.search-input:hover {
+  border-color: var(--primary);
+}

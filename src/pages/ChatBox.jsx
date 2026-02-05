@@ -1,7 +1,7 @@
 // src/pages/ChatBox.jsx
 import React, { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ImageIcon, SendHorizonal, Mic, Square, Check, CheckCheck } from "lucide-react";
+import { ImageIcon, SendHorizonal, Mic, ImageUpIcon, FileIcon, VideoIcon } from "lucide-react";
 import axiosBase from "../utils/axiosBase";
 import moment from "moment";
 import ProfileAvatar from "../component/shared/ProfileAvatar";
@@ -23,6 +23,7 @@ import ChatboxHeader from "../component/shared/ChatboxHeader";
 import ChatboxInput from "../component/shared/ChatboxInput";
 import MediaDropdown from "../component/MediaDropdown";
 import HeaderArrow from "../component/shared/HeaderArrow";
+import ImageComposer from "../component/shared/ImageComposer";
 
 
 
@@ -122,21 +123,38 @@ const ChatBox = ({ userId: propUserId }) => {
 
   const isUserNearBottom = useRef(true);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+// ===================== NEAR BOTTOM SCROLL DETECTION =====================
+useEffect(() => {
+  const container = containerRef.current;
+  if (!container) return;
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const nearBottom = distanceFromBottom < 150; // threshold in px
-      isUserNearBottom.current = nearBottom;
-      setShowScrollButton(!nearBottom);
-    };
+  const handleScroll = () => {
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const paddingBottom = parseFloat(getComputedStyle(container).paddingBottom) || 0;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight - paddingBottom;
+    const nearBottom = distanceFromBottom < 150; // threshold in px
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, []);
+    // 🔹 Debug logs
+    console.log("📏 scrollTop:", scrollTop);
+    console.log("📏 clientHeight:", clientHeight);
+    console.log("📏 scrollHeight:", scrollHeight);
+    console.log("📏 paddingBottom:", paddingBottom);
+    console.log("📏 distanceFromBottom:", distanceFromBottom);
+    console.log("📏 nearBottom:", nearBottom);
+
+    isUserNearBottom.current = nearBottom;
+    setShowScrollButton(!nearBottom);
+  };
+
+  // Run once initially to set correct state
+  handleScroll();
+
+  // Attach scroll listener
+  container.addEventListener("scroll", handleScroll);
+
+  return () => container.removeEventListener("scroll", handleScroll);
+}, []);
+
 
 
 
@@ -194,6 +212,9 @@ const ChatBox = ({ userId: propUserId }) => {
   fetchData();
 }, [user, userId]);
 
+
+
+
   
   // eslint-disable-line // =========================== SOCKET CONNECTION =========================== 
   useEffect(() => {
@@ -209,13 +230,23 @@ const ChatBox = ({ userId: propUserId }) => {
           { ...m, status: "seen" } :
           m)));
     };
-const handleReceiveMessage = (newMsg) => {
- setMessages(prev => {
-  const updated = [...prev, serverMsg]; // or whatever logic
-  localStorage.setItem(`chat_history_${userId}`, JSON.stringify(updated));
-  return updated;
-});
 
+  const handleReceiveMessage = (newMsg) => {
+  setMessages(prev => {
+    const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
+    if (tempIndex !== -1) {
+      const updated = [...prev];
+      updated[tempIndex] = { ...newMsg, status: "delivered" };
+      return updated;
+    }
+
+    if (prev.some(m => m._id === newMsg._id)) return prev; // normal duplicate prevention
+
+    return [...prev, newMsg];
+  });
+
+  receiveSound.current.currentTime = 0;
+  receiveSound.current.play().catch(() => {});
 };
 
 
@@ -251,7 +282,7 @@ const handleTypingFrom = ({ from_user_id }) => {
       socket.off("messageRead", handleMessageRead);
     };
   },
-    [socket, user]);
+    [socket]);
   // eslint-disable-line //====================FAILED MESSAGE ====================/ // 
   // LocalStorage helpers 
   const getFailedMessages = () => {
@@ -345,7 +376,9 @@ setReplyTo(null); // reset reply state
         let ext = blob.type === "audio/webm" ? "webm" : "mp3";
         formData.append("media", blob, `audio_${Date.now()}.${ext}`);
       }
-      scrollToBottom();
+      requestAnimationFrame(() => {
+  scrollToBottom();
+});
       const res = await axiosBase.post("/api/chat/message",
         formData, {
         headers: { Accept: "application/json" },
@@ -409,7 +442,9 @@ setReplyTo(null); // reset reply state
         withCredentials: true,
       });
       const serverMsg = res.data.message;
-      scrollToBottom();
+      requestAnimationFrame(() => {
+  scrollToBottom();
+});
       setMessages((prev) => prev.map((m) =>
         m._id === newTempId ?
           {
@@ -507,33 +542,26 @@ setReplyTo(null); // reset reply state
 }, [loading, sortedMessages.length]);
 
 
-  //================disconnect user================
-  useEffect(() => {
-    if (!socket || !user) return;
+  // //================disconnect user================
+  // useEffect(() => {
+  //   if (!socket || !user) return;
 
-    socket.emit("userOnline", user._id);
+  //   socket.emit("userOnline", user._id);
 
-    return () => {
-      socket.emit("userOffline", user._id);
-    };
-  }, [socket, user]);
+  //   return () => {
+  //     socket.emit("userOffline", user._id);
+  //   };
+  // }, [socket, user]);
 
 
-useEffect(() => { 
-  if (!socket || !receiver) return;
+useEffect(() => {
+  if (!receiver) return;
 
-  const handleUserOffline = (offlineUserId) => {
-    if (offlineUserId === receiver._id) {
-      setLastActive(new Date().toISOString());
-    }
-  };
+  if (!onlineUsers.has(receiver._id)) {
+    setLastActive(receiver.lastActiveAt || new Date().toISOString());
+  }
+}, [onlineUsers, receiver]);
 
-  socket.on("userOffline", handleUserOffline);
-
-  return () => {
-    socket.off("userOffline", handleUserOffline);
-  };
-}, [socket, receiver]);
 
 
 
@@ -1086,7 +1114,7 @@ useEffect(() => {
 )}
 
 
- {!recording && !audioURL && (
+ {!recording && !audioURL && !(image instanceof File) && (
     <textarea
       id="chatInput"
       className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
@@ -1130,76 +1158,117 @@ useEffect(() => {
   {!recording && !audioURL && (
     <>
       {image instanceof File ? (
-        <div className="relative w-12 h-12">
-          <img
-            src={URL.createObjectURL(image)}
-            alt="preview"
-            className="w-full h-full object-cover rounded-md"
-          />
-          <button
-            onClick={() => setImage(null)}
-            className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition"
-            title="Cancel"
-          >
-            ×
-          </button>
-        </div>
-      ) : (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
-            className="p-2 rounded-md text-gray-500 hover:bg-gray-100"
-            title="Attach media"
-          >
-            <ImageIcon className="text-gray-500" />
-          </button>
+      <ImageComposer
+  image={image}
+  setImage={setImage}
+  caption={text}
+  setCaption={setText}
+  onSend={sendMessage}
+  sending={sending}
+/>) : <div className="relative">
+  {/* ATTACH MEDIA BUTTON */}
+  <button
+    type="button"
+    onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
+    className="flex items-center justify-center transition-all duration-300"
+    style={{
+      backgroundColor: "var(--primary)",
+      border: "2px solid var(--primary)",
+      borderRadius: "0.75rem", // smooth rounded corners
+      padding: "0.5rem",
+      cursor: "pointer",
+      boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
+    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
+    title="Attach media"
+  >
+    <ImageUpIcon className="text-white w-5 h-5" />
+  </button>
 
-          <MediaDropdown
-            open={showMediaDropdown}
-            onClose={() => setShowMediaDropdown(false)}
-            onSelect={handleMediaSelect}
-          />
+  {/* MEDIA DROPDOWN */}
+  {showMediaDropdown && (
+    <div
+      className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
+      style={{
+        backgroundColor: "var(--deeper-opaque-secondary)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderRadius: "0.75rem",
+        border: "1px solid var(--primary)",
+        minWidth: "220px",
+        boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+      }}
+    >
+  {/* IMAGE INPUT */}
+    <label
+      htmlFor="image"
+      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+    >
+      <ImageIcon size={18} />
+      <span>Upload Image</span>
+    </label>
 
-          <input
-            ref={imageInputRef}
-            type="file"
-            id="image"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              if (f instanceof File) setImage(f);
-              e.target.value = "";
-            }}
-          />
+    {/* FILE INPUT */}
+    <label
+      htmlFor="file"
+      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+    >
+      <FileIcon size={18} />
+      <span>Upload File</span>
+    </label>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            id="file"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              if (f instanceof File) setImage(f);
-              e.target.value = "";
-            }}
-          />
+    {/* VIDEO INPUT */}
+    <label
+      htmlFor="video"
+      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+    >
+      <VideoIcon size={18} />
+      <span>Upload Video</span>
+    </label>
+    </div>
+  )}
 
-          <input
-            ref={videoInputRef}
-            type="file"
-            id="video"
-            accept="video/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files && e.target.files[0];
-              if (f instanceof File) setImage(f);
-              e.target.value = "";
-            }}
-          />
-        </div>
-      )}
+  {/* HIDDEN INPUTS */}
+  <input
+    ref={imageInputRef}
+    type="file"
+    id="image"
+    accept="image/*"
+    hidden
+    onChange={(e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f instanceof File) setImage(f);
+      e.target.value = "";
+    }}
+  />
+
+  <input
+    ref={fileInputRef}
+    type="file"
+    id="file"
+    hidden
+    onChange={(e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f instanceof File) setImage(f);
+      e.target.value = "";
+    }}
+  />
+
+  <input
+    ref={videoInputRef}
+    type="file"
+    id="video"
+    accept="video/*"
+    hidden
+    onChange={(e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f instanceof File) setImage(f);
+      e.target.value = "";
+    }}
+  />
+</div>
+}
     </>
   )}
 
@@ -1256,7 +1325,7 @@ useEffect(() => {
 
   {/* Send button (shows if text, image, or audio exist) */}
 
-{(!recording && (text?.trim() || image || audioURL)) && (
+{(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) &&(
   <button
     onClick={() =>{scrollToBottom(); sendMessage()}}
     style={{ backgroundColor: "var(--input-primary)" }}

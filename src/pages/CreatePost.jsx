@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
-import { X, Image, Video as VideoIcon } from "lucide-react";
+import { X, Image, Video as VideoIcon, Trash2, Headphones } from "lucide-react";
 import CustomAlert from "../component/shared/CustomAlert";
 import location from "../utils/location";
 import BackButton from "../component/shared/BackButton";
 import ProfileAvatar from "../component/shared/ProfileAvatar"
+import AudioMessage from "../component/shared/AudioMessage";
 import { useNavigate } from "react-router-dom";
 
 
@@ -20,7 +21,12 @@ const CreatePost = () => {
   const [alert, setAlert] = useState(null);
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-const [uploadState, setUploadState] = useState(""); 
+  const [uploadState, setUploadState] = useState(""); 
+  const [audio, setAudio] = useState(null); // stores the recorded/selected audio
+  const [recording, setRecording] = useState(false); // is recording active
+  const mediaRecorderRef = useRef(null); // media recorder ref
+  const audioChunksRef = useRef([]); // to store audio chunks
+
 const textareaRef = useRef(null);
 
 
@@ -120,8 +126,8 @@ useEffect(() => {
   };
 
 const handleSubmit = async () => {
-  if (!content && images.length === 0 && videos.length === 0) {
-    return showAlert("Please add content, images, or videos", "warning");
+  if (!content && images.length === 0 && videos.length === 0 && !audio) {
+    return showAlert("Please add content, images, videos, or audio", "warning");
   }
 
   setLoading(true);
@@ -155,7 +161,7 @@ const handleSubmit = async () => {
 
     images.forEach(file => formData.append("media", file));
     videos.forEach(file => formData.append("media", file));
-
+    if (audio) formData.append("media", audio);
     if (isDev) console.log("FormData keys:", Array.from(formData.keys()));
 
     const res = await axios.post(
@@ -225,6 +231,55 @@ const handleSubmit = async () => {
 };
 
 
+const startRecording = async () => {
+   if(images.length > 0 || videos.length > 0){
+    return showAlert("You cannot record audio while images or videos are selected. Delete them first.", "warning");
+  }
+  else if(audio){
+    return showAlert("Audio already selected. Remove it first to record new audio.", "warning");
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+    audioChunksRef.current = []
+
+    mediaRecorder.ondataavailable = (e) => {
+      audioChunksRef.current.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm"});
+      const file = new File([blob], `recording_${Date.now()}.webm`, { type: "audio/webm" });
+      setAudio(file);
+    };
+
+    mediaRecorder.start();
+    setRecording(true);
+  }
+  catch(err){
+    console.error("❌ Error accessing microphone:", err);
+    showAlert("Unable to access microphone.", "error");
+  }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    }
+  };
+
+  const handleAudioUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      return showAlert("Audio file exceeds 10MB.", "warning");
+    }
+
+    setAudio(file);
+  };
 
 
   return (
@@ -353,6 +408,48 @@ const handleSubmit = async () => {
 <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-300">
   {/* Image & Video Upload Icons */}
   <div className="flex gap-2">
+    <label
+    htmlFor="audioFile"
+    className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition cursor-pointer border rounded-md"
+    title={ audio ? "Audio selected" : "Upload audio file"}
+  >
+   < Headphones className="w-6 h-6" />
+  </label>
+  <input
+    type="file"
+    id="audioFile"
+    accept="audio/*"
+    hidden
+    onChange={handleAudioUpload}
+  />
+
+  {/* Recording controls */}
+{!recording ? (
+  <button
+    onClick={startRecording}
+    className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition border rounded-md"
+    title="Start recording"
+  >
+    ⏺
+  </button>
+) : (
+  <button
+    onClick={stopRecording}
+    className="flex items-center justify-center w-10 h-10 text-red-500 hover:text-red-700 transition border rounded-md"
+    title="Stop recording"
+  >
+    ⏹
+  </button>
+)}
+
+{/* Preview recorded/uploaded audio */}
+{audio && (
+  <div className="flex items-center gap-2 mt-1">
+  <AudioMessage msg={{ media_url: URL.createObjectURL(audio) }} />
+    <button onClick={() => setAudio(null)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+  </div>
+)}
+
     <label
       htmlFor="images"
       className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition cursor-pointer border rounded-md"

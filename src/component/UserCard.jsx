@@ -20,6 +20,8 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
     }
   })();
 
+  console.log("Rendering UserCard for user:", rawUser);
+
   const activeUser = ctxUser && ctxUser._id ? ctxUser : storedUser;
   const activeToken = ctxToken || localStorage.getItem("token") || null;
 
@@ -36,35 +38,23 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
     followersCount: Array.isArray(rawUser.followers)
       ? rawUser.followers.length
       : rawUser.followersCount ?? 0,
+    isFollowing: rawUser.isFollowing || false,
+    connectionStatus: rawUser.connectionStatus || "none",
     __raw: rawUser,
   };
 
-  const [connectionStatus, setConnectionStatus] = useState("none");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(
-    Array.isArray(activeUser.following)
-      ? activeUser.following.map(String).includes(String(user._id))
-      : false
-  );
   const [isConnecting, setIsConnecting] = useState(false);
   const [followersCount, setFollowersCount] = useState(user.followersCount);
   const [disabledFollow, setDisabledFollow] = useState(false);
   const [alert, setAlert] = useState({ open: false, message: "", type: "info" });
+  const [isFollowing, setIsFollowing] = useState(user.isFollowing || false);
+  const [connectionStatus, setConnectionStatus] = useState(user.connectionStatus || "none");
 
-  useEffect(() => {
-    if (!activeUser || !user._id) return;
-    const userIdStr = String(user._id);
 
-    if ((activeUser.connections || []).map(String).includes(userIdStr)) {
-      setConnectionStatus("connected");
-    } else if ((activeUser.pendingConnections || []).some(c => String(c._id) === userIdStr && c.direction === "outgoing")) {
-      setConnectionStatus("pending_out");
-    } else if ((activeUser.incomingRequests || []).map(String).includes(userIdStr)) {
-      setConnectionStatus("pending_in");
-    } else {
-      setConnectionStatus("none");
-    }
-  }, [activeUser, rawUser]);
+
+
+
 
   const showAlert = (message, type = "info") => {
     setAlert({ open: true, message, type });

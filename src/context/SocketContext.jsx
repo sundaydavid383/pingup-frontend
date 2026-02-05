@@ -57,19 +57,19 @@ export const SocketProvider = ({ children }) => {
       console.warn("⚠️ Socket connection error:", err.message);
     });
 
-s.on("userOnline", (userId) => {
-  setOnlineUsers(prev => new Set([...prev, userId]));
-});
+// s.on("userOnline", (userId) => {
+//   setOnlineUsers(prev => new Set([...prev, userId]));
+// });
 
 
 
-        s.on("userOffline", (userId) => {
-      setOnlineUsers((prev) => {
-        const s = new Set(prev);
-        s.delete(userId);
-        return s;
-      });
-    });
+//         s.on("userOffline", (userId) => {
+//       setOnlineUsers((prev) => {
+//         const s = new Set(prev);
+//         s.delete(userId);
+//         return s;
+//       });
+//     });
 
        
 
