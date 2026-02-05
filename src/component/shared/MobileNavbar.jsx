@@ -25,7 +25,7 @@ const MobileNavbar = ({ setSidebarOpen }) => {
   {/* <BackButton className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white" top="5px" left="49px"  onClick={() => setSidebarOpen(true)} /> */}
 
       {/* Menu Icons */}
-      <div className="mobile-navbar-menu">
+      <div className="mobile-navbar-menu hidden">
         {menuItems.map(({ to, icon: Icon, badge }) => (
           <NavLink key={to} to={to} className="mobile-navbar-link">
             <Icon className="mobile-navbar-icon" />
