@@ -149,5 +149,5 @@ const NotificationSettings = ({ isEmbedded = false }) => {
       </div>
     </div>
   );
-
+};
 export default NotificationSettings;

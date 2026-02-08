@@ -326,3 +326,6 @@ const AccountSettings = ({ isEmbedded = false }) => {
       </div>
     </div>
   );
+};
+
+export default AccountSettings;

@@ -151,5 +151,5 @@ const PersonalInfo = ({ isEmbedded = false }) => {
       </div>
     </div>
   );
-
+};
 export default PersonalInfo;

@@ -135,5 +135,6 @@ const HelpAbout = ({ isEmbedded = false }) => {
       </div>
     </div>
   );
+};
 
 export default HelpAbout;

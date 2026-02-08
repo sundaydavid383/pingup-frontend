@@ -144,6 +144,6 @@ const Appearance = ({ isEmbedded = false }) => {
         </div>
       </div>
     </div>
-  );
+  ); }
 
 export default Appearance;
