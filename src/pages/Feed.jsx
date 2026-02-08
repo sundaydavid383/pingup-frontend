@@ -18,6 +18,7 @@ import LiveMapModal from "../component/LiveMapModal";
 import PostCardSkeleton from "../component/shared/PostCardSkeleton";
 import RightSidebar from "../component/RightSidebar";
 import { runOncePerSession } from "../utils/runOncePerSession";
+import assets from "../assets/assets";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import CustomAlert from "../component/shared/CustomAlert";
 import { EmptyFeed } from "../component/staterep/EmptyFeed";
