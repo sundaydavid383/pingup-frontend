@@ -44,33 +44,38 @@ const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => 
     };
   }, []);
 
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
+ const togglePlay = () => {
+  const audio = audioRef.current;
+  if (!audio) return;
 
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-      if (currentlyPlayingAudio === audio) {
-        currentlyPlayingAudio = null;
-        currentlyPlayingSetter = null;
-      }
-    } else {
-      // Stop currently playing audio if any
-      if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
-        currentlyPlayingAudio.pause();
-        currentlyPlayingAudio.currentTime = 0;
-        if (currentlyPlayingSetter) currentlyPlayingSetter(false);
-      }
-
-      currentlyPlayingAudio = audio;
-      currentlyPlayingSetter = setIsPlaying;
-
-      setIsLoading(true);
-      audio.play();
-      setIsPlaying(true);
+  if (isPlaying) {
+    audio.pause();
+    setIsPlaying(false);
+    setIsLoading(false);
+    if (currentlyPlayingAudio === audio) {
+      currentlyPlayingAudio = null;
+      currentlyPlayingSetter = null;
     }
-  };
+  } else {
+    // Stop currently playing audio if any
+    if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
+      currentlyPlayingAudio.pause();
+      currentlyPlayingAudio.currentTime = 0;
+      if (currentlyPlayingSetter) currentlyPlayingSetter(false);
+    }
+
+    currentlyPlayingAudio = audio;
+    currentlyPlayingSetter = setIsPlaying;
+
+    setIsLoading(true); // show loading immediately
+    audio.play().catch(() => {
+      setIsLoading(false); // stop spinner if play fails
+      setIsPlaying(false);
+    });
+    setIsPlaying(true);
+  }
+};
+
 
   const scrub = (e) => {
     const audio = audioRef.current;
@@ -93,26 +98,39 @@ const AudioMessage = ({ msg, backgroundImage = null, barColor = "#3B82F6" }) => 
           : "#F3F4F6",
       }}
     >
-      <button
-        onClick={togglePlay}
-        style={{
-          position: "relative",
-          zIndex: 2,
-          backgroundColor: barColor,
-          border: "none",
-          borderRadius: "50%",
-          color: "#fff",
-          width: 32,
-          height: 32,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          flexShrink: 0,
-        }}
-      >
-        {isPlaying ? "⏸" : "▶"}
-      </button>
+   <button
+  onClick={togglePlay}
+  disabled={isLoading} // prevent double clicks while loading
+  style={{
+    position: "relative",
+    zIndex: 2,
+    backgroundColor: barColor,
+    border: "none",
+    borderRadius: "50%",
+    color: "#fff",
+    width: 32,
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: isLoading ? "not-allowed" : "pointer",
+    flexShrink: 0,
+  }}
+>
+  {isLoading ? (
+    <div
+      style={{
+        width: 16,
+        height: 16,
+        border: "2px solid #fff",
+        borderTopColor: barColor,
+        borderRadius: "50%",
+        animation: "spin 1s linear infinite",
+      }}
+    />
+  ) : isPlaying ? "⏸" : "▶"}
+</button>
+
 
       <input
         type="range"

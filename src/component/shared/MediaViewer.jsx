@@ -8,6 +8,7 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
   const [showFullText, setShowFullText] = useState(false);
   const [textVisible, setTextVisible] = useState(true);
   const [ready, setReady] = useState(false);
+
   const [loaded, setLoaded] = useState(false);
 
 
@@ -62,7 +63,7 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
   if (!allMedia.length) return null;
 
   return (
-    <div className="fixed inset-0 z-[995550] bg-black/95">
+    <div className="fixed inset-0 z-[999995550] bg-black/95">
 
       {/* ❌ Close */}
       <button onClick={onClose} className="close-btn">

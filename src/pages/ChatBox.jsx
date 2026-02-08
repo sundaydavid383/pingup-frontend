@@ -51,7 +51,7 @@ const ChatBox = ({ userId: propUserId }) => {
  */  const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false); // loading now only affects empty fetch, not initial display
-
+  const dropdownRef = useRef(null);
   // ... other states (image, audio, etc.)
   
   const [showScrollButton, setShowScrollButton] = useState(true); 
@@ -122,6 +122,24 @@ const ChatBox = ({ userId: propUserId }) => {
   };
 
   const isUserNearBottom = useRef(true);
+
+
+  //================= REMOVING FILES DROPDOWN ===============
+   useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowMediaDropdown(false);
+      }
+    }
+
+    // Attach the listener
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Cleanup on unmount
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
 // ===================== NEAR BOTTOM SCROLL DETECTION =====================
 useEffect(() => {
@@ -1049,57 +1067,6 @@ useEffect(() => {
                       )
           }
 
-       {/* Find this block near the bottom of ChatBox.jsx */}
-
-          {
-            showMediaViewer && (
-              <div
-  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000]"
-  onClick={() => setShowMediaViewer(false)} // Click outside closes modal
->
-  {/* Close button */}
-  <button
-    className="absolute top-5 right-5 text-white text-2xl font-bold bg-black/40 hover:bg-black/60 p-2 rounded-full transition"
-    onClick={(e) => { 
-      e.stopPropagation(); // Prevent click from reaching overlay
-      setShowMediaViewer(false); 
-    }}
-  >
-    ✕
-  </button>
-
-  {/* Previous button */}
-  <button
-    className="absolute left-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
-    onClick={(e) => {
-      e.stopPropagation();
-      setCurrentImageIndex((prev) => prev === 0 ? imageMessages.length - 1 : prev - 1);
-    }}
-  >
-    ‹
-  </button>
-
-  {/* Image */}
-  <img
-    src={imageMessages[currentImageIndex]?.media_url}
-    alt="Viewer"
-    className="rounded-lg shadow-2xl object-contain transition-transform duration-300 max-h-[75vh] md:max-h-[85vh] max-w-[85vw] md:max-w-[80vw] lg:max-w-[65vw]"
-    onClick={(e) => e.stopPropagation()} // Prevent modal close when clicking the image
-  />
-
-  {/* Next button */}
-  <button
-    className="absolute right-5 text-white text-3xl font-bold bg-black/30 hover:bg-black/60 px-3 py-2 rounded-full transition"
-    onClick={(e) => {
-      e.stopPropagation();
-      setCurrentImageIndex((prev) => prev === imageMessages.length - 1 ? 0 : prev + 1);
-    }}
-  >
-    ›
-  </button>
-</div>
-)
-          }
         </div >
 
 

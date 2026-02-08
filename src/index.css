@@ -75,7 +75,7 @@ input, textarea, select {
 
   /* Borders & Shadows */
   --input-border: #99b7e0;
-  --input-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+  --input-shadow: 0 0 5px rgba(255, 255, 255, 0.4) !important;
 
 
   /* Effects */

@@ -11,7 +11,6 @@ import ProfileViewersDropdown from "../component/ProfileViewersDropdown";
 import ProfileModal from "../component/ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import CustomAlert from "../component/shared/CustomAlert";
-import { ArrowLeft } from "lucide-react";
 import ProfileSkeleton from "../component/skeleton/ProfileSkeleton";
 import BackButton from "../component/shared/BackButton";
 import RightSidebar from "../component/RightSidebar";
@@ -98,7 +97,7 @@ const Profile = () => {
     } catch (err) {
       console.error("❌ Error fetching profile:", err);
       // fallback to assets to avoid UI break (keeps interactions intact)
-      setProfileUser(assets.currentUser);
+     // setProfileUser(assets.currentUser);
       setPosts([]);
       showAlert("Failed to load profile data.", "error");
     } finally {

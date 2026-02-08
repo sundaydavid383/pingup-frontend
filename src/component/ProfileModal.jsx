@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Pencil, X} from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import axios from "axios";
 import assets from "../assets/assets";
 import CustomAlert from "./shared/CustomAlert";
 import axiosBase from "../utils/axiosBase";
 import ActionNotifier from "./shared/ActionNotifier"; // adjust path if needed
-import ProfileAvatar from  "./shared/ProfileAvatar"
-
+import ProfileAvatar from "./shared/ProfileAvatar"
+import { useAuth } from "../context/AuthContext";
+import CoverPhotoEditor from "./shared/CoverPhotoEditor";
+import ProfileAvatarSkeleton from "./skeleton/ProfileAvatarSkeleton";
 
 
 const RELATIONSHIP_OPTIONS = ["Single", "Married", "Prefer not to say"];
@@ -21,39 +23,41 @@ const INTEREST_OPTIONS = [
 ];
 
 const ProfileModal = ({ setShowEdit }) => {
-  const stored = typeof window !== "undefined" ? localStorage.getItem("springsConnectUser") : null;
-  const parsed = stored ? JSON.parse(stored) : {};
-  const baseUser = Object.keys(parsed).length ? parsed : assets?.currentUser || {};
+  const { user, updateUser } = useAuth();
+  const baseUser = Object.keys(user).length ? user : {};
+  console.log("Loaded user for editing:", baseUser);
 
   const [formData, setFormData] = useState({ ...baseUser });
   const [preview, setPreview] = useState(baseUser.profilePicUrl || "");
-  const [coverPreview, setCoverPreview] = useState(baseUser.coverPhotoUrl || "");
+  const [coverPreview, setCoverPreview] = useState(baseUser.coverPhotoUrl || user.coverPhotoUrl || "");
   const [alert, setAlert] = useState({ show: false, message: "", type: "" });
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
 
 
   // Phone validation UX state
-  const [phoneInput, setPhoneInput] = useState( baseUser.phoneNumber || baseUser.phone || "");
+  const [phoneInput, setPhoneInput] = useState(baseUser.phoneNumber || baseUser.phone || "");
   const [phoneError, setPhoneError] = useState(""); // empty => no error
   const [phoneSuggested, setPhoneSuggested] = useState(""); // suggestion when we can auto-format
 
   // Keep formData.phone in sync if baseUser changes later (safety)
-useEffect(() => {
-  const phoneValue = baseUser.phoneNumber || baseUser.phone || "";
-  setFormData((p) => ({ ...p, phone: phoneValue }));
-  setPhoneInput(phoneValue);
-}, [baseUser.phone, baseUser.phoneNumber]);
+  useEffect(() => {
+    const phoneValue = baseUser.phoneNumber || baseUser.phone || "";
+    setFormData((p) => ({ ...p, phone: phoneValue }));
+    setPhoneInput(phoneValue);
+  }, [baseUser.phone, baseUser.phoneNumber]);
 
 
-//handle cancle const 
-const handleCancel = () => {
-  setPreview(baseUser.profilePicUrl || "");
-  setCoverPreview(baseUser.coverPhotoUrl || "");
-  setShowEdit(false);
-};
+  //handle cancle const 
+  const handleCancel = () => {
+    setPreview(baseUser.profilePicUrl || "");
+    setCoverPreview(baseUser.coverPhotoUrl || "");
+    setShowEdit(false);
+  };
 
 
   // 🟢 Handle alert message
@@ -110,36 +114,6 @@ const handleCancel = () => {
   };
 
 
-
-
-const handleCoverUpload = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  if (!/^image\//.test(file.type)) return setMsg("Please select a valid image.", "error");
-  if (file.size > 5 * 1024 * 1024) return setMsg("Cover image too large (max 5MB).", "error");
-
-  const fd = new FormData();
-  fd.append("coverPhoto", file);
-
-  try {
-    setUploading(true);
-    const { data } = await axiosBase.post("/api/auth/upload-image", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    const url = data?.url || data?.imageUrl || data?.imageUrlFull || "";
-    if (!url) throw new Error("No image URL returned from server.");
-
-    setFormData((p) => ({ ...p, coverPhotoUrl: url }));
-    setCoverPreview(url);
-    setMsg("Cover photo uploaded.", "success");
-  } catch (err) {
-    setMsg(err?.response?.data?.message || err.message || "Cover photo upload failed.", "error");
-  } finally {
-    setUploading(false);
-  }
-};
-
   // -------------------------
   // File upload handler
   // -------------------------
@@ -153,7 +127,7 @@ const handleCoverUpload = async (e) => {
     fd.append("profilePic", file);
 
     try {
-      setUploading(true);
+      setUploadingProfile(true);
       const { data } = await axiosBase.post("/api/auth/upload-image", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -167,7 +141,7 @@ const handleCoverUpload = async (e) => {
     } catch (err) {
       setMsg(err?.response?.data?.message || err.message || "Image upload failed.", "error");
     } finally {
-      setUploading(false);
+      setUploadingProfile(false);
     }
   };
 
@@ -220,25 +194,25 @@ const handleCoverUpload = async (e) => {
 
 
   // ------------------------------------
-   // Delete profile picture
-    // ------------------------------------
-    const handleDeleteUser = async () => {
-  if (!formData._id) return setMsg("User ID not found.", "error");
+  // Delete profile picture
+  // ------------------------------------
+  const handleDeleteUser = async () => {
+    if (!formData._id) return setMsg("User ID not found.", "error");
 
-  try {
-    setLoading(true);
-    await axiosBase.delete(`/api/auth/delete-user/${formData._id}`);
-    setMsg("Account deleted successfully.", "success");
-     setShowDeleteConfirm(false)
-    // Clear local storage and redirect
-    localStorage.removeItem("springsConnectUser");
-    window.location.href = "/"; // redirect to homepage or signin
-  } catch (err) {
-    setMsg(err?.response?.data?.message || "Failed to delete user.", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      await axiosBase.delete(`/api/auth/delete-user/${formData._id}`);
+      setMsg("Account deleted successfully.", "success");
+      setShowDeleteConfirm(false)
+      // Clear local storage and redirect
+      localStorage.removeItem("springsConnectUser");
+      window.location.href = "/"; // redirect to homepage or signin
+    } catch (err) {
+      setMsg(err?.response?.data?.message || "Failed to delete user.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
@@ -276,10 +250,11 @@ const handleCoverUpload = async (e) => {
 
       const updatedUser = data.user;
       localStorage.setItem("springsConnectUser", JSON.stringify(updatedUser));
+      updateUser(updatedUser); // Update context with new user data
       setFormData(updatedUser);
       setPhoneInput(updatedUser.phone || "");
 
-      setTimeout(() => hanld, 900);
+      setTimeout(() => setShowEdit(false), 900);
     } catch (err) {
       setMsg(err?.response?.data?.message || "Update failed.", "error");
     } finally {
@@ -295,86 +270,84 @@ const handleCoverUpload = async (e) => {
   }, [formData.name]);
 
   return (<>
-   <button
- className="fixed top-4 right-4 text-xl bg-[var(--primary)] text-[var(--white)] hover:bg-gray-200/50 px-3 py-1 rounded-full z-[51120] backdrop-blur-sm"
+    {alert.show && (
+      <CustomAlert
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ show: false, message: "", type: "" })}
+      />
+    )}
+    <button
+      className="fixed top-4 right-4 text-xl bg-[var(--primary)] text-[var(--white)] hover:bg-gray-200/50 px-3 py-1 rounded-full z-[51120] backdrop-blur-sm"
       onClick={() => handleCancel()}
     >
       ✕
-    </button> 
-<div className="fixed inset-0 z-[51110] h-screen overflow-y-auto bg-black/50 backdrop-blur-md">
-                  <div className="max-w-2xl sm:py-6 mx-auto">
+    </button>
+    <div className="fixed inset-0 z-[51110] h-screen overflow-y-auto bg-black/50 backdrop-blur-md">
+      <div className="max-w-2xl sm:py-6 mx-auto">
         <div className="bg-white rounded-lg shadow p-6">
 
           <h1 className="text-2xl font-bold text-slate-900 mb-4">Edit Profile</h1>
 
-          {alert.show && (
-            <CustomAlert
-              message={alert.message}
-              type={alert.type}
-              onClose={() => setAlert({ show: false, message: "", type: "" })}
-            />
-          )}
+
 
           <form className="space-y-4" onSubmit={handleSaveProfile}>
 
             {/* Cover Photo */}
-<div className="flex flex-col items-center mb-4">
-  <label className="relative w-full h-40 cursor-pointer">
-    {coverPreview ? (
-      <img
-        src={coverPreview}
-        alt="Cover"
-        className="w-full h-full object-cover rounded-lg"
-      />
-    ) : (
-      <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-        <span className="text-gray-500">Click to upload cover photo</span>
-      </div>
-    )}
-
-    <input
-      type="file"
-      accept="image/*"
-      onChange={handleCoverUpload}
-      className="hidden"
-    />
-
-    <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 hover:opacity-100 rounded-lg transition">
-      <Pencil className="w-5 h-5 text-white" />
-    </div>
-  </label>
-</div>
+            <div className="flex flex-col items-center mb-4">
+              <label className="relative w-full h-40 cursor-pointer">
+                <div className="flex flex-col items-center mb-4">
+                  <CoverPhotoEditor
+                    coverPreview={coverPreview}
+                    setCoverPreview={(url) => setFormData((p) => ({ ...p, coverPhotoUrl: url }))}
+                    uploadingCover={uploadingCover}
+                    setFormData={setFormData}
+                    setUploadingCover={setUploadingCover}
+                    setMsg={setMsg}
+                  />
+                </div>
+              </label>
+            </div>
 
             {/* Profile Picture */}
             <div className="flex flex-col items-center">
-              
-           <label className="group/profile relative cursor-pointer">
-  <ProfileAvatar
-    user={{
-      name: formData.name || "?", // use the name to generate initials
-      profilePicUrl: preview || formData.profilePicUrl || "", // show uploaded preview first
-      profilePicBackground: formData.profilePicBackground || "#b3b3b3",
-    }}
-    size={96} // 24 * 4px (matches w-24 h-24)
-  />
 
-  {uploading && (
-    <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-xs text-white">
-      Uploading...
+              <label className="group/profile relative cursor-pointer">
+               <label className="group/profile relative cursor-pointer">
+  <div
+    className={`transition-all duration-300 ${
+      uploadingProfile ? "blur-sm" : ""
+    }`}
+  >
+    <ProfileAvatar
+      user={{
+        name: formData.name || "?",
+        profilePicUrl: preview || formData.profilePicUrl || "",
+        profilePicBackground: formData.profilePicBackground || "#b3b3b3",
+      }}
+      size={96}
+    />
+  </div>
+
+  {uploadingProfile && (
+    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-white/60">
+      <ProfileAvatarSkeleton size={96} />
     </div>
   )}
-
-  <input
-    type="file"
-    accept="image/*"
-    onChange={handleUpload}
-    className="hidden"
-  />
-
-  <div className="absolute hidden group-hover/profile:flex top-2 left-2 right-2 bottom-2 bg-black/25 rounded-full items-center justify-center">
-    <Pencil className="w-5 h-5 text-white" />
-  </div>
 </label>
+
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  className="hidden"
+                />
+
+                <div className="absolute hidden group-hover/profile:flex top-2 left-2 right-2 bottom-2 bg-black/25 rounded-full items-center justify-center">
+                  <Pencil className="w-5 h-5 text-white" />
+                </div>
+              </label>
 
             </div>
 
@@ -470,21 +443,21 @@ const handleCoverUpload = async (e) => {
 
             {/* Actions */}
 
-<button
-  type="button"
-  className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50"
-  onClick={() => setShowDeleteConfirm(true)}
->
-  Delete Account
-</button>
+            <button
+              type="button"
+              className="px-4 py-2 border bg-red-500 text-white rounded-lg hover:bg-white hover:text-red-900 border-red-400 transition"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete Account
+            </button>
 
-{showDeleteConfirm && (
-  <ActionNotifier
-    action="delete your account"
-    onConfirm={handleDeleteUser}
-    onCancel={() => setShowDeleteConfirm(false)}
-  />
-)}
+            {showDeleteConfirm && (
+              <ActionNotifier
+                action="delete your account"
+                onConfirm={handleDeleteUser}
+                onCancel={() => setShowDeleteConfirm(false)}
+              />
+            )}
 
 
 
@@ -499,7 +472,7 @@ const handleCoverUpload = async (e) => {
               <button
                 type="submit"
                 className="btn"
-                disabled={loading || uploading}
+                disabled={loading || uploadingProfile || uploadingCover}
               >
                 {loading ? "Saving..." : "Save changes"}
               </button>

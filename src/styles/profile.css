@@ -8,6 +8,7 @@
   height: 4px;
   z-index: 50;
   background: var(--accent);
+  border-bottom: 1px solid rgb(248, 247, 247);
   transition: all 0.3s ease;
 }
 

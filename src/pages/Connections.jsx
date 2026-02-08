@@ -5,6 +5,8 @@ import {
   UserCheck,
   UserRoundPen,
   MessageSquare,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -312,7 +314,11 @@ const Connections = () => {
 
   {currentTab === "Pending" && user.direction === "incoming" && (
     <IconButton
-      icon={Check}
+      icon={  acceptingId === user._id ? (
+        <Loader2 className="animate-spin" />
+      ) : (
+        <Check />
+      )}
       label={acceptingId === user._id ? "Accepting..." : "Accept request"}
       onClick={() => handleAccept(user._id)}
       disabled={acceptingId === user._id}

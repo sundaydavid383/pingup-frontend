@@ -9,6 +9,7 @@ import axios from 'axios';
 import { useAuth } from "../context/AuthContext";
 import location from "../utils/location"
 import { Eye, EyeOff } from "lucide-react";
+import ProfileAvatar from './shared/ProfileAvatar';
 
 const steps = [
   'Basic Info',
@@ -510,10 +511,9 @@ if (step === 1) {
     </div>
   ) : (
     <div className="relative w-24 h-24 mx-auto mt-4">
-      <img
-        src={formData.profilePicUrl}
-        alt="Preview"
-        className="w-24 h-24 rounded-full object-cover shadow-md border-2 border-white"
+      <ProfileAvatar
+        user={{ profilePicUrl: formData.profilePicUrl }}
+        size={96}
       />
       <button
         type="button"

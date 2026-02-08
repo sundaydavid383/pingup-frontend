@@ -15,6 +15,8 @@ import ChapterTTS from "../../component/shared/ChapterTTS";
 import BibleControls from "../../component/shared/BibleControls";
 import "../../styles/biblecontrols.css"
 import { useAuth } from "../../context/AuthContext";
+import { Sun, Moon } from "lucide-react";
+
 // Map of short names or abbreviations to full book names
 const BOOK_FULL_NAMES = {
   gn: "Genesis",
@@ -115,6 +117,19 @@ export default function BibleReader() {
   const ttsRef = useRef(null);
   const verseOffsetsRef = useRef([]);
 
+
+  //bible theme 
+    const [theme, setTheme] = useState(
+    localStorage.getItem("bibleTheme") || "dark"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("bibleTheme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === "dark" ? "light" : "dark"));
+  };
 
   const { book, chapter, verse } = useParams();
 
@@ -578,86 +593,91 @@ export default function BibleReader() {
 
 
   return (
+        <div className={`bible-page`} data-theme={theme}>
+
+
     <div className="bible-reader-container">
       <div className="bible-reader-inner">
         {/* --- Replace your fixed-header block with this --- */}
-        <div className="fixed-header">
-          <div className="header-inner">
-            {/* Left: Title */}
-            <h2 className="bible-title"><span>Bible</span> <span>Reader</span></h2>
+      <div className="fixed-header">
+  <div className="header-inner">
+    {/* Left: Title */}
+    <h2 className="bible-title">
+      <span>Bible</span> <span>Reader</span>
+    </h2>
 
-            {/* Center: Chapter */}
-            {selectedBookName && (
-              <div className="chapter-center flex items-center gap-3">
-                <span className="text-[var(--hover-light)]">
-                  {selectedBookName} {selectedChapterNumber}
-                </span>
-              </div>
-            )}
+    {/* Center: Chapter */}
+    {selectedBookName && (
+      <div className="chapter-center flex items-center gap-3">
+        <span className="text-[var(--hover-light)]">
+          {selectedBookName} {selectedChapterNumber}
+        </span>
+      </div>
+    )}
 
-
-            {/* Right: Search & Selectors */}
-            <div className="header-right">
-              {/* Search Dropdown */}
-              <div className="search-container" ref={searchRef}>
-                <FaSearch
-                  className="search-toggle-icon"
-                  onClick={() => setSearchVisible(prev => !prev)}
-                />
-                {searchVisible && (
-                  <div className="search-dropdown">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search scripture, book, or phrase"
-                      className="bible-search-input"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
-                    />
-                    <button
-                      onClick={() => handleSearchClick()}
-                    >
-                      Search
-                    </button>
-                    {/* Loading bar appears inside dropdown */}
-                  </div>
-                )}
-              </div>
-              {isSearching && (
-                <div className="search-loading-bar fixed-loading">
-                  <div className="search-loading-progress" />
-                </div>
-
-              )}
-
-              {/* Book/Chapter Selectors */}
-              <div className="selectors-container" ref={selectorsRef}>
-                <FaBook
-                  className="selectors-toggle-icon"
-                  onClick={() => setSelectorsVisible(prev => !prev)}
-                />
-                {selectorsVisible && (
-                  <div className="selectors-dropdown">
-                    <CustomSelect
-                      options={bookNames}
-                      value={selectedBookName}
-                      onChange={handleBookSelection}
-                      placeholder="Book"
-                    />
-                    {selectedBookName && (
-                      <CustomSelect
-                        options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
-                        value={selectedChapterNumber}
-                        onChange={handleChapterSelection}
-                        placeholder="Chapter"
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+    {/* Right: Search, Selectors & Theme Toggle */}
+    <div className="header-right flex items-center gap-3">
+      {/* Existing Search */}
+      <div className="search-container" ref={searchRef}>
+        <FaSearch
+          className="search-toggle-icon"
+          onClick={() => setSearchVisible(prev => !prev)}
+        />
+        {searchVisible && (
+          <div className="search-dropdown">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search scripture, book, or phrase"
+              className="bible-search-input"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+            />
+            <button onClick={handleSearchClick}>Search</button>
           </div>
+        )}
+      </div>
+
+      {/* Book/Chapter Selectors */}
+      <div className="selectors-container" ref={selectorsRef}>
+        <FaBook
+          className="selectors-toggle-icon"
+          onClick={() => setSelectorsVisible(prev => !prev)}
+        />
+        {selectorsVisible && (
+          <div className="selectors-dropdown">
+            <CustomSelect
+              options={bookNames}
+              value={selectedBookName}
+              onChange={handleBookSelection}
+              placeholder="Book"
+            />
+            {selectedBookName && (
+              <CustomSelect
+                options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
+                value={selectedChapterNumber}
+                onChange={handleChapterSelection}
+                placeholder="Chapter"
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Theme Switch */}
+      <div
+        className={`theme-switch ${theme === "dark" ? "dark" : ""}`}
+        onClick={toggleTheme}
+        title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      >
+        <div className="theme-toggle-circle">
+          {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 
 
@@ -761,6 +781,7 @@ export default function BibleReader() {
 
       </div>
 
+    </div>
     </div>
   );
 

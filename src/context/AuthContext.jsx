@@ -101,6 +101,10 @@ useEffect(() => {
     setToken(token);
   };
 
+  const updateUser = (newData) => {
+    setUser(newData);
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -124,6 +128,7 @@ return (
     user,
     token,
     login,
+    updateUser,
     logout,
     modalOpen,
     setModalOpen,

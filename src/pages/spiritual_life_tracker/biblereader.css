@@ -1,4 +1,85 @@
 
+/* Dark mode (default) */
+.bible-page[data-theme="dark"] {
+  --bg-main: #0f172a;
+  --bg-light: #0a0d22;
+  --text-main: #fdfdfd;
+  --trakcer: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --primary: #1e40af;
+  --gold: rgb(223, 190, 61);
+  --hover-light: #c9d4f7;
+  --verse-bg: rgba(255, 255, 255, 0.05);
+  --header-background: rgba(30, 30, 60, 0.8);
+}
+
+/* Light mode */
+.bible-page[data-theme="light"] {
+  --bg-main: #ffffff;
+  --bg-light: #f1f5f9;
+  --trakcer: #28364b;
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --primary: #1e40af;
+  --gold: #dcaf36;
+  --hover-light: #1e40af;
+  --verse-bg: rgba(230, 230, 250, 0.5);
+  --header-background: rgba(255, 255, 255, 0.8);
+}
+
+/* Example using variables */
+.bible-page {
+  background: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.bible-page .verse-text-paragraph {
+  background: var(--verse-bg);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+/* Theme toggle switch */
+.theme-switch {
+
+  width: 60px;
+  height: 30px;
+  border-radius: 15px;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  z-index: 1000;
+  transition: background 0.3s ease;
+}
+
+
+.theme-switch.dark {
+  background: var(--trakcer);
+}
+
+.theme-toggle-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.theme-switch.dark .theme-toggle-circle {
+  transform: translateX(30px);
+}
 
 .bible-reader-container {
   width: 100%;
@@ -17,18 +98,22 @@
   display: flex;
   flex-direction: column;
   position: relative;
-}/* ===== Fixed Header ===== *//* ===== Fixed Header ===== */
+  gap: 3rem;
+}
+/* ===== Fixed Header ===== *//* ===== Fixed Header ===== */
 .fixed-header {
   position: sticky;
   top: 5px;
   z-index: 200;
   width: 100%;
   padding: 0.5rem 1rem;
-  background: rgba(40, 41, 85, 0.8);
   backdrop-filter: blur(20px);
   display: flex;
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  background: var(--header-background);
+  color: var(--text-color);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* ===== Header Inner ===== */

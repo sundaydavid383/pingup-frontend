@@ -15,7 +15,7 @@ const ProfileAvatar = ({ user, size = 50 }) => {
   })();
 
   const hasProfilePic = user.profilePicUrl?.trim() && !imgError;
-  const bgColor = user.profilePicBackground || "#b3b3b3";
+  const bgColor = user.profilePicBackground || "#e6e2e2";
 
   const containerStyle = {
     width: size,
@@ -29,7 +29,7 @@ const ProfileAvatar = ({ user, size = 50 }) => {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: "var(--secondary)",
     fontSize: size * 0.38,
     fontWeight: "bold",
     textTransform: "uppercase",
