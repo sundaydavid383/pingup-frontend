@@ -108,11 +108,14 @@ export default function GlobalVoiceModal() {
     startDrag(t.clientX, t.clientY);
   };
 
-  const onTouchMove = (e) => {
-    e.preventDefault();
-    const t = e.touches[0];
-    onDrag(t.clientX, t.clientY);
-  };
+ const onTouchMove = (e) => {
+  if (!draggingRef.current) return; // ← allow normal scroll
+
+  e.preventDefault(); // only when dragging
+  const t = e.touches[0];
+  onDrag(t.clientX, t.clientY);
+};
+
 
   const onTouchEnd = stopDrag;
 
@@ -151,6 +154,7 @@ export default function GlobalVoiceModal() {
         WebkitBackdropFilter: "blur(10px)",
         backgroundColor: "var(--really-bright-glass)",
         boxShadow: "0 0px 10px 0 rgba(31, 38, 135, 0.37)",
+        touchAction: "pan-y"
         
       }}
       className=" rounded-xl shadow-xl p-3 flex items-center gap-2 ring-4 ring-inset ring-[rgb(255,255,255,.4)]"
