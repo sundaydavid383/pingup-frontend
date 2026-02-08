@@ -25,6 +25,14 @@ import AuthSuccess from "./pages/AuthSuccess";
 import "./styles/ui.css"
 import GlobalAudioModal from './component/shared/GlobalAudioModal';
 import GlobalVideoModal from './component/shared/GlobalVideoModal';
+import Settings from './pages/settings/Settings';
+import AccountSettings from './pages/settings/AccountSettings';
+import PrivacySafety from './pages/settings/PrivacySafety';
+import Appearance from './pages/settings/Appearance';
+import NotificationSettings from './pages/settings/NotificationSettings';
+import PersonalInfo from './pages/settings/PersonalInfo';
+import ContentPreferences from './pages/settings/ContentPreferences';
+import HelpAbout from './pages/settings/HelpAbout';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location  = useLocation();
@@ -106,6 +114,10 @@ const App = () => {
   <Route path="notification" element={<Notification userId={user?._id}/>} />
   <Route path='portfolio' element={<Portfolio/>}/>
   <Route path="post/:postId" element={<SinglePostPage />} />
+  
+  {/* Settings Route - No nested routing, single page with state management */}
+  <Route path="settings" element={<Settings />} />
+  
   <Route path="*" element={<NotFound />} />
 </Route>
 
