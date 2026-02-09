@@ -45,6 +45,12 @@ const ChatBox = ({ userId: propUserId }) => {
     const cached = localStorage.getItem(`chat_history_${userId}`);
     return cached ? JSON.parse(cached) : [];
   });
+  // Track last seen message in viewport
+const [lastSeenMessage, setLastSeenMessage] = useState(() => {
+  const stored = localStorage.getItem(`last_seen_${userId}`);
+  return stored ? JSON.parse(stored) : null;
+});
+
 
   // Only show loading if we have zero cached messages
 /*   const [loading, setLoading] = useState(messages.length === 0);
@@ -143,35 +149,40 @@ const ChatBox = ({ userId: propUserId }) => {
 
 // ===================== NEAR BOTTOM SCROLL DETECTION =====================
 useEffect(() => {
-  const container = containerRef.current;
-  if (!container) return;
+  if (!containerRef.current) return;
+
+  let scrollTimeout;
 
   const handleScroll = () => {
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const paddingBottom = parseFloat(getComputedStyle(container).paddingBottom) || 0;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight - paddingBottom;
-    const nearBottom = distanceFromBottom < 150; // threshold in px
+    const container = containerRef.current;
+    const messagesInView = messages.filter(msg => {
+      const el = document.getElementById(`msg_${msg._id}`);
+      if (!el) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= window.innerHeight;
+    });
 
-    // 🔹 Debug logs
-    console.log("📏 scrollTop:", scrollTop);
-    console.log("📏 clientHeight:", clientHeight);
-    console.log("📏 scrollHeight:", scrollHeight);
-    console.log("📏 paddingBottom:", paddingBottom);
-    console.log("📏 distanceFromBottom:", distanceFromBottom);
-    console.log("📏 nearBottom:", nearBottom);
+    if (messagesInView.length === 0) return;
 
-    isUserNearBottom.current = nearBottom;
-    setShowScrollButton(!nearBottom);
+    // Clear previous timeout
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+
+    // Wait 1.5s after user stops scrolling
+    scrollTimeout = setTimeout(() => {
+      const lastMsgInView = messagesInView[messagesInView.length - 1];
+      setLastSeenMessage(lastMsgInView);
+      localStorage.setItem(`last_seen_${userId}`, JSON.stringify(lastMsgInView));
+    }, 1500);
   };
 
-  // Run once initially to set correct state
-  handleScroll();
+  containerRef.current.addEventListener("scroll", handleScroll);
 
-  // Attach scroll listener
-  container.addEventListener("scroll", handleScroll);
+  return () => {
+    containerRef.current.removeEventListener("scroll", handleScroll);
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+  };
+}, [messages]);
 
-  return () => container.removeEventListener("scroll", handleScroll);
-}, []);
 
 
 
@@ -581,6 +592,22 @@ useEffect(() => {
 }, [onlineUsers, receiver]);
 
 
+useEffect(() => {
+  if (!containerRef.current || messages.length === 0) return;
+
+  requestAnimationFrame(() => {
+    if (lastSeenMessage) {
+      const el = document.getElementById(`msg_${lastSeenMessage._id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "auto", block: "start" });
+        return;
+      }
+    }
+
+    // No lastSeenMessage found, scroll to bottom
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+  });
+}, [messages, lastSeenMessage]);
 
 
   //=[==============================
@@ -1034,6 +1061,7 @@ useEffect(() => {
               sortedMessages.length > 0 ? (
                 <ChatMessagesFull
                   messages={sortedMessages}
+                  chatId={chatId}
                   user={user}
                   resendMessage={resendMessage}
                   imageMessages={imageMessages}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
@@ -7,6 +7,7 @@ import BackButton from "./shared/BackButton";
 
 const ChatMessagesFull = ({
   messages,
+  chatId,
   user,
   resendMessage,
   imageMessages,
@@ -51,6 +52,45 @@ const ChatMessagesFull = ({
     const dateB = new Date(groupedMessages[b][0].createdAt);
     return dateA - dateB;
   });
+  const lastSeenMessageRef = useRef(null);
+  const messageRefs = useRef({});
+
+  // Replace with your user ID and chat session ID
+const lastSeenKey = `last_seen_${user._id}_${chatId}`;
+
+const [lastSeenMessage, setLastSeenMessage] = React.useState(() => {
+  const stored = localStorage.getItem(lastSeenKey);
+  return stored ? JSON.parse(stored) : null;
+});
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.dataset.id;
+          const msg = messages.find((m) => m._id === id);
+
+          if (msg) {
+            setLastSeenMessage(msg);
+            localStorage.setItem(lastSeenKey, JSON.stringify(msg));
+          }
+        }
+      });
+    },
+    { threshold: 0.6 }
+  );
+
+  Object.values(messageRefs.current).forEach((el) => observer.observe(el));
+
+  return () => observer.disconnect();
+}, [messages]);
+
+
+useEffect(() => {
+  if (lastSeenMessageRef.current) {
+    lastSeenMessageRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}, [lastSeenMessage]);
 
   return (
     <div className="relative flex flex-col min-h-full pb-24">
@@ -81,14 +121,23 @@ const ChatMessagesFull = ({
 
               return (
                 <div
-                  key={msg._id}
-                  className={`flex flex-col  ${
-                    sentByUser ? "items-end" : "items-start"
-                  }`}
-                >
+  key={msg._id}
+  data-id={msg._id}
+  id={`msg_${msg._id}`}
+    ref={(el) => {
+    if (el) messageRefs.current[msg._id] = el;
+    if (msg._id === lastSeenMessage?._id) {
+      lastSeenMessageRef.current = el;
+    }
+  }}className={`flex flex-col  ${
+    sentByUser ? "items-end" : "items-start"
+  }`}
+>
+
                   {/* Message bubble */}
                   <div
                     data-id={msg._id}
+                    id={`msg_${msg._id}`}
                     className={`p-2 text-sm max-w-[400px] rounded-xl shadow break-words relative transition-all duration-200
                       ${
                         sentByUser

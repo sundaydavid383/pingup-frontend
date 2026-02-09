@@ -87,6 +87,7 @@
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
+  border-radius: 10px;
   background-color: var(--glassy-white);
   backdrop-filter: blur(30px);
   align-items: center;
