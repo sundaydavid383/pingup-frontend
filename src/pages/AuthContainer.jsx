@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import assets from "../assets/assets";
 import { StarIcon } from "lucide-react";
 import SignUpForm from "../component/SignUpForm";
@@ -9,10 +10,11 @@ import CustomAlert from "../component/shared/CustomAlert";
 import Loading from "../component/shared/Loading";
 import UserStats from "../component/UserStats";
 
-const AuthContainer = ({ initialError }) => {
+const AuthContainer = ({ initialError, initialTab = 'login', onClose, isModal = false }) => {
+  const location = useLocation();
   const [error, setError] = useState(initialError || null);
   // Reverted back to 2-way toggle state
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState(initialTab || location.state?.activeTab || "login");
 
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -44,7 +46,7 @@ const AuthContainer = ({ initialError }) => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[var(--bg-main)] intro-background">
+    <div className={isModal ? "w-full" : "min-h-screen flex flex-col md:flex-row bg-[var(--bg-main)] intro-background"}>
       {loading && <Loading text={loadingText} />}
       {alert.show && (
         <CustomAlert
@@ -57,29 +59,41 @@ const AuthContainer = ({ initialError }) => {
         <CustomAlert type="error" message={error} onClose={() => setError(null)} />
       )}
 
-      {/* -------- LEFT SIDE -------- */}
-      <div className="flex-1 flex flex-col justify-center items-center text-center bg-[var(--inverse-dark-indigo-gradient)] text-white relative overflow-hidden p-6 sm:p-10 md:p-12 lg:p-20 min-h-[50vh] md:min-h-screen order-1">
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--radial-highlight)] to-transparent pointer-events-none"></div>
-        <img src={assets.logo} alt="Logo" className="h-14 w-[205px] mb-6" />
-        <div className="flex justify-center items-center gap-3 mb-5">
-          <div className="flex -space-x-3">
-            {[assets.user2, assets.user1, assets.user3].map((src, i) => (
-              <div key={i} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden">
-                <img src={src} alt="user" className="w-full h-full story-image-fill" />
-              </div>
-            ))}
+      {/* -------- LEFT SIDE (Hidden in Modal) -------- */}
+      {!isModal && (
+        <div className="flex-1 flex flex-col justify-center items-center text-center bg-[var(--inverse-dark-indigo-gradient)] text-white relative overflow-hidden p-6 sm:p-10 md:p-12 lg:p-20 min-h-[50vh] md:min-h-screen order-1">
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--radial-highlight)] to-transparent pointer-events-none"></div>
+          <img src={assets.logo} alt="Logo" className="h-14 w-[205px] mb-6" />
+          <div className="flex justify-center items-center gap-3 mb-5">
+            <div className="flex -space-x-3">
+              {[assets.user2, assets.user1, assets.user3].map((src, i) => (
+                <div key={i} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden">
+                  <img src={src} alt="user" className="w-full h-full story-image-fill" />
+                </div>
+              ))}
+            </div>
+            <UserStats />
           </div>
-          <UserStats />
+          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-[var(--primary)] via-[var(--hover-dark)] to-[var(--primary)] bg-clip-text text-transparent">
+            More than just friends, truly connect
+          </h1>
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-[var(--primary)] via-[var(--hover-dark)] to-[var(--primary)] bg-clip-text text-transparent">
-          More than just friends, truly connect
-        </h1>
-      </div>
+      )}
 
-      {/* -------- RIGHT SIDE: UPDATED TAB SYSTEM -------- */}
-      <div className="flex-1 flex justify-center items-center p-3 sm:p-8 md:p-6 min-h-[50vh] md:min-h-screen order-2 relative">
-        <div className="w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 border border-[var(--input-border)] bg-white/10 backdrop-blur-xl">
+      {/* -------- RIGHT SIDE / MODAL CONTENT -------- */}
+      <div className={isModal ? "w-full p-6" : "flex-1 flex justify-center items-center p-3 sm:p-8 md:p-6 min-h-[50vh] md:min-h-screen order-2 relative"}>
+        <div className={isModal ? "w-full" : "w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 border border-[var(--input-border)] bg-white/10 backdrop-blur-xl"}>
           
+          {/* Back Button - Only show when NOT in modal */}
+          {!isModal && onClose && (
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white text-sm font-medium mb-4 flex items-center gap-1 transition"
+            >
+              ← Back to Landing
+            </button>
+          )}
+
           {/* TWO TABS (Login & Register) */}
           <div className="flex p-1 bg-black/20 rounded-xl mb-6">
             <button

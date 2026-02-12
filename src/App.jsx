@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation, useNavigate  } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
 import Feed from './pages/Feed';
@@ -33,6 +33,9 @@ import NotificationSettings from './pages/settings/NotificationSettings';
 import PersonalInfo from './pages/settings/PersonalInfo';
 import ContentPreferences from './pages/settings/ContentPreferences';
 import HelpAbout from './pages/settings/HelpAbout';
+import LandingPage from './pages/LandingPage';
+import CommunityPage from './pages/CommunityPage';
+import AboutPage from './pages/AboutPage';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location  = useLocation();
@@ -94,32 +97,40 @@ const App = () => {
 
         {/* Public or Auth route */}
         <Route path="/auth/success" element={<AuthSuccess />} />
+        
+        {/* Public Pages */}
+        <Route path="/community" element={<CommunityPage />} />
+        <Route path="/about" element={<AboutPage />} />
 
-    <Route path="/" element={!user ? <AuthContainer initialError={oauthError} /> : <Layout />}>
-  <Route index element={<Feed />} />
-  <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />
-  <Route path="bible">
-  <Route index element={<BibleReader />} />
-  <Route path=":book/:chapter" element={<BibleReader />} />
-  <Route path=":book/:chapter/:verse" element={<BibleReader />} />
-</Route>
- {/* ← new route */}
-  <Route path="messages" element={<Messages />} />
-  <Route path="chatbox/:userId" element={<ChatBox />} />
-  <Route path="connections" element={<Connections />} />
-  <Route path="discover" element={<Discover />} />
-  <Route path="profile" element={<Profile />} />
-  <Route path="profile/:profileId" element={<Profile />} />
-  <Route path="create-post" element={<CreatePost />} />
-  <Route path="notification" element={<Notification userId={user?._id}/>} />
-  <Route path='portfolio' element={<Portfolio/>}/>
-  <Route path="post/:postId" element={<SinglePostPage />} />
-  
-  {/* Settings Route - No nested routing, single page with state management */}
-  <Route path="settings" element={<Settings />} />
-  
-  <Route path="*" element={<NotFound />} />
-</Route>
+        {/* Landing Page - visible before login */}
+        <Route path="/" element={!user ? <LandingPage /> : <Layout />}>
+          {user && <Route index element={<Feed />} />}
+          {user && <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />}
+          {user && (
+            <Route path="bible">
+              <Route index element={<BibleReader />} />
+              <Route path=":book/:chapter" element={<BibleReader />} />
+              <Route path=":book/:chapter/:verse" element={<BibleReader />} />
+            </Route>
+          )}
+          {user && <Route path="messages" element={<Messages />} />}
+          {user && <Route path="chatbox/:userId" element={<ChatBox />} />}
+          {user && <Route path="connections" element={<Connections />} />}
+          {user && <Route path="discover" element={<Discover />} />}
+          {user && <Route path="profile" element={<Profile />} />}
+          {user && <Route path="profile/:profileId" element={<Profile />} />}
+          {user && <Route path="create-post" element={<CreatePost />} />}
+          {user && <Route path="notification" element={<Notification userId={user?._id}/>} />}
+          {user && <Route path='portfolio' element={<Portfolio/>}/>}
+          {user && <Route path="post/:postId" element={<SinglePostPage />} />}
+          {user && <Route path="settings" element={<Settings />} />}
+        </Route>
+
+        {/* Auth page - for login/signup */}
+        <Route path="/auth" element={!user ? <AuthContainer initialError={oauthError} /> : <Navigate to="/" />} />
+
+        {/* 404 Not Found */}
+        <Route path="*" element={<NotFound />} />
 
       </Routes>
     </>

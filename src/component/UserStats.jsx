@@ -50,7 +50,7 @@ const UserStats = () => {
         </div>
       ) : (
         <p className="text-xs md:text-sm text-[var(--hover-dark)] animate-fadeIn">
-          Used by {formatNumber(totalUsers)} Individuals
+           {formatNumber(totalUsers)}+ Active Users
         </p>
       )}
     </div>
