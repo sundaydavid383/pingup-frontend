@@ -1,13 +1,19 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import MediaViewer from "./shared/MediaViewer"; // Make sure this import exists
 import BackButton from "./shared/BackButton";
+import axiosBase from "../utils/axiosBase";
+import { useSocket } from "../context/SocketContext";
 
 const ChatMessagesFull = ({
   messages,
+  setMessages,
   chatId,
+  scrollDirection,
+  scrollStopped,
+  containerRef,
   user,
   resendMessage,
   imageMessages,
@@ -22,6 +28,7 @@ const ChatMessagesFull = ({
   scrollToBottom,
 }) => {
   // Group messages by day
+    const { socket, connected, onlineUsers } = useSocket();
   const groupedMessages = messages.reduce((acc, msg) => {
     const messageDate = new Date(msg.createdAt);
     const today = new Date();
@@ -58,39 +65,113 @@ const ChatMessagesFull = ({
   // Replace with your user ID and chat session ID
 const lastSeenKey = `last_seen_${user._id}_${chatId}`;
 
-const [lastSeenMessage, setLastSeenMessage] = React.useState(() => {
-  const stored = localStorage.getItem(lastSeenKey);
-  return stored ? JSON.parse(stored) : null;
-});
+const [lastSeenMessage, setLastSeenMessage] = useState(null);
 useEffect(() => {
+  if (!socket) return;
+  if (!chatId) return;
+
+  axiosBase
+    .get(`/api/chat/${chatId}/last-seen`)
+    .then(res => {
+      if (res.data?.message) setLastSeenMessage(res.data.message);
+    })
+    .catch(err => console.error(err));
+}, [chatId]);
+
+useEffect(() => {
+  // Only mark seen when user scrolls DOWN and STOPS
+  if (!scrollStopped) return;
+  if (scrollDirection !== "down") return;
+  if (!containerRef.current) return;
+
   const observer = new IntersectionObserver(
     (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const id = entry.target.dataset.id;
-          const msg = messages.find((m) => m._id === id);
+      let visibleMessages = [];
 
-          if (msg) {
-            setLastSeenMessage(msg);
-            localStorage.setItem(lastSeenKey, JSON.stringify(msg));
-          }
-        }
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+
+        const id = entry.target.dataset.id;
+        const msg = messages.find((m) => m._id === id);
+        if (msg) visibleMessages.push(msg);
+      });
+
+      if (visibleMessages.length === 0) return;
+
+      // ✅ Pick the LAST message actually visible in viewport
+      const lastVisibleMsg = visibleMessages.reduce((a, b) =>
+        new Date(a.createdAt) > new Date(b.createdAt) ? a : b
+      );
+
+      // Avoid duplicate updates
+      if (lastSeenMessage?._id === lastVisibleMsg._id) return;
+
+      // Update local state
+      setLastSeenMessage(lastVisibleMsg);
+
+      // ✅ Persist to backend
+      // axiosBase.post(`/api/chat/${chatId}/last-seen`, {
+      //   messageId: lastVisibleMsg._id,
+      // }).catch(console.error);
+
+      // ✅ Optional real-time sync
+      socket.emit("updateLastSeen", {
+        chatId,
+        messageId: lastVisibleMsg._id,
       });
     },
-    { threshold: 0.6 }
+    {
+      root: containerRef.current,
+      threshold: 0.6,
+    }
   );
 
-  Object.values(messageRefs.current).forEach((el) => observer.observe(el));
+  Object.values(messageRefs.current).forEach((el) => {
+    if (el) observer.observe(el);
+  });
 
   return () => observer.disconnect();
-}, [messages]);
-
+}, [scrollStopped, scrollDirection, messages]);
 
 useEffect(() => {
+  if (!socket) return;
+  socket.on(
+    "userSeenMessage",
+    ({ chatId: seenChatId, userId: seenUserId, messageId, createdAt }) => {
+      if (chatId !== seenChatId) return;
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          // Compare by createdAt timestamp, not _id
+          new Date(msg.createdAt) <= new Date(createdAt)
+            ? {
+                ...msg,
+                seenBy: [...new Set([...(msg.seenBy || []), seenUserId])],
+              }
+            : msg
+        )
+      );
+    }
+  );
+
+  return () => socket.off("userSeenMessage");
+}, [chatId, socket]);
+
+
+const hasScrolledToLastSeen = useRef(false);
+
+useEffect(() => {
+  if (hasScrolledToLastSeen.current) return;
+
   if (lastSeenMessageRef.current) {
-    lastSeenMessageRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    lastSeenMessageRef.current.scrollIntoView({
+      behavior: "auto",
+      block: "center",
+    });
+    hasScrolledToLastSeen.current = true;
   }
-}, [lastSeenMessage]);
+}, []);
+
 
   return (
     <div className="relative flex flex-col min-h-full pb-24">

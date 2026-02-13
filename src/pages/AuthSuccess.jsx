@@ -46,6 +46,8 @@ const AuthSuccess = () => {
     profilePicUrl,
   };
 
+sessionStorage.removeItem("oauth_loading");
+sessionStorage.removeItem("oauth_text");
   // 3️⃣ Login + redirect
   login(user, token);
   navigate("/", { replace: true });

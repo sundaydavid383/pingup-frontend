@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../../utils/cropImage"; // your helper
 import { Pencil } from "lucide-react";

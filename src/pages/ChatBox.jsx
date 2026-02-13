@@ -45,11 +45,7 @@ const ChatBox = ({ userId: propUserId }) => {
     const cached = localStorage.getItem(`chat_history_${userId}`);
     return cached ? JSON.parse(cached) : [];
   });
-  // Track last seen message in viewport
-const [lastSeenMessage, setLastSeenMessage] = useState(() => {
-  const stored = localStorage.getItem(`last_seen_${userId}`);
-  return stored ? JSON.parse(stored) : null;
-});
+
 
 
   // Only show loading if we have zero cached messages
@@ -59,8 +55,8 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
   const [loading, setLoading] = useState(false); // loading now only affects empty fetch, not initial display
   const dropdownRef = useRef(null);
   // ... other states (image, audio, etc.)
-  
-  const [showScrollButton, setShowScrollButton] = useState(true); 
+
+  const [showScrollButton, setShowScrollButton] = useState(true);
   /* const [text, setText] = useState("");  */
   const [image, setImage] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
@@ -76,9 +72,18 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [showMediaDropdown, setShowMediaDropdown] = useState(false);
   const { currentTheme, setCurrentTheme } = useTheme();
-   const [lastActive, setLastActive] = useState(receiver?.lastActiveAt || null);
+
+
+  const [lastActive, setLastActive] = useState(receiver?.lastActiveAt || null);
   const sendSound = useRef(new Audio("/sounds/send.mp3"));
   const receiveSound = useRef(new Audio("/sounds/receive.mp3"));
+
+  /* scroll logic */
+  const lastScrollTop = useRef(0);
+  const scrollStopTimeout = useRef(null);
+
+  const [scrollDirection, setScrollDirection] = useState("down");
+  const [scrollStopped, setScrollStopped] = useState(false);
   const containerRef = useRef(null);
   const chatContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -88,6 +93,7 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const mediaDropdownRef = useRef(null);
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -115,7 +121,7 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
 
   // Scroll-to-bottom when clicking the scroll button
   const scrollToBottom = () => {
-    if (containerRef.current){
+    if (containerRef.current) {
       const container = containerRef.current;
       const paddingBottom = parseFloat(
         getComputedStyle(container).paddingBottom
@@ -127,11 +133,26 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
     }
   };
 
-  const isUserNearBottom = useRef(true);
+
+
+  // ====================== CLOSE DROPDOWN WHEN CLICKING OUTSIDE =======================
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
+        setShowMediaDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  },[])
+
 
 
   //================= REMOVING FILES DROPDOWN ===============
-   useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowMediaDropdown(false);
@@ -147,41 +168,59 @@ const [lastSeenMessage, setLastSeenMessage] = useState(() => {
     };
   }, []);
 
-// ===================== NEAR BOTTOM SCROLL DETECTION =====================
+  // ===================== NEAR BOTTOM SCROLL DETECTION =====================
+
+  
+  const isUserNearBottomRef = useRef(true);
 useEffect(() => {
   if (!containerRef.current) return;
 
-  let scrollTimeout;
+  const container = containerRef.current;
+
+  const checkNearBottom = () => {
+    const scrollPosition = container.scrollTop + container.clientHeight;
+    const threshold = 150; // px from bottom to consider "near"
+    isUserNearBottomRef.current = scrollPosition >= container.scrollHeight - threshold;
+    setShowScrollButton(!isUserNearBottomRef.current);
+  };
+
+  container.addEventListener("scroll", checkNearBottom);
+  checkNearBottom(); // initial check
+
+  return () => container.removeEventListener("scroll", checkNearBottom);
+}, []);
+
+useEffect(() => {
+  if (!containerRef.current) return;
+
+  const el = containerRef.current;
 
   const handleScroll = () => {
-    const container = containerRef.current;
-    const messagesInView = messages.filter(msg => {
-      const el = document.getElementById(`msg_${msg._id}`);
-      if (!el) return false;
-      const rect = el.getBoundingClientRect();
-      return rect.top >= 0 && rect.bottom <= window.innerHeight;
-    });
+    const currentTop = el.scrollTop;
 
-    if (messagesInView.length === 0) return;
+    const isDown = currentTop > lastScrollTop.current;
+    lastScrollTop.current = currentTop;
 
-    // Clear previous timeout
-    if (scrollTimeout) clearTimeout(scrollTimeout);
+    setScrollDirection(isDown ? "down" : "up");
 
-    // Wait 1.5s after user stops scrolling
-    scrollTimeout = setTimeout(() => {
-      const lastMsgInView = messagesInView[messagesInView.length - 1];
-      setLastSeenMessage(lastMsgInView);
-      localStorage.setItem(`last_seen_${userId}`, JSON.stringify(lastMsgInView));
+    if (scrollStopTimeout.current) {
+      clearTimeout(scrollStopTimeout.current);
+    }
+
+    setScrollStopped(false);
+
+    scrollStopTimeout.current = setTimeout(() => {
+      setScrollStopped(true);
     }, 1500);
   };
 
-  containerRef.current.addEventListener("scroll", handleScroll);
+  el.addEventListener("scroll", handleScroll);
 
   return () => {
-    containerRef.current.removeEventListener("scroll", handleScroll);
-    if (scrollTimeout) clearTimeout(scrollTimeout);
+    el.removeEventListener("scroll", handleScroll);
+    if (scrollStopTimeout.current) clearTimeout(scrollStopTimeout.current);
   };
-}, [messages]);
+}, []);
 
 
 
@@ -193,58 +232,58 @@ useEffect(() => {
 
   // eslint-disable-line //======================== FETCH RECEIVER + CHAT =========================== 
   useEffect(() => {
-  if (!user || !userId) return;
+    if (!user || !userId) return;
 
-  const fetchData = async () => {
-    try {
-      const [receiverRes, chatRes] = await Promise.all([
-        axiosBase.get(`/api/user/${userId}`),
-        axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),
-      ]);
+    const fetchData = async () => {
+      try {
+        const [receiverRes, chatRes] = await Promise.all([
+          axiosBase.get(`/api/user/${userId}`),
+          axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),
+        ]);
 
-      setReceiver(receiverRes.data.user || null);
-      setLastActive(receiverRes.data.user?.lastActiveAt || null);
+        setReceiver(receiverRes.data.user || null);
+        setLastActive(receiverRes.data.user?.lastActiveAt || null);
 
-      if (chatRes.data?.room) setChatId(chatRes.data.room._id);
+        if (chatRes.data?.room) setChatId(chatRes.data.room._id);
 
-      if (Array.isArray(chatRes.data?.messages)) {
-        setMessages(prev => {
-          const merged = [...prev]; // start from local messages
+        if (Array.isArray(chatRes.data?.messages)) {
+          setMessages(prev => {
+            const merged = [...prev]; // start from local messages
 
-          chatRes.data.messages.forEach(msg => {
-            const existsIndex = merged.findIndex(m => m._id === msg._id);
-            if (existsIndex !== -1) {
-              // Update if different
-              if (JSON.stringify(merged[existsIndex]) !== JSON.stringify(msg)) {
-                merged[existsIndex] = msg;
+            chatRes.data.messages.forEach(msg => {
+              const existsIndex = merged.findIndex(m => m._id === msg._id);
+              if (existsIndex !== -1) {
+                // Update if different
+                if (JSON.stringify(merged[existsIndex]) !== JSON.stringify(msg)) {
+                  merged[existsIndex] = msg;
+                }
+              } else {
+                merged.push(msg); // add new
               }
-            } else {
-              merged.push(msg); // add new
-            }
+            });
+
+            merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+            // save to localStorage
+            localStorage.setItem(`chat_history_${userId}`, JSON.stringify(merged));
+
+            return merged;
           });
+        }
 
-          merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-          // save to localStorage
-          localStorage.setItem(`chat_history_${userId}`, JSON.stringify(merged));
-
-          return merged;
-        });
+        clearUnread(userId);
+      } catch (err) {
+        console.error("❌ Error fetching chat:", err);
       }
+    };
 
-      clearUnread(userId);
-    } catch (err) {
-      console.error("❌ Error fetching chat:", err);
-    }
-  };
-
-  fetchData();
-}, [user, userId]);
+    fetchData();
+  }, [user, userId]);
 
 
 
 
-  
+
   // eslint-disable-line // =========================== SOCKET CONNECTION =========================== 
   useEffect(() => {
     if (!socket || !user) {
@@ -260,41 +299,47 @@ useEffect(() => {
           m)));
     };
 
-  const handleReceiveMessage = (newMsg) => {
-  setMessages(prev => {
-    const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
-    if (tempIndex !== -1) {
-      const updated = [...prev];
-      updated[tempIndex] = { ...newMsg, status: "delivered" };
-      return updated;
-    }
+    const handleReceiveMessage = (newMsg) => {
+      setMessages(prev => {
+        const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
+        if (tempIndex !== -1) {
+          const updated = [...prev];
+          updated[tempIndex] = { ...newMsg, status: "delivered" };
+          return updated;
+        }
 
-    if (prev.some(m => m._id === newMsg._id)) return prev; // normal duplicate prevention
+        if (prev.some(m => m._id === newMsg._id)) return prev; // normal duplicate prevention
+        
+        return [...prev, newMsg];
+      });
 
-    return [...prev, newMsg];
-  });
+      if(isUserNearBottomRef.current) {
+        requestAnimationFrame(() => {
+            scrollToBottom();
+        });
+      }
 
-  receiveSound.current.currentTime = 0;
-  receiveSound.current.play().catch(() => {});
-};
+      receiveSound.current.currentTime = 0;
+      receiveSound.current.play().catch(() => { });
+    };
 
 
 
 
 
 
-const handleTypingFrom = ({ from_user_id }) => {
-  setTypingUser(true);
-  setTypingUserFromId(from_user_id);
-  if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-  // Only hide typing after 2s of inactivity
-  typingTimeoutRef.current = setTimeout(() => {
-    setTypingUser(false);
-    setTypingUserFromId(null);
-  }, 2000); 
-};
+    const handleTypingFrom = ({ from_user_id }) => {
+      setTypingUser(true);
+      setTypingUserFromId(from_user_id);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      // Only hide typing after 2s of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingUser(false);
+        setTypingUserFromId(null);
+      }, 2000);
+    };
 
- 
+
 
     // socket.on("userOnline", handleUserOnline);
     //socket.on("userOffline", handleUserOffline);
@@ -366,25 +411,25 @@ const handleTypingFrom = ({ from_user_id }) => {
   // ======================== SEND MESSAGE ====================== 
   const sendMessage = async (overrideText = null) => {
     const currentText = (overrideText !== null) ? overrideText : text;
-    if (!currentText && !image && !audioURL) return; 
-    
+    if (!currentText && !image && !audioURL) return;
+
     const message_type = audioURL ? "audio" : image ? "image" : "text";
     const tempId = "temp_" + Date.now();
     const tempMsg = {
-  _id: tempId,
-  chatId,
-  from_user_id: user._id,
-  to_user_id: userId,
-  text: currentText || "",
-  replyTo: replyTo ? { _id: replyTo._id, text: replyTo.text } : null,
-  message_type,
-  media_url: audioURL || (image ? URL.createObjectURL(image) : ""),
-  createdAt: new Date().toISOString(),
-  sending: true,
-  status: "sending",
-};
+      _id: tempId,
+      chatId,
+      from_user_id: user._id,
+      to_user_id: userId,
+      text: currentText || "",
+      replyTo: replyTo ? { _id: replyTo._id, text: replyTo.text } : null,
+      message_type,
+      media_url: audioURL || (image ? URL.createObjectURL(image) : ""),
+      createdAt: new Date().toISOString(),
+      sending: true,
+      status: "sending",
+    };
 
-setReplyTo(null); // reset reply state
+    setReplyTo(null); // reset reply state
 
     // optimistic UI
     setMessages((p) => [...p, tempMsg]);
@@ -406,8 +451,8 @@ setReplyTo(null); // reset reply state
         formData.append("media", blob, `audio_${Date.now()}.${ext}`);
       }
       requestAnimationFrame(() => {
-  scrollToBottom();
-});
+        scrollToBottom();
+      });
       const res = await axiosBase.post("/api/chat/message",
         formData, {
         headers: { Accept: "application/json" },
@@ -436,7 +481,7 @@ setReplyTo(null); // reset reply state
       setSending(false);
       saveFailedMessages([...stored, failedMsg]);
     }
-    finally{
+    finally {
       setSending(false)
       console.log("setting sending to false", sending)
     }
@@ -472,8 +517,8 @@ setReplyTo(null); // reset reply state
       });
       const serverMsg = res.data.message;
       requestAnimationFrame(() => {
-  scrollToBottom();
-});
+        scrollToBottom();
+      });
       setMessages((prev) => prev.map((m) =>
         m._id === newTempId ?
           {
@@ -555,20 +600,20 @@ setReplyTo(null); // reset reply state
 
 
   useEffect(() => {
-  if (
-    loading === false &&
-    containerRef.current &&
-    sortedMessages.length > 0 &&
-    !hasInitialScrolledRef.current
-  ) {
-    containerRef.current.scrollTo({
-      top: containerRef.current.scrollHeight,
-      behavior: "auto", // instant, no animation
-    });
+    if (
+      loading === false &&
+      containerRef.current &&
+      sortedMessages.length > 0 &&
+      !hasInitialScrolledRef.current
+    ) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "auto", // instant, no animation
+      });
 
-    hasInitialScrolledRef.current = true; // 🔒 lock it forever
-  }
-}, [loading, sortedMessages.length]);
+      hasInitialScrolledRef.current = true; // 🔒 lock it forever
+    }
+  }, [loading, sortedMessages.length]);
 
 
   // //================disconnect user================
@@ -583,31 +628,13 @@ setReplyTo(null); // reset reply state
   // }, [socket, user]);
 
 
-useEffect(() => {
-  if (!receiver) return;
+  useEffect(() => {
+    if (!receiver) return;
 
-  if (!onlineUsers.has(receiver._id)) {
-    setLastActive(receiver.lastActiveAt || new Date().toISOString());
-  }
-}, [onlineUsers, receiver]);
-
-
-useEffect(() => {
-  if (!containerRef.current || messages.length === 0) return;
-
-  requestAnimationFrame(() => {
-    if (lastSeenMessage) {
-      const el = document.getElementById(`msg_${lastSeenMessage._id}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "auto", block: "start" });
-        return;
-      }
+    if (!onlineUsers.has(receiver._id)) {
+      setLastActive(receiver.lastActiveAt || new Date().toISOString());
     }
-
-    // No lastSeenMessage found, scroll to bottom
-    containerRef.current.scrollTop = containerRef.current.scrollHeight;
-  });
-}, [messages, lastSeenMessage]);
+  }, [onlineUsers, receiver]);
 
 
   //=[==============================
@@ -662,12 +689,12 @@ useEffect(() => {
     }
 
     if (!receiver) {
-  return (
-    <div className="flex items-center justify-center p-4 text-gray-700 gap-3">
-      <span><div className="loader"></div></span>
-    </div>
-  );
-}
+      return (
+        <div className="flex items-center justify-center p-4 text-gray-700 gap-3">
+          <span><div className="loader"></div></span>
+        </div>
+      );
+    }
 
 
     // When chat is empty
@@ -686,177 +713,177 @@ useEffect(() => {
     // When messages exist
     return (
       <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-20">
-  <div className="flex items-center gap-3">
-    <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
-    <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer relative">
-      <ProfileAvatar user={receiver} size={48} />
-      {onlineUsers.has(receiver._id) && (
-        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></span>
-      )}
-    </div>
-    <div className="flex flex-col">
-      <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
-      <span className="text-xs text-gray-500">{onlineUsers.has(receiver._id) ? "Online" : `Active ${moment(lastActive).fromNow()}`}</span>
-    </div>
-  </div>
-<div className="flex items-center gap-2 relative">
-  {/* Three-dot button */}
-  <button
-    onClick={(e) => {
-  e.stopPropagation();
-  setShowMenu(true);
-}}
+        <div className="flex items-center gap-3">
+          <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
+          <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer relative">
+            <ProfileAvatar user={receiver} size={48} />
+            {onlineUsers.has(receiver._id) && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></span>
+            )}
+          </div>
+          <div className="flex flex-col">
+            <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
+            <span className="text-xs text-gray-500">{onlineUsers.has(receiver._id) ? "Online" : `Active ${moment(lastActive).fromNow()}`}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 relative">
+          {/* Three-dot button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(true);
+            }}
 
-    className="p-2.5 rounded-full transition-all duration-200 hover:bg-black/5 active:scale-90 text-gray-600"
-    aria-label="More options"
-  >
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="12" cy="5" r="1" />
-      <circle cx="12" cy="19" r="1" />
-    </svg>
-  </button>
+            className="p-2.5 rounded-full transition-all duration-200 hover:bg-black/5 active:scale-90 text-gray-600"
+            aria-label="More options"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="12" cy="5" r="1" />
+              <circle cx="12" cy="19" r="1" />
+            </svg>
+          </button>
 
-  {/* Dropdown */}
-  {showMenu && (
-    <>
-      {/* click-outside overlay */}
-      <div
-  className="fixed inset-0 z-40"
-  onClick={(e) => {
-    e.stopPropagation();
-    setShowMenu(false);
-  }}
-/>
+          {/* Dropdown */}
+          {showMenu && (
+            <>
+              {/* click-outside overlay */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                }}
+              />
 
 
-      <div
-        className="absolute right-0 top-full mt-2 w-56 z-50 overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
-        style={{
-          background: "rgba(255, 255, 255, 0.8)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderRadius: "18px",
-          border: "1px solid rgba(255, 255, 255, 0.5)",
-          boxShadow:
-            "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div className="p-1.5 flex flex-col gap-1">
+              <div
+                className="absolute right-0 top-full mt-2 w-56 z-50 overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
+                style={{
+                  background: "rgba(255, 255, 255, 0.8)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  borderRadius: "18px",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  boxShadow:
+                    "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                <div className="p-1.5 flex flex-col gap-1">
 
-  {/* ================= Appearance ================= */}
-  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-    Appearance
-  </div>
+                  {/* ================= Appearance ================= */}
+                  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Appearance
+                  </div>
 
-  <div className="rounded-xl hover:bg-white/40 transition-colors">
-    <ThemeDropdown containerRef={chatContainerRef} />
-  </div>
+                  <div className="rounded-xl hover:bg-white/40 transition-colors">
+                    <ThemeDropdown containerRef={chatContainerRef} />
+                  </div>
 
-  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
+                  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
 
-  {/* ================= Chat Actions ================= */}
-  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-    Chat
-  </div>
+                  {/* ================= Chat Actions ================= */}
+                  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Chat
+                  </div>
 
-  {/* View Profile */}
-  <button
-    onClick={() => {
-      navigate(`/profile/${receiver._id}`);
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-indigo-400" />
-    View Profile
-  </button>
+                  {/* View Profile */}
+                  <button
+                    onClick={() => {
+                      navigate(`/profile/${receiver._id}`);
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                    View Profile
+                  </button>
 
-  {/* Search Chat */}
-  <button
-    onClick={() => {
-      // TODO: open search modal
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-purple-400" />
-    Search in Chat
-  </button>
+                  {/* Search Chat */}
+                  <button
+                    onClick={() => {
+                      // TODO: open search modal
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                    Search in Chat
+                  </button>
 
-  {/* Clear Chat */}
-  <button
-    onClick={() => {
-      // TODO: clear messages logic
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-blue-400" />
-    Clear Chat
-  </button>
+                  {/* Clear Chat */}
+                  <button
+                    onClick={() => {
+                      // TODO: clear messages logic
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-400" />
+                    Clear Chat
+                  </button>
 
-  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
+                  <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
 
-  {/* ================= Privacy & Safety ================= */}
-  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-    Privacy
-  </div>
+                  {/* ================= Privacy & Safety ================= */}
+                  <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Privacy
+                  </div>
 
-  {/* Mute Notifications */}
-  <button
-    onClick={() => {
-      // TODO: mute logic
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-yellow-400" />
-    Mute Notifications
-  </button>
+                  {/* Mute Notifications */}
+                  <button
+                    onClick={() => {
+                      // TODO: mute logic
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                    Mute Notifications
+                  </button>
 
-  {/* Block User */}
-  <button
-    onClick={() => {
-      // TODO: block user logic
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50/50 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-red-500" />
-    Block User
-  </button>
+                  {/* Block User */}
+                  <button
+                    onClick={() => {
+                      // TODO: block user logic
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50/50 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    Block User
+                  </button>
 
-  {/* Report User */}
-  <button
-    onClick={() => {
-      // TODO: report logic
-      setShowMenu(false);
-    }}
-    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50/50 rounded-xl transition"
-  >
-    <span className="w-2 h-2 rounded-full bg-red-400" />
-    Report User
-  </button>
-  
+                  {/* Report User */}
+                  <button
+                    onClick={() => {
+                      // TODO: report logic
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50/50 rounded-xl transition"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    Report User
+                  </button>
 
-</div>
 
+                </div>
+
+              </div>
+            </>
+          )}
+
+        </div>
       </div>
-    </>
-  )}
-  
-</div>
-</div>
 
     );
   };
@@ -920,89 +947,89 @@ useEffect(() => {
   // =========================== RETURN UI =========================== 
   return (
     <div
-    ref={chatContainerRef} 
-    className="flex flex-col h-screen w-full overflow-hidden bg-[var(--bg-main)]"
-  >
+      ref={chatContainerRef}
+      className="flex flex-col h-screen w-full overflow-hidden bg-[var(--bg-main)]"
+    >
 
-      
 
-        <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>    
-                {renderHeader()}
+
+      <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
+        {renderHeader()}
       </ChatboxHeader>
-        <div
+      <div
         ref={containerRef}
-          className="flex-1 flex flex-col chatbox-wrapper 
+        className="flex-1 flex flex-col chatbox-wrapper 
           chatbox-messages bg-[var(--input-chatbox-bg-gradient)] overflow-y-auto"
-         style={{
-            background: "var(--input-chatbox-bg-gradient)",
-            color: "var(--input-text-color)",
-          }}>
-          {loading ?
-            (
+        style={{
+          background: "var(--input-chatbox-bg-gradient)",
+          color: "var(--input-text-color)",
+        }}>
+        {loading ?
+          (
             <div className="flex flex-col min-h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
               {/* Top bar shimmer */}
               {/* Messages shimmer */}
               <div className="flex-1 overflow-y-auto p-4">
-  <div className="space-y-5 max-w-4xl mx-auto px-4">
-    {[...Array(10)].map((_, idx) => {
-      const isSender = idx % 2 === 0;
-      const type = ["text", "image", "audio"][Math.floor(Math.random() * 3)];
+                <div className="space-y-5 max-w-4xl mx-auto px-4">
+                  {[...Array(10)].map((_, idx) => {
+                    const isSender = idx % 2 === 0;
+                    const type = ["text", "image", "audio"][Math.floor(Math.random() * 3)];
 
-      let content;
-      const senderBg = "var(--input-bubble-sender, #ffffff)";
-      const receiverBg = "var(--input-bubble-receiver, #7c3aed)";
+                    let content;
+                    const senderBg = "var(--input-bubble-sender, #ffffff)";
+                    const receiverBg = "var(--input-bubble-receiver, #7c3aed)";
 
-      // Bubble content
-      if (type === "text") {
-        const bubbleWidth = [100, 160, 240, 120][Math.floor(Math.random() * 4)];
-        const bubbleHeight = [16, 24, 36][Math.floor(Math.random() * 3)];
-        content = (
-          <div
-            className={`shockwave rounded-xl ${isSender ? "rounded-br-none" : "rounded-bl-none"}`}
-            style={{ width: bubbleWidth + "px", height: bubbleHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
-          />
-        );
-      } else if (type === "image") {
-        const imgWidth = [160, 200, 250][Math.floor(Math.random() * 3)];
-        const imgHeight = [120, 160][Math.floor(Math.random() * 2)];
-        content = (
-          <div
-            className="shockwave rounded-2xl"
-            style={{ width: imgWidth + "px", height: imgHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
-          />
-        );
-      } else if (type === "audio") {
-        content = (
-          <div
-            className="flex items-center gap-2 px-4 py-2 rounded-full shockwave"
-            style={{ width: 180, height: 44, backgroundColor: isSender ? senderBg : receiverBg }}
-          >
-            <div className="w-5 h-5 rounded-full shimmer" />
-            <div className="flex-1 h-2 shimmer rounded" />
-            <div className="w-3 h-3 rounded-full shimmer" />
-          </div>
-        );
-      }
+                    // Bubble content
+                    if (type === "text") {
+                      const bubbleWidth = [100, 160, 240, 120][Math.floor(Math.random() * 4)];
+                      const bubbleHeight = [16, 24, 36][Math.floor(Math.random() * 3)];
+                      content = (
+                        <div
+                          className={`shockwave rounded-xl ${isSender ? "rounded-br-none" : "rounded-bl-none"}`}
+                          style={{ width: bubbleWidth + "px", height: bubbleHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
+                        />
+                      );
+                    } else if (type === "image") {
+                      const imgWidth = [160, 200, 250][Math.floor(Math.random() * 3)];
+                      const imgHeight = [120, 160][Math.floor(Math.random() * 2)];
+                      content = (
+                        <div
+                          className="shockwave rounded-2xl"
+                          style={{ width: imgWidth + "px", height: imgHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
+                        />
+                      );
+                    } else if (type === "audio") {
+                      content = (
+                        <div
+                          className="flex items-center gap-2 px-4 py-2 rounded-full shockwave"
+                          style={{ width: 180, height: 44, backgroundColor: isSender ? senderBg : receiverBg }}
+                        >
+                          <div className="w-5 h-5 rounded-full shimmer" />
+                          <div className="flex-1 h-2 shimmer rounded" />
+                          <div className="w-3 h-3 rounded-full shimmer" />
+                        </div>
+                      );
+                    }
 
-      // Return the message bubble with Reply button
-      return (
-        <div key={idx} className={`flex ${isSender ? "justify-end" : "justify-start"} group relative`}>
-          {content}
+                    // Return the message bubble with Reply button
+                    return (
+                      <div key={idx} className={`flex ${isSender ? "justify-end" : "justify-start"} group relative`}>
+                        {content}
 
-          {/* Reply button */}
-          <button
-            onClick={() => setReplyTo({ id: idx, text: type === "text" ? "Text message" : type === "image" ? "Image" : "Audio" })}
-            className="absolute -top-3 right-0 hidden group-hover:flex text-xs px-2 py-1 bg-white shadow rounded-full text-gray-600 hover:text-black"
-          >
-            Reply
-          </button>
-        </div>
-      );
-    })}
-  </div>
-</div>
- 
-                  {/* Input bar shimmer */}
+                        {/* Reply button */}
+                        <button
+                          onClick={() => setReplyTo({ id: idx, text: type === "text" ? "Text message" : type === "image" ? "Image" : "Audio" })}
+                          className="absolute -top-3 right-0 hidden group-hover:flex text-xs px-2 py-1 bg-white shadow rounded-full text-gray-600 hover:text-black"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Input bar shimmer */}
               <div className="p-3 border-t shadow-inner fixed bottom-0 left-0 right-0"
                 style={{ backgroundColor: "var(--input-bg-color, #ffffff)" }} >
                 <div className="max-w-4xl mx-auto px-4">
@@ -1035,10 +1062,10 @@ useEffect(() => {
               </style>
 
             </div >)
-            : receiver && sortedMessages.length === 0 ?
-              (
+          : receiver && sortedMessages.length === 0 ?
+            (
               <>
-               {/* Top bar */}
+                {/* Top bar */}
 
                 {/* Empty state */}
                 <div className="flex flex-col items-center justify-center flex-1 bg-multi-gradient text-center px-6 animate-fadeIn">
@@ -1054,322 +1081,327 @@ useEffect(() => {
                     <button onClick={() => sendMessage("hello")}
                       className="bg-black text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all" >
                       ✍️ Say Hello </button>
-                  </div> 
-                  </div> 
-                  </>
-                  ) :
-              sortedMessages.length > 0 ? (
-                <ChatMessagesFull
-                  messages={sortedMessages}
-                  chatId={chatId}
-                  user={user}
-                  resendMessage={resendMessage}
-                  imageMessages={imageMessages}
-                  setCurrentImageIndex={setCurrentImageIndex}
-                  setShowMediaViewer={setShowMediaViewer}
-                  formatTime={formatTime}
-                  typingUser={typingUser}
-                  typingUserFromId={typingUserFromId}
-                  scrollToBottom={scrollToBottom}
-                  showScrollButton={showScrollButton}
+                  </div>
+                </div>
+              </>
+            ) :
+            sortedMessages.length > 0 ? (
+              <ChatMessagesFull
+                messages={sortedMessages}
+                setMessages={setMessages}
+                chatId={chatId}
+                scrollDirection={scrollDirection}
+                scrollStopped={scrollStopped}
+                containerRef={containerRef}
+                user={user}
+                resendMessage={resendMessage}
+                imageMessages={imageMessages}
+                setCurrentImageIndex={setCurrentImageIndex}
+                setShowMediaViewer={setShowMediaViewer}
+                formatTime={formatTime}
+                typingUser={typingUser}
+                typingUserFromId={typingUserFromId}
+                scrollToBottom={scrollToBottom}
+                showScrollButton={showScrollButton}
 
-                />
-              )
-                :
-                (
-                  // ❌ FETCH ERROR
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
+              />
+            )
+              :
+              (
+                // ❌ FETCH ERROR
+                <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
               from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
-                    <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
-                      <div className="flex justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
-                      </div>
-                      <h2 className="text-lg font-semibold text-gray-800 mb-2"> Unable to fetch your messages 😔
-                      </h2>
-                      <p className="text-sm text-gray-600 mb-6"> It seems there was a problem connecting to the server. Please check your internet connection or try refreshing this page. </p>
-                      <button onClick={() => window.location.reload()}
-                        className="bg-[var(--input-accent)] text-white px-6 py-2 rounded-full 
+                  <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
+                    <div className="flex justify-center mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
+                    </div>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-2"> Unable to fetch your messages 😔
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-6"> It seems there was a problem connecting to the server. Please check your internet connection or try refreshing this page. </p>
+                    <button onClick={() => window.location.reload()}
+                      className="bg-[var(--input-accent)] text-white px-6 py-2 rounded-full 
                       font-medium hover:opacity-90 transition-all btn" > 🔄 Retry </button>
-                       </div> 
-                      </div>
-                      )
-          }
+                  </div>
+                </div>
+              )
+        }
 
-        </div >
+      </div >
 
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
-<ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
-{replyTo && (
-  <div className="px-3 py-2 mb-1 rounded-lg bg-gray-100 text-sm text-gray-700 flex justify-between items-center">
-    <span>Replying to: {replyTo.text}</span>
-    <button onClick={() => setReplyTo(null)} className="text-red-500 font-bold">×</button>
-  </div>
-)}
+      <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
+        {replyTo && (
+          <div className="px-3 py-2 mb-1 rounded-lg bg-gray-100 text-sm text-gray-700 flex justify-between items-center">
+            <span>Replying to: {replyTo.text}</span>
+            <button onClick={() => setReplyTo(null)} className="text-red-500 font-bold">×</button>
+          </div>
+        )}
 
 
- {!recording && !audioURL && !(image instanceof File) && (
-    <textarea
-      id="chatInput"
-      className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
-      style={{
-        borderRadius: "20px",
-        padding: "12px 16px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-        background: "#fff",
-        width: "100%", // still keep this
-        minWidth: 0,   // important for flex shrinking
-      }}
-      placeholder={placeholders[placeholderIndex] || ""}
-      value={typeof text === "string" ? text : ""}
-      rows={1}
-      onFocus={() => setPlaceholderIndex(0)}
-      onChange={(e) => {
-        const val = e.target.value;
-        setText(val);
-        e.target.style.height = "auto";
-        const newHeight = Math.min(e.target.scrollHeight, 120);
-        e.target.style.height = `${newHeight}px`;
-        if (socket && chatId && user?._id)
-          socket.emit("typing", { chatId, from_user_id: user._id });
-      }}
-      onKeyDown={async (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          if (text.trim() !== "") {
-            await sendMessage();
-            setText("");
-            e.target.style.height = "auto";
-          }
-        }
-      }}
-    />
-  )}
-
-
-  <div className="flex items-end gap-2">
-  {/* Image preview or upload */}
-  {!recording && !audioURL && (
-    <>
-      {image instanceof File ? (
-      <ImageComposer
-  image={image}
-  setImage={setImage}
-  caption={text}
-  setCaption={setText}
-  onSend={sendMessage}
-  sending={sending}
-/>) : <div className="relative">
-  {/* ATTACH MEDIA BUTTON */}
-  <button
-    type="button"
-    onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
-    className="flex items-center justify-center transition-all duration-300"
-    style={{
-      backgroundColor: "var(--primary)",
-      border: "2px solid var(--primary)",
-      borderRadius: "0.75rem", // smooth rounded corners
-      padding: "0.5rem",
-      cursor: "pointer",
-      boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
-    }}
-    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
-    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
-    title="Attach media"
-  >
-    <ImageUpIcon className="text-white w-5 h-5" />
-  </button>
-
-  {/* MEDIA DROPDOWN */}
-  {showMediaDropdown && (
-    <div
-      className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
-      style={{
-        backgroundColor: "var(--deeper-opaque-secondary)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderRadius: "0.75rem",
-        border: "1px solid var(--primary)",
-        minWidth: "220px",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
-      }}
-    >
-  {/* IMAGE INPUT */}
-    <label
-      htmlFor="image"
-      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
-    >
-      <ImageIcon size={18} />
-      <span>Upload Image</span>
-    </label>
-
-    {/* FILE INPUT */}
-    <label
-      htmlFor="file"
-      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
-    >
-      <FileIcon size={18} />
-      <span>Upload File</span>
-    </label>
-
-    {/* VIDEO INPUT */}
-    <label
-      htmlFor="video"
-      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
-    >
-      <VideoIcon size={18} />
-      <span>Upload Video</span>
-    </label>
-    </div>
-  )}
-
-  {/* HIDDEN INPUTS */}
-  <input
-    ref={imageInputRef}
-    type="file"
-    id="image"
-    accept="image/*"
-    hidden
-    onChange={(e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f instanceof File) setImage(f);
-      e.target.value = "";
-    }}
-  />
-
-  <input
-    ref={fileInputRef}
-    type="file"
-    id="file"
-    hidden
-    onChange={(e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f instanceof File) setImage(f);
-      e.target.value = "";
-    }}
-  />
-
-  <input
-    ref={videoInputRef}
-    type="file"
-    id="video"
-    accept="video/*"
-    hidden
-    onChange={(e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f instanceof File) setImage(f);
-      e.target.value = "";
-    }}
-  />
-</div>
-}
-    </>
-  )}
-
-  {/* Recording / audio preview */}
-{(audioURL || recording) && (
-  <div className="flex flex-col items-center w-full gap-3">
-    {audioURL ? (
-      <div className="relative inline-block w-full">
-        <AudioMessage msg={{ media_url: audioURL }} />
-        <button
-          onClick={() => setAudioURL(null)}
-          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
-          title="Cancel audio"
-        >
-          ×
-        </button>
-      </div>
-    ) : (
-      <div className="flex items-center w-full gap-3">
-        {/* Range-style progress bar filling all available space */}
-        <div className="flex-1">
-          <input
-            type="range"
-            min={0}
-            max={MAX_RECORD_TIME}
-            value={recordTime}
-            readOnly
-            className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
+        {!recording && !audioURL && !(image instanceof File) && (
+          <textarea
+            id="chatInput"
+            className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
             style={{
-              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
+              borderRadius: "20px",
+              padding: "12px 16px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              background: "#fff",
+              width: "100%", // still keep this
+              minWidth: 0,   // important for flex shrinking
+            }}
+            placeholder={placeholders[placeholderIndex] || ""}
+            value={typeof text === "string" ? text : ""}
+            rows={1}
+            onFocus={() => setPlaceholderIndex(0)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setText(val);
+              e.target.style.height = "auto";
+              const newHeight = Math.min(e.target.scrollHeight, 120);
+              e.target.style.height = `${newHeight}px`;
+              if (socket && chatId && user?._id)
+                socket.emit("typing", { chatId, from_user_id: user._id });
+            }}
+            onKeyDown={async (e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (text.trim() !== "") {
+                  await sendMessage();
+                  setText("");
+                  e.target.style.height = "auto";
+                }
+              }
             }}
           />
+        )}
+
+
+        <div className="flex items-end gap-2">
+          {/* Image preview or upload */}
+          {!recording && !audioURL && (
+            <>
+              {image instanceof File ? (
+                <ImageComposer
+                  image={image}
+                  setImage={setImage}
+                  caption={text}
+                  setCaption={setText}
+                  onSend={sendMessage}
+                  sending={sending}
+                />) : <div className="relative">
+                {/* ATTACH MEDIA BUTTON */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
+                  className="flex items-center justify-center transition-all duration-300"
+                  style={{
+                    backgroundColor: "var(--primary)",
+                    border: "2px solid var(--primary)",
+                    borderRadius: "0.75rem", // smooth rounded corners
+                    padding: "0.5rem",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
+                  title="Attach media"
+                >
+                  <ImageUpIcon className="text-white w-5 h-5" />
+                </button>
+
+                {/* MEDIA DROPDOWN */}
+                {showMediaDropdown && (
+                  <div
+                   ref={mediaDropdownRef}
+                    className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
+                    style={{
+                      backgroundColor: "var(--deeper-opaque-secondary)",
+                      backdropFilter: "blur(20px)",
+                      WebkitBackdropFilter: "blur(20px)",
+                      borderRadius: "0.75rem",
+                      border: "1px solid var(--primary)",
+                      minWidth: "220px",
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+                    }}
+                  >
+                    {/* IMAGE INPUT */}
+                    <label
+                      htmlFor="image"
+                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                    >
+                      <ImageIcon size={18} />
+                      <span>Upload Image</span>
+                    </label>
+
+                    {/* FILE INPUT */}
+                    <label
+                      htmlFor="file"
+                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                    >
+                      <FileIcon size={18} />
+                      <span>Upload File</span>
+                    </label>
+
+                    {/* VIDEO INPUT */}
+                    <label
+                      htmlFor="video"
+                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                    >
+                      <VideoIcon size={18} />
+                      <span>Upload Video</span>
+                    </label>
+                  </div>
+                )}
+
+                {/* HIDDEN INPUTS */}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f instanceof File) setImage(f);
+                    e.target.value = "";
+                  }}
+                />
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  id="file"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f instanceof File) setImage(f);
+                    e.target.value = "";
+                  }}
+                />
+
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  id="video"
+                  accept="video/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (f instanceof File) setImage(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              }
+            </>
+          )}
+
+          {/* Recording / audio preview */}
+          {(audioURL || recording) && (
+            <div className="flex flex-col items-center w-full gap-3">
+              {audioURL ? (
+                <div className="relative inline-block w-full">
+                  <AudioMessage msg={{ media_url: audioURL }} />
+                  <button
+                    onClick={() => setAudioURL(null)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
+                    title="Cancel audio"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center w-full gap-3">
+                  {/* Range-style progress bar filling all available space */}
+                  <div className="flex-1">
+                    <input
+                      type="range"
+                      min={0}
+                      max={MAX_RECORD_TIME}
+                      value={recordTime}
+                      readOnly
+                      className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
+                      style={{
+                        background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Time indicator */}
+                  <span className="text-xs text-gray-700 min-w-[50px] text-right">
+                    {recordTime}s / {MAX_RECORD_TIME}s
+                  </span>
+
+                  {/* Stop button */}
+                  <button
+                    onClick={stopRecording}
+                    className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
+                  >
+                    Stop
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+
+
+
+          {/* Send button (shows if text, image, or audio exist) */}
+
+          {(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) && (
+            <button
+              onClick={() => { scrollToBottom(); sendMessage() }}
+              style={{ backgroundColor: "var(--input-primary)" }}
+              className="text-white p-2 rounded-full flex items-center justify-center"
+              title="Send"
+              disabled={sending} // disable while sending
+            >
+              {sending ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                  ></path>
+                </svg>
+              ) : (
+                <SendHorizonal size={18} />
+              )}
+            </button>
+          )}
+
+
+          {/* Record button (show only if nothing to send) */}
+          {!recording && !text?.trim() && !image && !audioURL && (
+            <button
+              onClick={startRecording}
+              className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+              title="Start Recording"
+            >
+              <Mic size={18} />
+            </button>
+          )}
         </div>
+      </ChatboxInput>
 
-        {/* Time indicator */}
-        <span className="text-xs text-gray-700 min-w-[50px] text-right">
-          {recordTime}s / {MAX_RECORD_TIME}s
-        </span>
+    </div>
+  );
 
-        {/* Stop button */}
-        <button
-          onClick={stopRecording}
-          className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
-        >
-          Stop
-        </button>
-      </div>
-    )}
-  </div>
-)}
-
-
-
-
-  {/* Send button (shows if text, image, or audio exist) */}
-
-{(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) &&(
-  <button
-    onClick={() =>{scrollToBottom(); sendMessage()}}
-    style={{ backgroundColor: "var(--input-primary)" }}
-    className="text-white p-2 rounded-full flex items-center justify-center"
-    title="Send"
-    disabled={sending} // disable while sending
-  >
-    {sending ? (
-      <svg
-        className="animate-spin h-5 w-5 text-white"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-        ></path>
-      </svg>
-    ) : (
-      <SendHorizonal size={18} />
-    )}
-  </button>
-)}
-
-
-  {/* Record button (show only if nothing to send) */}
-  {!recording && !text?.trim() && !image && !audioURL && (
-    <button
-      onClick={startRecording}
-      className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
-      title="Start Recording"
-    >
-      <Mic size={18} />
-    </button>
-  )}
-  </div>
-</ChatboxInput>
-
-      </div>
-      );
-      
 }; export default ChatBox;

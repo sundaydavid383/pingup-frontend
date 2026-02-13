@@ -5,8 +5,8 @@ import user1 from "./user2.jpg"
 import user2 from "./user3.jpg"
 import user3 from "./user4.jpg"
 import story1 from "./story1.mp4"
-import church1 from "./church10.jpg"
-import church2 from "./church11.jpg"
+import heroHuman from "./human.png"
+import sampleImage from "./sampleImage.jpg"
 import church3 from "./church12.jpg"
 import church4 from "./church13.jpg"
 import church5 from "./church14.jpg"
@@ -14,6 +14,7 @@ import church6 from "./church15.jpg"
 import church7 from "./church7.jpg"
 import church8 from "./church8.jpg"
 import church9 from "./church6.jpg"
+import accountability from "./accountability-voice.mp3"
 
 
 
@@ -991,8 +992,12 @@ function capitalizeFullName(name = "") {
     .join(" ");
 }
 
+
 const assets = {
     logo,
+    heroHuman,
+    sampleAudio: accountability,
+    sampleImage: sampleImage,
     groupuser,
     user1,
     user2,

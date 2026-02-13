@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate  } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import AuthContainer from './pages/AuthContainer';
@@ -39,6 +39,18 @@ const App = () => {
   const searchParams = new URLSearchParams(location.search);
   const oauthError = searchParams.get('error');
 
+    const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthText, setOauthText] = useState("Loading…");
+
+  useEffect(() => {
+    const loading = sessionStorage.getItem("oauth_loading");
+    const text = sessionStorage.getItem("oauth_text");
+
+    if (loading === "true") {
+      setOauthLoading(true);
+      setOauthText(text || "Loading…");
+    }
+  }, []);
   const toTitleCase = (str) => {
     return str
       ?.toLowerCase()
@@ -88,7 +100,7 @@ const App = () => {
 
       <AppInstallPrompt />
       <GlobalAudioModal/>
- 
+      {oauthLoading && <Loading text={oauthText} />}
 
       <Routes>
 
