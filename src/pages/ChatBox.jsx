@@ -93,6 +93,7 @@ const ChatBox = ({ userId: propUserId }) => {
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const showMenuRef = useRef(null);
   const mediaDropdownRef = useRef(null);
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
@@ -134,27 +135,13 @@ const ChatBox = ({ userId: propUserId }) => {
   };
 
 
-
-  // ====================== CLOSE DROPDOWN WHEN CLICKING OUTSIDE =======================
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
-        setShowMediaDropdown(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  },[])
-
-
-
   //================= REMOVING FILES DROPDOWN ===============
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (showMenuRef.current && !showMenuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+          if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
         setShowMediaDropdown(false);
       }
     }
@@ -167,6 +154,7 @@ const ChatBox = ({ userId: propUserId }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
 
   // ===================== NEAR BOTTOM SCROLL DETECTION =====================
 
@@ -758,6 +746,7 @@ useEffect(() => {
             <>
               {/* click-outside overlay */}
               <div
+              ref={showMenuRef}
                 className="fixed inset-0 z-40"
                 onClick={(e) => {
                   e.stopPropagation();

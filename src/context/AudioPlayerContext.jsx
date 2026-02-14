@@ -36,17 +36,20 @@ export const AudioPlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeInView, setActiveInView] = useState(true);
   const [progress, setProgress] = useState(0);
+  //timer
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   // refs for each audio card
-const audioRefs = useRef({});
+  const audioRefs = useRef({});
 
-// call this to scroll to the current playing audio
-const scrollToCurrentAudio = () => {
-  const el = audioRefs.current[currentUrl];
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-};
+  // call this to scroll to the current playing audio
+  const scrollToCurrentAudio = () => {
+    const el = audioRefs.current[currentUrl];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
 
   /* ---------------------------------------------
@@ -64,20 +67,31 @@ const scrollToCurrentAudio = () => {
     const handleTimeUpdate = () => {
       if (!audio.duration) return;
       setProgress((audio.currentTime / audio.duration) * 100);
+      setCurrentTime(audio.currentTime);
     };
-
+    const handleLoadedMetadata = () => setDuration(audio.duration);
     const handleEnded = () => {
       setIsPlaying(false);
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [audioRef]);
+
+  const formatTime = (seconds) => {
+    if (!seconds) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
 
   /* ---------------------------------------------
      INIT WEB AUDIO GRAPH (ONCE)
@@ -155,19 +169,19 @@ const scrollToCurrentAudio = () => {
       play(url);
     }
   };
-const clearAudio = () => {
-  const audio = audioRef.current;
-  if (!audio) return;
+  const clearAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  audio.pause();
-  audio.currentTime = 0;
-  audio.src = "";
+    audio.pause();
+    audio.currentTime = 0;
+    audio.src = "";
 
-  setIsPlaying(false);
-  setCurrentUrl(null);
-  setProgress(0);
-  setActiveInView(true);
-};
+    setIsPlaying(false);
+    setCurrentUrl(null);
+    setProgress(0);
+    setActiveInView(true);
+  };
 
   /* ---------------------------------------------
      SEEK
@@ -197,7 +211,12 @@ const clearAudio = () => {
         activeInView,
         setActiveInView,
         audioRefs,               // <-- add this
-        scrollToCurrentAudio,     
+        scrollToCurrentAudio,
+
+        // timer
+        currentTime,
+        duration,
+        formatTime,
 
         // controls
         play,

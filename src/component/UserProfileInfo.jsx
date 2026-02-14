@@ -13,6 +13,7 @@ import {
   UserCheck,
   UserMinus,
   Link as LinkIcon,
+  MessageSquare,
   Clock,
 } from "lucide-react";
 import moment from "moment";
@@ -32,7 +33,8 @@ const UserProfileInfo = ({ user, posts, profileId, setShowEdit }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("none"); 
   const [isLoading, setIsLoading] = useState(false);
-  const [connections, setConnections] = useState([]); 
+  const [connections, setConnections] = useState([]);
+  const [canChat, setCanChat] = useState(false); 
   const [connectionsLoading, setConnectionsLoading] = useState(false); 
   const navigate = useNavigate();
   const isOwnProfile = currentUser?._id === user?._id;
@@ -86,6 +88,22 @@ const UserProfileInfo = ({ user, posts, profileId, setShowEdit }) => {
     checkConnectionStatus();
     fetchConnections();
   }, [user?._id, currentUser]);
+
+
+
+
+// Determine if chat is allowed
+useEffect(() => {
+  if (!currentUser?._id || !user?._id) return;
+
+  const isConnected = connectionStatus === "connected";
+
+  // Either user is following the other
+  const isFollowingProfile = user.followers?.some(f => String(f) === String(currentUser._id));
+  const isProfileFollowingMe = user.following?.some(f => String(f) === String(currentUser._id));
+
+  setCanChat(isConnected || isFollowingProfile || isProfileFollowingMe);
+}, [connectionStatus, user, currentUser]);
 
   const handleFollow = async () => {
     if (!user || !currentUser) return;
@@ -238,6 +256,17 @@ const UserProfileInfo = ({ user, posts, profileId, setShowEdit }) => {
     </span>
   </div>
 </div>
+
+{canChat && !isOwnProfile && (
+  <div className="w-full flex justify-center mt-2">
+    <button
+      onClick={() => navigate(`/chatbox/${user._id}`)}
+      className="flex btn"
+    >
+      <MessageSquare className="w-4 h-4 mr-2" /> Chat
+    </button>
+  </div>
+)}
 
       {/* 👁️ PROFILE VIEWS */}
       <div className="bg-gray-50 rounded-xl p-4 flex justify-center">

@@ -16,12 +16,18 @@ export default function GlobalVoiceModal() {
     activeInView,
     setActiveInView,
     scrollToCurrentAudio,
-    clearAudio
+    clearAudio,
+    currentTime, duration, formatTime,
   } = useAudioPlayer();
 
   const location = useLocation();
   const navigate = useNavigate();
   const canvasRef = useRef(null);
+  const [, forceUpdate] = useState(0);
+
+useEffect(() => {
+  forceUpdate((n) => n + 1); // triggers a re-render
+}, [currentUrl, isPlaying]);
 
   /* ------------------ DRAG STATE ------------------ */
   const [position, setPosition] = useState({ x: 20, y: 20 });
@@ -35,18 +41,15 @@ export default function GlobalVoiceModal() {
     !activeInView
   );
 
-  /* ------------------ VISUALIZER ------------------ */
- useEffect(() => {
-  if (!currentUrl || !isPlaying) return; // only show when playing
-
-  const analyser = analyserRef.current;
+/* ------------------ VISUALIZER ------------------ */
+useEffect(() => {
   const canvas = canvasRef.current;
-  if (!analyser || !canvas) return;
+  const analyser = analyserRef.current;
+  if (!canvas || !analyser || !isPlaying) return;
 
   const ctx = canvas.getContext("2d");
-
-  canvas.width = 240;
-  canvas.height = 40;
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
 
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
@@ -57,10 +60,9 @@ export default function GlobalVoiceModal() {
   gradient.addColorStop(1, "#8fd3f4");
 
   let rafId;
-  const draw = () => {
-    rafId = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(dataArray);
 
+  const draw = () => {
+    analyser.getByteFrequencyData(dataArray);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const barWidth = canvas.width / bufferLength;
@@ -69,12 +71,15 @@ export default function GlobalVoiceModal() {
       ctx.fillStyle = gradient;
       ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 2, barHeight);
     }
+
+    rafId = requestAnimationFrame(draw);
   };
 
   draw();
 
   return () => cancelAnimationFrame(rafId);
-}, [currentUrl, isPlaying, analyserRef]);
+}, [isPlaying, currentUrl, forceUpdate]);
+
 
   /* ------------------ DRAG LOGIC ------------------ */
   const startDrag = (x, y) => {
@@ -174,24 +179,43 @@ export default function GlobalVoiceModal() {
       </button>
 
       {/* Visualizer + Progress */}
-      <div className="flex-1">
-        <canvas ref={canvasRef} className="w-full h-10 mb-1" />
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={progress}
-          onChange={(e) => seek(Number(e.target.value))}
-          className="w-full"
-          style={{
-            background: `linear-gradient(
-              to right,
-              var(--primary) ${progress}%,
-              var(--hover-light) ${progress}%
-            )`,
-          }}
-        />
-      </div>
+<div className="flex-1">
+  {/* Verbose / Voice Label */}
+  <div className="voice-body mb-1">
+    <p className="voice-label">Voice Note</p>
+    <canvas ref={canvasRef} className="voice-canvas w-full h-10" />
+  </div>
+
+  {/* Timer */}
+  {formatTime && duration > 0 && (
+    <div className="voice-timer flex justify-between text-sm text-gray-400 mt-1">
+      <span>{formatTime(currentTime)}</span>
+      <span>{formatTime(duration)}</span>
+    </div>
+  )}
+
+  {/* Slider */}
+  <input
+    type="range"
+    min={0}
+    max={100}
+    value={duration ? (currentTime / duration) * 100 : 0}
+    onChange={(e) => {
+      const newTime = (Number(e.target.value) / 100) * duration;
+      audioRef.current.currentTime = newTime;
+      seek((newTime / duration) * 100);
+    }}
+    className="voice-range"
+    style={{
+      background: `linear-gradient(
+        to right,
+        var(--primary) ${(currentTime / duration) * 100}%,
+        var(--hover-light) ${(currentTime / duration) * 100}%
+      )`,
+    }}
+  />
+</div>
+
     </div>
   );
 }

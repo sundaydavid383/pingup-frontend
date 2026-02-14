@@ -28,7 +28,7 @@ import VoiceNoteCard from "./shared/VoiceNoteCard";
 import { useGlobalVideo } from "../context/GlobalVideoContext";
 
 
-const PostCard = ({   post,
+const PostCard = ({ post,
   setFeeds,
   onShare,
   onImageClick,
@@ -70,26 +70,26 @@ const PostCard = ({   post,
   const [likeLoading, setLikeLoading] = useState(false);
   const [showCommentsSection, setShowCommentsSection] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount ?? post.comments_count ?? 0);
-    const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // ---------------- DISLIKE STATES ----------------
-const initialDisliked = (() => {
-  if (!userId) return false;
-  if (Array.isArray(post.recentDislikes)) {
-    return post.recentDislikes.some((r) => {
-      const ru = r.user;
-      return (
-        (ru && ru._id?.toString?.() === userId?.toString?.()) ||
-        ru?.toString?.() === userId?.toString?.()
-      );
-    });
-  }
-  return false;
-})();
+  const initialDisliked = (() => {
+    if (!userId) return false;
+    if (Array.isArray(post.recentDislikes)) {
+      return post.recentDislikes.some((r) => {
+        const ru = r.user;
+        return (
+          (ru && ru._id?.toString?.() === userId?.toString?.()) ||
+          ru?.toString?.() === userId?.toString?.()
+        );
+      });
+    }
+    return false;
+  })();
 
-const [disliked, setDisliked] = useState(initialDisliked);
-const [dislikesCount, setDislikesCount] = useState(
-  post.dislikesCount ?? 0 
-);
+  const [disliked, setDisliked] = useState(initialDisliked);
+  const [dislikesCount, setDislikesCount] = useState(
+    post.dislikesCount ?? 0
+  );
 
 
 
@@ -115,12 +115,12 @@ const [dislikesCount, setDislikesCount] = useState(
   const contentToShow = isExpanded || !shouldTruncate ? post.content : post.content.slice(0, maxLength) + "...";
   const displayContent = DOMPurify.sanitize(highlightHashtags(contentToShow));
   function linkify(text) {
-  if (!text) return "";
+    if (!text) return "";
 
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-  return text.replace(urlRegex, (url) => {
-    return `<a 
+    return text.replace(urlRegex, (url) => {
+      return `<a 
       href="${url}" 
       target="_blank" 
       rel="noopener noreferrer"
@@ -128,9 +128,9 @@ const [dislikesCount, setDislikesCount] = useState(
     >
       ${url}
     </a>`;
-  });
-}
-const processedContent = linkify(displayContent);
+    });
+  }
+  const processedContent = linkify(displayContent);
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (likeBarRef.current && !likeBarRef.current.contains(e.target)) setShowLikesBar(false);
@@ -140,61 +140,61 @@ const processedContent = linkify(displayContent);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-const handleLike = async () => {
-  if (!userId) return navigate("/signin");
-  if (likeLoading) return;
-  setLikeLoading(true);
+  const handleLike = async () => {
+    if (!userId) return navigate("/signin");
+    if (likeLoading) return;
+    setLikeLoading(true);
 
-  // save previous state for rollback
-  const prevLiked = liked;
-  const prevLikes = likesCount;
-  const prevDisliked = disliked;
-  const prevDislikes = dislikesCount;
+    // save previous state for rollback
+    const prevLiked = liked;
+    const prevLikes = likesCount;
+    const prevDisliked = disliked;
+    const prevDislikes = dislikesCount;
 
-  // optimistic update: toggle like and remove dislike if present
-  const willLike = !prevLiked;
-  setLiked(willLike);
-  setLikesCount(willLike ? prevLikes + 1 : Math.max(0, prevLikes - 1));
+    // optimistic update: toggle like and remove dislike if present
+    const willLike = !prevLiked;
+    setLiked(willLike);
+    setLikesCount(willLike ? prevLikes + 1 : Math.max(0, prevLikes - 1));
 
-  if (prevDisliked && willLike) {
-    setDisliked(false);
-    setDislikesCount(Math.max(0, prevDislikes - 1));
-  }
+    if (prevDisliked && willLike) {
+      setDisliked(false);
+      setDislikesCount(Math.max(0, prevDislikes - 1));
+    }
 
-  try {
-    const res = await axiosBase.put(`/api/posts/${post._id}/like`);
-    const serverPost = res.data?.post;
-    if (serverPost) {
-      console.log("Received updated post from server:", serverPost);
-      // authoritative reconciliation
-      setLikesCount(serverPost.likesCount ?? likesCount);
-      setDislikesCount(serverPost.dislikesCount ?? dislikesCount);
+    try {
+      const res = await axiosBase.put(`/api/posts/${post._id}/like`);
+      const serverPost = res.data?.post;
+      if (serverPost) {
+        console.log("Received updated post from server:", serverPost);
+        // authoritative reconciliation
+        setLikesCount(serverPost.likesCount ?? likesCount);
+        setDislikesCount(serverPost.dislikesCount ?? dislikesCount);
 
-      const meLiked = (serverPost.recentReactions || []).some(
-        (r) => r.type === "like" && r.user?._id?.toString() === userId?.toString()
-      );
-const meDisliked = (serverPost.recentDislikes || []).some(
-  (r) =>
-    (r.user?._id?.toString() === userId?.toString()) ||
-    (r.user?.toString?.() === userId?.toString())
-);
+        const meLiked = (serverPost.recentReactions || []).some(
+          (r) => r.type === "like" && r.user?._id?.toString() === userId?.toString()
+        );
+        const meDisliked = (serverPost.recentDislikes || []).some(
+          (r) =>
+            (r.user?._id?.toString() === userId?.toString()) ||
+            (r.user?.toString?.() === userId?.toString())
+        );
 
 
-      setLiked(!!meLiked);
-      setDisliked(!!meDisliked);
-    } 
-  } catch (err) {
-    // rollback
-    setLiked(prevLiked);
-    setLikesCount(prevLikes);
-    setDisliked(prevDisliked);
-    setDislikesCount(prevDislikes);
-    console.error("Failed to like post", err);
-    showAlert?.("Failed to like post. Try again.", "error");
-  } finally {
-    setLikeLoading(false);
-  }
-};
+        setLiked(!!meLiked);
+        setDisliked(!!meDisliked);
+      }
+    } catch (err) {
+      // rollback
+      setLiked(prevLiked);
+      setLikesCount(prevLikes);
+      setDisliked(prevDisliked);
+      setDislikesCount(prevDislikes);
+      console.error("Failed to like post", err);
+      showAlert?.("Failed to like post. Try again.", "error");
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
 
   const onConfirmDelete = async () => {
@@ -230,6 +230,14 @@ const meDisliked = (serverPost.recentDislikes || []).some(
     setShowConfirm(true);
   };
 
+      // Detect attachment types
+      const hasImageAttachment = post.attachments?.some(att => att.type === "image");
+      const hasAudioAttachment = post.attachments?.some(att => att.type === "audio");
+      const isMixedImageAudio = hasImageAttachment && hasAudioAttachment;
+      
+      // Separate attachments
+      const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
+      const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
 
 
   const handleShowLikes = async (postId) => {
@@ -285,7 +293,7 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
 
   const hasVideoAttachment = post.attachments?.some(
-    (file) => file.type === "video" || file.type === "youtube" 
+    (file) => file.type === "video" || file.type === "youtube"
   )
 
 
@@ -298,8 +306,8 @@ const meDisliked = (serverPost.recentDislikes || []).some(
       <div className="flex justify-between items-center w-full ">
         {/* LEFT: user details */}
         <div
-            className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-              onDoubleClick={onHeaderClick}  >
+          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+          onDoubleClick={onHeaderClick}  >
           <div onClick={() => navigate(`/profile/${post.user?._id}`)}>
             <ProfileAvatar
 
@@ -344,169 +352,184 @@ const meDisliked = (serverPost.recentDislikes || []).some(
 
 
       {/* Content */}
- {post.content && (
-  <div className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">
-    <div dangerouslySetInnerHTML={{ __html: processedContent }} />
-    {shouldTruncate && (
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-[var(--primary)] mt-1 inline-block"
-      >
-        {isExpanded ? "Read Less" : "Read More"}
-      </button>
-    )}
-  </div>
-)}
+      {post.content && (
+        <div className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">
+          <div dangerouslySetInnerHTML={{ __html: processedContent }} />
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-[var(--primary)] mt-1 inline-block"
+            >
+              {isExpanded ? "Read Less" : "Read More"}
+            </button>
+          )}
+        </div>
+      )}
 
 
-      {/* Attachments */}
-  {post.attachments?.length > 0 && (
-  <div
-    className={`w-full grid gap-2  ${hasVideoAttachment ? "bg-black" : ""}
+     {/* Attachments */}
+     {isMixedImageAudio && audioAttachments.map((file, index) => (
+ <VoiceNoteCard
+                        audioUrl={file.url}
+                        ref={(el) => {
+                          if (el) audioRefs.current[file.url] = el;
+                        }}
+                      />
+))}
+
+      {nonAudioAttachments?.length > 0 && (
+        <div
+          className={`w-full grid gap-2  ${hasVideoAttachment ? "bg-black" : ""}
       ${post.attachments.length === 1 && "flex justify-center"}
       ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
       ${post.attachments.length === 3 && "grid-cols-2"}
       ${post.attachments.length >= 4 && "grid-cols-2"}
     `}
-  >
-    {post.attachments.map((file, index) => {
-      const count = post.attachments.length;
-      const single = count === 1;
+        >
+          {nonAudioAttachments.map((file, index) => {
+            const count = nonAudioAttachments.length;
+            const single = count === 1;
 
-      const isImage = file.type === "image";
-      const isVideo = file.type === "video";
-      const isYouTube = file.type === "youtube";
-      const isAudio = file.type === "audio";
+            const isImage = file.type === "image";
+            const isVideo = file.type === "video";
+            const isYouTube = file.type === "youtube";
+            const isAudio = file.type === "audio";
 
-      // ✅ Detect portrait / mobile-shaped images
-      const isMobileShaped = isImage && file?.aspect === "tall" && !single;
+            // ✅ Detect portrait / mobile-shaped images
+            const isMobileShaped = isImage && file?.aspect === "tall" && !single;
 
-      // ✅ Special case: last item in 3 attachments
-      const isLastOfThree = count === 3 && index === 2;
+            // ✅ Special case: last item in 3 attachments
+            const isLastOfThree = count === 3 && index === 2;
 
-      // ✅ Dynamic max height (GRID SAFE)
-      let maxHeight;
-    
-if (single) {
-  maxHeight = "450px"; // 1 image
-} else if (count === 4) {
-  maxHeight = "520px"; // 2x2 grid
-} else if (count === 3) {
-  maxHeight = 520; // 🔥 same as 4-image logic for balance
-} else if (isMobileShaped) {
-  maxHeight = "1000px"; // tall portrait
-} else {
-  maxHeight = "750px"; // landscape
-}
+            // ✅ Dynamic max height (GRID SAFE)
+            let maxHeight;
 
-let widthClass = "w-full";
-if (count === 2) {
-  widthClass = "w-1/2"; // 2 side-by-side
-} else if (count === 3) {
-  widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
-} else if (count === 4) {
-  widthClass = "w-1/2"; // 2x2 grid
-}
+            if (single) {
+              maxHeight = "450px"; // 1 image
+            } else if (count === 4) {
+              maxHeight = "520px"; // 2x2 grid
+            } else if (count === 3) {
+              maxHeight = 520; // 🔥 same as 4-image logic for balance
+            } else if (isMobileShaped) {
+              maxHeight = "1000px"; // tall portrait
+            } else {
+              maxHeight = "750px"; // landscape
+            }
 
-
-      // ✅ Aspect ratio (controls shape, not image)
-    const aspectRatio = single
-  ? "auto"
-  : isMobileShaped
-    ? "3 / 5"
-    : count === 4 || count === 3
-      ? "4 / 5"  
-      : "5 / 3";
+            let widthClass = "w-full";
+            if (count === 2) {
+              widthClass = "w-1/2"; // 2 side-by-side
+            } else if (count === 3) {
+              widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
+            } else if (count === 4) {
+              widthClass = "w-1/2"; // 2x2 grid
+            }
 
 
-      return (
-<div
-  key={index}
-  onClick={(e) => {
-    e.stopPropagation();
-    if (isImage) onImageClick(index);
-  }}
-  className={`relative overflow-hidden cursor-pointer
+            // ✅ Aspect ratio (controls shape, not image)
+            const aspectRatio = single
+              ? "auto"
+              : isMobileShaped
+                ? "3 / 5"
+                : count === 4 || count === 3
+                  ? "4 / 5"
+                  : "5 / 3";
+
+
+            return (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isImage) onImageClick(index);
+                  }}
+                  className={`relative overflow-hidden cursor-pointer
     ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
     ${single ? "rounded-lg" : "rounded-sm"}
     ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
   `}
-  style={{ aspectRatio }}
->
+                  style={{ aspectRatio }}
+                >
 
 
-          {/* ✅ IMAGE */}
-          {isImage && (
-          <img
-  src={file.url}
-  alt={`attachment-${index}`}
-  className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
-  style={{
-    maxHeight,
-    width: isMobileShaped || count === 3 && index === 2 ? "auto" : "100%",
-    margin: "auto",
-    userSelect: "none",
-  }}
-  draggable={false}
-  onContextMenu={(e) => e.preventDefault()}
-/>
+                  {/* ✅ IMAGE */}
+                  {isImage && (
+                    <img
+                      src={file.url}
+                      alt={`attachment-${index}`}
+                      className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
+                      style={{
+                        maxHeight,
+                        width: isMobileShaped || count === 3 && index === 2 ? "auto" : "100%",
+                        margin: "auto",
+                        userSelect: "none",
+                      }}
+                      draggable={false}
+                      onContextMenu={(e) => e.preventDefault()}
+                    />
 
-          )}
+                  )}
 
-          {/* ✅ VIDEO */}
+                  {/* ✅ VIDEO */}
 
-{isVideo && (
-  <div className="w-full h-full flex items-center justify-center bg-black">
-    <div className="w-full h-full max-h-full flex items-center justify-center">
-      <VideoPlayer
-  src={file.url}
-  poster={file.poster || ""}
-  className="max-h-full max-w-full"
-  primaryColor="#FF4D4F"
-  autoPlayOnView={true}
-  sectionId={`feed-${post._id}`}
-  ref={(ref) => {
-    if (ref?.videoRef?.current) {
-      setVideoState({
-        src: file.url,
-        poster: file.poster || "",
-        inlineRef: ref.videoRef.current,
-        playing: !ref.videoRef.current.paused,
-        currentTime: ref.videoRef.current.currentTime,
-      });
-    }
-  }}
-/>
+                  {isVideo && (
+                    <div className="w-full h-full flex items-center justify-center bg-black">
+                      <div className="w-full h-full max-h-full flex items-center justify-center">
+                        <VideoPlayer
+                          src={file.url}
+                          poster={file.poster || ""}
+                          className="max-h-full max-w-full"
+                          primaryColor="#FF4D4F"
+                          autoPlayOnView={true}
+                          sectionId={`feed-${post._id}`}
+                          ref={(ref) => {
+                            if (ref?.videoRef?.current) {
+                              setVideoState({
+                                src: file.url,
+                                poster: file.poster || "",
+                                inlineRef: ref.videoRef.current,
+                                playing: !ref.videoRef.current.paused,
+                                currentTime: ref.videoRef.current.currentTime,
+                              });
+                            }
+                          }}
+                        />
 
-    </div>
-  </div>
-)}
+                      </div>
+                    </div>
+                  )}
 
-{isAudio && (
-  <VoiceNoteCard
-   audioUrl={file.url}
-   ref={(el) => {
-  if (el) audioRefs.current[file.url] = el;
-}}/>
-)}
+                  {isAudio && (
+                    !isMixedImageAudio &&
+                    (
+                      // ✅ KEEP ORIGINAL AUDIO-ONLY BEHAVIOR
+                      <VoiceNoteCard
+                        audioUrl={file.url}
+                        ref={(el) => {
+                          if (el) audioRefs.current[file.url] = el;
+                        }}
+                      />
+                    )
+                  )}
 
 
 
-          {/* ✅ YOUTUBE */}
-          {isYouTube && (
-            <iframe
-              src={`https://www.youtube.com/embed/${file.youtubeId}`}
-              title={`youtube-${index}`}
-              className="w-full h-full rounded-md"
-              allowFullScreen
-              style={{ maxHeight }}
-            />
-          )}
+
+                  {/* ✅ YOUTUBE */}
+                  {isYouTube && (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${file.youtubeId}`}
+                      title={`youtube-${index}`}
+                      className="w-full h-full rounded-md"
+                      allowFullScreen
+                      style={{ maxHeight }}
+                    />
+                  )}
+                </div>
+            );
+          })}
         </div>
-      );
-    })}
-  </div>
-)}
+      )}
 
 
 
@@ -549,36 +572,36 @@ if (count === 2) {
           <span className="text-sm font-medium">{likesCount}</span>
         </div>
 
-<DislikeButton
-  postId={post._id}
-  post={post}
-  onToggle={(payload) => {
-  const serverPost = payload?.post || payload;
-  if (!serverPost) return;
+        <DislikeButton
+          postId={post._id}
+          post={post}
+          onToggle={(payload) => {
+            const serverPost = payload?.post || payload;
+            if (!serverPost) return;
 
-  setLikesCount(serverPost.likesCount);
-  setDislikesCount(serverPost.dislikesCount);
+            setLikesCount(serverPost.likesCount);
+            setDislikesCount(serverPost.dislikesCount);
 
-  const meLiked = serverPost.recentReactions?.some(
-    (r) => r.user?._id?.toString() === userId?.toString()
-  );
+            const meLiked = serverPost.recentReactions?.some(
+              (r) => r.user?._id?.toString() === userId?.toString()
+            );
 
- const meDisliked = (serverPost.recentDislikes || []).some(
-  (r) =>
-    (r.user?._id?.toString() === userId?.toString()) ||
-    (r.user?.toString?.() === userId?.toString())
-);
+            const meDisliked = (serverPost.recentDislikes || []).some(
+              (r) =>
+                (r.user?._id?.toString() === userId?.toString()) ||
+                (r.user?.toString?.() === userId?.toString())
+            );
 
-  setLiked(meLiked);
-  setDisliked(meDisliked);
-}}
-disliked={disliked}
-setDisliked={setDisliked}
-dislikesCount={dislikesCount}
-setDislikesCount={setDislikesCount}
+            setLiked(meLiked);
+            setDisliked(meDisliked);
+          }}
+          disliked={disliked}
+          setDisliked={setDisliked}
+          dislikesCount={dislikesCount}
+          setDislikesCount={setDislikesCount}
 
 
-/>
+        />
 
 
 
@@ -598,7 +621,7 @@ setDislikesCount={setDislikesCount}
 
       {showCommentsSection && <CommentSection commentsCount={commentsCount} postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
       {showConfirm && (<ActionNotifier action="delete this post" onConfirm={onConfirmDelete} onCancel={onCancelDelete} />)}
-       {deleting && <Loading text="Deleting post..." />}
+      {deleting && <Loading text="Deleting post..." />}
 
 
       {/* Likes popup */}

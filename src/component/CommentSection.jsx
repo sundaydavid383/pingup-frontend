@@ -224,6 +224,19 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                       <div className="text-sm font-medium">{c.user?.full_name || c.user?.username}</div>
                       {/* Timestamp */}
                       <div className="text-[10px] mt-[3px] text-gray-600">{moment(c.createdAt).fromNow()}</div>
+                         {/* Reply button */}
+                    <div className="flex items-center gap-3 mt-1 text-[11px] ">
+                      <button
+                        onClick={() => {
+                          setEditingId(null);
+                          setReplyTo(c);
+                          inputRef.current?.focus();
+                        }}
+                        className="hover:text-[var(--accent)] transition text-gray-500 bg-gray-100 px-2 py-1 rounded-full active:scale-95 flex items-center gap-1"
+                      >
+                        Reply
+                      </button>
+                    </div>
                      </div>
 
                       {/* Action menu trigger */}
@@ -326,10 +339,10 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                           <div
                             className="absolute left-3"
                             style={{
-                              top: '-1.5rem', // start above the reply avatar
+                              top: '-1.6rem', // start above the reply avatar
                               bottom: '0',
                               width: '2px',
-                              left: '0rem',
+                              left: '0.2rem',
                               backgroundColor: '#d1d5db', // tailwind gray-300
                             }}
                           ></div>
@@ -355,21 +368,6 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                           </div>
                         </div>
                       ))}
-                    </div>
-
-
-                    {/* Reply button */}
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setReplyTo(c);
-                          inputRef.current?.focus();
-                        }}
-                        className="hover:text-[var(--accent)] transition"
-                      >
-                        Reply
-                      </button>
                     </div>
 
                     {c.pending && <div className="text-xs text-gray-500 mt-1">sending…</div>}

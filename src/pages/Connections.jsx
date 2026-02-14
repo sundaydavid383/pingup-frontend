@@ -40,62 +40,52 @@ const Connections = () => {
   };
 
   // ✅ Fetch connections
-  const fetchConnections = async () => {
-    setLoading(true);
+// ------------------------- Step 1 -------------------------
+const fetchConnections = async () => {
+  setLoading(true);
 
-    try {
-      const userId = user?._id;
-
-      if (!token || !userId) {
-        showAlert("Please log in again.", "warning");
-        return;
-      }
-
-      const res = await axiosBase.get(`/api/user/connections?userId=${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = res?.data?.data || {};
-
-      const formatted = {
-        followers: data.followers || [],
-        following: data.following || [],
-        connections: data.connections || [],
-        pendingConnections: data.pendingConnections || [],
-      };
-
-      // Update UI
-      setData(formatted);
-
-      // Save to localStorage for offline fallback
-      localStorage.setItem(
-        "springsconnect_connections_full",
-        JSON.stringify(formatted)
-      );
-
-    } catch (error) {
-      console.error("❌ Error fetching connections:", error);
-      showAlert("Failed to load connections. Showing saved data.", "error");
-
-      // FALLBACK: Load previous saved data
-      const cached = localStorage.getItem("springsconnect_connections_full");
-
-      if (cached) {
-        setData(JSON.parse(cached));
-      } else {
-        // If nothing saved before
-        setData({
-          followers: [],
-          following: [],
-          connections: [],
-          pendingConnections: [],
-        });
-      }
-
-    } finally {
-      setLoading(false);
+  try {
+    const userId = user?._id;
+    if (!token || !userId) {
+      showAlert("Please log in again.", "warning");
+      return;
     }
-  };
+
+    const res = await axiosBase.get(`api/user/connections?userId=${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = res?.data?.data || {};
+
+    const formatted = {
+      followers: data.followers || [],
+      following: data.following || [],
+      connections: data.connections || [],
+      pendingConnections: data.pendingConnections || [],
+    };
+
+    setData(formatted);
+    localStorage.setItem(
+      "springsconnect_connections_full",
+      JSON.stringify(formatted)
+    );
+
+  } catch (error) {
+    console.error("❌ Error fetching connections:", error);
+    showAlert("Failed to load connections. Showing saved data.", "error");
+
+    // FALLBACK
+    const cached = localStorage.getItem("springsconnect_connections_full");
+    setData(
+      cached
+        ? JSON.parse(cached)
+        : { followers: [], following: [], connections: [], pendingConnections: [] }
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   useEffect(() => {
@@ -103,34 +93,44 @@ const Connections = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Accept connection
-  const handleAccept = async (senderId) => {
-    if (!user?._id || !token) {
-      showAlert("Please log in again.", "warning");
-      return;
+// ------------------------- Step 3 -------------------------
+const handleAccept = async (senderId) => {
+  if (!user?._id || !token) {
+    showAlert("Please log in again.", "warning");
+    return;
+  }
+
+  try {
+    setAcceptingId(senderId);
+
+    const res = await axiosBase.get("api/user/accept", {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { userId: user._id, id: senderId },
+    });
+
+    if (res.data.success) {
+      // ✅ Optimistically update UI
+      setData((prev) => ({
+        ...prev,
+        pendingConnections: prev.pendingConnections.filter(u => u._id !== senderId),
+        connections: [...prev.connections, prev.pendingConnections.find(u => u._id === senderId)],
+      }));
+
+      showAlert("✅ Connection accepted successfully!", "success");
+
+      // ✅ Still fetch fresh data to sync all tabs in case backend changed
+      fetchConnections();
+    } else {
+      showAlert(res.data.message || "Failed to accept connection.", "error");
     }
+  } catch (error) {
+    console.error("❌ Error accepting connection:", error);
+    showAlert("Something went wrong. Please try again.", "error");
+  } finally {
+    setAcceptingId(null);
+  }
+};
 
-    try {
-      setAcceptingId(senderId);
-
-      const res = await axiosBase.get("/api/user/accept", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { userId: user._id, id: senderId },
-      });
-
-      if (res.data.success) {
-        showAlert("✅ Connection accepted successfully!", "success");
-        await fetchConnections();
-      } else {
-        showAlert(res.data.message || "Failed to accept connection.", "error");
-      }
-    } catch (error) {
-      console.error("❌ Error accepting connection:", error);
-      showAlert("Something went wrong. Please try again.", "error");
-    } finally {
-      setAcceptingId(null);
-    }
-  };
 
   const dataArray = [
     { label: "Followers", value: data.followers, icon: Users },
@@ -256,21 +256,25 @@ const Connections = () => {
                 className="flex flex-wrap justify-center gap-2 border border-gray-200
               rounded-md p-2 bg-white shadow-sm max-w-full"
               >
-                {dataArray.map((tab) => (
-                  <button
-                    onClick={() => setCurrentTab(tab.label)}
-                    key={tab.label}
-                    className={`flex items-center justify-center gap-1 px-4 py-2 text-sm font-medium
-                  rounded-md whitespace-normal w-[140px] sm:w-[150px] md:w-[160px]
-                  transition-colors duration-200 ${currentTab === tab.label
-                        ? "bg-[var(--hover-light)] text-[var(--secondary)]"
-                        : "text-gray-600 hover:text-black"
-                      }`}
-                  >
-                    <tab.icon className="w-4 h-4 shrink-0" />
-                    <span className="text-center leading-tight">{tab.label}</span>
-                  </button>
-                ))}
+{dataArray.map((tab) => (
+  <button
+    onClick={() => {
+      setCurrentTab(tab.label);
+      fetchConnections(); // ✅ fetch fresh data on every tab switch
+    }}
+    key={tab.label}
+    className={`flex items-center justify-center gap-1 px-4 py-2 text-sm font-medium
+      rounded-md whitespace-normal w-[140px] sm:w-[150px] md:w-[160px]
+      transition-colors duration-200 ${currentTab === tab.label
+        ? "bg-[var(--hover-light)] text-[var(--secondary)]"
+        : "text-gray-600 hover:text-black"
+      }`}
+  >
+    <tab.icon className="w-4 h-4 shrink-0" />
+    <span className="text-center leading-tight">{tab.label}</span>
+  </button>
+))}
+
               </div>
 
               {/* List */}

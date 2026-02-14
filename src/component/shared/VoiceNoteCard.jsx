@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef } from "react";
+import React, { useEffect, useRef, useState, forwardRef } from "react";
 import { Play, Pause } from "lucide-react";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import "../../styles/voicenotecard.css";
@@ -11,7 +11,8 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     progress,
     seek,
     analyserRef,
-    setActiveInView
+    setActiveInView,
+    currentTime, duration, formatTime,
   } = useAudioPlayer();
 
   const canvasRef = useRef(null);
@@ -19,6 +20,8 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
 
   // Use the forwarded ref, fallback to internal if not provided
   const cardRef = useRef(null);
+
+
 
   useEffect(() => {
   if (!forwardedRef) return;
@@ -115,19 +118,26 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
           <canvas ref={canvasRef} className="voice-canvas" />
         </div>
       </div>
+      <div className="voice-timer flex justify-between text-sm text-gray-400 mt-1">
+  <span>{formatTime(currentTime)}</span>
+  <span>{formatTime(duration)}</span>
+</div>
 
       <input
         type="range"
         min={0}
         max={100}
-        value={isActive ? progress : 0}
-        onChange={(e) => seek(Number(e.target.value))}
-        className="voice-range"
+          value={duration ? (currentTime / duration) * 100 : 0}
+         onChange={(e) => {
+    const newTime = (Number(e.target.value) / 100) * duration;
+    audioRef.current.currentTime = newTime;
+    seek((newTime / duration) * 100);
+  }}className="voice-range"
         style={{
           background: `linear-gradient(
-            to right,
-            var(--primary) ${progress}%,
-            var(--hover-light) ${progress}%
+      to right,
+      var(--primary) ${(currentTime / duration) * 100}%,
+      var(--hover-light) ${(currentTime / duration) * 100}%
           )`,
         }}
       />

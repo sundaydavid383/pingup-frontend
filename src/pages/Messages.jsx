@@ -69,13 +69,17 @@ const Messages = () => {
       setSyncProgress(50); // mid-progress
 
       // Sync Connections
-      if (connRes.status === 'fulfilled') {
-        const data = connRes.value.data.data;
-        const acceptedConnections = data?.connections?.length ? data.connections : (data?.followers || []);
+     // ------------------- Step 1 -------------------
+if (connRes.status === 'fulfilled') {
+  const data = connRes.value.data.data;
 
-        setConnections(acceptedConnections);
-        localStorage.setItem("springsconnect_connections", JSON.stringify(acceptedConnections));
-      }
+  // Only include users who have a confirmed connection
+  const confirmedConnections = (data.connections || [])
+
+  setConnections(confirmedConnections);
+  localStorage.setItem("springsconnect_connections", JSON.stringify(confirmedConnections));
+}
+
 
       setSyncProgress(70); // more progress
 
