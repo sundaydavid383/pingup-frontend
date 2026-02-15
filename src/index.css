@@ -36,6 +36,9 @@ input, textarea, select {
   --glassy-white: rgba(232, 228, 228, 0.4);
   --really-bright-glass: rgba(255, 255, 255, 0.4);
 
+  /* Animations */
+  --animate-spin-slow: spin 3s linear infinite;
+
     --color-1: #fdfcfb;
   --color-2: #e2d1c3;
   --color-3: #c2b3e4;

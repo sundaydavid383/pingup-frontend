@@ -1,6 +1,6 @@
 // BibleReader.jsx
-import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
@@ -119,7 +119,7 @@ export default function BibleReader() {
 
 
   //bible theme 
-    const [theme, setTheme] = useState(
+  const [theme, setTheme] = useState(
     localStorage.getItem("bibleTheme") || "dark"
   );
 
@@ -132,6 +132,38 @@ export default function BibleReader() {
   };
 
   const { book, chapter, verse } = useParams();
+  const location = useLocation();
+  const isOnBiblePage = location.pathname.includes('/bible');
+
+  // ------------------------------
+  // Stop TTS when navigating away from Bible page
+  // ------------------------------
+  const stopTTsOnLeave = useCallback(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      console.log('🔊 TTS stopped due to navigation');
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: stop TTS when component unmounts
+      stopTTsOnLeave();
+    };
+  }, [stopTTsOnLeave]);
+
+  // Listen for route changes - stop TTS when leaving Bible page
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Check if we're still on a Bible page
+      if (!location.pathname.includes('/bible')) {
+        stopTTsOnLeave();
+      }
+    };
+
+    // Run on location change
+    handleRouteChange();
+  }, [location, stopTTsOnLeave]);
 
 
 
@@ -577,6 +609,9 @@ export default function BibleReader() {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setSearchVisible(false);
       }
+      if (selectorsRef.current && !selectorsRef.current.contains(event.target)) {
+        setSelectorsVisible(false);
+      }
     };
 
 
@@ -593,195 +628,195 @@ export default function BibleReader() {
 
 
   return (
-        <div className={`bible-page`} data-theme={theme}>
+    <div className={`bible-page`} data-theme={theme}>
 
 
-    <div className="bible-reader-container">
-      <div className="bible-reader-inner">
-        {/* --- Replace your fixed-header block with this --- */}
-      <div className="fixed-header">
-  <div className="header-inner">
-    {/* Left: Title */}
-    <h2 className="bible-title">
-      <span>Bible</span> <span>Reader</span>
-    </h2>
+      <div className="bible-reader-container">
+        <div className="bible-reader-inner">
+          {/* --- Replace your fixed-header block with this --- */}
+          <div className="fixed-header">
+            <div className="header-inner">
+              {/* Left: Title */}
+              <h2 className="bible-title">
+                <span>Bible</span> <span>Reader</span>
+              </h2>
 
-    {/* Center: Chapter */}
-    {selectedBookName && (
-      <div className="chapter-center flex items-center gap-3">
-        <span className="text-[var(--hover-light)]">
-          {selectedBookName} {selectedChapterNumber}
-        </span>
-      </div>
-    )}
+              {/* Center: Chapter */}
+              {selectedBookName && (
+                <div className="chapter-center flex items-center gap-3">
+                  <span className="text-[var(--hover-light)]">
+                    {selectedBookName} {selectedChapterNumber}
+                  </span>
+                </div>
+              )}
 
-    {/* Right: Search, Selectors & Theme Toggle */}
-    <div className="header-right flex items-center gap-3">
-      {/* Existing Search */}
-      <div className="search-container" ref={searchRef}>
-        <FaSearch
-          className="search-toggle-icon"
-          onClick={() => setSearchVisible(prev => !prev)}
-        />
-        {searchVisible && (
-          <div className="search-dropdown">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search scripture, book, or phrase"
-              className="bible-search-input"
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
-            />
-            <button onClick={handleSearchClick}>Search</button>
+              {/* Right: Search, Selectors & Theme Toggle */}
+              <div className="header-right flex items-center gap-3">
+                {/* Existing Search */}
+                <div className="search-container" ref={searchRef}>
+                  <FaSearch
+                    className="search-toggle-icon"
+                    onClick={() => setSearchVisible(prev => !prev)}
+                  />
+                  {searchVisible && (
+                    <div className="search-dropdown">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search scripture, book, or phrase"
+                        className="bible-search-input"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+                      />
+                      <button onClick={handleSearchClick}>Search</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Book/Chapter Selectors */}
+                <div className="selectors-container" ref={selectorsRef}>
+                  <FaBook
+                    className="selectors-toggle-icon"
+                    onClick={() => setSelectorsVisible(prev => !prev)}
+                  />
+                  {selectorsVisible && (
+                    <div className="selectors-dropdown">
+                      <CustomSelect
+                        options={bookNames}
+                        value={selectedBookName}
+                        onChange={handleBookSelection}
+                        placeholder="Book"
+                      />
+                      {selectedBookName && (
+                        <CustomSelect
+                          options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
+                          value={selectedChapterNumber}
+                          onChange={handleChapterSelection}
+                          placeholder="Chapter"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Theme Switch */}
+                <div
+                  className={`theme-switch ${theme === "dark" ? "dark" : ""}`}
+                  onClick={toggleTheme}
+                  title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                >
+                  <div className="theme-toggle-circle">
+                    {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Book/Chapter Selectors */}
-      <div className="selectors-container" ref={selectorsRef}>
-        <FaBook
-          className="selectors-toggle-icon"
-          onClick={() => setSelectorsVisible(prev => !prev)}
-        />
-        {selectorsVisible && (
-          <div className="selectors-dropdown">
-            <CustomSelect
-              options={bookNames}
-              value={selectedBookName}
-              onChange={handleBookSelection}
-              placeholder="Book"
-            />
-            {selectedBookName && (
-              <CustomSelect
-                options={Array.from({ length: maximumChapterNumber }, (_, i) => i + 1)}
-                value={selectedChapterNumber}
-                onChange={handleChapterSelection}
-                placeholder="Chapter"
-              />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Theme Switch */}
-      <div
-        className={`theme-switch ${theme === "dark" ? "dark" : ""}`}
-        onClick={toggleTheme}
-        title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-      >
-        <div className="theme-toggle-circle">
-          {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 
 
 
-        {isReadingChapter && <>
-          <ChapterTTS
-            ref={ttsRef}
-            text={buildChapterText()}
-            speed={ttsSpeed}
-            progress={progress}
-            setProgress={setProgress}
-            verseOffsetsRef={verseOffsetsRef}
-          />
-
-
-          {!seeControls && <div
-            onClick={() => setSeeControls(prev => !prev)}
-            className="bible_controls_toggler"
-            style={{
-              left: sidebarOpen ? "20rem" : "0.1rem",
-              transition: "left 0.3s ease",
-            }}>
-            <FaSlidersH />
-          </div>
-          }
-          {seeControls && <div ref={controlsRef}>
-            <BibleControls
-              ttsSpeed={ttsSpeed}
-              setTtsSpeed={setTtsSpeed}
+          {isReadingChapter && <>
+            <ChapterTTS
+              ref={ttsRef}
+              text={buildChapterText()}
+              speed={ttsSpeed}
               progress={progress}
               setProgress={setProgress}
-              ttsRef={ttsRef}
-            /></div>}
-        </>}
+              verseOffsetsRef={verseOffsetsRef}
+            />
 
-        <div
-          className="verses-container"
-          onTouchStart={(e) => {
-            if (!selectedBookName) return;
-            const touch = e.touches[0];
-            touchStartX.current = touch.clientX;
-            touchStartY.current = touch.clientY; // add vertical reference
-          }}
-          onTouchEnd={(e) => {
-            if (!selectedBookName) return;
-            const touch = e.changedTouches[0];
-            const diffX = touchStartX.current - touch.clientX;
-            const diffY = touchStartY.current - touch.clientY;
 
-            // Only consider horizontal swipe if horizontal movement is bigger than vertical
-            if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-              if (diffX > 0) navigateChapter("next");
-              else navigateChapter("prev");
-            }
-          }}
-
-        >
-          {isLoadingVerses ? (
-            <div className="verse-skeleton-wrapper">
-              {[1, 2, 3, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="verse-skeleton">
-                  <div className="skeleton-line short"></div>
-                  <div className="skeleton-line"></div>
-                  <div className="skeleton-line"></div>
-                </div>
-              ))}
+            {!seeControls && <div
+              onClick={() => setSeeControls(prev => !prev)}
+              className="bible_controls_toggler"
+              style={{
+                left: sidebarOpen ? "20rem" : "0.1rem",
+                transition: "left 0.3s ease",
+              }}>
+              <FaSlidersH />
             </div>
-          ) : searchResults.length > 0 && hasSearched ? (
-            // Search results (Verse component styling preserved)
-            searchResults.map((v, index) => (
-              <Verse
-                key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
-                verse={v}
-                isChapterVerse={false}
-                handleVerseSeen={handleVerseSeen}
-              />
-            ))
-          ) : hasSearched && !isSearching ? (
-            // No search results message
-            <p className="text-gray-400 text-center py-8">
-              No results found for “{searchQuery}”
-            </p>
-          ) : displayedVerses.length > 0 ? (
-            // Normal chapter / random verses
-            displayedVerses.map((v, index) => (
-              <Verse
-                key={
-                  isReadingChapter
-                    ? `${v.book}-${v.chapter}-${v.verse}`
-                    : `${v.book}-${v.chapter}-${v.verse}-${index}`
-                }
-                verse={v}
-                isChapterVerse={isReadingChapter}
-                handleVerseSeen={handleVerseSeen}
-              />
-            ))
-          ) : (
-            <p className="text-gray-400 text-center py-8">No verses to display</p>
-          )}
+            }
+            {seeControls && <div ref={controlsRef}>
+              <BibleControls
+                ttsSpeed={ttsSpeed}
+                setTtsSpeed={setTtsSpeed}
+                progress={progress}
+                setProgress={setProgress}
+                ttsRef={ttsRef}
+              /></div>}
+          </>}
+
+          <div
+            className="verses-container"
+            onTouchStart={(e) => {
+              if (!selectedBookName) return;
+              const touch = e.touches[0];
+              touchStartX.current = touch.clientX;
+              touchStartY.current = touch.clientY; // add vertical reference
+            }}
+            onTouchEnd={(e) => {
+              if (!selectedBookName) return;
+              const touch = e.changedTouches[0];
+              const diffX = touchStartX.current - touch.clientX;
+              const diffY = touchStartY.current - touch.clientY;
+
+              // Only consider horizontal swipe if horizontal movement is bigger than vertical
+              if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) navigateChapter("next");
+                else navigateChapter("prev");
+              }
+            }}
+
+          >
+            {isLoadingVerses ? (
+              <div className="verse-skeleton-wrapper">
+                {[1, 2, 3, 5, 6, 7, 8].map((i) => (
+                  <div key={i} className="verse-skeleton">
+                    <div className="skeleton-line short"></div>
+                    <div className="skeleton-line"></div>
+                    <div className="skeleton-line"></div>
+                  </div>
+                ))}
+              </div>
+            ) : searchResults.length > 0 && hasSearched ? (
+              // Search results (Verse component styling preserved)
+              searchResults.map((v, index) => (
+                <Verse
+                  key={`${v.book}-${v.chapter}-${v.verse}-search-${index}`}
+                  verse={v}
+                  isChapterVerse={false}
+                  handleVerseSeen={handleVerseSeen}
+                />
+              ))
+            ) : hasSearched && !isSearching ? (
+              // No search results message
+              <p className="text-gray-400 text-center py-8">
+                No results found for “{searchQuery}”
+              </p>
+            ) : displayedVerses.length > 0 ? (
+              // Normal chapter / random verses
+              displayedVerses.map((v, index) => (
+                <Verse
+                  key={
+                    isReadingChapter
+                      ? `${v.book}-${v.chapter}-${v.verse}`
+                      : `${v.book}-${v.chapter}-${v.verse}-${index}`
+                  }
+                  verse={v}
+                  isChapterVerse={isReadingChapter}
+                  handleVerseSeen={handleVerseSeen}
+                />
+              ))
+            ) : (
+              <p className="text-gray-400 text-center py-8">No verses to display</p>
+            )}
+          </div>
+
         </div>
 
       </div>
-
-    </div>
     </div>
   );
 

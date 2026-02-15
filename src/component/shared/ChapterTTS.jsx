@@ -9,6 +9,7 @@ import React, {
 import { FaPlay, FaPause, FaStop } from "react-icons/fa";
 import { Loader } from "lucide-react";
 import CustomAlert from "./CustomAlert";
+import { useTTS } from "../../context/TTSContext";
 
 // ------------------------------
 // Safe text chunker (word-boundary)
@@ -42,6 +43,9 @@ const ChapterTTS = forwardRef(
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isLoadingTTS, setIsLoadingTTS] = useState(false);
     const [alert, setAlert] = useState(null);
+
+    // TTS Context for voice input integration
+    const { startSpeaking: notifyStartSpeaking, stopSpeaking: notifyStopSpeaking } = useTTS();
 
     const utteranceRef = useRef(null);
     const chunkIndexRef = useRef(0);
@@ -103,6 +107,7 @@ const ChapterTTS = forwardRef(
       utterance.onstart = () => {
         setIsLoadingTTS(false);
         setIsSpeaking(true);
+        notifyStartSpeaking(); // Notify TTS context
 
         setProgress(Math.round(((index + 1) / chunks.length) * 100));
 
@@ -128,6 +133,7 @@ const ChapterTTS = forwardRef(
         } else {
           shouldSpeakRef.current = false;
           setIsSpeaking(false);
+          notifyStopSpeaking(); // Notify TTS context
           setProgress(100);
         }
       };

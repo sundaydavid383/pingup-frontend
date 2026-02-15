@@ -5,6 +5,7 @@ import Toast from "../../component/shared/Toast";
 import assets from '../../assets/assets'
 import BackendAudioCapture from "./inner_component/BackendAudioCapture";
 import { useAuth } from "../../context/AuthContext";
+import { useTTS } from "../../context/TTSContext";
 
 
 const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => {
@@ -14,6 +15,9 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const { user } = useAuth();
   const [currentMode, setCurrentMode] = useState("web");
+
+  // TTS Context for blocking voice during TTS/processing
+  const { shouldBlockVoice, isSpeaking, isProcessing, startSpeaking, stopSpeaking, startProcessing, stopProcessing } = useTTS();
 
 
   const VOICE_STATE = {
@@ -334,6 +338,12 @@ useEffect(() => {
 
 // Start microphone listening
 const startListening = async () => {
+  // Block if TTS or processing is active
+  if (shouldBlockVoice) {
+    console.log("🔹 Voice input blocked - TTS or processing active");
+    return;
+  }
+  
   if (disabled || listening) return;
 
   setError(null); // clear old error

@@ -13,6 +13,8 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import { AudioPlayerProvider } from "./context/AudioPlayerContext";
 import { GlobalVideoProvider } from "./context/GlobalVideoContext";
+import { TTSProvider } from "./context/TTSContext";
+
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
@@ -22,23 +24,25 @@ if (!PUBLISHABLE_KEY) {
 createRoot(document.getElementById('root')).render(
   <HelmetProvider>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <MessageProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <SocketProvider>
-              <ThemeProvider>
-                <BrowserRouter>
-                  <AudioPlayerProvider>
-                <GlobalVideoProvider>
-                  <App />
-                    </GlobalVideoProvider>
-                </AudioPlayerProvider>
-                </BrowserRouter>
-              </ThemeProvider>
-            </SocketProvider>
-          </AuthProvider>
-        </NotificationProvider>
-      </MessageProvider>
+      <TTSProvider>
+        <MessageProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              <SocketProvider>
+                <ThemeProvider>
+                  <BrowserRouter>
+                    <AudioPlayerProvider>
+                      <GlobalVideoProvider>
+                        <App />
+                      </GlobalVideoProvider>
+                    </AudioPlayerProvider>
+                  </BrowserRouter>
+                </ThemeProvider>
+              </SocketProvider>
+            </AuthProvider>
+          </NotificationProvider>
+        </MessageProvider>
+      </TTSProvider>
     </ClerkProvider>
   </HelmetProvider>
 );

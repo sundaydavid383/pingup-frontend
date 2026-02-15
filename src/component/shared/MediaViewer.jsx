@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import VideoPlayer from "./VideoPlayer";
 
 const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
@@ -9,7 +9,8 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
   const [textVisible, setTextVisible] = useState(true);
   const [ready, setReady] = useState(false);
 
-  const [loaded, setLoaded] = useState(false);
+  // Track loaded state per image
+  const [loadedImages, setLoadedImages] = useState({});
 
 
   const attachments = Array.isArray(post?.attachments) ? post.attachments : [];
@@ -27,16 +28,61 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
     ? content
     : truncatedText;
 
-  /* 🔹 Scroll to initial index on mount */
+  /* 🔹 Scroll to initial index on mount and when initialIndex changes */
 
   useEffect(() => {
     if (!containerRef.current) return;
     const width = containerRef.current.clientWidth;
     containerRef.current.scrollLeft = width * initialIndex;
+    setCurrentIndex(initialIndex);
     requestAnimationFrame(() => {
       setReady(true);
     });
   }, [initialIndex]);
+
+  /* 🔹 Handle image load for specific image */
+  const handleImageLoad = (index) => {
+    setLoadedImages(prev => ({ ...prev, [index]: true }));
+  };
+
+  /* 🔹 Navigate to previous image */
+  const goToPrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
+      if (containerRef.current) {
+        const width = containerRef.current.clientWidth;
+        containerRef.current.scrollTo({ left: width * newIndex, behavior: 'smooth' });
+      }
+    }
+  }, [currentIndex]);
+
+  /* 🔹 Navigate to next image */
+  const goToNext = useCallback(() => {
+    if (currentIndex < allMedia.length - 1) {
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+      if (containerRef.current) {
+        const width = containerRef.current.clientWidth;
+        containerRef.current.scrollTo({ left: width * newIndex, behavior: 'smooth' });
+      }
+    }
+  }, [currentIndex, allMedia.length]);
+
+  /* 🔹 Keyboard navigation */
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") {
+        goToPrevious();
+      } else if (e.key === "ArrowRight") {
+        goToNext();
+      } else if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goToPrevious, goToNext, onClose]);
 
 
   /* 🔹 Update index based on scroll position */
@@ -69,6 +115,28 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
       <button onClick={onClose} className="close-btn">
         <X className="w-5 h-5" />
       </button>
+
+      {/* 🔹 Navigation arrows */}
+      {allMedia.length > 1 && (
+        <>
+          {currentIndex > 0 && (
+            <button
+              onClick={goToPrevious}
+              className="fixed left-4 top-1/2 -translate-y-1/2 z-[60] bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          {currentIndex < allMedia.length - 1 && (
+            <button
+              onClick={goToNext}
+              className="fixed right-4 top-1/2 -translate-y-1/2 z-[60] bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+        </>
+      )}
 
       {/* 🔹 WhatsApp-style progress */}
       <div className="fixed top-3 left-3 right-3 z-[6] flex gap-1">
@@ -115,23 +183,25 @@ const MediaViewer = ({ post, initialIndex = 0, onClose }) => {
                   unmuteOnView={false}
                 />
               ) : (
-                <div className="relative max-h-[80vh] max-w-[90vw]">
-                  {!loaded && <img
-                    src={item.url || item}
-                    alt="media"
-                    className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60 transition-opacity duration-300"
-                  />}
+                <div className="relative max-h-[80vh] max-w-[90vw] flex items-center justify-center">
+                  {!loadedImages[index] && (
+                    <img
+                      src={item.url || item}
+                      alt="media"
+                      className="absolute inset-0 w-full h-full object-contain blur-2xl scale-110 opacity-60"
+                    />
+                  )}
 
                   <img
                     src={item.url || item}
                     alt="media"
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
-                    onLoad={() => setLoaded(true)}
+                    onLoad={() => handleImageLoad(index)}
                     style={{ userSelect: "none" }}
                     className={`relative z-10 max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-lg
       transition-opacity duration-300
-      ${loaded ? "opacity-100" : "opacity-0"}
+      ${loadedImages[index] ? "opacity-100" : "opacity-0"}
     `}
                   />
                 </div>)

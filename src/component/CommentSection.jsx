@@ -4,13 +4,11 @@ import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axiosBase from "../utils/axiosBase";
-import { Trash2, Pencil, SendHorizonal, Loader2 } from "lucide-react";
+import { Trash2, Pencil, SendHorizonal, Loader2, CornerDownRight, MessageSquare, ThumbsUp, MoreVertical } from "lucide-react";
 import CommentText from "./shared/CommentText";
 import CommentSkeleton from "./skeleton/CommentSkeleton";
 import ProfileAvatar from "./shared/ProfileAvatar";
 import CustomAlert from "./shared/CustomAlert";
-
-
 
 export default function CommentSection({ postId, commentsCount, initial = [], onCommentAdded }) {
   const { user: currentUser, token } = useAuth() || {};
@@ -29,19 +27,22 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
   const [editingText, setEditingText] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
   const [editError, setEditError] = useState("");
-  const [replyTo, setReplyTo] = useState(null); // comment object
+  const [replyTo, setReplyTo] = useState(null);
+  const [expandedReplies, setExpandedReplies] = useState({});
   const rootComments = comments.filter(c => !c.parent);
   const replies = comments.filter(c => c.parent);
 
-
-
-
+  const toggleReplies = (commentId) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  };
 
   const inputRef = useRef(null);
   const editInputRef = useRef(null);
   const intervalRef = useRef(null);
   const menuRefs = useRef({});
-
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -51,13 +52,10 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
         setOpenMenuId(null);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openMenuId]);
 
-
-  // Fetch comments
   const fetchComments = async () => {
     if (!postId) return;
     setLoading(true);
@@ -77,7 +75,6 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     fetchComments();
   }, [postId]);
 
-  // Cycle highlighted comment
   useEffect(() => {
     if (!showAll && rootComments.length > 1) {
       intervalRef.current = setInterval(() => {
@@ -87,7 +84,6 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     }
   }, [rootComments, showAll]);
 
-  // Post comment
   const handlePost = async () => {
     if (!currentUser) return navigate("/signin");
     const trimmed = text.trim();
@@ -110,10 +106,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     try {
       const res = await axiosBase.post(
         `/api/posts/${postId}/comments`,
-        {
-          text: trimmed,
-          parent: replyTo?._id || null
-        },
+        { text: trimmed, parent: replyTo?._id || null },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       const created = res.data.comment ?? res.data.data ?? res.data;
@@ -134,14 +127,13 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     }
   };
 
-
   const handleEditSubmit = async (commentId) => {
     if (!editingText.trim()) return;
     setUpdatingId(commentId);
     setEditError("");
 
     try {
-      const res = await axiosBase.put(
+      await axiosBase.put(
         `/api/posts/${postId}/comments/${commentId}`,
         { text: editingText },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -152,7 +144,6 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
           c._id === commentId ? { ...c, text: editingText, isEdited: true } : c
         )
       );
-
       setEditingId(null);
     } catch (err) {
       console.error(err);
@@ -162,271 +153,334 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     }
   };
 
+  const handleDelete = async (commentId) => {
+    if (!token) return navigate("/signin");
+    setDeletingId(commentId);
+    try {
+      await axiosBase.delete(
+        `/api/posts/${postId}/comments/${commentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setComments((prev) => prev.filter((com) => com._id !== commentId));
+      if (openMenuId === commentId) setOpenMenuId(null);
+    } catch (err) {
+      console.error(err);
+      setAlert({
+        open: true,
+        message: err?.response?.data?.message || "Failed to delete comment",
+        type: "error",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
-  const displayedComments = showAll ? rootComments : rootComments.slice(highlightIndex, highlightIndex + 1);
+  // Build nested comment structure
+  const buildCommentTree = (comments) => {
+    const commentMap = {};
+    const rootComments = [];
+
+    comments.forEach(comment => {
+      commentMap[comment._id] = { ...comment, replies: [] };
+    });
+
+    comments.forEach(comment => {
+      if (comment.parent) {
+        const parentId = comment.parent._id || comment.parent;
+        if (commentMap[parentId]) {
+          commentMap[parentId].replies.push(commentMap[comment._id]);
+        }
+      } else {
+        rootComments.push(commentMap[comment._id]);
+      }
+    });
+
+    return rootComments;
+  };
+
+  const commentTree = buildCommentTree(comments);
+
+  const displayedComments = showAll ? commentTree : [commentTree[highlightIndex]].filter(Boolean);
+
+  // Render individual comment with replies (YouTube-style with enhanced visual hierarchy)
+  const renderComment = (comment, isReply = false, parentComment = null, depth = 0) => {
+    const commentReplies = comment.replies || [];
+    const isExpanded = expandedReplies[comment._id];
+
+    return (
+      <div key={comment._id} className={`${isReply ? 'pl-0' : ''}`}>
+        <div className="flex gap-3 sm:gap-4 group">
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-200 ring-2 ring-transparent group-hover:ring-[var(--primary)] transition-all duration-200">
+              {comment.user?.profilePicUrl ? (
+                <ProfileAvatar user={comment.user} size={isReply ? 36 : 40} />
+              ) : (
+                <div className="text-sm font-semibold text-gray-600 flex items-center justify-center h-full bg-gradient-to-br from-gray-200 to-gray-300">
+                  {(comment.user?.full_name || comment.user?.username || "U")[0].toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Comment content */}
+          <div className="flex-1 min-w-0">
+            {/* Header */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-sm sm:text-base font-semibold text-gray-900 hover:underline cursor-pointer transition-colors">
+                {comment.user?.full_name || comment.user?.username}
+              </span>
+              <span className="text-xs sm:text-sm text-gray-500">
+                {moment(comment.createdAt).fromNow()}
+              </span>
+              {comment.isEdited && (
+                <span className="text-xs text-gray-400 italic">(edited)</span>
+              )}
+            </div>
+
+            {/* Edit mode */}
+            {editingId === comment._id ? (
+              <div className="mt-2 sm:mt-3">
+                <textarea
+                  value={editingText}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) setEditingText(e.target.value);
+                    const el = editInputRef.current;
+                    if (el) {
+                      el.style.height = "auto";
+                      el.style.height = Math.min(el.scrollHeight, 150) + "px";
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleEditSubmit(comment._id);
+                    }
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  autoFocus
+                  rows={1}
+                  maxLength={300}
+                  ref={editInputRef}
+                  className="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none transition-all"
+                />
+                <div className="flex gap-2 mt-2 sm:mt-3">
+                  <button onClick={() => handleEditSubmit(comment._id)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[var(--primary)] text-white rounded-full text-sm hover:opacity-90 transition flex items-center gap-1.5">
+                    {updatingId === comment._id ? <Loader2 size={16} className="animate-spin" /> : "Save"}
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition">
+                    Cancel
+                  </button>
+                </div>
+                {editError && <div className="text-red-500 text-xs mt-2">{editError}</div>}
+              </div>
+            ) : (
+              <div className="text-sm sm:text-base text-gray-800 leading-relaxed mt-2 sm:mt-2.5">
+                <CommentText text={DOMPurify.sanitize(comment.text)} isEdited={comment.isEdited} maxChars={500} />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 sm:gap-2 mt-2 sm:mt-3">
+              <button className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-[var(--primary)] transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
+                <ThumbsUp size={14} sm:size={16} />
+                <span className="hidden sm:inline">Like</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEditingId(null);
+                  setReplyTo(comment);
+                  inputRef.current?.focus();
+                }}
+                className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-[var(--accent)] transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100"
+              >
+                <MessageSquare size={14} sm:size={16} />
+                <span className="hidden sm:inline">Reply</span>
+              </button>
+              {comment.user?._id === currentUser?._id && (
+                <div className="relative" ref={el => menuRefs.current[comment._id] = el}>
+                  <button
+                    onClick={() => setOpenMenuId(openMenuId === comment._id ? null : comment._id)}
+                    className="p-1.5 rounded-full hover:bg-gray-100 transition text-gray-400 hover:text-gray-600"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {openMenuId === comment._id && (
+                    <div className="absolute left-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50 animate-fadeIn">
+                      <button
+                        onClick={() => {
+                          setEditingId(comment._id);
+                          setEditingText(comment.text);
+                          setOpenMenuId(null);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(comment._id)}
+                        disabled={deletingId === comment._id}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                      >
+                        {deletingId === comment._id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Pending/Failed status */}
+            {comment.pending && <div className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Posting...</div>}
+            {comment.failed && (
+              <div onClick={handlePost} className="text-xs text-red-500 cursor-pointer mt-2 hover:underline">
+                Failed to post. Click to retry
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Replies section - Enhanced YouTube-style with connecting lines */}
+        {commentReplies.length > 0 && (
+          <div className="mt-3 sm:mt-4">
+            <button
+              onClick={() => toggleReplies(comment._id)}
+              className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base font-semibold text-[var(--primary)] hover:text-[var(--accent)] transition mb-3 sm:mb-4 ml-10 sm:ml-11"
+            >
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--primary)] text-white flex items-center justify-center">
+                <CornerDownRight size={12} sm:size={14} />
+              </div>
+              <span className="hidden sm:inline">{isExpanded ? 'Hide' : 'View'} {commentReplies.length} {commentReplies.length === 1 ? 'reply' : 'replies'}</span>
+              <span className="sm:hidden">{commentReplies.length} {commentReplies.length === 1 ? 'reply' : 'replies'}</span>
+            </button>
+
+            {isExpanded && (
+              <div className="space-y-0 relative">
+                {/* Enhanced vertical connecting line with gradient */}
+                <div
+                  className="absolute left-[22px] sm:left-[23px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--primary)] via-[var(--primary)] to-transparent"
+                  style={{ opacity: 0.25 }}
+                />
+                {commentReplies.map((reply, index) => (
+                  <div key={reply._id} className="relative pl-10 sm:pl-11 py-3 sm:py-4">
+                    {/* Enhanced horizontal connector with dot */}
+                    <div className="absolute left-[18px] sm:left-[19px] top-5 sm:top-6 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white border-2 border-[var(--primary)] z-10 shadow-sm" />
+
+                    {/* Vertical line segment with enhanced styling */}
+                    {index < commentReplies.length - 1 && (
+                      <div className="absolute left-[22px] sm:left-[23px] top-7 sm:top-8 w-0.5 h-full bg-[var(--primary)" style={{ opacity: 0.15 }} />
+                    )}
+
+                    {/* Reply container with subtle background */}
+                    <div className="rounded-lg p-2 sm:p-3 -ml-2" style={{ backgroundColor: 'rgba(var(--primary-rgb), 0.03)' }}>
+                      {renderComment(reply, true, comment, depth + 1)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="border-t border-gray-200 mt-4 p-3 w-full bg-white rounded-lg shadow-sm">
-      {/* Comments display */}
-      <div className="mb-3 space-y-2 max-h-64 overflow-y-auto">
+    <div className="w-full">
+      {/* Comments count header */}
+      <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900">{commentsCount || comments.length} Comments</h3>
+        <button onClick={() => setShowAll(!showAll)} className="text-sm text-gray-500 hover:text-gray-700 transition">
+          {showAll ? 'Collapse all' : 'Expand'}
+        </button>
+      </div>
+
+      {/* Comment input */}
+      <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="flex-shrink-0">
+          <ProfileAvatar user={currentUser} size={40} />
+        </div>
+        <div className="flex-1">
+          {replyTo && (
+            <div className="flex items-center justify-between bg-gray-50 px-3 sm:px-4 py-2 sm:py-2.5 rounded-t-lg border-b-2 border-[var(--primary)]">
+              <div className="flex items-center gap-2">
+                <CornerDownRight size={14} className="text-[var(--primary)]" />
+                <span className="text-xs sm:text-sm text-gray-600">
+                  Replying to <strong className="text-gray-900">@{replyTo.user?.username || replyTo.user?.full_name}</strong>
+                </span>
+              </div>
+              <button onClick={() => setReplyTo(null)} className="text-gray-400 hover:text-red-500 transition p-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={(e) => {
+              if (e.target.value.length <= 500) setText(e.target.value);
+              const el = inputRef.current;
+              if (el) {
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 150) + "px";
+              }
+            }}
+            placeholder={currentUser ? "Add a comment..." : "Sign in to comment"}
+            disabled={!currentUser || posting}
+            rows={1}
+            maxLength={500}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handlePost();
+              }
+            }}
+            className={`w-full border-2 ${replyTo ? 'border-t-0 rounded-b-lg' : 'rounded-lg'} border-gray-200 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:outline-none focus:border-[var(--primary)] resize-none transition-colors`}
+          />
+          <div className="flex justify-end gap-2 sm:gap-3 mt-2 sm:mt-3">
+            {text.trim() && (
+              <button onClick={() => { setText(''); setReplyTo(null); }} className="px-4 sm:px-5 py-2 sm:py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition">
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handlePost}
+              disabled={!currentUser || posting || !text.trim()}
+              className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--primary)] text-white rounded-full text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--btn-hover)] transition flex items-center gap-2"
+            >
+              {posting ? <Loader2 size={16} className="animate-spin" /> : <SendHorizonal size={16} />}
+              <span className="hidden sm:inline">Comment</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Comments list */}
+      <div className="space-y-5 sm:space-y-6">
         {loading ? (
           <>
-            {Array.from({ length: commentsCount }).map((_, i) => (
+            {Array.from({ length: commentsCount || 3 }).map((_, i) => (
               <CommentSkeleton key={i} />
             ))}
           </>
         ) : displayedComments.length === 0 ? (
-          <div className="text-gray-400 text-sm text-center">No comments yet.</div>
+          <div className="text-gray-500 text-sm sm:text-base text-center py-6 sm:py-8 px-4">
+            <div className="mb-2">
+              <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto opacity-30" />
+            </div>
+            No comments yet. Be the first to comment!
+          </div>
         ) : (
-          displayedComments.map((c) => {
-            const handleDelete = async () => {
-              if (!token) return navigate("/signin");
-              setDeletingId(c._id); // start loading
-              try {
-                const res = await axiosBase.delete(
-                  `/api/posts/${postId}/comments/${c._id}`,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-                setComments((prev) => prev.filter((com) => com._id !== c._id));
-                if (openMenuId === c._id) setOpenMenuId(null);
-              } catch (err) {
-                console.error(err);
-                setAlert({
-                  open: true,
-                  message: err?.response?.data?.message || "Failed to delete comment",
-                  type: "error",
-                });
-              } finally {
-                setDeletingId(null);
-              }
-            };
-
-            return (
-              <div key={c._id} className="flex flex-col gap-2 relative">
-                {/* Parent comment */}
-                <div className="flex items-start gap-3 relative">
-
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                    {c.user?.profilePicUrl ? (
-                      <ProfileAvatar user={c.user} size={36} />
-                    ) : (
-                      <div className="text-sm font-semibold text-gray-600 flex items-center justify-center h-full">
-                        {(c.user?.full_name || c.user?.username || "U")[0].toUpperCase()}
-                      </div>
-                    )}
-
-                  </div>
-
-                  <div className="flex-1 mb-3">
-                    {/* Comment header */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1 mb-[5px]">
-                      <div className="text-sm font-medium">{c.user?.full_name || c.user?.username}</div>
-                      {/* Timestamp */}
-                      <div className="text-[10px] mt-[3px] text-gray-600">{moment(c.createdAt).fromNow()}</div>
-                         {/* Reply button */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] ">
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setReplyTo(c);
-                          inputRef.current?.focus();
-                        }}
-                        className="hover:text-[var(--accent)] transition text-gray-500 bg-gray-100 px-2 py-1 rounded-full active:scale-95 flex items-center gap-1"
-                      >
-                        Reply
-                      </button>
-                    </div>
-                     </div>
-
-                      {/* Action menu trigger */}
-                      {c.user?._id === currentUser?._id && (
-                        <div className="relative" ref={el => menuRefs.current[c._id] = el}>
-                          <button
-                            onClick={() => setOpenMenuId(openMenuId === c._id ? null : c._id)}
-                            className="p-2 rounded-full hover:bg-[var(--hover-light)] transition-all duration-200 flex items-center justify-center text-gray-500 hover:text-[var(--accent)] active:scale-95 mr-4"
-                          >
-                            <span className="text-xl leading-none select-none">⋮</span>
-                          </button>
-
-                          {/* Dropdown menu */}
-                          {openMenuId === c._id && (
-                            <div
-                              className="absolute right-0 mt-1 w-28 bg-white border rounded-md shadow-md flex flex-col py-1 z-30 animate-fadeIn"
-                              style={{ borderColor: "var(--input-border)" }}
-                            >
-                              <button
-                                onClick={handleDelete}
-                                disabled={deletingId === c._id}
-                                className={`flex items-center gap-2 text-sm px-3 py-2 text-[var(--danger)] hover:bg-[var(--hover-light)] text-left transition cursor-pointer ${deletingId === c._id ? "opacity-60 cursor-not-allowed" : ""}`}
-                              >
-                                {deletingId === c._id ? (
-                                  <svg className="animate-spin h-4 w-4 text-[var(--danger)]" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
-                                  </svg>
-                                ) : (
-                                  <Trash2 size={14} />
-                                )}
-                                {deletingId === c._id ? "Deleting…" : "Delete"}
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setEditingId(c._id);
-                                  setEditingText(c.text);
-                                  setOpenMenuId(null);
-                                }}
-                                className="flex items-center gap-2 text-sm px-3 py-2 text-[var(--accent)] hover:bg-[var(--hover-light)] text-left transition cursor-pointer"
-                              >
-                                <Pencil size={14} />
-                                Edit
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-
-                    {/* Editing mode */}
-                    {editingId === c._id ? (
-                      <div className="flex flex-col gap-1 mt-1">
-                        <textarea
-                          value={editingText}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 500) setEditingText(e.target.value);
-                            const el = editInputRef.current;
-                            if (el) {
-                              el.style.height = "auto";
-                              const maxHeight = 150;
-                              el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleEditSubmit(c._id);
-                            }
-                            if (e.key === "Escape") setEditingId(null);
-                          }}
-                          autoFocus
-                          rows={1}
-                          maxLength={300}
-                          ref={editInputRef}
-                          style={{ borderRadius: "6px" }}
-                          className="flex-1 min-w-0 border border-gray-300 px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] resize-none overflow-auto"
-                        />
-                        <div className="flex gap-2 mt-1">
-                          <button onClick={() => handleEditSubmit(c._id)} className="px-3 py-1 bg-[var(--primary)] text-white rounded-full text-sm hover:bg-[var(--btn-hover)] transition flex items-center">
-                            {updatingId === c._id ? <Loader2 size={18} className="animate-spin" /> : "Save"}
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition">
-                            Cancel
-                          </button>
-                        </div>
-                        {editError && <div className="text-red-500 text-xs">{editError}</div>}
-                      </div>
-                    ) : (
-                      <CommentText text={DOMPurify.sanitize(c.text)} isEdited={c.isEdited} maxChars={150} />
-                    )}
-
-                    {/* Replies */}
-                    <div className="flex flex-col gap-2 mt-2 relative">
-                      {replies.filter(r => r.parent?._id === c._id).map(reply => (
-                        <div key={reply._id} className="relative flex items-start ml-10">
-                          {/* Vertical line from parent to reply */}
-                          <div
-                            className="absolute left-3"
-                            style={{
-                              top: '-1.6rem', // start above the reply avatar
-                              bottom: '0',
-                              width: '2px',
-                              left: '0.2rem',
-                              backgroundColor: '#d1d5db', // tailwind gray-300
-                            }}
-                          ></div>
-
-                          {/* Reply container */}
-                          <div className="flex items-start gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition relative z-10">
-                            <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                              {reply.user?.profilePicUrl ? (
-                                <ProfileAvatar user={reply.user} size={28} />
-                              ) : (
-                                <div className="text-xs font-semibold text-gray-600 flex items-center justify-center h-full">
-                                  {(reply.user?.full_name || reply.user?.username || "U")[0].toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                               <div className="flex items-center gap-1 mb-[5px]">
-                      <div className="text-sm font-medium">{reply.user?.full_name || reply.user?.username}</div>
-                      {/* Timestamp */}
-                      <div className="text-[10px] mt-[3px] text-gray-600">{moment(reply.createdAt).fromNow()}</div>
-                     </div><CommentText text={DOMPurify.sanitize(reply.text)} isEdited={reply.isEdited} maxChars={150} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {c.pending && <div className="text-xs text-gray-500 mt-1">sending…</div>}
-                    {c.failed && (
-                      <div onClick={handlePost} className="text-[10px] text-[var(--error)] cursor-pointer">
-                        Failed to post retry
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          displayedComments.map((comment) => renderComment(comment))
         )}
-      </div>
-
-      {/* Comment input */}
-      {replyTo && (
-        <div className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded text-xs mb-2">
-          <span>
-            Replying to <strong>@{replyTo.user?.username || replyTo.user?.full_name}</strong>
-          </span>
-          <button onClick={() => setReplyTo(null)} className="text-gray-500 hover:text-red-500">
-            ✕
-          </button>
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-2">
-        <ProfileAvatar user={currentUser} size={36} />
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={(e) => {
-            if (e.target.value.length <= 500) setText(e.target.value);
-            const el = inputRef.current;
-            if (el) {
-              el.style.height = "auto";
-              el.style.height = Math.min(el.scrollHeight, 150) + "px";
-            }
-          }}
-          placeholder={currentUser ? "Write a comment..." : "Sign in to comment"}
-          disabled={!currentUser || posting}
-          rows={1}
-          maxLength={500}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handlePost();
-            }
-          }}
-          className="flex-1 min-w-0 border border-gray-300 px-4 py-2 text-sm rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--accent)] resize-none overflow-auto"
-        />
-        <button
-          onClick={handlePost}
-          disabled={!currentUser || posting || !text.trim()}
-          className="bg-[var(--primary)] flex-shrink-0 p-2 rounded-full text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--btn-hover)] transition"
-        >
-          {posting ? <Loader2 size={18} className="animate-spin" /> : <SendHorizonal size={18} />}
-        </button>
       </div>
 
       {alert.open && (
@@ -436,15 +490,6 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
           onClose={() => setAlert({ ...alert, open: false })}
         />
       )}
-
-      {comments.length > 1 && (
-        <div className="mt-2 text-right">
-          <button onClick={() => setShowAll(!showAll)} className="text-xs text-gray-500 hover:text-gray-700">
-            {showAll ? "Collapse" : "View all comments"}
-          </button>
-        </div>
-      )}
     </div>
   );
-
 }

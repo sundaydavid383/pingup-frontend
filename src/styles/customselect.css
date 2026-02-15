@@ -8,20 +8,20 @@
 
 .custom-select-header {
   background: var(--input-bg);
-  color: var(--text-main);
+  color: var(--dropdown-text);
   padding: 0.6rem 1rem;
-  border-radius: var(--radius);
+  border-radius: 10px;
   border: 1px solid var(--input-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--input-shadow);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 .custom-select-header:hover {
-  background: var(--dark-indigo-gradient);
   border-color: var(--primary);
+  background: var(--verse-bg);
 }
 
 .chevron {
@@ -34,36 +34,64 @@
 
 .custom-select-options {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   left: 0;
   width: 100%;
-  background: var(--bg-light);
-  border-radius: var(--radius);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  background: var(--dropdown-bg);
+  border-radius: 10px;
+  box-shadow: var(--border-shadow);
   z-index: 10;
-  max-height: 70vh;
+  max-height: 60vh;
   overflow-y: auto;
   padding: 0.25rem 0;
+  border: 1px solid var(--input-border);
 }
 
 .custom-select-option {
-  padding: 0.5rem 1rem;
-  transition: all 0.2s ease;
+  padding: 0.6rem 1rem;
+  color: var(--dropdown-text);
+  transition: all 0.15s ease;
+  border-bottom: 1px solid transparent;
 }
 
 .custom-select-option:hover {
-  background: var(--hover-dark);
-  color: var(--text-main);
+  background: var(--verse-bg);
+  border-bottom-color: var(--input-border);
 }
 
 .custom-select-option.selected {
   font-weight: 700;
   color: var(--gold);
   background: var(--primary);
+  color: #fff;
 }
+
+/* Scrollbar styling for dropdown */
+.custom-select-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-select-options::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: 3px;
+}
+
+.custom-select-options::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 3px;
+}
+
 @media (max-width: 600px) {
   .custom-select {
-  width: 160px;
-
-}
+    width: 160px;
+    font-size: 0.85rem;
+  }
+  
+  .custom-select-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .custom-select-option {
+    padding: 0.5rem 0.75rem;
+  }
 }

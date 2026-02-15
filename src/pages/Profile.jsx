@@ -15,6 +15,7 @@ import ProfileSkeleton from "../component/skeleton/ProfileSkeleton";
 import BackButton from "../component/shared/BackButton";
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
+import AuthContainer from "./AuthContainer";
 import "../styles/profile.css";
 const Profile = () => {
   const { profileId } = useParams();
@@ -28,6 +29,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [blocking, setBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  
+  const isUnauthenticatedVisitor = !currentUser;
+
 
   // Alert state
   const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
@@ -133,15 +137,16 @@ const Profile = () => {
 
   useEffect(() => {
     fetchProfileData();
-    // cleanup on unmount
+    // cleanup on unmount - close the edit modal when leaving the profile page
     return () => {
       clearInterval(progressIntervalRef.current);
+      setShowEdit(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId, currentUser]); // same dependencies as before
 
   const isCurrentUser = currentUser?._id === profileId;
- 
+  
 
 
 
@@ -201,10 +206,11 @@ return (
               profileId={profileId}
               setShowEdit={setShowEdit}
               isCurrentUser={isCurrentUser}
+              isUnauthenticatedVisitor={isUnauthenticatedVisitor}
             />
           )}
 
-          {!isCurrentUser && (
+         {  !isUnauthenticatedVisitor && !isCurrentUser && (
             <div className="block-wrapper">
               {loading ? (
                 <div className="bg-skeleton animate-skeleton" />
@@ -229,7 +235,7 @@ return (
           )}
         </div>
 
-        <div className="tabs-wrapper">
+        { !isUnauthenticatedVisitor && <div className="tabs-wrapper">
           <div className="tabs-container">
             {["posts", "media", "likes"].map((tab) => (
               <button
@@ -243,9 +249,9 @@ return (
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
-        {activeTab === "posts" && (
+         {!isUnauthenticatedVisitor && activeTab === "posts" && (
           <div className="posts-wrapper">
             {posts.length ? (
               posts.map((post) => (
@@ -264,11 +270,17 @@ return (
         )}
       </div>
     )}
-<div className="right-sidebar">
+{ !isUnauthenticatedVisitor && <div className="right-sidebar">
  <RightSidebar sponsors={sponsors} loading={!sponsors} />
-</div>
- <MediumSidebarToggle sponsors={sponsors} />
-    {showEdit && <ProfileModal setShowEdit={setShowEdit} />}
+</div>}
+
+ {!isUnauthenticatedVisitor && <MediumSidebarToggle sponsors={sponsors} />}
+  {!isUnauthenticatedVisitor && showEdit && <ProfileModal setShowEdit={setShowEdit} />}
+   {isUnauthenticatedVisitor && (
+    <div className="w-[80%] flex justify-end items-center p-4 sm:p-8 backdrop-blur-xl bg-[rgba(1,8,44,0.8)]  rounded-lg  ">
+    <AuthContainer isModal={true} onClose={() => navigate("/")} initialTab="login"/>
+    </div>
+  )}
   </div>
 </>
 

@@ -115,7 +115,7 @@ const App = () => {
         {/* Public Pages */}
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/about" element={<AboutPage />} />
-
+        <Route path="profile/:profileId" element={<Profile />} />
         {/* Landing Page - visible before login */}
         <Route path="/" element={!user ? <LandingPage /> : <Layout />}>
           {user && <Route index element={<Feed />} />}
@@ -132,7 +132,7 @@ const App = () => {
           {user && <Route path="connections" element={<Connections />} />}
           {user && <Route path="discover" element={<Discover />} />}
           {user && <Route path="profile" element={<Profile />} />}
-          {user && <Route path="profile/:profileId" element={<Profile />} />}
+          
           {user && <Route path="create-post" element={<CreatePost />} />}
           {user && <Route path="notification" element={<Notification userId={user?._id}/>} />}
           {user && <Route path='portfolio' element={<Portfolio/>}/>}

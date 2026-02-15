@@ -68,9 +68,9 @@ const MediumSidebarToggle = ({ sponsors }) => {
         }
       >
         {!showSidebar ? (
-          <Megaphone size={20} className="text-slate-700" />
+          <Megaphone size={25} className="text-slate-700" />
         ) : (
-          <X size={20} className="text-slate-700" />
+          <X size={25} className="text-slate-700" />
         )}
       </button>
     </>

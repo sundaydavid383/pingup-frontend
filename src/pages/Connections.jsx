@@ -318,15 +318,11 @@ const handleAccept = async (senderId) => {
 
   {currentTab === "Pending" && user.direction === "incoming" && (
     <IconButton
-      icon={  acceptingId === user._id ? (
-        <Loader2 className="animate-spin" />
-      ) : (
-        <Check />
-      )}
-      label={acceptingId === user._id ? "Accepting..." : "Accept request"}
-      onClick={() => handleAccept(user._id)}
-      disabled={acceptingId === user._id}
-    />
+  icon={acceptingId === user._id ? Loader2 : Check} // <-- no JSX brackets
+  label={acceptingId === user._id ? "Accepting..." : "Accept request"}
+  onClick={() => handleAccept(user._id)}
+  disabled={acceptingId === user._id}
+/>
   )}
 
   {currentTab === "Connections" && (

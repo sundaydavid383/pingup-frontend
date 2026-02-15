@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Lock, Palette, Bell, FileText, Brain, HelpCircle, Menu, X } from 'lucide-react';
 import AccountSettings from './AccountSettings';
@@ -13,6 +13,30 @@ const Settings = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('account');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Handle responsive breakpoints
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar when category changes on mobile
+  const handleCategoryChange = (categoryId) => {
+    setActiveCategory(categoryId);
+    if (window.innerWidth < 768) {
+      setMobileSidebarOpen(false);
+    }
+  };
 
   const settingsCategories = [
     {
@@ -75,22 +99,22 @@ const Settings = () => {
       style={{ backgroundColor: 'var(--bg-main)' }}
     >
       {/* Header with back button (Mobile & Tablet) */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--input-border)' }}>
-        <div className="flex items-center gap-3">
+      <div className="md:hidden flex items-center justify-between p-3 sm:p-4 border-b sticky top-0 z-50" style={{ borderColor: 'var(--input-border)', backgroundColor: 'var(--bg-main)' }}>
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg hover:opacity-70 transition"
             style={{ backgroundColor: 'var(--form-bg)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
             Settings
           </h1>
         </div>
         <button
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
+          className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg hover:opacity-70 transition"
           style={{ backgroundColor: 'var(--form-bg)' }}
         >
           {mobileSidebarOpen ? (
@@ -103,7 +127,7 @@ const Settings = () => {
 
       {/* Left Sidebar - Categories */}
       <div
-        className={`fixed md:static top-14 left-0 right-0 md:top-0 z-40 md:z-auto w-full md:w-72 h-[calc(100vh-56px)] md:h-screen md:border-r transition-all duration-300 ${
+        className={`fixed md:static inset-x-0 top-14 md:top-0 z-40 md:z-auto w-full md:w-64 lg:w-72 h-[calc(100vh-56px)] md:h-screen md:border-r transition-all duration-300 ease-in-out ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
         style={{
@@ -112,8 +136,8 @@ const Settings = () => {
         }}
       >
         {/* Desktop Header */}
-        <div className="hidden md:flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--input-border)' }}>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
+        <div className="hidden md:flex items-center justify-between p-4 lg:p-6 border-b" style={{ borderColor: 'var(--input-border)' }}>
+          <h1 className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
             Settings
           </h1>
           <button
@@ -135,11 +159,8 @@ const Settings = () => {
               return (
                 <button
                   key={category.id}
-                  onClick={() => {
-                    setActiveCategory(category.id);
-                    setMobileSidebarOpen(false);
-                  }}
-                  className={`w-full px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group ${
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group ${
                     isActive
                       ? 'custom-gradient text-white shadow-lg scale-[1.02]'
                       : 'hover:scale-[1.01]'
@@ -154,11 +175,11 @@ const Settings = () => {
                   }
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
-                  <div className="text-left">
-                    <div className={`font-medium text-sm ${isActive ? 'text-white' : ''}`}>
+                  <div className="text-left min-w-0">
+                    <div className={`font-medium text-sm sm:text-base ${isActive ? 'text-white' : ''}`}>
                       {category.label}
                     </div>
-                    <div className={`text-xs mt-0.5 ${isActive ? 'text-white/80' : 'opacity-60'}`}>
+                    <div className={`text-xs mt-0.5 hidden sm:block ${isActive ? 'text-white/80' : 'opacity-60'}`}>
                       {category.description}
                     </div>
                   </div>
@@ -179,11 +200,11 @@ const Settings = () => {
 
       {/* Right Panel - Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="min-h-screen p-4 md:p-8 md:max-w-4xl">
+        <div className="min-h-screen p-4 sm:p-6 md:p-8 lg:max-w-4xl">
           {/* Desktop Header */}
-          <div className="hidden md:flex items-center gap-3 mb-8">
+          <div className="hidden md:flex items-center gap-3 mb-6 lg:mb-8">
             <div>
-              <h2 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+              <h2 className="text-2xl lg:text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
                 {activeItem?.label}
               </h2>
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
@@ -193,8 +214,8 @@ const Settings = () => {
           </div>
 
           {/* Mobile Header */}
-          <div className="md:hidden mb-6">
-            <h2 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
+          <div className="md:hidden mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
               {activeItem?.label}
             </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>

@@ -1,0 +1,929 @@
+/* ==========================================================================
+   SpringssConnect Live Map - Production-Ready Styling
+   ========================================================================== */
+
+/* CSS Variables - Theme Compatible */
+:root {
+  /* Map-specific colors */
+  --lm-glass-bg: rgba(15, 23, 42, 0.75);
+  --lm-glass-bg-light: rgba(255, 255, 255, 0.12);
+  --lm-glass-border: rgba(255, 255, 255, 0.15);
+  --lm-glass-border-light: rgba(255, 255, 255, 0.25);
+  
+  /* Accent colors */
+  --lm-accent-primary: #6366f1; /* Indigo-500 */
+  --lm-accent-emerald: #10b981; /* Emerald-500 */
+  --lm-accent-amber: #f59e0b; /* Amber-500 */
+  --lm-accent-rose: #f43f5e; /* Rose-500 */
+  
+  /* Status colors */
+  --lm-online: #22c55e;
+  --lm-idle: #f59e0b;
+  --lm-offline: #94a3b8;
+  
+  /* Marker colors */
+  --lm-marker-shadow: rgba(99, 102, 241, 0.4);
+  --lm-current-user-glow: rgba(99, 102, 241, 0.6);
+  
+  /* Text colors */
+  --lm-text-primary: #f8fafc;
+  --lm-text-secondary: #94a3b8;
+  --lm-text-muted: #64748b;
+  
+  /* Spacing scale (8px base) */
+  --lm-space-xs: 4px;
+  --lm-space-sm: 8px;
+  --lm-space-md: 16px;
+  --lm-space-lg: 24px;
+  --lm-space-xl: 32px;
+  
+  /* Transitions */
+  --lm-transition-fast: 150ms ease;
+  --lm-transition-normal: 200ms ease;
+  --lm-transition-slow: 300ms ease;
+  
+  /* Border radius */
+  --lm-radius-sm: 8px;
+  --lm-radius-md: 12px;
+  --lm-radius-lg: 16px;
+  --lm-radius-full: 50%;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --lm-glass-bg: rgba(255, 255, 255, 0.75);
+  --lm-glass-bg-light: rgba(255, 255, 255, 0.85);
+  --lm-glass-border: rgba(0, 0, 0, 0.08);
+  --lm-glass-border-light: rgba(0, 0, 0, 0.15);
+  --lm-text-primary: #0f172a;
+  --lm-text-secondary: #475569;
+  --lm-text-muted: #64748b;
+  --lm-marker-shadow: rgba(99, 102, 241, 0.25);
+  --lm-current-user-glow: rgba(99, 102, 241, 0.4);
+}
+
+/* ==========================================================================
+   Base Map Container
+   ========================================================================== */
+
+.livemap-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  overflow: hidden;
+  border-radius: var(--lm-radius-lg);
+}
+
+.livemap-container .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #1e293b;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom tile layer styling */
+.livemap-container .leaflet-tile-pane {
+  filter: saturate(0.9) brightness(0.95);
+}
+
+/* Darken tiles for better marker visibility */
+[data-theme="light"] .livemap-container .leaflet-tile-pane {
+  filter: saturate(1.1) brightness(1.05);
+}
+
+/* ==========================================================================
+   Glass UI Control Panel (Top-Left)
+   ========================================================================== */
+
+.lm-control-panel {
+  position: absolute;
+  top: var(--lm-space-md);
+  left: var(--lm-space-md);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lm-space-sm);
+  padding: var(--lm-space-md);
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--lm-glass-border);
+  border-radius: var(--lm-radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 280px;
+  transition: all var(--lm-transition-normal);
+}
+
+.lm-control-panel:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.lm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--lm-space-sm);
+  border-bottom: 1px solid var(--lm-glass-border);
+  margin-bottom: var(--lm-space-xs);
+}
+
+.lm-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lm-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-sm);
+}
+
+.lm-panel-title svg {
+  color: var(--lm-accent-primary);
+}
+
+.lm-user-count {
+  font-size: 12px;
+  color: var(--lm-accent-emerald);
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.lm-panel-stats {
+  display: flex;
+  gap: var(--lm-space-md);
+  font-size: 12px;
+}
+
+.lm-stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-xs);
+  color: var(--lm-text-secondary);
+}
+
+.lm-stat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.lm-stat-dot.online {
+  background: var(--lm-online);
+  box-shadow: 0 0 6px var(--lm-online);
+}
+
+.lm-stat-dot.idle {
+  background: var(--lm-idle);
+}
+
+.lm-stat-dot.offline {
+  background: var(--lm-offline);
+}
+
+/* ==========================================================================
+   Floating Action Buttons (Top-Right)
+   ========================================================================== */
+
+.lm-fab-container {
+  position: absolute;
+  top: var(--lm-space-md);
+  right: var(--lm-space-md);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lm-space-sm);
+}
+
+.lm-fab {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--lm-radius-md);
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--lm-glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--lm-text-primary);
+  transition: all var(--lm-transition-normal);
+}
+
+.lm-fab:hover {
+  background: var(--lm-accent-primary);
+  border-color: var(--lm-accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+
+.lm-fab:active {
+  transform: translateY(0);
+}
+
+.lm-fab svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ==========================================================================
+   Custom Marker Icons
+   ========================================================================== */
+
+/* Base marker container */
+.lm-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--lm-transition-fast);
+}
+
+.lm-marker:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
+
+/* Current user marker (YOU) */
+.lm-marker-current {
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+
+.lm-marker-current::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--lm-current-user-glow);
+  animation: lm-pulse-current 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+.lm-marker-current .lm-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px var(--lm-marker-shadow);
+  object-fit: cover;
+}
+
+.lm-marker-current .lm-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid white;
+  background: linear-gradient(135deg, var(--lm-accent-primary), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 12px var(--lm-marker-shadow);
+}
+
+/* Other user marker */
+.lm-marker-user {
+  width: 36px;
+  height: 36px;
+  position: relative;
+}
+
+.lm-marker-user .lm-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+  transition: all var(--lm-transition-fast);
+}
+
+.lm-marker-user .lm-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: linear-gradient(135deg, #64748b, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Online status ring */
+.lm-marker-user.online::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--lm-online);
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: lm-status-pulse 2s ease-in-out infinite;
+}
+
+/* Idle status */
+.lm-marker-user.idle::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--lm-idle);
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+/* Offline status */
+.lm-marker-user.offline {
+  opacity: 0.6;
+}
+
+.lm-marker-user.offline::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--lm-offline);
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+/* ==========================================================================
+   User Popup Card (Bottom Sheet Style)
+   ========================================================================== */
+
+.lm-popup-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  padding: var(--lm-space-md);
+  padding-bottom: calc(var(--lm-space-md) + env(safe-area-inset-bottom, 0px));
+  animation: lm-slide-up 300ms ease-out;
+}
+
+.lm-popup-card {
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--lm-glass-border);
+  border-radius: var(--lm-radius-lg);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.lm-popup-header {
+  display: flex;
+  align-items: center;
+  padding: var(--lm-space-md);
+  gap: var(--lm-space-md);
+  border-bottom: 1px solid var(--lm-glass-border);
+}
+
+.lm-popup-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--lm-accent-primary);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.lm-popup-avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--lm-accent-primary);
+  background: linear-gradient(135deg, var(--lm-accent-primary), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.lm-popup-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lm-popup-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lm-text-primary);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-sm);
+}
+
+.lm-popup-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lm-popup-status.online {
+  background: var(--lm-online);
+  box-shadow: 0 0 8px var(--lm-online);
+}
+
+.lm-popup-status.idle {
+  background: var(--lm-idle);
+}
+
+.lm-popup-status.offline {
+  background: var(--lm-offline);
+}
+
+.lm-popup-bio {
+  font-size: 13px;
+  color: var(--lm-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--lm-space-xs);
+}
+
+.lm-popup-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-md);
+  font-size: 12px;
+  color: var(--lm-text-muted);
+}
+
+.lm-popup-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lm-space-xs);
+}
+
+.lm-popup-meta-item svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lm-popup-close {
+  position: absolute;
+  top: var(--lm-space-md);
+  right: var(--lm-space-md);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--lm-glass-bg-light);
+  border: 1px solid var(--lm-glass-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--lm-text-secondary);
+  transition: all var(--lm-transition-fast);
+}
+
+.lm-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--lm-text-primary);
+}
+
+.lm-popup-actions {
+  display: flex;
+  padding: var(--lm-space-md);
+  gap: var(--lm-space-sm);
+}
+
+.lm-popup-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--lm-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--lm-transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lm-space-sm);
+  border: none;
+}
+
+.lm-popup-btn-primary {
+  background: var(--lm-accent-primary);
+  color: white;
+}
+
+.lm-popup-btn-primary:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.lm-popup-btn-secondary {
+  background: var(--lm-glass-bg-light);
+  color: var(--lm-text-primary);
+  border: 1px solid var(--lm-glass-border);
+}
+
+.lm-popup-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
+
+.lm-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 900;
+  text-align: center;
+  padding: var(--lm-space-xl);
+}
+
+.lm-empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--lm-space-md);
+  background: var(--lm-glass-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lm-glass-border);
+}
+
+.lm-empty-icon svg {
+  width: 36px;
+  height: 36px;
+  color: var(--lm-text-muted);
+}
+
+.lm-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--lm-text-primary);
+  margin-bottom: var(--lm-space-sm);
+}
+
+.lm-empty-text {
+  font-size: 14px;
+  color: var(--lm-text-secondary);
+  max-width: 280px;
+}
+
+/* ==========================================================================
+   Location Permission Error State
+   ========================================================================== */
+
+.lm-error-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 900;
+  text-align: center;
+  padding: var(--lm-space-xl);
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lm-glass-border);
+  border-radius: var(--lm-radius-lg);
+  max-width: 320px;
+}
+
+.lm-error-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--lm-space-md);
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lm-error-icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--lm-accent-rose);
+}
+
+.lm-error-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lm-text-primary);
+  margin-bottom: var(--lm-space-sm);
+}
+
+.lm-error-text {
+  font-size: 13px;
+  color: var(--lm-text-secondary);
+  margin-bottom: var(--lm-space-md);
+}
+
+.lm-error-btn {
+  padding: 10px 20px;
+  background: var(--lm-accent-primary);
+  color: white;
+  border: none;
+  border-radius: var(--lm-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--lm-transition-fast);
+}
+
+.lm-error-btn:hover {
+  background: #4f46e5;
+}
+
+/* ==========================================================================
+   Loading State
+   ========================================================================== */
+
+.lm-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 950;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lm-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--lm-glass-border);
+  border-top-color: var(--lm-accent-primary);
+  border-radius: 50%;
+  animation: lm-spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes lm-pulse-current {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes lm-status-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes lm-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes lm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Marker hover animation */
+.lm-marker-user:hover .lm-avatar {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Mobile Responsiveness
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .lm-control-panel {
+    top: var(--lm-space-sm);
+    left: var(--lm-space-sm);
+    right: var(--lm-space-sm);
+    max-width: none;
+    padding: var(--lm-space-sm);
+  }
+  
+  .lm-panel-stats {
+    justify-content: space-around;
+  }
+  
+  .lm-fab-container {
+    top: auto;
+    bottom: var(--lm-space-md);
+    right: var(--lm-space-md);
+    flex-direction: row;
+  }
+  
+  .lm-popup-overlay {
+    padding: var(--lm-space-sm);
+    padding-bottom: calc(var(--lm-space-sm) + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .lm-popup-header {
+    padding: var(--lm-space-sm);
+    gap: var(--lm-space-sm);
+  }
+  
+  .lm-popup-avatar,
+  .lm-popup-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .lm-popup-actions {
+    padding: var(--lm-space-sm);
+  }
+  
+  .lm-empty-state {
+    width: 90%;
+    padding: var(--lm-space-md);
+  }
+}
+
+/* ==========================================================================
+   Leaflet Popup Customization
+   ========================================================================== */
+
+.leaflet-popup-content-wrapper {
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: var(--lm-radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--lm-glass-border);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  color: var(--lm-text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.leaflet-popup-tip {
+  background: var(--lm-glass-bg);
+  border: 1px solid var(--lm-glass-border);
+}
+
+.leaflet-popup-close-button {
+  color: var(--lm-text-secondary) !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--lm-text-primary) !important;
+}
+
+/* ==========================================================================
+   Geolocation Control (Bottom-Right)
+   ========================================================================== */
+
+.lm-geolocation-btn {
+  position: absolute;
+  bottom: var(--lm-space-md);
+  left: var(--lm-space-md);
+  z-index: 1000;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--lm-radius-sm);
+  background: var(--lm-glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lm-glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--lm-text-primary);
+  transition: all var(--lm-transition-normal);
+}
+
+.lm-geolocation-btn:hover {
+  background: var(--lm-accent-primary);
+  border-color: var(--lm-accent-primary);
+}
+
+.lm-geolocation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lm-geolocation-btn:disabled:hover {
+  background: var(--lm-glass-bg);
+  border-color: var(--lm-glass-border);
+}
+
+@media (max-width: 640px) {
+  .lm-geolocation-btn {
+    bottom: calc(var(--lm-space-md) + 80px);
+  }
+}
+
+/* ==========================================================================
+   Zoom Controls Customization
+   ========================================================================== */
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--lm-glass-bg) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lm-glass-border) !important;
+  color: var(--lm-text-primary) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 34px !important;
+  font-size: 18px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--lm-accent-primary) !important;
+  border-color: var(--lm-accent-primary) !important;
+}
+
+.leaflet-control-zoom-in {
+  border-radius: var(--lm-radius-sm) var(--lm-radius-sm) 0 0 !important;
+}
+
+.leaflet-control-zoom-out {
+  border-radius: 0 0 var(--lm-radius-sm) var(--lm-radius-sm) !important;
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.lm-fab:focus-visible,
+.lm-popup-btn:focus-visible,
+.lm-popup-close:focus-visible,
+.lm-error-btn:focus-visible,
+.lm-geolocation-btn:focus-visible {
+  outline: 2px solid var(--lm-accent-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --lm-glass-bg: rgba(0, 0, 0, 0.9);
+    --lm-glass-border: rgba(255, 255, 255, 0.3);
+    --lm-text-primary: #ffffff;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

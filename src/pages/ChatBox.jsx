@@ -46,6 +46,9 @@ const ChatBox = ({ userId: propUserId }) => {
     return cached ? JSON.parse(cached) : [];
   });
 
+  // Input ref for focusing
+  const inputRef = useRef(null);
+
 
 
   // Only show loading if we have zero cached messages
@@ -141,7 +144,7 @@ const ChatBox = ({ userId: propUserId }) => {
       if (showMenuRef.current && !showMenuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
-          if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
+      if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
         setShowMediaDropdown(false);
       }
     }
@@ -158,57 +161,57 @@ const ChatBox = ({ userId: propUserId }) => {
 
   // ===================== NEAR BOTTOM SCROLL DETECTION =====================
 
-  
+
   const isUserNearBottomRef = useRef(true);
-useEffect(() => {
-  if (!containerRef.current) return;
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const container = containerRef.current;
+    const container = containerRef.current;
 
-  const checkNearBottom = () => {
-    const scrollPosition = container.scrollTop + container.clientHeight;
-    const threshold = 150; // px from bottom to consider "near"
-    isUserNearBottomRef.current = scrollPosition >= container.scrollHeight - threshold;
-    setShowScrollButton(!isUserNearBottomRef.current);
-  };
+    const checkNearBottom = () => {
+      const scrollPosition = container.scrollTop + container.clientHeight;
+      const threshold = 150; // px from bottom to consider "near"
+      isUserNearBottomRef.current = scrollPosition >= container.scrollHeight - threshold;
+      setShowScrollButton(!isUserNearBottomRef.current);
+    };
 
-  container.addEventListener("scroll", checkNearBottom);
-  checkNearBottom(); // initial check
+    container.addEventListener("scroll", checkNearBottom);
+    checkNearBottom(); // initial check
 
-  return () => container.removeEventListener("scroll", checkNearBottom);
-}, []);
+    return () => container.removeEventListener("scroll", checkNearBottom);
+  }, []);
 
-useEffect(() => {
-  if (!containerRef.current) return;
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const el = containerRef.current;
+    const el = containerRef.current;
 
-  const handleScroll = () => {
-    const currentTop = el.scrollTop;
+    const handleScroll = () => {
+      const currentTop = el.scrollTop;
 
-    const isDown = currentTop > lastScrollTop.current;
-    lastScrollTop.current = currentTop;
+      const isDown = currentTop > lastScrollTop.current;
+      lastScrollTop.current = currentTop;
 
-    setScrollDirection(isDown ? "down" : "up");
+      setScrollDirection(isDown ? "down" : "up");
 
-    if (scrollStopTimeout.current) {
-      clearTimeout(scrollStopTimeout.current);
-    }
+      if (scrollStopTimeout.current) {
+        clearTimeout(scrollStopTimeout.current);
+      }
 
-    setScrollStopped(false);
+      setScrollStopped(false);
 
-    scrollStopTimeout.current = setTimeout(() => {
-      setScrollStopped(true);
-    }, 1500);
-  };
+      scrollStopTimeout.current = setTimeout(() => {
+        setScrollStopped(true);
+      }, 1500);
+    };
 
-  el.addEventListener("scroll", handleScroll);
+    el.addEventListener("scroll", handleScroll);
 
-  return () => {
-    el.removeEventListener("scroll", handleScroll);
-    if (scrollStopTimeout.current) clearTimeout(scrollStopTimeout.current);
-  };
-}, []);
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      if (scrollStopTimeout.current) clearTimeout(scrollStopTimeout.current);
+    };
+  }, []);
 
 
 
@@ -297,13 +300,13 @@ useEffect(() => {
         }
 
         if (prev.some(m => m._id === newMsg._id)) return prev; // normal duplicate prevention
-        
+
         return [...prev, newMsg];
       });
 
-      if(isUserNearBottomRef.current) {
+      if (isUserNearBottomRef.current) {
         requestAnimationFrame(() => {
-            scrollToBottom();
+          scrollToBottom();
         });
       }
 
@@ -403,13 +406,22 @@ useEffect(() => {
 
     const message_type = audioURL ? "audio" : image ? "image" : "text";
     const tempId = "temp_" + Date.now();
+
+    // Build reply object with complete info
+    const replyInfo = replyTo ? {
+      _id: replyTo._id,
+      text: replyTo.text,
+      from_user_id: replyTo.from_user_id,
+      message_type: replyTo.message_type
+    } : null;
+
     const tempMsg = {
       _id: tempId,
       chatId,
       from_user_id: user._id,
       to_user_id: userId,
       text: currentText || "",
-      replyTo: replyTo ? { _id: replyTo._id, text: replyTo.text } : null,
+      replyTo: replyInfo,
       message_type,
       media_url: audioURL || (image ? URL.createObjectURL(image) : ""),
       createdAt: new Date().toISOString(),
@@ -432,6 +444,7 @@ useEffect(() => {
       formData.append("to_user_id", userId);
       formData.append("text", tempMsg.text);
       formData.append("tempId", tempId);
+      formData.append("replyTo", replyTo ? replyTo._id : null);
       if (image) formData.append("media", image, image.name || `image_${Date.now()}`);
       if (audioURL) {
         const blob = await fetch(audioURL).then(r => r.blob());
@@ -479,10 +492,13 @@ useEffect(() => {
     if (!failedMsg || !failedMsg.failed) return;
     const { text, message_type, media_url, _id: tempId } = failedMsg;
     const newTempId = "temp_" + Date.now();
+
+        const replyInfo = replyTo?._id 
     // Update UI: mark as resending 
     setMessages((prev) => prev.map((m) => m._id === tempId ?
       { ...m, status: "sending", failed: false, _id: newTempId }
       : m));
+
     try {
       const formData = new FormData();
       formData.append("chatId", chatId);
@@ -490,6 +506,7 @@ useEffect(() => {
       formData.append("to_user_id", userId);
       formData.append("text", text);
       formData.append("tempId", newTempId);
+      formData.append("replyTo", replyInfo ? replyInfo : "");
       if (message_type === "image" && media_url) {
         const blob = await fetch(media_url).then((r) => r.blob());
         formData.append("media", blob, `image_${Date.now()}.jpg`);
@@ -638,26 +655,6 @@ useEffect(() => {
   }, [sortedMessages]);
 
 
-  //  ================== Image navigation ================
-  useEffect(() => {
-    if (!showMediaViewer) return;
-    const handleKey = (e) => {
-      if (e.key === "ArrowRight") {
-        setCurrentImageIndex((prev) =>
-          (prev + 1) % imageMessages.length);
-      }
-      else if (e.key === "ArrowLeft") {
-        setCurrentImageIndex((prev) => (prev === 0 ? imageMessages.length - 1 : prev - 1));
-      } else if (e.key === "Escape") {
-        setShowMediaViewer(false);
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  },
-    [showMediaViewer, imageMessages.length]);
-
-
   //======================================
   //========================================RETURN HEADER
   //===========================================
@@ -746,7 +743,7 @@ useEffect(() => {
             <>
               {/* click-outside overlay */}
               <div
-              ref={showMenuRef}
+                ref={showMenuRef}
                 className="fixed inset-0 z-40"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1092,6 +1089,9 @@ useEffect(() => {
                 typingUserFromId={typingUserFromId}
                 scrollToBottom={scrollToBottom}
                 showScrollButton={showScrollButton}
+                setReplyTo={setReplyTo}
+                receiver={receiver}
+                inputRef={inputRef}
 
               />
             )
@@ -1122,15 +1122,39 @@ useEffect(() => {
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
-          <div className="px-3 py-2 mb-1 rounded-lg bg-gray-100 text-sm text-gray-700 flex justify-between items-center">
-            <span>Replying to: {replyTo.text}</span>
-            <button onClick={() => setReplyTo(null)} className="text-red-500 font-bold">×</button>
+          <div
+            className="px-3 py-2 mb-1 rounded-lg flex items-start gap-2"
+            style={{
+              background: 'linear-gradient(to right, var(--input-accent, #7c3aed), var(--input-accent, #7c3aed))',
+              borderLeft: '3px solid white'
+            }}
+          >
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-xs font-medium text-white/80 flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
+                </svg>
+                Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
+              </span>
+              <span className="text-sm text-white/90 truncate">
+                {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
+              </span>
+            </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="text-white/80 hover:text-white transition-colors p-1"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
 
         {!recording && !audioURL && !(image instanceof File) && (
           <textarea
+            ref={inputRef}
             id="chatInput"
             className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
             style={{
@@ -1204,7 +1228,7 @@ useEffect(() => {
                 {/* MEDIA DROPDOWN */}
                 {showMediaDropdown && (
                   <div
-                   ref={mediaDropdownRef}
+                    ref={mediaDropdownRef}
                     className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
                     style={{
                       backgroundColor: "var(--deeper-opaque-secondary)",

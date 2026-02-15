@@ -171,6 +171,16 @@ useEffect(() => {
 </p>  */}
 <CreatePostTrigger />
 
+          {/* Live Map Floating Button */}
+          <button
+            onClick={() => setShowLiveMap(true)}
+            className="fixed bottom-6 right-6 z-40 bg-[var(--primary)] text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-300 flex items-center gap-2 group"
+            title="View Live Map"
+          >
+            <Globe className="w-5 h-5 group-hover:animate-spin-slow" />
+            <span className="hidden md:inline text-sm font-medium">Live Map</span>
+          </button>
+
 
           <div className="space-y-6 py-5 no-scrollbar pb-25 relative">
             {loadingInitial ? (

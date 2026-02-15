@@ -28,7 +28,7 @@ import assets from "../assets/assets";
 
 const BASE = import.meta.env.VITE_SERVER;
 
-const UserProfileInfo = ({ user, posts, profileId, setShowEdit }) => {
+const UserProfileInfo = ({ user, posts, profileId, setShowEdit, isUnauthenticatedVisitor }) => {
   const { user: currentUser, token } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("none"); 
@@ -189,11 +189,11 @@ useEffect(() => {
               </h1>
               {user.isVerified && <Verified className="w-5 h-5 text-blue-500" />}
             </div>
-            <p className="text-gray-500 text-sm">@{user.username || "username"}</p>
+            <p className="text-gray-500 text-sm text-left">@{user.username || "username"}</p>
           </div>
 
           <div className="flex gap-3 justify-center">
-            {!isOwnProfile ? (
+            {!isOwnProfile && !isUnauthenticatedVisitor ? (
               <>
                 <button onClick={handleFollow} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${isFollowing ? "bg-gray-200" : "bg-[var(--accent)] text-white"}`}>
                   {isFollowing ? "Unfollow" : "Follow"}
@@ -201,7 +201,7 @@ useEffect(() => {
                 {getConnectionButton()}
               </>
             ) : (
-              <button onClick={() => setShowEdit(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+              !isUnauthenticatedVisitor && <button onClick={() => setShowEdit(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
                 <PenBox className="w-4 h-4" /> Edit Profile
               </button>
             )}
@@ -211,7 +211,7 @@ useEffect(() => {
 
       {/* 📝 BIO */}
       {user.bio && (
-        <p className="text-gray-700 text-base max-w-2xl leading-relaxed text-center md:text-left">
+        <p className="text-gray-700 text-base max-w-2xl leading-relaxed text-left md:text-left family-[Inter]" style={{ whiteSpace: "pre-wrap" }}>
           {user.bio}
         </p>
       )}
@@ -257,7 +257,7 @@ useEffect(() => {
   </div>
 </div>
 
-{canChat && !isOwnProfile && (
+{canChat && !isOwnProfile && !isUnauthenticatedVisitor && (
   <div className="w-full flex justify-center mt-2">
     <button
       onClick={() => navigate(`/chatbox/${user._id}`)}
@@ -269,9 +269,9 @@ useEffect(() => {
 )}
 
       {/* 👁️ PROFILE VIEWS */}
-      <div className="bg-gray-50 rounded-xl p-4 flex justify-center">
+   { !isUnauthenticatedVisitor && <div className="bg-gray-50 rounded-xl p-4 flex justify-center">
         <ProfileViewersDropdown viewers={user.profileViewers || []} totalViews={user.profileViews || 0} />
-      </div>
+      </div>}
 
       {/* 🤝 CONNECTIONS */}
       <div className="pt-4">
