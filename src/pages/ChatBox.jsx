@@ -1,5 +1,5 @@
 // src/pages/ChatBox.jsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ImageIcon, SendHorizonal, Mic, ImageUpIcon, FileIcon, VideoIcon } from "lucide-react";
 import axiosBase from "../utils/axiosBase";
@@ -15,6 +15,7 @@ import ThemeDropdown from "../component/ThemeDropdown";
 import BackButton from "../component/shared/BackButton";
 import "../component/themeDropdown.css";
 import './chatbox.css'
+import '../styles/chat-highlight.css'
 import { useTheme } from "../context/ThemeContext";
 import AudioMessage from "../component/shared/AudioMessage";
 import ChatMessagesFull from "../component/ChatMessagesFull";
@@ -41,10 +42,17 @@ const ChatBox = ({ userId: propUserId }) => {
   // use the connected flag from context 
   const { unreadMessages, addUnread, clearUnread, getTotalUnread, incrementUnread } = useMessageContext();
   // 1. INITIALIZE FROM LOCAL STORAGE
+  // Use a state initializer that depends on userId
   const [messages, setMessages] = useState(() => {
     const cached = localStorage.getItem(`chat_history_${userId}`);
     return cached ? JSON.parse(cached) : [];
   });
+
+  // Reset messages when userId changes (chat switching)
+  useEffect(() => {
+    const cached = localStorage.getItem(`chat_history_${userId}`);
+    setMessages(cached ? JSON.parse(cached) : []);
+  }, [userId]);
 
   // Input ref for focusing
   const inputRef = useRef(null);
@@ -108,7 +116,7 @@ const ChatBox = ({ userId: propUserId }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex(prev => (prev + 1) % placeholders.length);
-    }, 20000);
+    }, 500000);
     return () => clearInterval(interval);
   }, []);
 
@@ -124,14 +132,97 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // Scroll-to-bottom when clicking the scroll button
+  const scrollToMessage = (messageId) => {
+    if (!containerRef.current) return;
+    const messageEl = containerRef.current.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageEl) {
+      messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Add a temporary highlight effect
+      messageEl.classList.add('message-highlight');
+      setTimeout(() => {
+        messageEl.classList.remove('message-highlight');
+      }, 2000);
+    }
+  };
+
+  // Scroll to original message being replied to
+  // If not in DOM, load older messages automatically
+  const scrollToReplyMessage = useCallback(async (replyToMessage) => {
+    if (!containerRef.current || !replyToMessage || !replyToMessage._id) return;
+
+    const replyId = replyToMessage._id;
+    const container = containerRef.current;
+
+    // First, check if the message is already in the DOM
+    let messageEl = container.querySelector(`[data-message-id="${replyId}"]`);
+
+    if (messageEl) {
+      // Message exists in DOM - scroll to it with highlight
+      messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageEl.classList.add('message-highlight');
+      setTimeout(() => {
+        messageEl.classList.remove('message-highlight');
+      }, 2000);
+      return;
+    }
+
+    // Message not in DOM - need to load older messages
+    // Find the oldest message timestamp to use for pagination
+    const oldestMessage = messages.length > 0
+      ? messages.reduce((oldest, msg) =>
+        new Date(msg.createdAt) < new Date(oldest.createdAt) ? msg : oldest
+      )
+      : null;
+
+    const oldestTimestamp = oldestMessage ? new Date(oldestMessage.createdAt).toISOString() : null;
+
+    // Show loading indicator (could add a state for this)
+    console.log('Loading older messages to find reply...');
+
+    try {
+      // Fetch older messages - using the chat room API with before parameter
+      const response = await axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}&before=${oldestTimestamp}&limit=50`);
+
+      if (response.data?.messages && response.data.messages.length > 0) {
+        // Add new messages to the existing ones (prepend since they're older)
+        const olderMessages = response.data.messages;
+        olderMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+        setMessages(prev => {
+          // Check if any of the new messages are already in the array
+          const existingIds = new Set(prev.map(m => m._id));
+          const newMessages = olderMessages.filter(m => !existingIds.has(m._id));
+          return [...newMessages, ...prev];
+        });
+
+        // After messages are loaded, try to scroll to the target message again
+        setTimeout(() => {
+          messageEl = container.querySelector(`[data-message-id="${replyId}"]`);
+          if (messageEl) {
+            messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageEl.classList.add('message-highlight');
+            setTimeout(() => {
+              messageEl.classList.remove('message-highlight');
+            }, 2000);
+          } else {
+            // If still not found, try loading more (recursive approach with limit)
+            console.log('Message still not found, may need more loading...');
+          }
+        }, 100);
+      } else {
+        console.log('No more older messages available');
+      }
+    } catch (err) {
+      console.error('Error loading older messages:', err);
+    }
+  }, [containerRef, messages, user._id, userId]);
+
   const scrollToBottom = () => {
     if (containerRef.current) {
       const container = containerRef.current;
-      const paddingBottom = parseFloat(
-        getComputedStyle(container).paddingBottom
-      );
+      // Simply scroll to the full scrollHeight to reach true bottom
       container.scrollTo({
-        top: container.scrollHeight - container.clientHeight + paddingBottom,
+        top: container.scrollHeight,
         behavior: "smooth"
       })
     }
@@ -238,28 +329,14 @@ const ChatBox = ({ userId: propUserId }) => {
         if (chatRes.data?.room) setChatId(chatRes.data.room._id);
 
         if (Array.isArray(chatRes.data?.messages)) {
-          setMessages(prev => {
-            const merged = [...prev]; // start from local messages
+          // Replace messages entirely for this chat - don't merge with previous
+          const newMessages = [...chatRes.data.messages];
+          newMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-            chatRes.data.messages.forEach(msg => {
-              const existsIndex = merged.findIndex(m => m._id === msg._id);
-              if (existsIndex !== -1) {
-                // Update if different
-                if (JSON.stringify(merged[existsIndex]) !== JSON.stringify(msg)) {
-                  merged[existsIndex] = msg;
-                }
-              } else {
-                merged.push(msg); // add new
-              }
-            });
+          // Save to localStorage
+          localStorage.setItem(`chat_history_${userId}`, JSON.stringify(newMessages));
 
-            merged.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-            // save to localStorage
-            localStorage.setItem(`chat_history_${userId}`, JSON.stringify(merged));
-
-            return merged;
-          });
+          setMessages(newMessages);
         }
 
         clearUnread(userId);
@@ -493,7 +570,7 @@ const ChatBox = ({ userId: propUserId }) => {
     const { text, message_type, media_url, _id: tempId } = failedMsg;
     const newTempId = "temp_" + Date.now();
 
-        const replyInfo = replyTo?._id 
+    const replyInfo = replyTo?._id
     // Update UI: mark as resending 
     setMessages((prev) => prev.map((m) => m._id === tempId ?
       { ...m, status: "sending", failed: false, _id: newTempId }
@@ -934,7 +1011,12 @@ const ChatBox = ({ userId: propUserId }) => {
   return (
     <div
       ref={chatContainerRef}
-      className="flex flex-col h-screen w-full overflow-hidden bg-[var(--bg-main)]"
+      className="flex flex-col w-full overflow-hidden bg-[var(--bg-main)]"
+      style={{
+        height: "100dvh", // Dynamic viewport height for mobile browsers
+        maxHeight: "100dvh",
+        minHeight: "100dvh",
+      }}
     >
 
 
@@ -949,6 +1031,11 @@ const ChatBox = ({ userId: propUserId }) => {
         style={{
           background: "var(--input-chatbox-bg-gradient)",
           color: "var(--input-text-color)",
+          paddingTop: "60px", // Account for fixed header height
+          paddingBottom: "90px", // Account for fixed input (70px) + extra space (20px)
+          overflowY: "auto",
+          WebkitOverflowY: "auto",
+          overscrollBehavior: "contain",
         }}>
         {loading ?
           (
@@ -1088,6 +1175,8 @@ const ChatBox = ({ userId: propUserId }) => {
                 typingUser={typingUser}
                 typingUserFromId={typingUserFromId}
                 scrollToBottom={scrollToBottom}
+                scrollToMessage={scrollToMessage}
+                scrollToReplyMessage={scrollToReplyMessage}
                 showScrollButton={showScrollButton}
                 setReplyTo={setReplyTo}
                 receiver={receiver}
@@ -1123,294 +1212,304 @@ const ChatBox = ({ userId: propUserId }) => {
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
           <div
-            className="px-3 py-2 mb-1 rounded-lg flex items-start gap-2"
-            style={{
-              background: 'linear-gradient(to right, var(--input-accent, #7c3aed), var(--input-accent, #7c3aed))',
-              borderLeft: '3px solid white'
-            }}
+            className="relative px-3 py-2 mb-1 rounded-lg flex items-start gap-2 overflow-hidden"
+            style={{ borderLeft: "3px solid white" }}
           >
-            <div className="flex flex-col flex-1 min-w-0">
-              <span className="text-xs font-medium text-white/80 flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
+            {/* Blur background */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "var(--opaque-primary)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                zIndex: 0,
+              }}
+            />    <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-xs font-medium text-white/80 flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
+                  </svg>
+                  Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
+                </span>
+                <span className="text-sm text-white/90 truncate">
+                  {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
+                </span>
+              </div>
+              <button
+                onClick={() => setReplyTo(null)}
+                className="text-white/80 hover:text-white transition-colors p-1"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
-                Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
-              </span>
-              <span className="text-sm text-white/90 truncate">
-                {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
-              </span>
+              </button>
             </div>
-            <button
-              onClick={() => setReplyTo(null)}
-              className="text-white/80 hover:text-white transition-colors p-1"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         )}
 
-
-        {!recording && !audioURL && !(image instanceof File) && (
-          <textarea
-            ref={inputRef}
-            id="chatInput"
-            className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
-            style={{
-              borderRadius: "20px",
-              padding: "12px 16px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              background: "#fff",
-              width: "100%", // still keep this
-              minWidth: 0,   // important for flex shrinking
-            }}
-            placeholder={placeholders[placeholderIndex] || ""}
-            value={typeof text === "string" ? text : ""}
-            rows={1}
-            onFocus={() => setPlaceholderIndex(0)}
-            onChange={(e) => {
-              const val = e.target.value;
-              setText(val);
-              e.target.style.height = "auto";
-              const newHeight = Math.min(e.target.scrollHeight, 120);
-              e.target.style.height = `${newHeight}px`;
-              if (socket && chatId && user?._id)
-                socket.emit("typing", { chatId, from_user_id: user._id });
-            }}
-            onKeyDown={async (e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (text.trim() !== "") {
-                  await sendMessage();
-                  setText("");
-                  e.target.style.height = "auto";
+        <div className="flex flex-row justify-center gap-5">
+          {!recording && !audioURL && !(image instanceof File) && (
+            <textarea
+              ref={inputRef}
+              id="chatInput"
+              className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
+              style={{
+                borderRadius: "20px",
+                padding: "12px 16px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                background: "#fff",
+                width: "100%", // still keep this
+                minWidth: 0,   // important for flex shrinking
+              }}
+              placeholder={placeholders[placeholderIndex] || ""}
+              value={typeof text === "string" ? text : ""}
+              rows={1}
+              onFocus={() => setPlaceholderIndex(0)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setText(val);
+                e.target.style.height = "auto";
+                const newHeight = Math.min(e.target.scrollHeight, 120);
+                e.target.style.height = `${newHeight}px`;
+                if (socket && chatId && user?._id)
+                  socket.emit("typing", { chatId, from_user_id: user._id });
+              }}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (text.trim() !== "") {
+                    await sendMessage();
+                    setText("");
+                    e.target.style.height = "auto";
+                  }
                 }
-              }
-            }}
-          />
-        )}
+              }}
+            />
+          )}
 
 
-        <div className="flex items-end gap-2">
-          {/* Image preview or upload */}
-          {!recording && !audioURL && (
-            <>
-              {image instanceof File ? (
-                <ImageComposer
-                  image={image}
-                  setImage={setImage}
-                  caption={text}
-                  setCaption={setText}
-                  onSend={sendMessage}
-                  sending={sending}
-                />) : <div className="relative">
-                {/* ATTACH MEDIA BUTTON */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
-                  className="flex items-center justify-center transition-all duration-300"
-                  style={{
-                    backgroundColor: "var(--primary)",
-                    border: "2px solid var(--primary)",
-                    borderRadius: "0.75rem", // smooth rounded corners
-                    padding: "0.5rem",
-                    cursor: "pointer",
-                    boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
-                  title="Attach media"
-                >
-                  <ImageUpIcon className="text-white w-5 h-5" />
-                </button>
-
-                {/* MEDIA DROPDOWN */}
-                {showMediaDropdown && (
-                  <div
-                    ref={mediaDropdownRef}
-                    className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
+          <div className="flex items-end gap-2">
+            {/* Image preview or upload */}
+            {!recording && !audioURL && (
+              <>
+                {image instanceof File ? (
+                  <ImageComposer
+                    image={image}
+                    setImage={setImage}
+                    caption={text}
+                    setCaption={setText}
+                    onSend={sendMessage}
+                    sending={sending}
+                  />) : <div className="relative">
+                  {/* ATTACH MEDIA BUTTON */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
+                    className="flex items-center justify-center transition-all duration-300"
                     style={{
-                      backgroundColor: "var(--deeper-opaque-secondary)",
-                      backdropFilter: "blur(20px)",
-                      WebkitBackdropFilter: "blur(20px)",
-                      borderRadius: "0.75rem",
-                      border: "1px solid var(--primary)",
-                      minWidth: "220px",
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+                      backgroundColor: "var(--primary)",
+                      border: "2px solid var(--primary)",
+                      borderRadius: "0.75rem", // smooth rounded corners
+                      padding: "0.5rem",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
+                    title="Attach media"
                   >
-                    {/* IMAGE INPUT */}
-                    <label
-                      htmlFor="image"
-                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
-                    >
-                      <ImageIcon size={18} />
-                      <span>Upload Image</span>
-                    </label>
+                    <ImageUpIcon className="text-white w-5 h-5" />
+                  </button>
 
-                    {/* FILE INPUT */}
-                    <label
-                      htmlFor="file"
-                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                  {/* MEDIA DROPDOWN */}
+                  {showMediaDropdown && (
+                    <div
+                      ref={mediaDropdownRef}
+                      className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
+                      style={{
+                        backgroundColor: "var(--deeper-opaque-secondary)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--primary)",
+                        minWidth: "220px",
+                        boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+                      }}
                     >
-                      <FileIcon size={18} />
-                      <span>Upload File</span>
-                    </label>
+                      {/* IMAGE INPUT */}
+                      <label
+                        htmlFor="image"
+                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                      >
+                        <ImageIcon size={18} />
+                        <span>Upload Image</span>
+                      </label>
 
-                    {/* VIDEO INPUT */}
-                    <label
-                      htmlFor="video"
-                      className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                      {/* FILE INPUT */}
+                      <label
+                        htmlFor="file"
+                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                      >
+                        <FileIcon size={18} />
+                        <span>Upload File</span>
+                      </label>
+
+                      {/* VIDEO INPUT */}
+                      <label
+                        htmlFor="video"
+                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                      >
+                        <VideoIcon size={18} />
+                        <span>Upload Video</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* HIDDEN INPUTS */}
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    id="image"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f instanceof File) setImage(f);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    id="file"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f instanceof File) setImage(f);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    id="video"
+                    accept="video/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f instanceof File) setImage(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                }
+              </>
+            )}
+
+            {/* Recording / audio preview */}
+            {(audioURL || recording) && (
+              <div className="flex flex-col items-center w-full gap-3">
+                {audioURL ? (
+                  <div className="relative inline-block w-full">
+                    <AudioMessage msg={{ media_url: audioURL }} />
+                    <button
+                      onClick={() => setAudioURL(null)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
+                      title="Cancel audio"
                     >
-                      <VideoIcon size={18} />
-                      <span>Upload Video</span>
-                    </label>
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center w-full gap-3">
+                    {/* Range-style progress bar filling all available space */}
+                    <div className="flex-1">
+                      <input
+                        type="range"
+                        min={0}
+                        max={MAX_RECORD_TIME}
+                        value={recordTime}
+                        readOnly
+                        className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
+                        style={{
+                          background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Time indicator */}
+                    <span className="text-xs text-gray-700 min-w-[50px] text-right">
+                      {recordTime}s / {MAX_RECORD_TIME}s
+                    </span>
+
+                    {/* Stop button */}
+                    <button
+                      onClick={stopRecording}
+                      className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
+                    >
+                      Stop
+                    </button>
                   </div>
                 )}
-
-                {/* HIDDEN INPUTS */}
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  id="image"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files && e.target.files[0];
-                    if (f instanceof File) setImage(f);
-                    e.target.value = "";
-                  }}
-                />
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  id="file"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files && e.target.files[0];
-                    if (f instanceof File) setImage(f);
-                    e.target.value = "";
-                  }}
-                />
-
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  id="video"
-                  accept="video/*"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files && e.target.files[0];
-                    if (f instanceof File) setImage(f);
-                    e.target.value = "";
-                  }}
-                />
               </div>
-              }
-            </>
-          )}
+            )}
 
-          {/* Recording / audio preview */}
-          {(audioURL || recording) && (
-            <div className="flex flex-col items-center w-full gap-3">
-              {audioURL ? (
-                <div className="relative inline-block w-full">
-                  <AudioMessage msg={{ media_url: audioURL }} />
-                  <button
-                    onClick={() => setAudioURL(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
-                    title="Cancel audio"
+
+
+
+            {/* Send button (shows if text, image, or audio exist) */}
+
+            {(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) && (
+              <button
+                onClick={() => { scrollToBottom(); sendMessage() }}
+                style={{ backgroundColor: "var(--input-primary)" }}
+                className="text-white p-2 rounded-full flex items-center justify-center"
+                title="Send"
+                disabled={sending} // disable while sending
+              >
+                {sending ? (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
                   >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center w-full gap-3">
-                  {/* Range-style progress bar filling all available space */}
-                  <div className="flex-1">
-                    <input
-                      type="range"
-                      min={0}
-                      max={MAX_RECORD_TIME}
-                      value={recordTime}
-                      readOnly
-                      className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
-                      style={{
-                        background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
-                      }}
-                    />
-                  </div>
-
-                  {/* Time indicator */}
-                  <span className="text-xs text-gray-700 min-w-[50px] text-right">
-                    {recordTime}s / {MAX_RECORD_TIME}s
-                  </span>
-
-                  {/* Stop button */}
-                  <button
-                    onClick={stopRecording}
-                    className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
-                  >
-                    Stop
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <SendHorizonal size={18} />
+                )}
+              </button>
+            )}
 
 
-
-
-          {/* Send button (shows if text, image, or audio exist) */}
-
-          {(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) && (
-            <button
-              onClick={() => { scrollToBottom(); sendMessage() }}
-              style={{ backgroundColor: "var(--input-primary)" }}
-              className="text-white p-2 rounded-full flex items-center justify-center"
-              title="Send"
-              disabled={sending} // disable while sending
-            >
-              {sending ? (
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                  ></path>
-                </svg>
-              ) : (
-                <SendHorizonal size={18} />
-              )}
-            </button>
-          )}
-
-
-          {/* Record button (show only if nothing to send) */}
-          {!recording && !text?.trim() && !image && !audioURL && (
-            <button
-              onClick={startRecording}
-              className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
-              title="Start Recording"
-            >
-              <Mic size={18} />
-            </button>
-          )}
+            {/* Record button (show only if nothing to send) */}
+            {!recording && !text?.trim() && !image && !audioURL && (
+              <button
+                onClick={startRecording}
+                className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                title="Start Recording"
+              >
+                <Mic size={18} />
+              </button>
+            )}
+          </div>
         </div>
       </ChatboxInput>
 

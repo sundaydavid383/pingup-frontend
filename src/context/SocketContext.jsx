@@ -159,6 +159,7 @@ useEffect(() => {
 
       // ✅ 1. Update unread messages 
       // we must add some checking like if it not on the viewport 
+      console.log('[Socket] Adding unread from:', msg.from_user_id, msg);
       addUnread(msg.from_user_id, msg);
 
       // ✅ 2. Update last message summary (for chat list, preview, etc.)

@@ -138,7 +138,6 @@ export default function LiveMap({ open }) {
   const { socket } = useSocket();
   const { user: currentUser } = useAuth();
   const mapRef = useRef(null);
-  const hasCentered = useRef(false);
   
   const [myCoords, setMyCoords] = useState(null);
   const [others, setOthers] = useState({});
@@ -198,6 +197,7 @@ export default function LiveMap({ open }) {
     if (!socket) return;
     
     const handleUpdate = ({ userId, coords, userData }) => {
+      if (!coords || !Array.isArray(coords) || coords.length < 2) return;
       const latlng = [coords[1], coords[0]];
       
       if (currentUser && userId === currentUser._id) {
@@ -216,14 +216,6 @@ export default function LiveMap({ open }) {
     socket.on('userLocationUpdated', handleUpdate);
     return () => socket.off('userLocationUpdated', handleUpdate);
   }, [socket, currentUser]);
-  
-  // Center map on current user once
-  useEffect(() => {
-    if (!mapRef.current || !myCoords || hasCentered.current) return;
-    
-    mapRef.current.flyTo(myCoords, 15, { animate: true });
-    hasCentered.current = true;
-  }, [myCoords]);
   
   // Invalidate map size when modal opens
   useEffect(() => {

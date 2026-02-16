@@ -630,9 +630,17 @@ export default function BibleReader() {
   return (
     <div className={`bible-page`} data-theme={theme}>
 
-
       <div className="bible-reader-container">
         <div className="bible-reader-inner">
+          {/* Fixed Loading Bar at Top */}
+          {isSearching && (
+            <div className="fixed-loading">
+              <div className="search-loading-bar">
+                <div className="search-loading-progress"></div>
+              </div>
+            </div>
+          )}
+
           {/* --- Replace your fixed-header block with this --- */}
           <div className="fixed-header">
             <div className="header-inner">
@@ -660,6 +668,12 @@ export default function BibleReader() {
                   />
                   {searchVisible && (
                     <div className="search-dropdown">
+                      {/* Loading bar */}
+                      {isSearching && (
+                        <div className="search-loading-bar" style={{ marginBottom: '0.5rem' }}>
+                          <div className="search-loading-progress"></div>
+                        </div>
+                      )}
                       <input
                         type="text"
                         value={searchQuery}
@@ -668,7 +682,9 @@ export default function BibleReader() {
                         className="bible-search-input"
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
                       />
-                      <button onClick={handleSearchClick}>Search</button>
+                      <button onClick={handleSearchClick} disabled={isSearching}>
+                        {isSearching ? 'Searching...' : 'Search'}
+                      </button>
                     </div>
                   )}
                 </div>

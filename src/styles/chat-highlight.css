@@ -1,0 +1,66 @@
+/* Message highlight effect for scroll-to-reply */
+.message-highlight {
+  animation: messageHighlight 2s ease-out;
+  border-radius: 12px;
+}
+
+@keyframes messageHighlight {
+  0% {
+    background-color: rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  20% {
+    background-color: rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 0 0 15px rgba(59, 130, 246, 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* WhatsApp-style reply preview in input area */
+.reply-preview-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(99, 102, 241, 0.15));
+  border-left: 3px solid #3b82f6;
+}
+
+.reply-preview-container .reply-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-preview-container .reply-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reply-preview-container .reply-text {
+  font-size: 13px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-preview-container .reply-close-btn {
+  padding: 4px;
+  border-radius: 50%;
+  color: #94a3b8;
+  transition: all 0.2s;
+}
+
+.reply-preview-container .reply-close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #475569;
+}

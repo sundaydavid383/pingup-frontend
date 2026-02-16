@@ -18,7 +18,9 @@ const MenuItems = ({ setSidebarOpen }) => {
   const [totalUnread, setTotalUnread] = useState(getTotalUnread() + unreadNotifications);
 
   useEffect(() => {
-    setTotalUnread(getTotalUnread() + unreadNotifications);
+    const total = getTotalUnread() + unreadNotifications;
+    console.log('[MenuItems] Unread check:', { unreadMessages, total, unreadNotifications });
+    setTotalUnread(total);
   }, [unreadMessages, getTotalUnread, unreadNotifications]);
 
   const menuItems = [

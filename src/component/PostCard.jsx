@@ -230,14 +230,14 @@ const PostCard = ({ post,
     setShowConfirm(true);
   };
 
-      // Detect attachment types
-      const hasImageAttachment = post.attachments?.some(att => att.type === "image");
-      const hasAudioAttachment = post.attachments?.some(att => att.type === "audio");
-      const isMixedImageAudio = hasImageAttachment && hasAudioAttachment;
-      
-      // Separate attachments
-      const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
-      const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
+  // Detect attachment types
+  const hasImageAttachment = post.attachments?.some(att => att.type === "image");
+  const hasAudioAttachment = post.attachments?.some(att => att.type === "audio");
+  const isMixedImageAudio = hasImageAttachment && hasAudioAttachment;
+
+  // Separate attachments
+  const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
+  const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
 
 
   const handleShowLikes = async (postId) => {
@@ -367,15 +367,15 @@ const PostCard = ({ post,
       )}
 
 
-     {/* Attachments */}
-     {isMixedImageAudio && audioAttachments.map((file, index) => (
- <VoiceNoteCard
-                        audioUrl={file.url}
-                        ref={(el) => {
-                          if (el) audioRefs.current[file.url] = el;
-                        }}
-                      />
-))}
+      {/* Attachments */}
+      {isMixedImageAudio && audioAttachments.map((file, index) => (
+        <VoiceNoteCard
+          audioUrl={file.url}
+          ref={(el) => {
+            if (el) audioRefs.current[file.url] = el;
+          }}
+        />
+      ))}
 
       {nonAudioAttachments?.length > 0 && (
         <div
@@ -397,6 +397,8 @@ const PostCard = ({ post,
 
             // ✅ Detect portrait / mobile-shaped images
             const isMobileShaped = isImage && file?.aspect === "tall" && !single;
+            // ✅ Detect landscape / desktop-shaped images
+            const isLandscapeShaped = isImage && file?.aspect === "wide" && !single;
 
             // ✅ Special case: last item in 3 attachments
             const isLastOfThree = count === 3 && index === 2;
@@ -405,15 +407,17 @@ const PostCard = ({ post,
             let maxHeight;
 
             if (single) {
-              maxHeight = "450px"; // 1 image
+              maxHeight = "500px"; // 1 image - allow more height
             } else if (count === 4) {
-              maxHeight = "520px"; // 2x2 grid
+              maxHeight = "450px"; // 2x2 grid
             } else if (count === 3) {
-              maxHeight = 520; // 🔥 same as 4-image logic for balance
+              maxHeight = "400px"; // balanced grid
             } else if (isMobileShaped) {
-              maxHeight = "1000px"; // tall portrait
+              maxHeight = "600px"; // tall portrait - allow natural height
+            } else if (isLandscapeShaped) {
+              maxHeight = "350px"; // wide landscape - constrain height
             } else {
-              maxHeight = "750px"; // landscape
+              maxHeight = "450px"; // default grid
             }
 
             let widthClass = "w-full";
@@ -426,106 +430,119 @@ const PostCard = ({ post,
             }
 
 
-            // ✅ Aspect ratio (controls shape, not image)
+            // ✅ Aspect ratio - use auto for natural ratio, only force for grid
             const aspectRatio = single
               ? "auto"
-              : isMobileShaped
-                ? "3 / 5"
-                : count === 4 || count === 3
-                  ? "4 / 5"
-                  : "5 / 3";
+              : isYouTube
+                ? "16 / 9" // YouTube always 16:9
+                : "auto"; // Let images use natural ratio via maxHeight
 
 
             return (
-                <div
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isImage) onImageClick(index);
-                  }}
-                  className={`relative overflow-hidden cursor-pointer
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isImage) onImageClick(index);
+                }}
+                className={`relative overflow-hidden cursor-pointer
     ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
     ${single ? "rounded-lg" : "rounded-sm"}
     ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
   `}
-                  style={{ aspectRatio }}
-                >
+                style={isYouTube ? { aspectRatio: "16/9" } : {}}
+              >
 
 
-                  {/* ✅ IMAGE */}
-                  {isImage && (
-                    <img
-                      src={file.url}
-                      alt={`attachment-${index}`}
-                      className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
-                      style={{
-                        maxHeight,
-                        width: isMobileShaped || count === 3 && index === 2 ? "auto" : "100%",
-                        margin: "auto",
-                        userSelect: "none",
-                      }}
-                      draggable={false}
-                      onContextMenu={(e) => e.preventDefault()}
-                    />
+                {/* ✅ IMAGE */}
+                {isImage && (
+                  <img
+                    src={file.url}
+                    alt={`attachment-${index}`}
+                    className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
+                    style={{
+                      maxHeight,
+                      width: "auto",
+                      maxWidth: "100%",
+                      height: "auto",
+                      margin: "auto",
+                      userSelect: "none",
+                    }}
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
 
-                  )}
+                )}
 
-                  {/* ✅ VIDEO */}
+                {/* ✅ VIDEO */}
 
-                  {isVideo && (
-                    <div className="w-full h-full flex items-center justify-center bg-black">
-                      <div className="w-full h-full max-h-full flex items-center justify-center">
-                        <VideoPlayer
-                          src={file.url}
-                          poster={file.poster || ""}
-                          className="max-h-full max-w-full"
-                          primaryColor="#FF4D4F"
-                          autoPlayOnView={true}
-                          sectionId={`feed-${post._id}`}
-                          ref={(ref) => {
-                            if (ref?.videoRef?.current) {
-                              setVideoState({
-                                src: file.url,
-                                poster: file.poster || "",
-                                inlineRef: ref.videoRef.current,
-                                playing: !ref.videoRef.current.paused,
-                                currentTime: ref.videoRef.current.currentTime,
-                              });
-                            }
-                          }}
-                        />
-
-                      </div>
-                    </div>
-                  )}
-
-                  {isAudio && (
-                    !isMixedImageAudio &&
-                    (
-                      // ✅ KEEP ORIGINAL AUDIO-ONLY BEHAVIOR
-                      <VoiceNoteCard
-                        audioUrl={file.url}
-                        ref={(el) => {
-                          if (el) audioRefs.current[file.url] = el;
+                {isVideo && (
+                  <div className="w-full h-full flex items-center justify-center bg-black">
+                    <div className="w-full h-full max-h-full flex items-center justify-center">
+                      <VideoPlayer
+                        src={file.url}
+                        poster={file.poster || ""}
+                        className="max-h-full max-w-full"
+                        primaryColor="#FF4D4F"
+                        autoPlayOnView={true}
+                        sectionId={`feed-${post._id}`}
+                        ref={(ref) => {
+                          if (ref?.videoRef?.current) {
+                            setVideoState({
+                              src: file.url,
+                              poster: file.poster || "",
+                              inlineRef: ref.videoRef.current,
+                              playing: !ref.videoRef.current.paused,
+                              currentTime: ref.videoRef.current.currentTime,
+                            });
+                          }
                         }}
                       />
-                    )
-                  )}
 
+                    </div>
+                  </div>
+                )}
 
-
-
-                  {/* ✅ YOUTUBE */}
-                  {isYouTube && (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${file.youtubeId}`}
-                      title={`youtube-${index}`}
-                      className="w-full h-full rounded-md"
-                      allowFullScreen
-                      style={{ maxHeight }}
+                {isAudio && (
+                  !isMixedImageAudio &&
+                  (
+                    // ✅ KEEP ORIGINAL AUDIO-ONLY BEHAVIOR
+                    <VoiceNoteCard
+                      audioUrl={file.url}
+                      ref={(el) => {
+                        if (el) audioRefs.current[file.url] = el;
+                      }}
                     />
-                  )}
-                </div>
+                  )
+                )}
+
+
+
+
+                {/* ✅ YOUTUBE */}
+                {isYouTube && (
+                  <div className="w-full h-full absolute inset-0 flex items-center justify-center bg-black">
+                    <div
+                      className="w-full h-full max-w-full"
+                      style={{
+                        position: "relative",
+                        paddingBottom: "56.25%", // 16:9 aspect ratio
+                        height: 0,
+                      }}
+                    >
+                      <iframe
+                        src={`https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
+                        title={`youtube-${index}`}
+                        className="absolute top-0 left-0 w-full h-full rounded-md"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        style={{ borderRadius: "8px" }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

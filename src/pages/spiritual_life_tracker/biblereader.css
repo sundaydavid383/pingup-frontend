@@ -221,10 +221,26 @@
   backdrop-filter: blur(12px);
   border-radius: 12px;
   box-shadow: var(--border-shadow);
-  width: 300px;
+  width: 320px;
   max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
   z-index: 9999990;
   border: 1px solid var(--input-border);
+}
+
+/* Ensure search dropdown stays in viewport on mobile */
+@media (max-width: 480px) {
+  .search-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 20px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 90vw;
+    max-height: 60vh;
+  }
 }
 
 /* Search Input */
@@ -315,32 +331,45 @@
 /* Loading Bar */
 .search-loading-bar {
   width: 100%;
-  height: 8px; /* keep visible */
-  background: rgba(255, 255, 255, 0.2); 
-  border-radius: 4px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
   overflow: hidden;
-  position: relative; /* ensure children animate properly */
+  position: relative;
   z-index: 9999999;
 }
 
+/* Dark mode loading bar */
+.bible-page[data-theme="dark"] .search-loading-bar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode loading bar */
+.bible-page[data-theme="light"] .search-loading-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 .fixed-loading {
-  position: fixed; /* sticky is tricky inside nested containers */
-  top: 70px;
-  left:0px;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
   z-index: 9999999;
+  padding: 0;
 }
 
 .search-loading-progress {
   height: 100%;
-  width: 40%;
-  background: var(--primary, blue); /* fallback to blue */
-  animation: search-loading 1s infinite linear;
+  width: 30%;
+  background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6, #3b82f6);
+  background-size: 200% 100%;
+  animation: search-loading 1.5s infinite linear;
+  border-radius: 3px;
 }
 
 @keyframes search-loading {
   0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
+  100% { transform: translateX(400%); }
 }
 
 
@@ -498,6 +527,21 @@
   font-weight: 700;
   color: var(--gold);
   margin-right: 0.25rem;
+}
+
+/* ============== Verse Highlight ============== */
+.verse-highlight {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(99, 102, 241, 0.4)) !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  transform: scale(1.02);
+  border-left: 4px solid #3b82f6;
+}
+
+/* Light mode verse highlight */
+.bible-page[data-theme="light"] .verse-highlight {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.25)) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  border-left: 4px solid #2563eb;
 }
 
 /* ============== mode button ============== */

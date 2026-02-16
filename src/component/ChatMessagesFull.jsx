@@ -27,6 +27,8 @@ const ChatMessagesFull = ({
   typingUserFromId,
   showScrollButton,
   scrollToBottom,
+  scrollToMessage,
+  scrollToReplyMessage,
   setReplyTo,
   receiver,
   inputRef,
@@ -166,29 +168,48 @@ const ChatMessagesFull = ({
     }
   }, []);
 
+    const { socket, connected, onlineUsers } = useSocket();
+
   // Handle delete message
-  const handleDeleteMessage = useCallback((messageId, isOwnMessage) => {
-    if (isOwnMessage) {
+  const handleDeleteMessage = useCallback(async (messageId, deleteForEveryone) => {
+    if (deleteForEveryone) {
       // Delete for everyone - call API
       if (setMessages) {
-        // Optimistically remove from UI
-        setMessages(prev => prev.filter(msg => msg._id !== messageId));
-
-        // TODO: Call API to delete message for everyone
-        // axiosBase.delete(`/api/chat/message/${messageId}`).catch(...)
+        try {
+          // Call API to delete message for everyone
+          await axiosBase.delete(`/api/chat/message/${messageId}`);
+          
+          // Emit socket event to notify other users
+          if (socket) {
+            socket.emit("messageDeleted", {
+              messageId,
+              chatId
+            });
+          }
+          
+          // Remove from UI
+          setMessages(prev => prev.filter(msg => msg._id !== messageId));
+        } catch (error) {
+          console.error("Error deleting message for everyone:", error);
+        }
       }
     } else {
       // Delete for yourself only - just hide from your view
       if (setMessages) {
-        setMessages(prev => prev.filter(msg => msg._id !== messageId));
-
-        // TODO: Call API to delete just for this user
-        // axiosBase.delete(`/api/chat/message/${messageId}/for-me`).catch(...)
+        try {
+          // Call API to delete just for this user
+          await axiosBase.delete(`/api/chat/message/${messageId}/for-me`);
+          
+          // Remove from UI
+          setMessages(prev => prev.filter(msg => msg._id !== messageId));
+        } catch (error) {
+          console.error("Error deleting message for me:", error);
+        }
       }
     }
-  }, [setMessages]);
+  }, [setMessages, socket, chatId]);
   // Group messages by day
-  const { socket, connected, onlineUsers } = useSocket();
+
   const groupedMessages = messages.reduce((acc, msg) => {
     const messageDate = new Date(msg.createdAt);
     const today = new Date();
@@ -383,6 +404,27 @@ const ChatMessagesFull = ({
     return () => socket.off("userSeenMessage");
   }, [chatId, socket]);
 
+  // Listen for message deletion from other users
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on(
+      "messageDeleted",
+      ({ messageId, chatId: deletedChatId }) => {
+        if (chatId !== deletedChatId) return;
+        
+        // Remove the deleted message from UI
+        setMessages((prev) =>
+          prev.filter((msg) => msg._id !== messageId)
+        );
+      }
+    );
+
+    return () => {
+      socket.off("messageDeleted");
+    };
+  }, [chatId, socket, setMessages]);
+
 
   const hasScrolledToLastSeen = useRef(false);
 
@@ -429,7 +471,7 @@ const ChatMessagesFull = ({
               return (
                 <div
                   key={msg._id}
-                  data-id={msg._id}
+                  data-message-id={msg._id}
                   id={`msg_${msg._id}`}
                   ref={(el) => {
                     if (el) messageRefs.current[msg._id] = el;
@@ -456,10 +498,16 @@ const ChatMessagesFull = ({
                         : "bg-[var(--input-accent)] text-white rounded-bl-none"
                       }`}
                   >
-                    {/* Replied Message Preview - WhatsApp Style */}
+                    {/* Replied Message Preview - WhatsApp Style - Clickable to scroll to original */}
                     {msg.replyTo && (
                       <div
-                        className={`mb-2 pb-2 border-b ${sentByUser ? 'border-gray-200' : 'border-white/20'}`}
+                        className={`mb-2 pb-2 border-b cursor-pointer hover:opacity-80 transition-opacity rounded ${sentByUser ? 'border-gray-200' : 'border-white/20'}`}
+                        onClick={() => {
+                          if (scrollToReplyMessage && msg.replyTo) {
+                            scrollToReplyMessage(msg.replyTo);
+                          }
+                        }}
+                        title="Click to view original message"
                       >
                         <div className="flex items-start gap-2">
                           {/* Vertical line indicator */}
