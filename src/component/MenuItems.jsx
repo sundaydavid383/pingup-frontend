@@ -14,6 +14,7 @@ const MenuItems = ({ setSidebarOpen }) => {
   const navigate = useNavigate();
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
+  const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
 
   const [totalUnread, setTotalUnread] = useState(getTotalUnread() + unreadNotifications);
 
@@ -40,19 +41,17 @@ const MenuItems = ({ setSidebarOpen }) => {
   };
 
   return (
-    <div className={`space-y-2 flex flex-col ${isMessageTab || isSettingsTab ? 'items-center' : ''}`}>
+    <div className={`space-y-2 flex flex-col ${isMessageTab || isSettingsTab || isProfileTab ? 'items-center' : ''}`}>
       {menuItems.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           end={to === "/"}
           className={({ isActive }) =>
-            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
-              isMessageTab || isSettingsTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-            } ${
-              isActive
-                ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && "translate-x-3"}`
-                : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab ? "hover:translate-x-3 gradient-hover" : ""}`
+            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+            } ${isActive
+              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && !isProfileTab && "translate-x-3"}`
+              : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`
             }`
           }
           onClick={() => {
@@ -64,33 +63,31 @@ const MenuItems = ({ setSidebarOpen }) => {
           <div className="relative flex items-center justify-center">
             <Icon className="w-5 h-5" />
             {(label === "Message" && getTotalUnread() > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
+              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab || isProfileTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
                 {getTotalUnread()}
               </span>
             )}
             {(label === "Notification" && unreadNotifications > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
+              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab || isProfileTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
                 {unreadNotifications}
               </span>
             )}
           </div>
-          {!isMessageTab && !isSettingsTab && <span className="truncate text-sm">{label}</span>}
+          {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">{label}</span>}
         </NavLink>
       ))}
 
       {/* Separator */}
-      {!isMessageTab && !isSettingsTab && <hr className="my-2 border-[var(--input-border)]" />}
+      {!isMessageTab && !isSettingsTab && !isProfileTab && <hr className="my-2 border-[var(--input-border)]" />}
 
       {/* Settings */}
       <NavLink
         to="/settings"
         className={({ isActive }) =>
-          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
-            isMessageTab || isSettingsTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-          } ${
-            isActive
-              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && "translate-x-3"}`
-              : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab ? "hover:translate-x-3 gradient-hover" : ""}`
+          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+          } ${isActive
+            ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && !isProfileTab && "translate-x-3"}`
+            : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`
           }`
         }
         onClick={() => {
@@ -100,18 +97,17 @@ const MenuItems = ({ setSidebarOpen }) => {
         }}
       >
         <Settings className="w-5 h-5" />
-        {!isMessageTab && !isSettingsTab && <span className="truncate text-sm">Settings</span>}
+        {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">Settings</span>}
       </NavLink>
 
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 ${
-          isMessageTab || isSettingsTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-        } ${!isMessageTab && !isSettingsTab ? "hover:translate-x-3 gradient-hover" : ""}`}
+        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+          } ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`}
       >
         <LogOut className="w-5 h-5" />
-        {!isMessageTab && !isSettingsTab && <span className="truncate text-sm">Logout</span>}
+        {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">Logout</span>}
       </button>
     </div>
   );

@@ -40,11 +40,11 @@ import CommunityPage from './pages/CommunityPage';
 import AboutPage from './pages/AboutPage';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
-  const location  = useLocation();
+  const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const oauthError = searchParams.get('error');
 
-    const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthText, setOauthText] = useState("Loading…");
 
   useEffect(() => {
@@ -70,22 +70,22 @@ const App = () => {
       if (e.target.tagName === 'IMG') {
         e.preventDefault();
       }
-  };
+    };
 
-   const disableImageDrag = (e) => {
-    if (e.target.tagName === 'IMG') {
-      e.preventDefault();
+    const disableImageDrag = (e) => {
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+      }
     }
-   }
 
-  document.addEventListener("contextmenu", disableImageContextMenu);
-  document.addEventListener("dragstart", disableImageDrag);
+    document.addEventListener("contextmenu", disableImageContextMenu);
+    document.addEventListener("dragstart", disableImageDrag);
 
-  return () => {
-    document.removeEventListener("contextmenu", disableImageContextMenu);
-    document.removeEventListener("dragstart", disableImageDrag);
-  }
-}, []);
+    return () => {
+      document.removeEventListener("contextmenu", disableImageContextMenu);
+      document.removeEventListener("dragstart", disableImageDrag);
+    }
+  }, []);
 
   useEffect(() => {
     document.title = modalOpen ? toTitleCase(user?.name) : "SpringsConnect – News Feed";
@@ -94,7 +94,7 @@ const App = () => {
   }, [modalOpen, user]);
   return (
     <>
-          <Helmet>
+      <Helmet>
         <title>SpringsConnect - Newsprings Youth</title>
         <meta name="description" content="Connect spiritually, share scriptures, and grow with SpringsConnect." />
       </Helmet>
@@ -104,18 +104,18 @@ const App = () => {
       {/* <ReloadNotice /> */}
 
       <AppInstallPrompt />
-      <GlobalAudioModal/>
+      <GlobalAudioModal />
       {oauthLoading && <Loading text={oauthText} />}
 
       <Routes>
 
         {/* Public or Auth route */}
         <Route path="/auth/success" element={<AuthSuccess />} />
-        
+
         {/* Public Pages */}
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="profile/:profileId" element={<Profile />} />
+
         {/* Landing Page - visible before login */}
         <Route path="/" element={!user ? <LandingPage /> : <Layout />}>
           {user && <Route index element={<Feed />} />}
@@ -132,13 +132,17 @@ const App = () => {
           {user && <Route path="connections" element={<Connections />} />}
           {user && <Route path="discover" element={<Discover />} />}
           {user && <Route path="profile" element={<Profile />} />}
-          
+          {user && <Route path="profile/:profileId" element={<Profile />} />}
+
           {user && <Route path="create-post" element={<CreatePost />} />}
-          {user && <Route path="notification" element={<Notification userId={user?._id}/>} />}
-          {user && <Route path='portfolio' element={<Portfolio/>}/>}
+          {user && <Route path="notification" element={<Notification userId={user?._id} />} />}
+          {user && <Route path='portfolio' element={<Portfolio />} />}
           {user && <Route path="post/:postId" element={<SinglePostPage />} />}
           {user && <Route path="settings" element={<Settings />} />}
         </Route>
+
+        {/* Public profile page for unauthenticated users */}
+        {!user && <Route path="profile/:profileId" element={<Profile />} />}
 
         {/* Auth page - for login/signup */}
         <Route path="/auth" element={!user ? <AuthContainer initialError={oauthError} /> : <Navigate to="/" />} />

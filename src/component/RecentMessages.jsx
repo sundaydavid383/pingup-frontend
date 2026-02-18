@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Image as ImageIcon, Mic, FileText, File, Send, X, Maximize2 } from "lucide-react";
+import { Image as ImageIcon, Mic, FileText, File, Send, X, Maximize2, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import axios from "../utils/axiosBase";
@@ -53,6 +53,50 @@ const RecentMessages = () => {
   const [mediaInitialIndex, setMediaInitialIndex] = useState(0);
   const [chatImages, setChatImages] = useState([]);
 
+  // Read-more state for recent messages
+  const [expandedMessages, setExpandedMessages] = useState(new Set());
+  const [expandedChatMessages, setExpandedChatMessages] = useState(new Set());
+  const CHARACTER_THRESHOLD = 200;
+
+  const toggleMessageExpansion = (messageId) => {
+    setExpandedMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleChatMessageExpansion = (messageId) => {
+    setExpandedChatMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  const getDisplayText = (text, messageId) => {
+    if (!text || text.length <= CHARACTER_THRESHOLD) return text;
+    if (expandedMessages.has(messageId)) return text;
+    return text.substring(0, CHARACTER_THRESHOLD) + "...";
+  };
+
+  const getDisplayChatText = (text, messageId) => {
+    if (!text || text.length <= CHARACTER_THRESHOLD) return text;
+    if (expandedChatMessages.has(messageId)) return text;
+    return text.substring(0, CHARACTER_THRESHOLD) + "...";
+  };
+
+  const shouldShowReadMore = (text) => {
+    return text && text.length > CHARACTER_THRESHOLD;
+  };
 
   const { user } = useAuth();
   const { onlineUsers } = useSocket();
@@ -86,26 +130,26 @@ const RecentMessages = () => {
 
 
   // 2. Fetch History when PiP Opens
-const fetchChatHistory = async (userId) => {
-  try {
-    setChatLoading(true);
-    const res = await axios.get(
-      `/api/chat/room?user1=${user._id}&user2=${userId}`
-    );
+  const fetchChatHistory = async (userId) => {
+    try {
+      setChatLoading(true);
+      const res = await axios.get(
+        `/api/chat/room?user1=${user._id}&user2=${userId}`
+      );
 
-    if (res.data?.room) setChatId(res.data.room._id);
-    setActiveChatHistory(res.data?.messages || []);
+      if (res.data?.room) setChatId(res.data.room._id);
+      setActiveChatHistory(res.data?.messages || []);
 
-    // ⬇️ force scroll after initial render
-    requestAnimationFrame(() => {
-      scrollToBottom(false);
-    });
-  } catch (err) {
-    console.error("Error fetching history:", err);
-  } finally {
-    setChatLoading(false);
-  }
-};
+      // ⬇️ force scroll after initial render
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
 
   // 3. Initial Load
@@ -241,75 +285,75 @@ const fetchChatHistory = async (userId) => {
 
 
   // ========================= AUDIO RECORD ==========================
-const startRecording = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    setAudioStream(stream); // store stream to stop tracks later
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setAudioStream(stream); // store stream to stop tracks later
 
-    setRecording(true);
-    setRecordTime(0);
-    setAudioLevel(0);
-
-    const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/wav";
-    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
-    audioChunksRef.current = [];
-
-    mediaRecorderRef.current.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
-      setRecording(false);
+      setRecording(true);
+      setRecordTime(0);
       setAudioLevel(0);
-      stream.getTracks().forEach(track => track.stop()); // stop mic
-      setAudioStream(null);
-    };
 
-    mediaRecorderRef.current.start();
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/wav";
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
 
-    // Live audio level
-    const audioContext = new AudioContext();
-    const analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-    analyser.fftSize = 256;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
 
-    const animate = () => {
-      if (!recording) return;
-      analyser.getByteFrequencyData(dataArray);
-      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      setAudioLevel(avg);
-      requestAnimationFrame(animate);
-    };
-    animate();
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
+        setRecording(false);
+        setAudioLevel(0);
+        stream.getTracks().forEach(track => track.stop()); // stop mic
+        setAudioStream(null);
+      };
 
-    // Timer
-    const start = Date.now();
-    recordTimerRef.current = setInterval(() => {
-      const sec = Math.floor((Date.now() - start) / 1000);
-      setRecordTime(sec);
-      if (sec >= MAX_RECORD_TIME) mediaRecorderRef.current.stop();
-    }, 500);
-  } catch (err) {
-    console.error("Mic error:", err);
+      mediaRecorderRef.current.start();
+
+      // Live audio level
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 256;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      const animate = () => {
+        if (!recording) return;
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        setAudioLevel(avg);
+        requestAnimationFrame(animate);
+      };
+      animate();
+
+      // Timer
+      const start = Date.now();
+      recordTimerRef.current = setInterval(() => {
+        const sec = Math.floor((Date.now() - start) / 1000);
+        setRecordTime(sec);
+        if (sec >= MAX_RECORD_TIME) mediaRecorderRef.current.stop();
+      }, 500);
+    } catch (err) {
+      console.error("Mic error:", err);
+      setRecording(false);
+    }
+  };
+
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    clearInterval(recordTimerRef.current);
     setRecording(false);
-  }
-};
-
-
- const stopRecording = () => {
-  mediaRecorderRef.current?.stop();
-  clearInterval(recordTimerRef.current);
-  setRecording(false);
-  setAudioLevel(0);
-  if (audioStream) {
-    audioStream.getTracks().forEach(track => track.stop());
-    setAudioStream(null);
-  }
-};
+    setAudioLevel(0);
+    if (audioStream) {
+      audioStream.getTracks().forEach(track => track.stop());
+      setAudioStream(null);
+    }
+  };
 
 
 
@@ -372,12 +416,38 @@ const startRecording = async () => {
                     {/* Bottom row: last message + unread */}
                     <div className="flex justify-between -mt-3 items-center mt-1">
                       <span
-                        className="flex items-center gap-1 truncate text-xs"
+                        className="flex items-center gap-1 truncate text-xs flex-col items-start"
                         style={{ color: "var(--text-secondary)" }}
                       >
                         {!last && "Click to chat"}
 
-                        {last?.type === "text" && last.text}
+                        {last?.type === "text" && (
+                          <div className="flex flex-col gap-0.5 w-full">
+                            <span className="truncate w-full">{getDisplayText(last.text, last._id)}</span>
+                            {shouldShowReadMore(last.text) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMessageExpansion(last._id);
+                                }}
+                                className="flex items-center gap-1 text-[10px] font-semibold opacity-70 hover:opacity-100 transition-opacity"
+                                style={{ color: "var(--primary)" }}
+                              >
+                                {expandedMessages.has(last._id) ? (
+                                  <>
+                                    <ChevronUp size={12} />
+                                    Less
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown size={12} />
+                                    More
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {last?.type === "image" && (
                           <>
@@ -458,7 +528,30 @@ const startRecording = async () => {
                   <div key={msg._id || i} className={`flex flex-col ${msg.from_user_id === user._id ? "items-end" : "items-start"}`}>
                     <div className={` ${msg.message_type === "image" || msg.message_type === "audio" ? "px-1 py-1" : "px-3 py-2"} rounded-2xl text-sm max-w-[85%] ${msg.from_user_id === user._id ? "bg-black text-white rounded-tr-none" : "bg-white border rounded-tl-none"
                       }`}>
-                      {msg.message_type === "text" && msg.text}
+                      {msg.message_type === "text" && (
+                        <div className="flex flex-col gap-1">
+                          <p>{getDisplayChatText(msg.text, msg._id)}</p>
+                          {shouldShowReadMore(msg.text) && (
+                            <button
+                              onClick={() => toggleChatMessageExpansion(msg._id)}
+                              className="flex items-center gap-1 text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity mt-1"
+                              style={{ color: msg.from_user_id === user._id ? 'rgba(255, 255, 255, 0.9)' : 'var(--primary)' }}
+                            >
+                              {expandedChatMessages.has(msg._id) ? (
+                                <>
+                                  <ChevronUp size={12} />
+                                  Read less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown size={12} />
+                                  Read more
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {msg.message_type === "image" && (
                         <img
@@ -505,102 +598,102 @@ const startRecording = async () => {
                 )}
 
                 <div
-  className="flex  items-center gap-2 px-3 py-2 rounded-full"
-  style={{
-    borderRadius: "50px",
-    backgroundColor: "rgba(255, 255, 255, 0.3)", // translucent
-    backdropFilter: "blur(20px)",              // blur effect
-    WebkitBackdropFilter: "blur(20px)",
-  }}
->
-{recording ?  (
-  <div className="mb-2 px-3">
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-600 w-14">
-        {MAX_RECORD_TIME - recordTime}s left
-      </span>
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value={audioLevel}
-        readOnly
-        className="flex-1 h-1 accent-green-500"
-      />
-      <span className="text-xs text-red-500">Recording…</span>
-    </div>
-  </div>
-) : audioURL ? (
-  <div className="flex items-center gap-2 w-full">
-    <button
-      onClick={() => setAudioURL(null)}
-      className="p-1 rounded-full hover:bg-red-100 transition flex-1 text-center"
-    >
-      Delete
-    </button>
-    <button
-      onClick={handleSend}
-      className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition flex-1 text-center"
-    >
-      Send
-    </button>
-  </div>
-) :   
- ( <div className="flex items-center gap-2 w-full">
-                    
-                    {/* Text Input */}
-                   <input
-  value={draft}
-  disabled={recording}
-  onChange={(e) => setDraft(e.target.value)}
-  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-  placeholder={recording ? "Recording voice…" : "Message..."}
-  className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-400"
-/>
+                  className="flex  items-center gap-2 px-3 py-2 rounded-full"
+                  style={{
+                    borderRadius: "50px",
+                    backgroundColor: "rgba(255, 255, 255, 0.3)", // translucent
+                    backdropFilter: "blur(20px)",              // blur effect
+                    WebkitBackdropFilter: "blur(20px)",
+                  }}
+                >
+                  {recording ? (
+                    <div className="mb-2 px-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 w-14">
+                          {MAX_RECORD_TIME - recordTime}s left
+                        </span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="255"
+                          value={audioLevel}
+                          readOnly
+                          className="flex-1 h-1 accent-green-500"
+                        />
+                        <span className="text-xs text-red-500">Recording…</span>
+                      </div>
+                    </div>
+                  ) : audioURL ? (
+                    <div className="flex items-center gap-2 w-full">
+                      <button
+                        onClick={() => setAudioURL(null)}
+                        className="p-1 rounded-full hover:bg-red-100 transition flex-1 text-center"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={handleSend}
+                        className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition flex-1 text-center"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  ) :
+                    (<div className="flex items-center gap-2 w-full">
+
+                      {/* Text Input */}
+                      <input
+                        value={draft}
+                        disabled={recording}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                        placeholder={recording ? "Recording voice…" : "Message..."}
+                        className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-400"
+                      />
 
 
-                    {/* Image Upload */}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="imageInput"
-                      hidden
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) setImage(file);
-                        e.target.value = "";
-                      }}
-                    />
-                    <button
-                      onClick={() => document.getElementById("imageInput").click()}
-                      className="p-1 rounded-full hover:bg-[var(--secondary)] transition"
-                      title="Upload Image"
-                    >
-                      <ImageIcon size={24} />
-                    </button>
+                      {/* Image Upload */}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="imageInput"
+                        hidden
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) setImage(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <button
+                        onClick={() => document.getElementById("imageInput").click()}
+                        className="p-1 rounded-full hover:bg-[var(--secondary)] transition"
+                        title="Upload Image"
+                      >
+                        <ImageIcon size={24} />
+                      </button>
 
-                    {/* Record Audio */}
-                    <button
-                      onClick={recording ? stopRecording : startRecording}
-                      className={`p-1 rounded-full transition ${audioURL ? "bg-green-100" : "hover:bg-[var(--secondary)]"}`}
-                      title={recording ? "Stop Recording" : audioURL ? "Recorded" : "Record Audio"}
-                    >
-                      <Mic size={24} />
-                    </button>
+                      {/* Record Audio */}
+                      <button
+                        onClick={recording ? stopRecording : startRecording}
+                        className={`p-1 rounded-full transition ${audioURL ? "bg-green-100" : "hover:bg-[var(--secondary)]"}`}
+                        title={recording ? "Stop Recording" : audioURL ? "Recorded" : "Record Audio"}
+                      >
+                        <Mic size={24} />
+                      </button>
 
 
 
-                    {/* Send Button */}
-                    <button
-                      onClick={handleSend}
-                      disabled={!(draft.trim() || image || audioURL)}
-                      className={`p-1 rounded-full transition ${draft.trim() || image || audioURL ? "text-black hover:bg-gray-200" : "text-gray-300 cursor-not-allowed"}`}
-                    >
-                      <Send size={24} fill="currentColor" />
-                    </button>
-                  </div>)}
+                      {/* Send Button */}
+                      <button
+                        onClick={handleSend}
+                        disabled={!(draft.trim() || image || audioURL)}
+                        className={`p-1 rounded-full transition ${draft.trim() || image || audioURL ? "text-black hover:bg-gray-200" : "text-gray-300 cursor-not-allowed"}`}
+                      >
+                        <Send size={24} fill="currentColor" />
+                      </button>
+                    </div>)}
 
-  
+
 
                 </div>
               </div>

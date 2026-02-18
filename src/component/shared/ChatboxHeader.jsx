@@ -2,19 +2,28 @@ import React from "react";
 
 const ChatboxHeader = ({ sidebarOpen, sidebarWidth = 240, children }) => {
   const headerStyle = {
-    position: "fixed",   
-    top: 0,              
+    position: "sticky",
+    top: 0,
     left: 0,
     right: 0,
-    zIndex: 40,            
+    zIndex: 40,
     background: "var(--color-6)",
     boxSizing: "border-box",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
     flexShrink: 0,
-    height: "60px", // Fixed height for header
+    height: "60px",
+    width: "100%",
+    maxWidth: "100%",
+    overflow: "hidden",
   };
 
-  return <div style={headerStyle}>{children}</div>;
+  return (
+    <div style={headerStyle} className="chatbox-header-container">
+      <div className="chatbox-header-content">
+        {children}
+      </div>
+    </div>
+  );
 };
 
 export default ChatboxHeader;

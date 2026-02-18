@@ -1,109 +1,84 @@
-const ProfileSkeleton = () => {
+export default function ProfileSkeleton() {
   return (
-    <div className="profile-main animate-pulse">
-      {/* ================= PROFILE CARD ================= */}
-      <div className="profile-card bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-8 animate-pulse overflow-visible">
 
-        {/* Cover */}
-        <div className="cover-wrapper">
-          <div className="h-48 md:h-56 w-full bg-gray-300" />
-        </div>
+      {/* COVER */}
+      <div className="w-full h-40 sm:h-48 md:h-56 bg-gray-200 rounded-xl" />
 
-        {/* USER INFO ROW */}
-        <div className="flex flex-col md:flex-row gap-8 md:gap-12 p-6 md:p-10">
-          {/* Avatar */}
-          <div className="flex justify-center md:justify-start">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gray-300" />
+      {/* HEADER SECTION */}
+      <div className="relative flex flex-col items-center md:items-start">
+
+        {/* Avatar */}
+        <div className="w-28 h-28 rounded-full bg-gray-200 -mt-14 border-4 border-white shadow-lg" />
+
+        {/* Name + Actions */}
+        <div className="w-full mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+
+          <div className="text-center md:text-left space-y-2">
+            <div className="h-6 bg-gray-200 rounded w-48 mx-auto md:mx-0" />
+            <div className="h-4 bg-gray-200 rounded w-32 mx-auto md:mx-0" />
           </div>
 
-          {/* Info */}
-          <div className="flex-1 space-y-4 text-center md:text-left">
-            <div className="h-6 w-56 bg-gray-300 rounded mx-auto md:mx-0" />
-            <div className="h-4 w-40 bg-gray-300 rounded mx-auto md:mx-0" />
-
-            {/* Buttons */}
-            <div className="flex gap-3 justify-center md:justify-start mt-4">
-              <div className="h-9 w-28 bg-gray-300 rounded-lg" />
-              <div className="h-9 w-32 bg-gray-300 rounded-lg" />
-            </div>
-          </div>
-        </div>
-
-        {/* BIO */}
-        <div className="px-6 md:px-10 space-y-2">
-          <div className="h-4 w-full bg-gray-300 rounded" />
-          <div className="h-4 w-4/5 bg-gray-300 rounded" />
-        </div>
-
-        {/* DETAILS */}
-        <div className="flex flex-wrap gap-x-6 gap-y-3 px-6 md:px-10 mt-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-4 w-36 bg-gray-300 rounded"
-            />
-          ))}
-        </div>
-
-        {/* STATS */}
-        <div className="flex justify-between border-t border-gray-200 mt-8 pt-5 px-6 md:px-10">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex-1 text-center space-y-2">
-              <div className="h-6 w-10 bg-gray-300 rounded mx-auto" />
-              <div className="h-3 w-16 bg-gray-300 rounded mx-auto" />
-            </div>
-          ))}
-        </div>
-
-        {/* CONNECTIONS */}
-        <div className="px-6 md:px-10 mt-10">
-          <div className="h-6 w-32 bg-gray-300 rounded mb-6" />
-
-          <div className="connections-stack flex">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="stack-item"
-                style={{ zIndex: 100 - i }}
-              >
-                <div className="stack-img w-12 h-12 rounded-full bg-gray-300" />
-              </div>
-            ))}
+          <div className="flex gap-3 justify-center">
+            <div className="h-9 w-24 bg-gray-200 rounded-lg" />
+            <div className="h-9 w-28 bg-gray-200 rounded-lg" />
           </div>
         </div>
       </div>
 
-      {/* ================= TABS ================= */}
-      <div className="tabs-wrapper mt-10">
-        <div className="tabs-container flex gap-2 max-w-md mx-auto">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex-1 h-9 bg-gray-300 rounded-lg"
-            />
+      {/* BIO */}
+      <div className="space-y-2 max-w-2xl mx-auto md:mx-0">
+        <div className="h-3 bg-gray-200 rounded w-full" />
+        <div className="h-3 bg-gray-200 rounded w-5/6" />
+      </div>
+
+      {/* DETAILS */}
+      <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4 border-t border-gray-100">
+        <div className="h-4 w-32 bg-gray-200 rounded" />
+        <div className="h-4 w-28 bg-gray-200 rounded" />
+        <div className="h-4 w-24 bg-gray-200 rounded" />
+      </div>
+
+      {/* STATS GRID */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 border-y border-gray-100 py-6">
+        <div className="h-10 bg-gray-200 rounded" />
+        <div className="h-10 bg-gray-200 rounded" />
+        <div className="h-10 bg-gray-200 rounded" />
+      </div>
+
+      {/* CHAT BUTTON */}
+      <div className="flex justify-center">
+        <div className="h-10 w-40 bg-gray-200 rounded-lg" />
+      </div>
+
+      {/* PROFILE VIEWERS */}
+      <div className="bg-gray-100 rounded-xl p-4">
+        <div className="h-4 bg-gray-200 rounded w-32 mx-auto" />
+      </div>
+
+      {/* CONNECTIONS */}
+      <div className="pt-4 space-y-4">
+        <div className="h-5 bg-gray-200 rounded w-32 mx-auto md:mx-0" />
+        <div className="flex justify-center md:justify-start gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="w-10 h-10 rounded-full bg-gray-200" />
           ))}
         </div>
       </div>
 
-      {/* ================= POSTS ================= */}
-      <div className="posts-wrapper mt-10 space-y-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex gap-4 p-4 bg-white rounded-xl shadow-md"
-          >
-            <div className="w-12 h-12 rounded-full bg-gray-300 shrink-0" />
+      {/* TABS */}
+      <div className="flex justify-center md:justify-start gap-4 pt-4">
+        <div className="h-8 w-20 bg-gray-200 rounded-full" />
+        <div className="h-8 w-20 bg-gray-200 rounded-full" />
+        <div className="h-8 w-20 bg-gray-200 rounded-full" />
+      </div>
 
-            <div className="flex-1 space-y-3">
-              <div className="h-4 w-1/3 bg-gray-300 rounded" />
-              <div className="h-3 w-full bg-gray-300 rounded" />
-              <div className="h-12 w-full bg-gray-300 rounded" />
-            </div>
-          </div>
+      {/* POSTS PLACEHOLDER */}
+      <div className="space-y-4 pt-6">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-32 bg-gray-200 rounded-xl" />
         ))}
       </div>
     </div>
   );
-};
-
-export default ProfileSkeleton;
+}

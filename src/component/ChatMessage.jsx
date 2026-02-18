@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck, Send } from "lucide-react";
+
+const READ_MORE_LIMIT = 200;
 
 const ChatMessage = ({
   message,
@@ -13,6 +15,7 @@ const ChatMessage = ({
   formatTime
 }) => {
   const msgRef = useRef(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Detect when message comes into view
   useEffect(() => {
@@ -34,6 +37,19 @@ const ChatMessage = ({
 
   const sentByUser = message.from_user_id === userId;
 
+  // Check if message should show "Read more"
+  const shouldShowReadMore = message.message_type === "text" && 
+    message.text && 
+    message.text.length > READ_MORE_LIMIT;
+
+  // Get display text based on expansion state
+  const getDisplayText = () => {
+    if (!shouldShowReadMore || isExpanded) {
+      return message.text;
+    }
+    return message.text.slice(0, READ_MORE_LIMIT);
+  };
+
   return (
     <div
       ref={msgRef}
@@ -49,7 +65,20 @@ const ChatMessage = ({
           }`}
       >
         {/* Render text, image, or audio */}
-        {message.message_type === "text" && <p>{message.text}</p>}
+        {message.message_type === "text" && (
+          <>
+            <p className="whitespace-pre-wrap">{getDisplayText()}</p>
+            {shouldShowReadMore && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-xs font-medium underline ml-1 hover:opacity-80 transition-opacity"
+                style={{ color: sentByUser ? "var(--input-accent)" : "#fff" }}
+              >
+                {isExpanded ? "Show less" : "Read more"}
+              </button>
+            )}
+          </>
+        )}
         {message.message_type === "image" && message.media_url && (
           <img
             src={message.media_url}

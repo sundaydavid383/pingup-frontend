@@ -57,6 +57,36 @@
   animation: dropdownFadeIn 0.25s forwards;
 }
 
+/* Styles for menu rendered into document.body via portal */
+.custom-dropdown__menu-portal {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-height: 12rem;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  background-color: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #111;
+  padding: 4px 0;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.custom-dropdown__option.highlighted,
+.custom-dropdown__option:focus {
+  background-color: #1e40af;
+  color: white;
+}
+
+.custom-dropdown__option {
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.15s, color 0.15s;
+}
+
 @keyframes dropdownFadeIn {
   to {
     opacity: 1;

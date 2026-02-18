@@ -127,7 +127,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2"
                     >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showNewPassword ? <EyeOff className="w-4 h-4" style={{ color: 'var(--white)' }} /> : <Eye className="w-4 h-4" style={{ color: '[var(--white)]' }} />}
                     </button>
                   </div>
                 </div>
@@ -153,7 +153,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="w-full px-4 py-2 rounded-lg custom-gradient text-white font-semibold disabled:opacity-50"
+                  className="w-full px-4 py-2 rounded-lg custom-gradient text-[var(--white)] font-semibold disabled:opacity-50"
                 >
                   {passwordLoading ? 'Changing...' : 'Update Password'}
                 </button>
@@ -190,7 +190,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
                 <button
                   type="submit"
                   disabled={emailLoading || email === user?.email}
-                  className="w-full px-4 py-2 rounded-lg custom-gradient text-white font-semibold disabled:opacity-50"
+                  className="w-full px-4 py-2 rounded-lg custom-gradient text-[var(--white)] font-semibold disabled:opacity-50"
                 >
                   {emailLoading ? 'Updating...' : 'Update Email'}
                 </button>
@@ -264,7 +264,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--form-bg)' }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" style={{ color: '[var(--white)]' }} />
             </button>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Account Settings
@@ -280,19 +280,18 @@ const AccountSettings = ({ isEmbedded = false }) => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition ${
-                activeTab === tab
-                  ? 'custom-gradient text-white'
+              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium transition ${activeTab === tab
+                  ? 'custom-gradient text-[var(--white)]'
                   : ''
-              }`}
+                }`}
               style={
                 activeTab === tab
                   ? {}
                   : {
-                      backgroundColor: 'var(--form-bg)',
-                      border: '1px solid var(--input-border)',
-                      color: 'var(--text-main)'
-                    }
+                    backgroundColor: 'var(--form-bg)',
+                    border: '1px solid var(--input-border)',
+                    color: 'var(--text-main)'
+                  }
               }
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}

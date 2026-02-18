@@ -22,7 +22,7 @@ const MediaDropdown = ({ open, onClose, onSelect }) => {
   return (
     <div
       ref={ref}
-      className="absolute bottom-14 left-2 w-48 bg-white rounded-xl shadow-lg border z-50 animate-fadeIn"
+      className="fixed bottom-20 left-4 w-48 bg-white rounded-xl shadow-lg border z-[60] animate-fadeIn"
     >
       <button
         onClick={() => onSelect("image")}

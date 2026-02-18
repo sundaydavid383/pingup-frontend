@@ -189,7 +189,7 @@ useEffect(() => {
               </h1>
               {user.isVerified && <Verified className="w-5 h-5 text-blue-500" />}
             </div>
-            <p className="text-gray-500 text-sm text-left">@{user.username || "username"}</p>
+            <p className="text-gray-500 text-sm text-center md:text-left">@{user.username || "username"}</p>
           </div>
 
           <div className="flex gap-3 justify-center">

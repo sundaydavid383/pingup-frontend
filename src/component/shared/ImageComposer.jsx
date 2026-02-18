@@ -17,8 +17,11 @@ export default function ImageComposer({ image, setImage, caption, setCaption, on
 
   return (
     <>
-      {/* IMAGE COMPOSER */}
-      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-lg flex flex-col overflow-hidden animate-slideUp">
+      {/* IMAGE COMPOSER - Fixed position to escape parent containers */}
+      <div 
+        className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:max-w-[500px] bg-white rounded-2xl shadow-lg flex flex-col overflow-hidden animate-slideUp z-50"
+        style={{ maxHeight: '80vh' }}
+      >
 
         {/* IMAGE ROW */}
         <div className="relative w-full flex-shrink-0">

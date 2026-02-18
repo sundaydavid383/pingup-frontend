@@ -50,7 +50,7 @@ const ContentPreferences = ({ isEmbedded = false }) => {
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--form-bg)' }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
             </button>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Content Preferences
@@ -69,23 +69,22 @@ const ContentPreferences = ({ isEmbedded = false }) => {
               <button
                 key={key}
                 onClick={() => togglePreference('interests', key)}
-                className={`p-4 rounded-lg font-medium transition text-center capitalize ${
-                  value
+                className={`p-4 rounded-lg font-medium transition text-center capitalize ${value
                     ? 'custom-gradient text-white'
                     : 'border'
-                }`}
+                  }`}
                 style={
                   !value
                     ? {
-                        backgroundColor: 'var(--form-bg)',
-                        borderColor: 'var(--input-border)',
-                        color: 'var(--text-main)'
-                      }
+                      backgroundColor: 'var(--form-bg)',
+                      borderColor: 'var(--input-border)',
+                      color: 'var(--text-main)'
+                    }
                     : {}
                 }
               >
                 <div className="flex items-center justify-center gap-2">
-                  {value && <Check className="w-4 h-4" />}
+                  {value && <Check className="w-4 h-4" style={{ color: 'white' }} />}
                   <span>{key}</span>
                 </div>
               </button>

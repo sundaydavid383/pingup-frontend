@@ -402,7 +402,7 @@ const filteredConnections = sortedConnections.filter((usr) => {
                             <Mic size={16} className="text-[var(--primary)]" /> Audio
                           </>
                         ) : (
-                          last.text
+                          <p>{last.text.substring(0, 17)}...</p>
                         )}
                       </span>
                     )}

@@ -1,0 +1,357 @@
+/* ==================================================
+   CHATBOX INPUT - CUSTOMIZATION & THEMES
+   ================================================== */
+
+/* 
+   This file shows how to customize the chatbox input styling
+   for different themes, dark modes, and specific brand colors.
+*/
+
+/* DEFAULT LIGHT THEME (already in chatbox.css) */
+:root {
+  --input-bg-color: #ffffff;
+  --input-text-color: #000000;
+  --input-placeholder: #999999;
+  --input-bg-focus: #ffffff;
+  --primary: #1e40af;
+  --primary-hover: #122872;
+  --btn-hover: #1f2f64;
+  --secondary: #ffffff;
+  --opaque-primary: rgba(0, 153, 255, 0.15);
+  --deeper-opaque-secondary: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== DARK MODE THEME ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #818cf8;
+    --primary-hover: #6366f1;
+    --input-bg-color: #2c2c2c;
+    --input-text-color: #ffffff;
+    --input-placeholder: #666666;
+    --input-bg-focus: #333333;
+    --input-accent: #818cf8;
+    --btn-hover: #6366f1;
+    --secondary: #e0e0e0;
+    --opaque-primary: rgba(129, 140, 248, 0.2);
+    --deeper-opaque-secondary: rgba(44, 44, 44, 0.8);
+  }
+
+  /* Adjust dropdown for dark mode */
+  .media-dropdown {
+    background: rgba(44, 44, 44, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .media-dropdown label {
+    color: #e0e0e0;
+  }
+
+  .media-dropdown label:hover {
+    background: rgba(99, 102, 241, 0.15);
+  }
+
+  /* Reply bar adjustments */
+  .reply-bar {
+    background: linear-gradient(135deg, 
+      rgba(99, 102, 241, 0.15) 0%, 
+      rgba(99, 102, 241, 0.08) 100%);
+  }
+}
+
+/* ===== BRAND CUSTOMIZATION - TEAL ===== */
+.chatbox-theme-teal {
+  --primary: #00a89d;
+  --primary-hover: #008a84;
+  --btn-hover: #006b66;
+}
+
+/* ===== BRAND CUSTOMIZATION - PURPLE ===== */
+.chatbox-theme-purple {
+  --primary: #9333ea;
+  --primary-hover: #7d2df3;
+  --btn-hover: #6d28d9;
+}
+
+/* ===== BRAND CUSTOMIZATION - PINK ===== */
+.chatbox-theme-pink {
+  --primary: #ec4899;
+  --primary-hover: #db2777;
+  --btn-hover: #be185d;
+}
+
+/* ===== COMPACT MODE ===== */
+.chatbox-compact {
+  /* Reduce overall spacing */
+}
+
+.chatbox-compact .input-field {
+  padding: 6px 10px;
+  min-height: 32px;
+}
+
+.chatbox-compact .media-button,
+.chatbox-compact .send-button,
+.chatbox-compact .record-button {
+  width: 32px;
+  height: 32px;
+}
+
+.chatbox-compact .reply-bar {
+  padding: 6px 8px;
+  min-height: 40px;
+}
+
+/* ===== SPACIOUS MODE ===== */
+.chatbox-spacious {
+  /* Increase spacing for accessibility */
+}
+
+.chatbox-spacious .input-field {
+  padding: 14px 18px;
+  min-height: 48px;
+  font-size: 1rem;
+}
+
+.chatbox-spacious .media-button,
+.chatbox-spacious .send-button,
+.chatbox-spacious .record-button {
+  width: 48px;
+  height: 48px;
+}
+
+.chatbox-spacious .reply-bar {
+  padding: 12px 14px;
+  min-height: 60px;
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+@media (prefers-contrast: more) {
+  .input-field {
+    border: 2px solid var(--primary);
+  }
+
+  .media-button,
+  .send-button,
+  .record-button {
+    border: 2px solid var(--primary);
+  }
+
+  .reply-bar {
+    border-width: 4px;
+  }
+}
+
+/* ===== REDUCED MOTION MODE ===== */
+@media (prefers-reduced-motion: reduce) {
+  .input-field {
+    transition: none;
+  }
+
+  .media-button,
+  .send-button,
+  .record-button {
+    transition: none;
+  }
+
+  .reply-bar,
+  .image-preview {
+    animation: none !important;
+  }
+}
+
+/* ===== LARGE TEXT MODE ===== */
+@media (prefers-reduced-motion: no-preference) and (font-size-adjust: 1.5) {
+  .input-field {
+    font-size: 1.1rem;
+  }
+
+  .reply-bar-text {
+    font-size: 0.95rem;
+  }
+
+  .recording-time {
+    font-size: 13px;
+  }
+}
+
+/* ===== GRADIENT BACKGROUNDS ===== */
+.chatbox-gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+  color: white;
+}
+
+.chatbox-gradient-sunset {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff9966 100%) !important;
+  color: white;
+}
+
+.chatbox-gradient-ocean {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white;
+}
+
+/* ===== GLASS MORPHISM ===== */
+.chatbox-glass {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ===== SHADOW ELEVATION LEVELS ===== */
+.chatbox-shadow-none {
+  box-shadow: none !important;
+}
+
+.chatbox-shadow-sm {
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.chatbox-shadow-lg {
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.chatbox-shadow-xl {
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ===== BORDER RADIUS VARIANTS ===== */
+.chatbox-rounded-none {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.chatbox-rounded-sm {
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+}
+
+.chatbox-rounded-lg {
+  border-top-left-radius: 24px !important;
+  border-top-right-radius: 24px !important;
+}
+
+.chatbox-rounded-full {
+  border-top-left-radius: 40px !important;
+  border-top-right-radius: 40px !important;
+}
+
+/* ===== ANIMATION SPEED VARIANTS ===== */
+.chatbox-animation-fast {
+  --animation-duration: 0.1s;
+}
+
+.chatbox-animation-slow {
+  --animation-duration: 0.4s;
+}
+
+.reply-bar {
+  animation: slideDownIn var(--animation-duration, 0.25s) ease-out;
+}
+
+/* ===== EXAMPLE COMPOSITION CLASSES ===== */
+
+/* WhatsApp-like (default) */
+.chatbox-whatsapp {
+  /* Uses all default settings */
+}
+
+/* Telegram-like (more compact, different colors) */
+.chatbox-telegram {
+  --primary: #0088cc;
+  --primary-hover: #0077aa;
+}
+
+.chatbox-telegram .input-field {
+  padding: 8px 12px;
+  max-height: 80px;
+}
+
+/* Slack-like (less rounded) */
+.chatbox-slack {
+  border-top-left-radius: 4px !important;
+  border-top-right-radius: 4px !important;
+}
+
+.chatbox-slack .input-field {
+  border-radius: 4px;
+}
+
+.chatbox-slack .media-button,
+.chatbox-slack .send-button,
+.chatbox-slack .record-button {
+  border-radius: 4px;
+}
+
+/* Discord-like (darker, more contrast) */
+.chatbox-discord {
+  --input-bg-color: #40444b;
+  --input-text-color: #ffffff;
+  --primary: #7289da;
+  --primary-hover: #5a73c7;
+}
+
+/* ===== RESPONSIVE CUSTOMIZATIONS ===== */
+
+/* Tablet-specific customization */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .chatbox-input {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* Desktop-specific customization */
+@media (min-width: 1440px) {
+  .chatbox-spacious .input-field {
+    font-size: 1.05rem;
+  }
+
+  .media-button,
+  .send-button,
+  .record-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ===== ANIMATION CUSTOMIZATION ===== */
+@keyframes slideDownInFast {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chatbox-animation-fast .reply-bar {
+  animation: slideDownInFast 0.15s ease-out;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.chatbox-input-bordered {
+  border: 2px solid var(--primary);
+  border-top-width: 3px;
+}
+
+.chatbox-input-minimalist {
+  box-shadow: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--input-bg-color);
+}
+
+.chatbox-input-flat {
+  background: var(--input-bg-color);
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Usage example:
+   <ChatboxInput className="chatbox-theme-purple chatbox-glass chatbox-spacious">
+     ...
+   </ChatboxInput>
+*/

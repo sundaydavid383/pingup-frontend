@@ -27,6 +27,18 @@ const CreatePost = () => {
   const mediaRecorderRef = useRef(null); // media recorder ref
   const audioChunksRef = useRef([]); // to store audio chunks
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // YouTube embed state
   const [youtubeInput, setYoutubeInput] = useState("");
   const [youtubeError, setYoutubeError] = useState("");
@@ -470,7 +482,8 @@ const CreatePost = () => {
             </select>
           </div>
 
-          {/* YouTube Embed Input */}
+          {/* YouTube Embed Input - Hidden on Mobile */}
+          {!isMobile && (
           <div className="relative z-10 mt-3">
             <div className="flex items-center gap-2 mb-2">
               <Youtube className="w-5 h-5 text-[var(--primary)]" />
@@ -532,6 +545,7 @@ const CreatePost = () => {
               </div>
             )}
           </div>
+          )}
 
           {/* Media Previews */}
           {(images.length > 0 || videos.length > 0) && (
@@ -641,7 +655,8 @@ const CreatePost = () => {
               </label>
               <input type="file" id="videos" accept="video/*" hidden multiple onChange={handleVideoUpload} />
 
-              {/* YouTube Button */}
+              {/* YouTube Button - Hidden on Mobile */}
+              {!isMobile && (
               <button
                 onClick={() => {
                   const ytInput = document.getElementById('youtubeInput');
@@ -652,6 +667,7 @@ const CreatePost = () => {
               >
                 <Youtube className="w-6 h-6" />
               </button>
+              )}
             </div>
 
             {/* Publish Button */}

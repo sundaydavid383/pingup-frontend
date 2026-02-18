@@ -34,7 +34,7 @@ const PersonalInfo = ({ isEmbedded = false }) => {
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--form-bg)' }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
             </button>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Personal Info
@@ -51,7 +51,7 @@ const PersonalInfo = ({ isEmbedded = false }) => {
               Date of Birth
             </label>
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
+              <Calendar className="w-5 h-5" style={{ color: 'white' }} />
               <input
                 type="date"
                 value={personalInfo.dateOfBirth}
@@ -103,7 +103,7 @@ const PersonalInfo = ({ isEmbedded = false }) => {
               Location
             </label>
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
+              <MapPin className="w-5 h-5" style={{ color: 'white' }} />
               <input
                 type="text"
                 value={personalInfo.location}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import AudioMessage from "./shared/AudioMessage";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import MediaViewer from "./shared/MediaViewer"; // Make sure this import exists
 import BackButton from "./shared/BackButton";
@@ -66,6 +66,32 @@ const ChatMessagesFull = ({
     message: null,
     position: { x: 0, y: 0 },
   });
+
+  // State for read-more functionality
+  const [expandedMessages, setExpandedMessages] = useState(new Set());
+  const CHARACTER_THRESHOLD = 200;
+
+  const toggleMessageExpansion = useCallback((messageId) => {
+    setExpandedMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const getDisplayText = (text, messageId) => {
+    if (!text || text.length <= CHARACTER_THRESHOLD) return text;
+    if (expandedMessages.has(messageId)) return text;
+    return text.substring(0, CHARACTER_THRESHOLD) + "...";
+  };
+
+  const shouldShowReadMore = (text) => {
+    return text && text.length > CHARACTER_THRESHOLD;
+  };
 
   // Long press timer for mobile
   const longPressTimer = useRef(null);
@@ -168,7 +194,7 @@ const ChatMessagesFull = ({
     }
   }, []);
 
-    const { socket, connected, onlineUsers } = useSocket();
+  const { socket, connected, onlineUsers } = useSocket();
 
   // Handle delete message
   const handleDeleteMessage = useCallback(async (messageId, deleteForEveryone) => {
@@ -178,7 +204,7 @@ const ChatMessagesFull = ({
         try {
           // Call API to delete message for everyone
           await axiosBase.delete(`/api/chat/message/${messageId}`);
-          
+
           // Emit socket event to notify other users
           if (socket) {
             socket.emit("messageDeleted", {
@@ -186,7 +212,7 @@ const ChatMessagesFull = ({
               chatId
             });
           }
-          
+
           // Remove from UI
           setMessages(prev => prev.filter(msg => msg._id !== messageId));
         } catch (error) {
@@ -199,7 +225,7 @@ const ChatMessagesFull = ({
         try {
           // Call API to delete just for this user
           await axiosBase.delete(`/api/chat/message/${messageId}/for-me`);
-          
+
           // Remove from UI
           setMessages(prev => prev.filter(msg => msg._id !== messageId));
         } catch (error) {
@@ -412,7 +438,7 @@ const ChatMessagesFull = ({
       "messageDeleted",
       ({ messageId, chatId: deletedChatId }) => {
         if (chatId !== deletedChatId) return;
-        
+
         // Remove the deleted message from UI
         setMessages((prev) =>
           prev.filter((msg) => msg._id !== messageId)
@@ -443,21 +469,21 @@ const ChatMessagesFull = ({
 
   return (
     <div className="relative flex flex-col min-h-full pb-24">
-      <div className="space-y-6 max-w-4xl mx-auto w-full px-4 pt-4">
+      <div className="space-y-2 max-w-4xl mx-auto w-full px-2 pt-4">
         {sortedDates.map((date) => (
           <div key={date} className="flex flex-col">
             {/* Date Separator */}
-            <div className="flex justify-center my-4 sticky top-4 z-10 pointer-events-none">
+            <div className="flex justify-center my-3 sticky top-4 z-10 pointer-events-none">
               <span
-                className="px-3 py-1 text-[9px] font-bold tracking-widest uppercase shadow-sm border border-white/40 text-gray-500 transition-all duration-300 pointer-events-auto"
+                className="px-3 py-1 text-[11px] font-medium shadow-sm text-gray-600"
                 style={{
-                  borderRadius: "100px",
-                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  borderRadius: "12px",
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
                   backdropFilter: "blur(8px)",
                   WebkitBackdropFilter: "blur(8px)",
                   display: "inline-flex",
                   alignItems: "center",
-                  height: "22px",
+                  height: "24px",
                 }}
               >
                 {date}
@@ -483,25 +509,35 @@ const ChatMessagesFull = ({
                   onDoubleClick={(e) => handleDoubleClick(msg, e)}
                   onTouchStart={(e) => handleTouchStart(msg, e)}
                   onTouchEnd={handleTouchEnd}
-                  className={`flex flex-col group relative ${sentByUser ? "items-end" : "items-start"
+                  className={`flex flex-col group relative mb-4 ${sentByUser ? "items-end" : "items-start"
                     }`}
                 >
                   {/* Message bubble */}
                   <div
                     data-id={msg._id}
                     id={`msg_${msg._id}`}
-                    className={`p-2 text-sm max-w-[400px] rounded-xl shadow break-words relative transition-all duration-200
+                    className={`p-2 text-sm max-w-[75%] min-w-[120px] rounded-[18px] shadow-sm break-words relative transition-all duration-200
                       ${sentByUser
                         ? msg.failed
                           ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"
-                          : "bg-white text-gray-900 rounded-br-none chat-custom-gradient"
-                        : "bg-[var(--input-accent)] text-white rounded-bl-none"
+                          : "bg-[var(--primary)] text-white rounded-bl-lg"
+                        : "bg-white text-gray-900 rounded-br-lg"
                       }`}
                   >
                     {/* Replied Message Preview - WhatsApp Style - Clickable to scroll to original */}
                     {msg.replyTo && (
                       <div
-                        className={`mb-2 pb-2 border-b cursor-pointer hover:opacity-80 transition-opacity rounded ${sentByUser ? 'border-gray-200' : 'border-white/20'}`}
+                        e v className={`mb-2 pb-2 px-2 py-1.5 -mx-1 cursor-pointer hover:opacity-85 transition-opacity rounded-md`}
+                        style={{
+                          backgroundColor: sentByUser
+                            ? 'rgba(255, 255, 255, 0.15)'
+                            : 'rgba(255, 255, 255, 0.12)',
+                          backdropFilter: 'blur(8px)',
+                          WebkitBackdropFilter: 'blur(8px)',
+                          border: sentByUser
+                            ? '1px solid rgba(255, 255, 255, 0.2)'
+                            : '1px solid rgba(255, 255, 255, 0.15)',
+                        }}
                         onClick={() => {
                           if (scrollToReplyMessage && msg.replyTo) {
                             scrollToReplyMessage(msg.replyTo);
@@ -512,17 +548,17 @@ const ChatMessagesFull = ({
                         <div className="flex items-start gap-2">
                           {/* Vertical line indicator */}
                           <div
-                            className="w-0.5 rounded-full mt-1"
-                            style={{ backgroundColor: sentByUser ? 'var(--input-accent)' : 'white' }}
+                            className="w-0.5 rounded-full mt-1 flex-shrink-0"
+                            style={{ backgroundColor: sentByUser ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.5)' }}
                           />
                           <div className="flex-1 min-w-0">
                             <span
                               className="text-xs font-medium"
-                              style={{ color: sentByUser ? 'var(--input-accent)' : 'rgba(255,255,255,0.8)' }}
+                              style={{ color: sentByUser ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)' }}
                             >
                               {msg.replyTo.from_user_id === user._id ? 'You' : (receiver?.name || 'User')}
                             </span>
-                            <p className={`text-xs truncate ${sentByUser ? 'text-gray-500' : 'text-white/70'}`}>
+                            <p className={`text-xs truncate ${sentByUser ? 'text-white/60' : 'text-white/60'}`}>
                               {msg.replyTo.text || (msg.replyTo.message_type === 'image' ? '📷 Image' : msg.replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
                             </p>
                           </div>
@@ -530,7 +566,30 @@ const ChatMessagesFull = ({
                       </div>
                     )}
 
-                    {msg.message_type === "text" && <p>{msg.text}</p>}
+                    {msg.message_type === "text" && (
+                      <div className="flex flex-col gap-1">
+                        <p>{getDisplayText(msg.text, msg._id)}</p>
+                        {shouldShowReadMore(msg.text) && (
+                          <button
+                            onClick={() => toggleMessageExpansion(msg._id)}
+                            className="flex items-center gap-1 text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity mt-1"
+                            style={{ color: sentByUser ? 'rgba(255, 255, 255, 0.9)' : 'var(--primary)' }}
+                          >
+                            {expandedMessages.has(msg._id) ? (
+                              <>
+                                <ChevronUp size={14} />
+                                Read less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown size={14} />
+                                Read more
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {msg.message_type === "image" && msg.media_url && (
                       <img
                         src={msg.media_url}
@@ -552,8 +611,8 @@ const ChatMessagesFull = ({
 
                   {/* Message status - only show for sent messages, not received */}
                   <div
-                    className="flex items-center gap-1 mt-1 text-xs"
-                    style={{ color: "var(--input-meta-text)" }}
+                    className="flex items-center justify-end gap-1 mt-1 text-[10px]"
+                    style={{ color: 'var(--primary)' }}
                   >
                     <span>{formatTime(msg.createdAt)}</span>
                     {sentByUser && (

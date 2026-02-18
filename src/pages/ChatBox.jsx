@@ -34,6 +34,8 @@ import ImageComposer from "../component/shared/ImageComposer";
 const ChatBox = ({ userId: propUserId }) => {
   const [replyTo, setReplyTo] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const params = useParams();
   const userId = propUserId || params.userId;
   const navigate = useNavigate();
@@ -74,6 +76,7 @@ const ChatBox = ({ userId: propUserId }) => {
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [typingUser, setTypingUser] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [chatId, setChatId] = useState(null);
   const [receiver, setReceiver] = useState(null);
   /* const [loading, setLoading] = useState(true); */
@@ -100,6 +103,9 @@ const ChatBox = ({ userId: propUserId }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
+  const pausedTimeRef = useRef(0);
+  const recordingStartRef = useRef(null);
+  const lastPauseTimeRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -232,11 +238,21 @@ const ChatBox = ({ userId: propUserId }) => {
   //================= REMOVING FILES DROPDOWN ===============
   useEffect(() => {
     function handleClickOutside(event) {
+      // Check if click is inside the header dropdown menu
       if (showMenuRef.current && !showMenuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
+      // Check if click is inside media dropdown
       if (mediaDropdownRef.current && !mediaDropdownRef.current.contains(event.target)) {
         setShowMediaDropdown(false);
+      }
+      // Check if click is inside any theme dropdown portal (rendered outside the main DOM)
+      const themeDropdowns = document.querySelectorAll('.theme-dropdown-portal');
+      const isInsideThemeDropdown = Array.from(themeDropdowns).some(
+        portal => portal.contains(event.target)
+      );
+      if (isInsideThemeDropdown) {
+        return; // Don't close the header menu when clicking inside theme dropdown
       }
     }
 
@@ -318,6 +334,12 @@ const ChatBox = ({ userId: propUserId }) => {
 
     const fetchData = async () => {
       try {
+        // Try to get cached chatId first as fallback
+        const cachedChatId = localStorage.getItem(`chatId_${userId}`);
+        if (cachedChatId) {
+          setChatId(cachedChatId);
+        }
+
         const [receiverRes, chatRes] = await Promise.all([
           axiosBase.get(`/api/user/${userId}`),
           axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),
@@ -326,7 +348,11 @@ const ChatBox = ({ userId: propUserId }) => {
         setReceiver(receiverRes.data.user || null);
         setLastActive(receiverRes.data.user?.lastActiveAt || null);
 
-        if (chatRes.data?.room) setChatId(chatRes.data.room._id);
+        if (chatRes.data?.room) {
+          setChatId(chatRes.data.room._id);
+          // Update chatId in localStorage for future reference
+          localStorage.setItem(`chatId_${userId}`, chatRes.data.room._id);
+        }
 
         if (Array.isArray(chatRes.data?.messages)) {
           // Replace messages entirely for this chat - don't merge with previous
@@ -617,9 +643,42 @@ const ChatBox = ({ userId: propUserId }) => {
         { ...m, failed: true, status: "failed" } : m));
     }
   };
+
+  // ======================== BLOCK USER ======================
+  const handleBlockUser = async () => {
+    if (!receiver?._id) return;
+
+    setBlocking(true);
+    try {
+      // Call the block user API - user will implement the backend
+      await axiosBase.post(`/api/users/block/${receiver._id}`, {}, {
+        withCredentials: true
+      });
+
+      // Clear chat history locally
+      setMessages([]);
+      localStorage.removeItem(`chat_history_${userId}`);
+
+      // Close menu and show success
+      setShowMenu(false);
+      setShowBlockConfirm(false);
+      alert(`You have blocked ${receiver.username || 'this user'}. Chat history has been cleared.`);
+
+      // Navigate back or close chat
+      navigate(-1);
+    } catch (err) {
+      console.error("Error blocking user:", err);
+      alert("Failed to block user. Please try again.");
+    } finally {
+      setBlocking(false);
+    }
+  };
+
   // ========================= AUDIO RECORD ==========================
   const startRecording = async () => {
     setRecording(true); // <-- immediately show the recording UI
+    setIsPaused(false);
+    pausedTimeRef.current = 0;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -634,40 +693,92 @@ const ChatBox = ({ userId: propUserId }) => {
       audioChunksRef.current = [];
       setRecordTime(0);
 
+      // Ensure we collect data periodically for longer recordings
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
+      // Request data every second to prevent data loss
+      const dataInterval = setInterval(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.requestData();
+        }
+      }, 1000);
+
       mediaRecorderRef.current.onstop = () => {
+        clearInterval(dataInterval);
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         console.log("🎤 Recorded blob:", blob, "size:", blob.size);
         if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
         else console.error("❌ Audio blob is empty!");
+        // Stop all tracks in the stream
+        stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.onerror = (e) => {
+        console.error("MediaRecorder error:", e);
+        clearInterval(dataInterval);
+        stream.getTracks().forEach(track => track.stop());
+      };
 
-      const start = Date.now();
+      mediaRecorderRef.current.start(1000); // Start collecting data every 1 second
+      recordingStartRef.current = Date.now();
+
       recordTimerRef.current = setInterval(() => {
-        const sec = Math.floor((Date.now() - start) / 1000);
-        setRecordTime(sec);
-        if (sec >= MAX_RECORD_TIME) stopRecording();
-      }, 500);
+        if (!isPaused) {
+          const sec = Math.floor((Date.now() - recordingStartRef.current - pausedTimeRef.current) / 1000);
+          setRecordTime(sec);
+          if (sec >= MAX_RECORD_TIME) stopRecording();
+        }
+      }, 100); // Update every 100ms for smoother timer
     } catch (err) {
       console.error("Mic error:", err);
+      // Handle permission denied
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        alert("Microphone access was denied. Please allow microphone access to record voice messages.");
+      }
       setRecording(false); // reset UI if mic fails
     }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
     clearInterval(recordTimerRef.current);
     setRecording(false);
+    setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    if (mediaRecorderRef.current) {
+      if (isPaused) {
+        // Resuming from pause
+        // Calculate how long we were paused and add to total paused time
+        const pauseDuration = Date.now() - lastPauseTimeRef.current;
+        pausedTimeRef.current += pauseDuration;
+
+        mediaRecorderRef.current.resume();
+        recordingStartRef.current = Date.now(); // Reset start time for next calculation
+        setIsPaused(false);
+      } else {
+        // Pausing
+        lastPauseTimeRef.current = Date.now();
+        mediaRecorderRef.current.pause();
+        setIsPaused(true);
+      }
+    }
   };
 
 
   useEffect(() => {
-    return () => clearInterval(recordTimerRef.current);
+    return () => {
+      // Cleanup: stop any ongoing recording when component unmounts
+      clearInterval(recordTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
   }, []);
 
   // =========================== HELPERS ========================== 
@@ -774,13 +885,17 @@ const ChatBox = ({ userId: propUserId }) => {
 
     // When messages exist
     return (
-      <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-20">
+      <div className="flex items-center justify-between p-3 shadow-sm sticky top-0 z-20"
+        style={{
+          background: 'var(--color-6)',
+          borderBottom: '1px solid rgba(0,0,0,0.08)'
+        }}>
         <div className="flex items-center gap-3">
           <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
           <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer relative">
             <ProfileAvatar user={receiver} size={48} />
             {onlineUsers.has(receiver._id) && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></span>
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
             )}
           </div>
           <div className="flex flex-col">
@@ -830,9 +945,9 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
               <div
-                className="absolute right-0 top-full mt-2 w-56 z-50 overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
+                className="fixed right-4 top-16 w-56 z-[100] overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
                 style={{
-                  background: "rgba(255, 255, 255, 0.8)",
+                  background: "rgba(255, 255, 255, 0.95)",
                   backdropFilter: "blur(16px)",
                   WebkitBackdropFilter: "blur(16px)",
                   borderRadius: "18px",
@@ -848,7 +963,7 @@ const ChatBox = ({ userId: propUserId }) => {
                     Appearance
                   </div>
 
-                  <div className="rounded-xl hover:bg-white/40 transition-colors">
+                  <div className="rounded-xl hover:bg-white/40 transition-colors" onClick={(e) => e.stopPropagation()}>
                     <ThemeDropdown containerRef={chatContainerRef} />
                   </div>
 
@@ -917,7 +1032,7 @@ const ChatBox = ({ userId: propUserId }) => {
                   {/* Block User */}
                   <button
                     onClick={() => {
-                      // TODO: block user logic
+                      setShowBlockConfirm(true);
                       setShowMenu(false);
                     }}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50/50 rounded-xl transition"
@@ -941,6 +1056,43 @@ const ChatBox = ({ userId: propUserId }) => {
 
                 </div>
 
+              </div>
+            </>
+          )}
+
+          {/* Block User Confirmation Dialog */}
+          {showBlockConfirm && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black/50 z-[90]"
+                onClick={() => setShowBlockConfirm(false)}
+              />
+              {/* Confirmation Dialog */}
+              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Block {receiver?.username || 'User'}?
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This will clear your chat history and prevent this user from contacting you. You can unblock them later in settings.
+                  </p>
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setShowBlockConfirm(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBlockUser}
+                      disabled={blocking}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition disabled:opacity-50"
+                    >
+                      {blocking ? 'Blocking...' : 'Block User'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -1011,7 +1163,7 @@ const ChatBox = ({ userId: propUserId }) => {
   return (
     <div
       ref={chatContainerRef}
-      className="flex flex-col w-full overflow-hidden bg-[var(--bg-main)]"
+      className="chatbox-wrapper flex flex-col w-full overflow-hidden bg-[var(--bg-main)]"
       style={{
         height: "100dvh", // Dynamic viewport height for mobile browsers
         maxHeight: "100dvh",
@@ -1031,8 +1183,8 @@ const ChatBox = ({ userId: propUserId }) => {
         style={{
           background: "var(--input-chatbox-bg-gradient)",
           color: "var(--input-text-color)",
-          paddingTop: "60px", // Account for fixed header height
-          paddingBottom: "90px", // Account for fixed input (70px) + extra space (20px)
+          paddingTop: "60px",
+          paddingBottom: "100px",
           overflowY: "auto",
           WebkitOverflowY: "auto",
           overscrollBehavior: "contain",
@@ -1211,58 +1363,36 @@ const ChatBox = ({ userId: propUserId }) => {
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
-          <div
-            className="relative px-3 py-2 mb-1 rounded-lg flex items-start gap-2 overflow-hidden"
-            style={{ borderLeft: "3px solid white" }}
-          >
-            {/* Blur background */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "var(--opaque-primary)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                zIndex: 0,
-              }}
-            />    <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-xs font-medium text-white/80 flex items-center gap-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
-                  </svg>
-                  Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
-                </span>
-                <span className="text-sm text-white/90 truncate">
-                  {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
-                </span>
-              </div>
-              <button
-                onClick={() => setReplyTo(null)}
-                className="text-white/80 hover:text-white transition-colors p-1"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M18 6L6 18M6 6l12 12" />
+          <div className="reply-bar">
+            <div className="reply-bar-content">
+              <div className="reply-bar-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
                 </svg>
-              </button>
+                Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
+              </div>
+              <div className="reply-bar-text">
+                {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
+              </div>
             </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="reply-bar-close"
+              title="Close reply"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
-        <div className="flex flex-row justify-center gap-5">
+        <div className="input-container">
           {!recording && !audioURL && !(image instanceof File) && (
             <textarea
               ref={inputRef}
               id="chatInput"
-              className="flex-1 min-h-[40px] max-h-[120px] max-w-[500px] resize-none outline-none border-none text-sm leading-relaxed text-black"
-              style={{
-                borderRadius: "20px",
-                padding: "12px 16px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                background: "#fff",
-                width: "100%", // still keep this
-                minWidth: 0,   // important for flex shrinking
-              }}
+              className="input-field"
               placeholder={placeholders[placeholderIndex] || ""}
               value={typeof text === "string" ? text : ""}
               rows={1}
@@ -1271,7 +1401,7 @@ const ChatBox = ({ userId: propUserId }) => {
                 const val = e.target.value;
                 setText(val);
                 e.target.style.height = "auto";
-                const newHeight = Math.min(e.target.scrollHeight, 120);
+                const newHeight = Math.min(e.target.scrollHeight, 100);
                 e.target.style.height = `${newHeight}px`;
                 if (socket && chatId && user?._id)
                   socket.emit("typing", { chatId, from_user_id: user._id });
@@ -1289,59 +1419,53 @@ const ChatBox = ({ userId: propUserId }) => {
             />
           )}
 
+          {/* Image preview - displays above input controls */}
+          {image instanceof File && (
+            <div className="flex flex-wrap gap-3 pl-2">
+              {image && (
+                <div className="image-preview">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt="Selected"
+                    style={{ maxWidth: "120px", maxHeight: "120px", borderRadius: "12px" }}
+                  />
+                  <button
+                    onClick={() => setImage(null)}
+                    className="image-preview-remove"
+                    title="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="flex items-end gap-2">
-            {/* Image preview or upload */}
-            {!recording && !audioURL && (
-              <>
-                {image instanceof File ? (
-                  <ImageComposer
-                    image={image}
-                    setImage={setImage}
-                    caption={text}
-                    setCaption={setText}
-                    onSend={sendMessage}
-                    sending={sending}
-                  />) : <div className="relative">
+          {/* Input controls - buttons and actions */}
+          <div className="input-controls">
+            {!recording && !audioURL && !(image instanceof File) && (
+              <div className="input-group">
+                <div className="relative">
                   {/* ATTACH MEDIA BUTTON */}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setShowMediaDropdown(prev => !prev); }}
-                    className="flex items-center justify-center transition-all duration-300"
-                    style={{
-                      backgroundColor: "var(--primary)",
-                      border: "2px solid var(--primary)",
-                      borderRadius: "0.75rem", // smooth rounded corners
-                      padding: "0.5rem",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--btn-hover)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--primary)"}
+                    className="media-button"
                     title="Attach media"
                   >
-                    <ImageUpIcon className="text-white w-5 h-5" />
+                    <ImageUpIcon size={20} />
                   </button>
 
-                  {/* MEDIA DROPDOWN */}
+                  {/* MEDIA DROPDOWN - Fixed positioning with proper constraints */}
                   {showMediaDropdown && (
                     <div
                       ref={mediaDropdownRef}
-                      className="absolute bottom-9 right-1 mt-2 z-50 flex flex-col gap-2 p-3 shadow-lg"
-                      style={{
-                        backgroundColor: "var(--deeper-opaque-secondary)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        borderRadius: "0.75rem",
-                        border: "1px solid var(--primary)",
-                        minWidth: "220px",
-                        boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
-                      }}
+                      className="media-dropdown"
                     >
                       {/* IMAGE INPUT */}
                       <label
                         htmlFor="image"
-                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                        className="cursor-pointer"
                       >
                         <ImageIcon size={18} />
                         <span>Upload Image</span>
@@ -1350,7 +1474,7 @@ const ChatBox = ({ userId: propUserId }) => {
                       {/* FILE INPUT */}
                       <label
                         htmlFor="file"
-                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                        className="cursor-pointer"
                       >
                         <FileIcon size={18} />
                         <span>Upload File</span>
@@ -1359,7 +1483,7 @@ const ChatBox = ({ userId: propUserId }) => {
                       {/* VIDEO INPUT */}
                       <label
                         htmlFor="video"
-                        className="cursor-pointer px-3 py-2 rounded-md hover:bg-[var(--primary)] transition text-[var(--white)] hover:text-[var(--white)] flex items-center gap-2"
+                        className="cursor-pointer"
                       >
                         <VideoIcon size={18} />
                         <span>Upload Video</span>
@@ -1373,7 +1497,8 @@ const ChatBox = ({ userId: propUserId }) => {
                     type="file"
                     id="image"
                     accept="image/*"
-                    hidden
+                    className="hidden"
+                    style={{ display: 'none' }}
                     onChange={(e) => {
                       const f = e.target.files && e.target.files[0];
                       if (f instanceof File) setImage(f);
@@ -1385,7 +1510,8 @@ const ChatBox = ({ userId: propUserId }) => {
                     ref={fileInputRef}
                     type="file"
                     id="file"
-                    hidden
+                    className="hidden"
+                    style={{ display: 'none' }}
                     onChange={(e) => {
                       const f = e.target.files && e.target.files[0];
                       if (f instanceof File) setImage(f);
@@ -1398,7 +1524,8 @@ const ChatBox = ({ userId: propUserId }) => {
                     type="file"
                     id="video"
                     accept="video/*"
-                    hidden
+                    className="hidden"
+                    style={{ display: 'none' }}
                     onChange={(e) => {
                       const f = e.target.files && e.target.files[0];
                       if (f instanceof File) setImage(f);
@@ -1406,13 +1533,24 @@ const ChatBox = ({ userId: propUserId }) => {
                     }}
                   />
                 </div>
-                }
-              </>
+              </div>
             )}
+
+            {/* Image Composer - for editing before send */}
+            {!recording && !audioURL && image instanceof File ? (
+              <ImageComposer
+                image={image}
+                setImage={setImage}
+                caption={text}
+                setCaption={setText}
+                onSend={sendMessage}
+                sending={sending}
+              />
+            ) : null}
 
             {/* Recording / audio preview */}
             {(audioURL || recording) && (
-              <div className="flex flex-col items-center w-full gap-3">
+              <div className="w-full">
                 {audioURL ? (
                   <div className="relative inline-block w-full">
                     <AudioMessage msg={{ media_url: audioURL }} />
@@ -1425,51 +1563,97 @@ const ChatBox = ({ userId: propUserId }) => {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center w-full gap-3">
-                    {/* Range-style progress bar filling all available space */}
-                    <div className="flex-1">
-                      <input
-                        type="range"
-                        min={0}
-                        max={MAX_RECORD_TIME}
-                        value={recordTime}
-                        readOnly
-                        className="w-full h-3 rounded-full appearance-none bg-gray-300 accent-red-500"
-                        style={{
-                          background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db ${(recordTime / MAX_RECORD_TIME) * 100}%, #d1d5db 100%)`,
-                        }}
-                      />
+                  <div className="recording-container">
+                    {/* Left side - Lock button */}
+                    <button
+                      className="recording-lock"
+                      title="Lock recording"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                      </svg>
+                    </button>
+
+                    {/* Center - Timer and Waveform */}
+                    <div className="recording-center">
+                      {/* Timer */}
+                      <span className="recording-timer">
+                        {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
+                      </span>
+
+                      {/* Waveform */}
+                      <div className="recording-waveform">
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                        <div className="wave-bar" />
+                      </div>
                     </div>
 
-                    {/* Time indicator */}
-                    <span className="text-xs text-gray-700 min-w-[50px] text-right">
-                      {recordTime}s / {MAX_RECORD_TIME}s
-                    </span>
+                    {/* Right side - Delete, Pause, Send */}
+                    <div className="recording-actions">
+                      {/* Delete button */}
+                      <button
+                        onClick={() => {
+                          stopRecording();
+                          setRecording(false);
+                          setRecordTime(0);
+                        }}
+                        className="recording-delete"
+                        title="Cancel recording"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
 
-                    {/* Stop button */}
-                    <button
-                      onClick={stopRecording}
-                      className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
-                    >
-                      Stop
-                    </button>
+                      {/* Pause button */}
+                      <button
+                        onClick={togglePause}
+                        className="recording-pause"
+                        title={isPaused ? "Resume recording" : "Pause recording"}
+                      >
+                        {isPaused ? (
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {/* Send button */}
+                      <button
+                        onClick={stopRecording}
+                        className="recording-send"
+                        title="Send voice message"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-
-
-
             {/* Send button (shows if text, image, or audio exist) */}
-
             {(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) && (
               <button
                 onClick={() => { scrollToBottom(); sendMessage() }}
-                style={{ backgroundColor: "var(--input-primary)" }}
-                className="text-white p-2 rounded-full flex items-center justify-center"
-                title="Send"
-                disabled={sending} // disable while sending
+                className="send-button"
+                title="Send message"
+                disabled={sending}
               >
                 {sending ? (
                   <svg
@@ -1493,18 +1677,17 @@ const ChatBox = ({ userId: propUserId }) => {
                     ></path>
                   </svg>
                 ) : (
-                  <SendHorizonal size={18} />
+                  <SendHorizonal size={20} />
                 )}
               </button>
             )}
-
 
             {/* Record button (show only if nothing to send) */}
             {!recording && !text?.trim() && !image && !audioURL && (
               <button
                 onClick={startRecording}
-                className="flex items-center justify-center p-3 rounded-full transition-all duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300"
-                title="Start Recording"
+                className="record-button"
+                title="Start voice recording"
               >
                 <Mic size={18} />
               </button>

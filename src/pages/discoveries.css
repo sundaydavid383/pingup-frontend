@@ -16,6 +16,50 @@
   background: white !important;
 }
 
+/* Search wrapper and blur bar */
+#discover-search-wrapper {
+  left: 0;
+  right: 0;
+  overflow: visible;
+}
+
+.discover_search_bar {
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  pointer-events: auto;
+}
+
+/* Primary search button (icon) */
+.discoveries_btn {
+  background: linear-gradient(180deg,#2563eb,#1d4ed8);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 12px rgba(37,99,235,0.18);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.discoveries_btn:hover { transform: translateY(-1px); }
+.discoveries_btn:active { transform: translateY(0); filter: brightness(.96); }
+
+/* Clear button */
+.discoveries_clear_btn {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(15,23,42,0.06);
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.75rem;
+  color: #374151;
+}
+.discoveries_clear_btn:hover { color: #dc2626; background: rgba(255,255,255,1); }
+
+/* Ensure dropdown container isn't clipped */
+.discover_search_wrapper { overflow: visible; }
+
 /* Ensure the grid provides enough space */
 .discoveries_grid {
   display: grid;

@@ -209,7 +209,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
 
     return (
       <div key={comment._id} className={`${isReply ? 'pl-0' : ''}`}>
-        <div className="flex gap-3 sm:gap-4 group">
+        <div className="flex gap-1 sm:gap-2 group">
           {/* Avatar */}
           <div className="flex-shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-200 ring-2 ring-transparent group-hover:ring-[var(--primary)] transition-all duration-200">
@@ -275,7 +275,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                 {editError && <div className="text-red-500 text-xs mt-2">{editError}</div>}
               </div>
             ) : (
-              <div className="text-sm sm:text-base text-gray-800 leading-relaxed mt-2 sm:mt-2.5">
+              <div className="text-[0.87rem] sm:text-[0.9rem] text-gray-800 leading-relaxed mt-2 sm:mt-2.5">
                 <CommentText text={DOMPurify.sanitize(comment.text)} isEdited={comment.isEdited} maxChars={500} />
               </div>
             )}
@@ -395,7 +395,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
     <div className="w-full">
       {/* Comments count header */}
       <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-900">{commentsCount || comments.length} Comments</h3>
+        <h3 className="text-[1rem] sm:text-[1.1rem] font-bold text-gray-900">{commentsCount || comments.length} Comments</h3>
         <button onClick={() => setShowAll(!showAll)} className="text-sm text-gray-500 hover:text-gray-700 transition">
           {showAll ? 'Collapse all' : 'Expand'}
         </button>
@@ -443,7 +443,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                 handlePost();
               }
             }}
-            className={`w-full border-2 ${replyTo ? 'border-t-0 rounded-b-lg' : 'rounded-lg'} border-gray-200 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:outline-none focus:border-[var(--primary)] resize-none transition-colors`}
+            className={`w-full border-2 ${replyTo ? 'border-t-0 rounded-b-lg' : 'rounded-lg'} border-gray-200 px-3 sm:px-4 py-2 sm:py-3 text-[.86rem] sm:text-base focus:outline-none focus:border-[var(--primary)] resize-none transition-colors`}
           />
           <div className="flex justify-end gap-2 sm:gap-3 mt-2 sm:mt-3">
             {text.trim() && (

@@ -45,7 +45,7 @@ const Appearance = ({ isEmbedded = false }) => {
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--form-bg)' }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
             </button>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Appearance
@@ -144,6 +144,7 @@ const Appearance = ({ isEmbedded = false }) => {
         </div>
       </div>
     </div>
-  ); }
+  );
+}
 
 export default Appearance;

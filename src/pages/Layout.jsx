@@ -1,4 +1,4 @@
-import React from 'react';
+import {useEffect} from 'react';
 import Sidebar from '../component/Sidebar';
 import { Outlet, useLocation } from 'react-router-dom'; // Added useLocation
 import { Menu } from 'lucide-react';
@@ -11,12 +11,16 @@ const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
   const location = useLocation();
 
-  // Detect if we are on the messages or settings page to match Sidebar's mini-width
+  // Detect if we are on the messages, profile, or settings page to match Sidebar's mini-width
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
+  const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
 
-  // Hide mobile navbar on messages, chatbox, and settings pages
-  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings');
+  // Hide mobile navbar on messages, chatbox, profile, and settings pages
+  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile');
+  useEffect(() => {
+    console.log(sidebarOpen, "sidebarOpen in Layout");
+  }, [sidebarOpen]);
 
   return user ? (
     <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
@@ -25,12 +29,11 @@ const Layout = () => {
 
       <div
         className={`flex-1 bg-slate-50 transition-all duration-300
-          ${
-            sidebarOpen 
-              ? (isMessageTab || isSettingsTab)
-                ? 'ml-20' // Matches Sidebar reduced width
-                : 'ml-52 md:ml-56 lg:ml-60' // Matches Sidebar full width
-              : 'ml-0'
+          ${sidebarOpen
+            ? (isMessageTab || isSettingsTab || isProfileTab)
+              ? 'ml-20' // Matches Sidebar reduced width
+              : 'ml-52 md:ml-56 lg:ml-60' // Matches Sidebar full width
+            : 'ml-0'
           } mobilenav_intervention`}
       >
         <Outlet />

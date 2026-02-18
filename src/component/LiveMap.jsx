@@ -80,53 +80,78 @@ const CompassIcon = () => (
 );
 
 // Component to handle map center updates
-function MapCenterHandler({ center, zoom }) {
+function MapCenterHandler({ center, zoom, mapReady }) {
   const map = useMap();
   const hasCentered = useRef(false);
-  
+  const centerRef = useRef(null);
+
   useEffect(() => {
+    // Guard against invalid inputs
+    if (!mapReady || !map) return;
     if (!center || !Array.isArray(center) || center.length < 2) return;
-    if (!map || typeof map.flyTo !== 'function') return;
-    if (hasCentered.current) return;
-    
+    if (typeof map.flyTo !== 'function') return;
+
+    // Skip if coordinates are invalid (NaN or undefined)
+    if (isNaN(center[0]) || isNaN(center[1]) || center[0] === undefined || center[1] === undefined) return;
+
+    // Skip if same as last center
+    if (centerRef.current && centerRef.current[0] === center[0] && centerRef.current[1] === center[1]) return;
+
+    // Prevent duplicate flyTo calls
+    if (hasCentered.current) {
+      // Still allow recentering if coordinates changed significantly
+      const prevCenter = centerRef.current;
+      if (prevCenter) {
+        const distance = Math.sqrt(
+          Math.pow(center[0] - prevCenter[0], 2) +
+          Math.pow(center[1] - prevCenter[1], 2)
+        );
+        if (distance < 0.0001) return;
+      }
+    }
+
     try {
-      map.flyTo(center, zoom || 15, { 
+      // Ensure map is ready
+      if (!map.getContainer()) return;
+
+      map.flyTo(center, zoom || 15, {
         animate: true,
         duration: 1.5,
         easeLinearity: 0.25
       });
       hasCentered.current = true;
+      centerRef.current = center;
     } catch (e) {
       console.warn('Map flyTo error:', e);
     }
-  }, [center, zoom, map]);
-  
+  }, [center, zoom, map, mapReady]);
+
   return null;
 }
 
 // Custom marker icon creator
 const createUserMarker = (user, isCurrentUser = false) => {
-  const initials = user?.name 
+  const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : '?';
-  
-  const status = user?.isOnline ? 'online' : 
+
+  const status = user?.isOnline ? 'online' :
     (user?.lastActive && (Date.now() - new Date(user.lastActive).getTime()) < 300000) ? 'idle' : 'offline';
-  
+
   if (isCurrentUser) {
     return new L.DivIcon({
       className: 'lm-marker lm-marker-current',
-      html: user?.avatar 
+      html: user?.avatar
         ? `<img src="${user.avatar}" alt="You" class="lm-avatar" />`
         : `<div class="lm-avatar-placeholder">${initials}</div>`,
       iconSize: [40, 40],
       iconAnchor: [20, 20],
     });
   }
-  
+
   return new L.DivIcon({
     className: `lm-marker lm-marker-user ${status}`,
-    html: user?.avatar 
+    html: user?.avatar
       ? `<img src="${user.avatar}" alt="${user.name || 'User'}" class="lm-avatar" />`
       : `<div class="lm-avatar-placeholder">${initials}</div>`,
     iconSize: [36, 36],
@@ -138,14 +163,30 @@ export default function LiveMap({ open }) {
   const { socket } = useSocket();
   const { user: currentUser } = useAuth();
   const mapRef = useRef(null);
-  
+  const mapIdRef = useRef(0);
+
   const [myCoords, setMyCoords] = useState(null);
   const [others, setOthers] = useState({});
   const [selectedUser, setSelectedUser] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'online', 'nearby'
-  
+  const [mapReady, setMapReady] = useState(false);
+
+  // Reset map when modal reopens
+  useEffect(() => {
+    if (open) {
+      setMapReady(false);
+      mapIdRef.current += 1;
+      // Reset states on reopen
+      setMyCoords(null);
+      setOthers({});
+      setSelectedUser(null);
+      setLocationError(null);
+      setIsLoading(true);
+    }
+  }, [open]);
+
   // Get user's location
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -153,13 +194,21 @@ export default function LiveMap({ open }) {
       setIsLoading(false);
       return;
     }
-    
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        
+        // Validate coordinates
+        if (isNaN(latitude) || isNaN(longitude)) {
+          setLocationError('Invalid location data received');
+          setIsLoading(false);
+          return;
+        }
+        
         setMyCoords([latitude, longitude]);
         setIsLoading(false);
-        
+
         // Emit location to socket
         if (socket && currentUser) {
           socket.emit('updateLocation', {
@@ -191,15 +240,19 @@ export default function LiveMap({ open }) {
       }
     );
   }, [socket, currentUser]);
-  
+
   // Listen for location updates from socket
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleUpdate = ({ userId, coords, userData }) => {
+      // Validate coords before processing
       if (!coords || !Array.isArray(coords) || coords.length < 2) return;
-      const latlng = [coords[1], coords[0]];
+      // Validate coordinates are valid numbers
+      if (isNaN(coords[0]) || isNaN(coords[1])) return;
       
+      const latlng = [coords[1], coords[0]];
+
       if (currentUser && userId === currentUser._id) {
         setMyCoords(latlng);
       } else {
@@ -212,34 +265,39 @@ export default function LiveMap({ open }) {
         }));
       }
     };
-    
+
     socket.on('userLocationUpdated', handleUpdate);
     return () => socket.off('userLocationUpdated', handleUpdate);
   }, [socket, currentUser]);
-  
+
   // Invalidate map size when modal opens
   useEffect(() => {
     if (!mapRef.current || !open) return;
-    
+
     setTimeout(() => {
       mapRef.current?.invalidateSize();
     }, 200);
   }, [open]);
-  
+
   // Filter users based on selected filter
-  const filteredUsers = Object.entries(others).map(([id, data]) => ({ id, ...data })).filter((userData) => {
-    if (filter === 'online') return userData.isOnline;
-    // 'nearby' would filter by distance in real implementation
-    return true;
-  });
-  
+  const filteredUsers = Object.entries(others)
+    .filter(([id, data]) => {
+      // Validate coords exist before filtering
+      if (!data?.coords || !Array.isArray(data.coords) || data.coords.length < 2) return false;
+      // Validate coordinates are valid numbers
+      if (isNaN(data.coords[0]) || isNaN(data.coords[1])) return false;
+      if (filter === 'online') return data.isOnline;
+      return true;
+    })
+    .map(([id, data]) => ({ id, ...data }));
+
   // Calculate stats
   const onlineCount = Object.values(others).filter(u => u.isOnline).length;
-  const idleCount = Object.values(others).filter(u => 
+  const idleCount = Object.values(others).filter(u =>
     u.lastActive && !u.isOnline && (Date.now() - new Date(u.lastActive).getTime()) < 300000
   ).length;
   const offlineCount = Object.keys(others).length - onlineCount - idleCount;
-  
+
   // Handle marker click
   const handleMarkerClick = (userId, userData) => {
     setSelectedUser({
@@ -247,41 +305,53 @@ export default function LiveMap({ open }) {
       ...userData
     });
   };
-  
+
   // Handle location button click
   const handleLocateMe = useCallback(() => {
-    if (myCoords && mapRef.current) {
-      mapRef.current.flyTo(myCoords, 16, { animate: true });
+    if (myCoords && Array.isArray(myCoords) && myCoords.length >= 2 && 
+        !isNaN(myCoords[0]) && !isNaN(myCoords[1]) && mapRef.current) {
+      try {
+        mapRef.current.flyTo(myCoords, 16, { animate: true });
+      } catch (e) {
+        console.warn('Error centering map:', e);
+      }
     }
   }, [myCoords]);
-  
+
   // Retry location
   const handleRetryLocation = () => {
     setLocationError(null);
     setIsLoading(true);
     window.location.reload();
   };
-  
+
   return (
     <div className="livemap-container">
       <MapContainer
+        key={mapIdRef.current}
         center={[6.5244, 3.3792]}
         zoom={15}
         className="w-full h-full"
-        whenCreated={(map) => (mapRef.current = map)}
+        whenCreated={(map) => {
+          mapRef.current = map;
+          // Wait for map to be ready
+          setTimeout(() => {
+            setMapReady(true);
+          }, 100);
+        }}
         zoomControl={true}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="© OpenStreetMap contributors"
         />
-        
-        <MapCenterHandler center={myCoords} zoom={16} />
-        
+
+        <MapCenterHandler center={myCoords} zoom={16} mapReady={mapReady} />
+
         {/* Current User Marker */}
-        {myCoords && currentUser && (
-          <Marker 
-            position={myCoords} 
+        {myCoords && currentUser && Array.isArray(myCoords) && myCoords.length >= 2 && !isNaN(myCoords[0]) && !isNaN(myCoords[1]) && (
+          <Marker
+            position={myCoords}
             icon={createUserMarker(currentUser, true)}
             eventHandlers={{
               click: () => setSelectedUser({
@@ -293,27 +363,27 @@ export default function LiveMap({ open }) {
             }}
           />
         )}
-        
+
         {/* Other Users Markers */}
-        {filteredUsers.map(([id, data]) => (
-          <Marker 
-            key={id}
-            position={data.coords}
-            icon={createUserMarker({ name: data.name, avatar: data.avatar, isOnline: data.isOnline, lastActive: data.lastActive })}
+        {filteredUsers.map((userData) => (
+          <Marker
+            key={userData.id}
+            position={userData.coords}
+            icon={createUserMarker({ name: userData.name, avatar: userData.avatar, isOnline: userData.isOnline, lastActive: userData.lastActive })}
             eventHandlers={{
-              click: () => handleMarkerClick(id, data)
+              click: () => handleMarkerClick(userData.id, userData)
             }}
           />
         ))}
-        
+
         {/* Leaflet Popup (optional - we use custom popup) */}
-        <Popup 
+        <Popup
           closeButton={false}
           className="lm-custom-popup"
         >
         </Popup>
       </MapContainer>
-      
+
       {/* Glass Control Panel - Top Left */}
       <div className="lm-control-panel">
         <div className="lm-panel-header">
@@ -325,7 +395,7 @@ export default function LiveMap({ open }) {
             <UsersIcon /> {Object.keys(others).length + (myCoords ? 1 : 0)}
           </span>
         </div>
-        
+
         <div className="lm-panel-stats">
           <div className="lm-stat-item">
             <span className="lm-stat-dot online"></span>
@@ -341,38 +411,38 @@ export default function LiveMap({ open }) {
           </div>
         </div>
       </div>
-      
+
       {/* Floating Action Buttons - Top Right */}
       <div className="lm-fab-container">
-        <button 
-          className="lm-fab" 
+        <button
+          className="lm-fab"
           onClick={() => setFilter(filter === 'online' ? 'all' : 'online')}
           title={filter === 'online' ? 'Show all' : 'Show online only'}
           aria-label="Filter online users"
         >
           <FilterIcon />
         </button>
-        
-        <button 
-          className="lm-fab" 
+
+        <button
+          className="lm-fab"
           title="Search nearby"
           aria-label="Search nearby"
         >
           <SearchIcon />
         </button>
-        
-        <button 
-          className="lm-fab" 
+
+        <button
+          className="lm-fab"
           title="Refresh"
           aria-label="Refresh map"
         >
           <RefreshIcon />
         </button>
       </div>
-      
+
       {/* Geolocation Button - Bottom Left */}
-      <button 
-        className="lm-geolocation-btn" 
+      <button
+        className="lm-geolocation-btn"
         onClick={handleLocateMe}
         disabled={!myCoords}
         title="Center on my location"
@@ -380,14 +450,14 @@ export default function LiveMap({ open }) {
       >
         <NavigationIcon />
       </button>
-      
+
       {/* Loading State */}
       {isLoading && (
         <div className="lm-loading-overlay">
           <div className="lm-loading-spinner"></div>
         </div>
       )}
-      
+
       {/* Location Error State */}
       {locationError && !isLoading && (
         <div className="lm-error-state">
@@ -401,7 +471,7 @@ export default function LiveMap({ open }) {
           </button>
         </div>
       )}
-      
+
       {/* Empty State - No other users */}
       {!isLoading && !locationError && Object.keys(others).length === 0 && (
         <div className="lm-empty-state">
@@ -414,10 +484,10 @@ export default function LiveMap({ open }) {
           </p>
         </div>
       )}
-      
+
       {/* User Popup Card - Bottom Sheet */}
       {selectedUser && (
-        <UserPopupCard 
+        <UserPopupCard
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onMessage={(user) => console.log('Message:', user)}

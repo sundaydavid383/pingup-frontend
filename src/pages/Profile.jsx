@@ -29,7 +29,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [blocking, setBlocking] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  
+
   const isUnauthenticatedVisitor = !currentUser;
 
 
@@ -101,7 +101,7 @@ const Profile = () => {
     } catch (err) {
       console.error("❌ Error fetching profile:", err);
       // fallback to assets to avoid UI break (keeps interactions intact)
-     // setProfileUser(assets.currentUser);
+      // setProfileUser(assets.currentUser);
       setPosts([]);
       showAlert("Failed to load profile data.", "error");
     } finally {
@@ -146,146 +146,145 @@ const Profile = () => {
   }, [profileId, currentUser]); // same dependencies as before
 
   const isCurrentUser = currentUser?._id === profileId;
-  
 
 
 
 
-  
 
-return (
- <>
-  {showProgress && (
-    <div
-      className="top-progress"
-      style={{
-        width: `${progress}%`,
-        maxWidth: "var(--profile-main-width)",
-      }}
-    />
-  )}
-   
-  <div className="profile-layout no-scrollbar">
-    {loading && !profileUser ? (
-      <ProfileSkeleton />
-    ) : 
-    (
-      <div
-        className="profile-main"
-     
-      >
-        {alert.show && (
-          <CustomAlert
-            message={alert.message}
-            type={alert.type}
-            onClose={() => setAlert({ ...alert, show: false })}
-          />
-        )}
 
-        <BackButton top="2" right="2" />
 
-        <div className="profile-card">
-          <div className="cover-wrapper bg-multi-gradient">
-            {loading ? (
-              <div className="bg-skeleton animate-skeleton" />
-            ) : profileUser?.coverPhotoUrl || profileUser?.cover_photo ? (
-              <img
-                src={profileUser.coverPhotoUrl || profileUser.cover_photo}
-                alt="Cover"
-                className="cover-image"
-              />
-            ) : null}
-          </div>
+  return (
+    <>
+      {showProgress && (
+        <div
+          className="top-progress"
+          style={{
+            width: `${progress}%`,
+            maxWidth: "var(--profile-main-width)",
+          }}
+        />
+      )}
 
-          {loading ? (
+      <div className="w-full min-h-screen no-scrollbar bg-slate-50 flex justify-center relative overflow-x-hidden">
+        <div className={`w-full max-w-[1200px] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0 ${isUnauthenticatedVisitor ? "flex-col md:flex-row" : ""}`}>
+          {loading && !profileUser ? (
             <ProfileSkeleton />
           ) : (
-            <UserProfileInfo
-              user={profileUser}
-              posts={posts}
-              profileId={profileId}
-              setShowEdit={setShowEdit}
-              isCurrentUser={isCurrentUser}
-              isUnauthenticatedVisitor={isUnauthenticatedVisitor}
-            />
-          )}
-
-         {  !isUnauthenticatedVisitor && !isCurrentUser && (
-            <div className="block-wrapper">
-              {loading ? (
-                <div className="bg-skeleton animate-skeleton" />
-              ) : (
-                <button
-                  disabled={blocking || isBlocked}
-                  onClick={handleBlockUser}
-                  className={`block-btn ${
-                    isBlocked
-                      ? "block-btn-disabled"
-                      : "block-btn-active"
-                  }`}
-                >
-                  {blocking
-                    ? "Blocking..."
-                    : isBlocked
-                    ? "User Blocked"
-                    : "Block User"}
-                </button>
+            <main
+              className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden`}
+            >
+              {alert.show && (
+                <CustomAlert
+                  message={alert.message}
+                  type={alert.type}
+                  onClose={() => setAlert({ ...alert, show: false })}
+                />
               )}
+
+              <BackButton top="2" right="2" />
+
+              <div className="profile-card">
+                <div className="cover-wrapper bg-multi-gradient">
+                  {loading ? (
+                    <div className="bg-skeleton animate-skeleton w-full h-full" />
+                  ) : (profileUser?.coverPhotoUrl || profileUser?.cover_photo) ? (
+                    <img
+                      src={profileUser.coverPhotoUrl || profileUser.cover_photo}
+                      alt="Cover"
+                      className="cover-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="cover-placeholder" />
+                  )}
+                </div>
+
+                {loading ? (
+                  <ProfileSkeleton />
+                ) : (
+                  <UserProfileInfo
+                    user={profileUser}
+                    posts={posts}
+                    profileId={profileId}
+                    setShowEdit={setShowEdit}
+                    isCurrentUser={isCurrentUser}
+                    isUnauthenticatedVisitor={isUnauthenticatedVisitor}
+                  />
+                )}
+
+                {!isUnauthenticatedVisitor && !isCurrentUser && (
+                  <div className="block-wrapper">
+                    {loading ? (
+                      <div className="bg-skeleton animate-skeleton" />
+                    ) : (
+                      <button
+                        disabled={blocking || isBlocked}
+                        onClick={handleBlockUser}
+                        className={`block-btn ${isBlocked
+                          ? "block-btn-disabled"
+                          : "block-btn-active"
+                          }`}
+                      >
+                        {blocking
+                          ? "Blocking..."
+                          : isBlocked
+                            ? "User Blocked"
+                            : "Block User"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {!isUnauthenticatedVisitor && <div className="tabs-wrapper">
+                <div className="tabs-container">
+                  {["posts", "media", "likes"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`tab-btn ${activeTab === tab ? "tab-active" : "tab-inactive"
+                        }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>}
+
+              {!isUnauthenticatedVisitor && activeTab === "posts" && (
+                <div className="posts-wrapper">
+                  {posts.length ? (
+                    posts.map((post) => (
+                      <PostCard
+                        post={post}
+                        key={post._id}
+                        setFeeds={setPosts}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-center text-muted mt-6">
+                      No posts yet.
+                    </p>
+                  )}
+                </div>
+              )}
+            </main>
+          )}
+          {!isUnauthenticatedVisitor && <RightSidebar sponsors={sponsors} loading={!sponsors} />}
+
+          {!isUnauthenticatedVisitor && <MediumSidebarToggle sponsors={sponsors} />}
+          {!isUnauthenticatedVisitor && showEdit && <ProfileModal setShowEdit={setShowEdit} />}
+          {isUnauthenticatedVisitor && (
+            <div className="w-full md:w-[40%] flex items-center justify-center p-4 sm:p-8">
+              <AuthContainer isModal={true} onClose={() => navigate("/")} initialTab="login" />
             </div>
           )}
         </div>
-
-        { !isUnauthenticatedVisitor && <div className="tabs-wrapper">
-          <div className="tabs-container">
-            {["posts", "media", "likes"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`tab-btn ${
-                  activeTab === tab ? "tab-active" : "tab-inactive"
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>}
-
-         {!isUnauthenticatedVisitor && activeTab === "posts" && (
-          <div className="posts-wrapper">
-            {posts.length ? (
-              posts.map((post) => (
-                <PostCard
-                  post={post}
-                  key={post._id}
-                  setFeeds={setPosts}
-                />
-              ))
-            ) : (
-              <p className="text-center text-muted mt-6">
-                No posts yet.
-              </p>
-            )}
-          </div>
-        )}
       </div>
-    )}
-{ !isUnauthenticatedVisitor && <div className="right-sidebar">
- <RightSidebar sponsors={sponsors} loading={!sponsors} />
-</div>}
-
- {!isUnauthenticatedVisitor && <MediumSidebarToggle sponsors={sponsors} />}
-  {!isUnauthenticatedVisitor && showEdit && <ProfileModal setShowEdit={setShowEdit} />}
-   {isUnauthenticatedVisitor && (
-    <div className="w-[80%] flex justify-end items-center p-4 sm:p-8 backdrop-blur-xl bg-[rgba(1,8,44,0.8)]  rounded-lg  ">
-    <AuthContainer isModal={true} onClose={() => navigate("/")} initialTab="login"/>
-    </div>
-  )}
-  </div>
-</>
-
-);
-
+    </>
+  );
 };
 
 export default Profile;

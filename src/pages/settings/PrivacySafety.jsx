@@ -62,15 +62,22 @@ const PrivacySafety = ({ isEmbedded = false }) => {
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-end md:items-center justify-center">
         <div
           className="w-full md:w-96 rounded-t-3xl md:rounded-2xl p-6 max-h-96 overflow-y-auto"
-          style={{ backgroundColor: 'var(--form-bg)' }}
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            color: 'white'
+          }}
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-semibold text-lg" style={{ color: 'var(--text-main)' }}>
+            <h3 className="font-semibold text-lg" style={{ color: 'white' }}>
               {setting.label}
             </h3>
             <button
               onClick={() => setSelectedSetting(null)}
               className="text-2xl leading-none"
+              style={{ color: 'white' }}
             >
               ×
             </button>
@@ -81,7 +88,7 @@ const PrivacySafety = ({ isEmbedded = false }) => {
               <label
                 key={option.value}
                 className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:opacity-80 transition"
-                style={{ backgroundColor: 'var(--bg-main)' }}
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
               >
                 <input
                   type="radio"
@@ -91,7 +98,7 @@ const PrivacySafety = ({ isEmbedded = false }) => {
                   onChange={(e) => handleSettingChange(setting.id, e.target.value)}
                   className="w-5 h-5 cursor-pointer"
                 />
-                <span style={{ color: 'var(--text-main)' }}>{option.label}</span>
+                <span style={{ color: 'white' }}>{option.label}</span>
               </label>
             ))}
           </div>
@@ -111,7 +118,7 @@ const PrivacySafety = ({ isEmbedded = false }) => {
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
               style={{ backgroundColor: 'var(--form-bg)' }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
             </button>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Privacy & Safety
@@ -144,7 +151,7 @@ const PrivacySafety = ({ isEmbedded = false }) => {
                     Current: {privacySettings[setting.id]}
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
+                <ChevronRight className="w-5 h-5" style={{ color: 'white' }} />
               </div>
             </button>
           ))}

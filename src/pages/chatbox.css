@@ -18,7 +18,7 @@ html, body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-main, #fff);
+  background: var(--color-6);
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
@@ -34,15 +34,54 @@ html, body {
 
 
 /* -----------------------------
-   MESSAGES AREA
+   MESSAGES AREA - WhatsApp-style background that scrolls with messages
 ----------------------------- */
 .chatbox-messages {
   flex: 1;
   width: 100%;
   max-width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 100px;
+  
+  /* WhatsApp-style warm background color */
+  background-color: #efe8dd;
+  
+  /* WhatsApp-style subtle pattern - diagonal lines */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #efe8dd 0%, #e5ded4 100%);
+  
+  background-attachment: scroll;
+  background-position: center top;
+  background-repeat: repeat;
+  min-height: 100%;
+  position: relative;
+}
+
+/* Responsive adjustments for different screen sizes */
+@media (max-width: 768px) {
+  .chatbox-messages {
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20z' fill='%23000000' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, #efe8dd 0%, #e5ded4 100%);
+  }
+}
+
+@media (max-width: 480px) {
+  .chatbox-messages {
+    padding-bottom: 80px;
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v30H0V0zm15 15h15v15H15V15z' fill='%23000000' fill-opacity='0.015' fill-rule='evenodd'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, #f0e9de 0%, #e8e0d5 100%);
+  }
+}
+
+/* Ensure messages container has proper bottom padding */
+.messages-container {
+  padding-bottom: 80px; /* Prevent last message from being hidden behind input */
 }
 @media (max-width: 638px){
   .mobilenav_intervention_inverse{
@@ -54,22 +93,29 @@ html, body {
   background-color: red;
 }
 /* -----------------------------
-   FIXED INPUT BAR
-   (we use left + right from inline style)
+   FIXED INPUT BAR (WhatsApp-style)
 ----------------------------- */
 .chatbox-input {
   position: sticky;
   bottom: 0;
   flex-shrink: 0;
   z-index: 50;
-  padding: 8px 12px;
+  padding: 8px 8px;
   box-sizing: border-box;
-  background: var(--input-ui-overlay, rgba(255,255,255,0.9));
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-top: 1px solid rgba(0,0,0,0.05);
-  display: block;               /* full-width block anchored by left/right */
+  background: var(--color-6);
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
   pointer-events: auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure children don't overflow */
+.chatbox-input > * {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 
@@ -139,6 +185,7 @@ html, body {
   background: var(--input-bg, #fff);
   color: var(--input-text-color, #000);
   font-size: 0.95rem;
+  box-sizing: border-box;
 }
 @keyframes slideUp {
   from {
@@ -226,6 +273,8 @@ html, body {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
+  border-left: none; /* remove left border */
+  border-right: none; /* remove right border */
 }
 
 /* -----------------------------
@@ -280,5 +329,846 @@ html, body {
   }
   100% {
     background-position: 0 50%, 50% 50%, 100% 50%;
+  }
+}
+
+/* ==================================================
+   ENHANCED WHATSAPP-STYLE INPUT STYLING
+   ================================================== */
+
+/* Reply bar styling */
+.reply-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--primary, #0099ff);
+  border-radius: 8px;
+  background: linear-gradient(135deg, 
+    rgba(0, 153, 255, 0.08) 0%, 
+    rgba(0, 153, 255, 0.04) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  min-height: 50px;
+  animation: slideDownIn 0.25s ease-out;
+}
+
+@keyframes slideDownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reply-bar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reply-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary, #0099ff);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.reply-bar-text {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--secondary, #fff);
+  word-break: break-word;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.reply-bar-close {
+  flex-shrink: 0;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--secondary, #fff);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reply-bar-close:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Image preview styling */
+.image-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 8px;
+  animation: scaleIn 0.25s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-preview-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: #ff4444;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.image-preview-remove:hover {
+  background: #ff2222;
+  transform: scale(1.15);
+}
+
+/* Input field styling - WhatsApp like */
+.input-field {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 100px;
+  resize: none;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  outline: none;
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  background-color: #ffffff !important; /* Always solid white - force override */
+  color: #000000;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  /* Remove default browser focus styling - keep clean and neutral */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.input-field:focus {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background-color: #ffffff !important; /* Always solid white */
+  outline: none;
+  /* Remove any browser-default focus rings */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.input-field:focus-visible {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.15);
+  /* Ensure no default focus ring */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Also add important to any textarea in chatbox input */
+.chatbox-input textarea,
+.chatbox-input .input-field,
+.input-field {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.input-field::placeholder {
+  color: #999999;
+  opacity: 0.7;
+}
+
+.input-field::placeholder {
+  color: var(--input-placeholder, #999);
+  opacity: 0.7;
+}
+
+/* Input container styling */
+.input-container {
+  display: flex;
+  flex-direction: row; /* align items in a single row */
+  align-items: flex-end; /* make controls align to bottom of textarea */
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Controls row - buttons and actions */
+.input-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  flex-shrink: 0; /* don't let controls shrink; keep them visible */
+}
+
+/* Input wrapper for the main input field and text area */
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0; /* allow textarea to shrink properly */
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Media buttons styling */
+.media-button,
+.send-button,
+.record-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  /* Prevent scroll on hover - use transform instead of margin/padding changes */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Additional scroll prevention */
+  margin: 0 !important;
+  padding: 0 !important;
+  will-change: transform;
+}
+
+/* Fix hover behavior - prevent layout shift and scrolling */
+.media-button:hover,
+.send-button:hover,
+.record-button:hover {
+  transform: translateZ(0) scale(1.05);
+  /* Ensure no scroll triggers */
+  overflow: hidden;
+}
+
+.media-button:active,
+.send-button:active,
+.record-button:active {
+  transform: scale(0.95);
+}
+
+/* Media button wrapper for dropdown positioning */
+.media-button-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-button {
+  background: var(--input-accent, #6366f1);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.media-button:hover {
+  background: var(--input-accent, #4f46e5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.media-button:active {
+  transform: scale(0.95);
+}
+
+.send-button {
+  background: var(--input-accent, #6366f1);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+/* Force send icon to use theme secondary color (lucide uses currentColor) */
+.send-button svg,
+.send-button .lucide {
+  color: var(--secondary, #ffffff) !important;
+}
+
+.send-button:hover:not(:disabled) {
+  background: var(--input-accent, #4f46e5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.send-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.record-button {
+  background: var(--input-accent, #6366f1);
+  color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+}
+
+.record-button:hover {
+  background: var(--input-accent, #4f46e5);
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
+}
+
+.record-button:active {
+  transform: scale(0.95);
+}
+
+/* Media dropdown styling - Fixed to prevent overflow */
+.media-dropdown {
+  position: absolute;
+  bottom: 48px;
+  right: 0;
+  min-width: 180px;
+  max-width: 220px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  animation: slideUpDropdown 0.2s ease-out;
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .media-dropdown {
+    right: 0;
+    left: auto;
+    max-width: 200px;
+    bottom: 48px;
+    border-radius: 8px;
+  }
+}
+
+@keyframes slideUpDropdown {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.media-dropdown label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.media-dropdown label:hover {
+  background: var(--opaque-primary, rgba(99, 102, 241, 0.1));
+  color: var(--primary, #6366f1);
+}
+
+.media-dropdown label svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+/* Recording bar styling - WhatsApp Style - Full Implementation */
+.recording-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  background: linear-gradient(90deg, #e8e8e8 0%, #f0f0f0 50%, #e8e8e8 100%);
+  border-radius: 24px;
+  min-height: 52px;
+}
+
+.recording-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Left side - Lock button (to lock recording) */
+.recording-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: #555;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recording-lock:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.recording-lock svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Center section - Timer and Waveform */
+.recording-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Timer display */
+.recording-timer {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff3b30;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* Waveform - WhatsApp style horizontal bars */
+.recording-waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 40px;
+  max-width: 120px;
+  height: 20px;
+}
+
+.recording-waveform .wave-bar {
+  width: 3px;
+  height: 100%;
+  background: #ff3b30;
+  border-radius: 2px;
+  animation: waveBounce 0.6s ease-in-out infinite;
+}
+
+.recording-waveform .wave-bar:nth-child(1) { animation-delay: 0s; }
+.recording-waveform .wave-bar:nth-child(2) { animation-delay: 0.08s; }
+.recording-waveform .wave-bar:nth-child(3) { animation-delay: 0.16s; }
+.recording-waveform .wave-bar:nth-child(4) { animation-delay: 0.24s; }
+.recording-waveform .wave-bar:nth-child(5) { animation-delay: 0.32s; }
+.recording-waveform .wave-bar:nth-child(6) { animation-delay: 0.4s; }
+.recording-waveform .wave-bar:nth-child(7) { animation-delay: 0.48s; }
+
+@keyframes waveBounce {
+  0%, 100% {
+    transform: scaleY(0.25);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Right side buttons container */
+.recording-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Delete button (X) - WhatsApp style */
+.recording-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: #999;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recording-delete:hover {
+  background: #777;
+  transform: scale(1.05);
+}
+
+.recording-delete svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Pause button */
+.recording-pause {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: #999;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recording-pause:hover {
+  background: #777;
+  transform: scale(1.05);
+}
+
+.recording-pause svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Send button - WhatsApp green style */
+.recording-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: var(--primary, #6366f1);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.recording-send:hover {
+  background: var(--primary-hover, #4f46e5);
+  transform: scale(1.05);
+}
+
+.recording-send svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Hide old progress bar styling */
+.recording-progress {
+  display: none;
+}
+
+/* Recording time (old class, keeping for compatibility) */
+.recording-time {
+  display: none;
+}
+
+/* Stop/Send button - keep for compatibility */
+.recording-stop {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .image-preview {
+    max-width: 100px;
+  }
+  
+  .media-dropdown {
+    max-width: 180px;
+  }
+  
+  .input-field {
+    font-size: 0.9rem;
+  }
+  
+  .media-button,
+  .send-button,
+  .record-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  .input-controls {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  
+  .reply-bar {
+    padding: 8px 10px;
+    min-height: 45px;
+  }
+  
+  .reply-bar-label {
+    font-size: 11px;
+  }
+  
+  .reply-bar-text {
+    font-size: 12px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .media-button,
+  .send-button,
+  .record-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+  
+  .media-dropdown {
+    min-width: 160px;
+    max-width: 160px;
+    font-size: 12px;
+  }
+  
+  .media-dropdown label {
+    padding: 6px 10px;
+  }
+  
+  .input-field {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
+  
+  .input-container {
+    gap: 4px;
+  }
+}
+
+/* ==================================================
+   ADDITIONAL RESPONSIVE & EDGE CASE HANDLING
+   ================================================== */
+
+/* Landscape mode (height-based) */
+@media (max-height: 600px) and (orientation: landscape) {
+  .input-field {
+    max-height: 60px;
+  }
+
+  .image-preview {
+    max-width: 80px;
+  }
+
+  .reply-bar {
+    min-height: 40px;
+    padding: 6px 8px;
+  }
+}
+
+/* Very large screens (1400px+) */
+@media (min-width: 1400px) {
+  .input-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .input-controls {
+    max-width: 100%;
+  }
+}
+
+/* Prevent layout shift when scrollbar appears/disappears */
+html {
+  overflow-y: scroll;
+}
+
+/* Ensure no horizontal scroll on any element */
+body, 
+#root,
+.chatbox-wrapper {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Smooth animations for content appearance */
+@keyframes inputExpand {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input-container > * {
+  animation: inputExpand 0.2s ease-out;
+}
+
+/* Fix for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .media-button:active,
+  .send-button:active,
+  .record-button:active {
+    transform: scale(0.92);
+  }
+
+  .input-field {
+    font-size: 16px; /* Prevent zoom on iOS input focus */
+  }
+}
+
+/* Fix for browsers that support reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .reply-bar,
+  .image-preview,
+  .input-container > * {
+    animation: none;
+  }
+
+  .media-button,
+  .send-button,
+  .record-button,
+  .input-field {
+    transition: none;
+  }
+}
+
+/* Ensure input field doesn't have browser default styling */
+.input-field::-webkit-outer-spin-button,
+.input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-field[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Additional focus style removal - ensure no blue border on any side */
+.input-field,
+.chatbox-input textarea,
+.chatbox-input input[type="text"],
+textarea.input-field {
+  /* Remove all default focus styling */
+  outline: none !important;
+  outline-offset: 0 !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  box-shadow: none !important;
+}
+
+/* But keep custom focus effect */
+.input-field:focus,
+.chatbox-input textarea:focus {
+  outline: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Better focus states for accessibility */
+.media-button:focus-visible,
+.send-button:focus-visible,
+.record-button:focus-visible {
+  outline: 2px solid var(--primary, #6366f1);
+  outline-offset: 2px;
+}
+
+.input-field:focus-visible {
+  outline: none;
+}
+
+/* Support for dark mode if needed */
+@media (prefers-color-scheme: dark) {
+  .media-dropdown {
+    background: rgba(40, 40, 40, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+  }
+
+  .media-dropdown label {
+    color: #e0e0e0;
+  }
+
+  .media-dropdown label:hover {
+    background: rgba(99, 102, 241, 0.2);
   }
 }

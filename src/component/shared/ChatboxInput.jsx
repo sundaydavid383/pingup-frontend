@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 const ChatboxInput = ({
   sidebarOpen,
@@ -6,30 +6,60 @@ const ChatboxInput = ({
   children,
   style: extraStyle = {},
 }) => {
+  // Calculate left position based on sidebar state (for very specific layouts)
+  // In most cases, the parent container already accounts for sidebar, so left stays 0
+  const leftPosition = useMemo(() => {
+    if (typeof window === "undefined") return 0;
+    // Only adjust if absolutely positioned relative to viewport
+    // Default to 0 (left edge of available space)
+    return 0;
+  }, [sidebarOpen, sidebarWidth]);
+
   const inputStyle = {
-    position: "fixed",
+    // Use sticky positioning so the input stays at bottom and can overflow properly
+    position: "sticky",
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 40,
+    zIndex: 100,
     display: "flex",
     flexDirection: "column",
-    background: "rgba(255,255,255,0.95)",
+    background: "var(--color-6)",
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
     boxSizing: "border-box",
-    padding: "10px 14px",
-    paddingBottom: "calc(env(safe-area-inset-bottom) + 14px)",
-    borderTopLeftRadius: "18px",
-    borderTopRightRadius: "18px",
-    boxShadow: "0 -2px 10px rgba(0,0,0,0.1)",
+    padding: "12px 16px",
+    paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+    borderTopLeftRadius: "20px",
+    borderTopRightRadius: "20px",
+    boxShadow: "0 -4px 16px rgba(0, 0, 0, 0.12)",
     flexShrink: 0,
     width: "100%",
     maxWidth: "100%",
-    gap: "6px",
-    height: "70px", // Fixed height for predictable scroll calculation
+    gap: "8px",
+    minHeight: "70px",
+    justifyContent: "flex-end",
+    willChange: "transform",
     ...extraStyle,
   };
 
-  return <div style={inputStyle}>{children}</div>;
+  // Inner wrapper for content
+  const innerStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    width: "100%",
+    boxSizing: "border-box",
+    paddingBottom: "env(safe-area-inset-bottom)",
+    WebkitOverflowScrolling: "touch",
+    scrollBehavior: "smooth",
+  };
+
+  return (
+    <div style={inputStyle} className="chatbox-input">
+      {children}
+    </div>
+  );
 };
 
 export default ChatboxInput;

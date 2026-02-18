@@ -20,7 +20,6 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
     }
   })();
 
-  console.log("Rendering UserCard for user:", rawUser);
 
   const activeUser = ctxUser && ctxUser._id ? ctxUser : storedUser;
   const activeToken = ctxToken || localStorage.getItem("token") || null;
@@ -131,7 +130,7 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
 
       <div className="p-5 w-full shadow-md border border-gray-200 rounded-xl bg-white hover:shadow-xl transition-all duration-200 flex flex-col justify-between min-h-[240px] md:min-h-[260px]">
         {/* TOP SECTION: PROFILE INFO */}
-        <div className="flex flex-col md:flex-row gap-4 items-start w-full">
+        <div className="flex flex-col md:flex-row gap-4 items-center md:items-start w-full">
           {/* Avatar */}
           <div className="flex-shrink-0 mx-auto md:mx-0">
             <div 
@@ -150,8 +149,8 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
           </div>
 
           {/* Text Content */}
-          <div className="flex-1 min-w-0 flex flex-col text-center md:text-left">
-            <p className="font-bold text-gray-800 truncate text-base">
+          <div className="flex-1 min-w-0 flex flex-col items-center md:items-start text-center md:text-left">
+<p className="font-bold text-gray-800 truncate text-base">
               {user.name || user.username}
             </p>
             {user.username && <p className="text-xs text-gray-500">@{user.username}</p>}

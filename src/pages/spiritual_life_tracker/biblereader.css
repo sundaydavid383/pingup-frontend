@@ -104,6 +104,8 @@
   display: flex;
   justify-content: center; /* centers inner content */
   color: var(--text-main);
+  padding-top: 55px; /* Account for mobile navbar height */
+  box-sizing: border-box;
 }
 
 .bible-reader-inner {
@@ -119,8 +121,8 @@
 /* ===== Fixed Header ===== *//* ===== Fixed Header ===== */
 .fixed-header {
   position: sticky;
-  top: 5px;
-  z-index: 200;
+  top: 0;
+  z-index: 100;
   width: 100%;
   padding: 0.5rem 1rem;
   backdrop-filter: blur(20px);
@@ -130,6 +132,7 @@
   background: var(--header-background);
   color: var(--text-color);
   transition: background 0.3s ease, color 0.3s ease;
+  margin-top: 0;
 }
 
 /* ===== Header Inner ===== */
@@ -420,7 +423,7 @@
 @media (max-width: 635px) {
   .fixed-header {
     position: sticky;
-    top: 55px;
+    top: 0;
     padding: 0.5rem 0.75rem;
   }
   
@@ -495,7 +498,7 @@
 @media (max-width: 635px) {
   .fixed-header {
   position: sticky;
-  top: 55px;
+  top: 0;
 }
 }
 

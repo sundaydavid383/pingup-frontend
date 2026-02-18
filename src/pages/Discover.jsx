@@ -140,6 +140,12 @@ export default function Discover() {
   }, []);
 
   useEffect(() => { fetchSuggestions(); }, []);
+  useEffect(() => {
+    if (filters.city || filters.country || filters.occupation) {
+      searchUsers(true);
+    }
+  }, [filters]);
+
 
   const handleUserUpdate = (updatedUser) => {
     setUsers((prev) => prev.map((u) => (u._id === updatedUser._id ? updatedUser : u)));
@@ -148,114 +154,121 @@ export default function Discover() {
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
       {/* STICKY SEARCH HEADER */}
-      <div className={`discover_search_wrapper sticky top-0 z-50 transition-all duration-300 ${isSticky ? 'bg-white/80 backdrop-blur-lg shadow-sm py-2' : 'bg-transparent py-6'}`}>
+      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-50 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
         <div className="max-w-6xl mx-auto px-5">
-          <div className="flex flex-col gap-4">
-            {/* SEARCH INPUT WITH ICON INSIDE */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 group">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Search name, location, or occupation..."
-                  className="discoveries_iput w-full pl-5 pr-12 py-3.5"
-                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                />
-                <button
-                  onClick={applySearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md active:scale-95"
-                >
-                  <Search size={18} />
-                </button>
+          <div className="discover_search_bar w-full rounded-2xl px-4 py-3">
+            <div className="flex flex-col gap-4">
+              {/* SEARCH INPUT WITH ICON INSIDE */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 group">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Search name, location, or occupation..."
+                    className="discoveries_iput w-full pl-5 pr-12 py-3.5"
+                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                  />
+                  <button
+                    onClick={applySearch}
+                    aria-label="Search"
+                    className="discoveries_btn absolute right-2 top-1/2 -translate-y-1/2 p-2 flex items-center justify-center"
+                  >
+                    <Search size={18} />
+                  </button>
+                </div>
+
+                {/* CLEAR BUTTON */}
+                {(input || filters.city || filters.country || filters.occupation) && (
+                  <button
+                    onClick={() => {
+                      setInput("");
+                      setFilters({ city: "", country: "", occupation: "" });
+                      hasFetched.current = false;
+                      fetchSuggestions();
+                    }}
+                    className="discoveries_clear_btn hidden md:flex items-center gap-2 text-sm font-medium transition-colors"
+                  >
+                    <X size={16} />
+                    <span>Clear</span>
+                  </button>
+                )}
               </div>
 
-              {/* CLEAR BUTTON */}
-              {(input || filters.city || filters.country || filters.occupation) && (
-                <button
-                  onClick={() => {
-                    setInput("");
-                    setFilters({ city: "", country: "", occupation: "" });
-                    hasFetched.current = false;
-                    fetchSuggestions();
-                  }}
-                  className="hidden md:flex items-center gap-1 text-gray-500 hover:text-red-500 text-sm font-medium transition-colors"
-                >
-                  <X size={16} /> Clear
-                </button>
-              )}
-            </div>
-
-            {/* FILTER DROPDOWNS */}
-            <div className="flex flex-wrap gap-2 overflow-visible">
-              <CustomDropdown
-                id="city"
-                label="City"
-                options={["Ikeja", "Mumbai", "London"]}
-                value={filters.city}
-                onChange={(val) => setFilters(p => ({ ...p, city: val }))}
-                openDropdownId={openDropdownId}
-                setOpenDropdownId={setOpenDropdownId}
-              />
-              <CustomDropdown
-                id="country"
-                label="Country"
-                options={["Nigeria", "India", "USA", "UK"]}
-                value={filters.country}
-                onChange={(val) => setFilters(p => ({ ...p, country: val }))}
-                openDropdownId={openDropdownId}
-                setOpenDropdownId={setOpenDropdownId}
-              />
-              <CustomDropdown
-                id="occupation"
-                label="Occupation"
-                options={["Developer", "Designer", "Engineer"]}
-                value={filters.occupation}
-                onChange={(val) => setFilters(p => ({ ...p, occupation: val }))}
-                openDropdownId={openDropdownId}
-                setOpenDropdownId={setOpenDropdownId}
-              />
+              {/* FILTER DROPDOWNS */}
+              <div className="flex flex-wrap gap-2 overflow-visible">
+                <CustomDropdown
+                  id="city"
+                  label="City"
+                  options={["Ikeja", "Mumbai", "London"]}
+                  value={filters.city}
+                  onChange={(val) => setFilters(p => ({ ...p, city: val }))}
+                  openDropdownId={openDropdownId}
+                  setOpenDropdownId={setOpenDropdownId}
+                  setInput={setInput}
+                />
+                <CustomDropdown
+                  id="country"
+                  label="Country"
+                  options={["Nigeria", "India", "USA", "UK"]}
+                  value={filters.country}
+                  onChange={(val) => setFilters(p => ({ ...p, country: val }))}
+                  openDropdownId={openDropdownId}
+                  setOpenDropdownId={setOpenDropdownId}
+                  setInput={setInput}
+                />
+                <CustomDropdown
+                  id="occupation"
+                  label="Occupation"
+                  options={["Developer", "Designer", "Engineer"]}
+                  value={filters.occupation}
+                  onChange={(val) => setFilters(p => ({ ...p, occupation: val }))}
+                  openDropdownId={openDropdownId}
+                  setOpenDropdownId={setOpenDropdownId}
+                  setInput={setInput}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* USERS GRID */}
-      <div className="max-w-6xl mx-auto px-5 mt-4">
-        <div className="discoveries_grid">
-          {users.map((userItem) => (
-            <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
-          ))}
-        </div>
-
-        {loadingInitial && (
-          <div className="grid discoveries_grid mt-8">
-            {Array.from({ length: 6 }).map((_, idx) => <SkeletonUserCard key={idx} />)}
+        {/* USERS GRID */}
+        <div className="max-w-6xl mx-auto px-5 mt-30 md:mt-4">
+          <div className="discoveries_grid">
+            {users.map((userItem) => (
+              <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
+            ))}
           </div>
-        )}
 
-        {/* LOADING & ERROR STATES */}
-        <div className="flex flex-col items-center py-10">
-          {loadingMore && <div className="animate-pulse text-blue-600 font-medium">Loading more...</div>}
-          {fetchError && (
-            <button onClick={() => searchUsers()} className="px-6 py-2 bg-blue-600 text-white rounded-full">
-              Retry
-            </button>
-          )}
-          {!loadingInitial && users.length === 0 && (
-            <div className="text-gray-400 text-center">
-              <Users size={48} className="mx-auto mb-2 opacity-20" />
-              <p>No results found</p>
+          {loadingInitial && (
+            <div className="grid discoveries_grid mt-8">
+              {Array.from({ length: 6 }).map((_, idx) => <SkeletonUserCard key={idx} />)}
             </div>
           )}
+
+          {/* LOADING & ERROR STATES */}
+          <div className="flex flex-col items-center py-10">
+            {loadingMore && <div className="animate-pulse text-blue-600 font-medium">Loading more...</div>}
+            {fetchError && (
+              <button onClick={() => searchUsers()} className="px-6 py-2 bg-blue-600 text-white rounded-full">
+                Retry
+              </button>
+            )}
+            {!loadingInitial && users.length === 0 && (
+              <div className="text-gray-400 text-center">
+                <Users size={48} className="mx-auto mb-2 opacity-20" />
+                <p>No results found</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <InfiniteScrollTrigger onReachBottom={fetchMore} enabled={hasMore && !loadingInitial} />
+        <InfiniteScrollTrigger onReachBottom={fetchMore} enabled={hasMore && !loadingInitial} />
 
-      <div className="mt-20 pb-10 text-gray-400 flex flex-col items-center gap-2">
-        <Sprout size={24} className="text-green-500 opacity-50" />
-        <span className="text-xs uppercase tracking-widest">Connect & Grow</span>
+        <div className="mt-20 pb-10 text-gray-400 flex flex-col items-center gap-2">
+          <Sprout size={24} className="text-green-500 opacity-50" />
+          <span className="text-xs uppercase tracking-widest">Connect & Grow</span>
+        </div>
       </div>
     </div>
   );
