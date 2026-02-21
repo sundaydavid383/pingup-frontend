@@ -17,7 +17,7 @@ const RecentMessages = () => {
   // Use PipModal context - state is managed by context now
   const {
     setPipOpen,
-    setActiveChatId,
+    openPipModal,
     setActiveChatHistory,
     setChatId,
     setChatLoading,
@@ -111,8 +111,7 @@ const RecentMessages = () => {
   }, [socket, user._id]);
 
   const handleUserClick = (usr) => {
-    setActiveChatId(usr._id);
-    setPipOpen(true);
+    openPipModal(usr._id);
     fetchChatHistory(usr._id);
     clearUnread(usr._id);
   };

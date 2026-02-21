@@ -189,7 +189,7 @@
 .media-dropdown {
   position: absolute;
   bottom: 100%;
-  left: 0;
+  right: 2rem;
   margin-bottom: 8px;
   background: #fff;
   border-radius: 12px;

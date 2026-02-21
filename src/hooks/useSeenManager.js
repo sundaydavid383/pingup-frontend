@@ -96,6 +96,8 @@ export const useSeenManager = ({
         [lastSeenMessage]
     );
 
+
+
     /**
      * Get the last message currently visible in viewport
      * Uses IntersectionObserver to determine visibility
@@ -157,47 +159,85 @@ export const useSeenManager = ({
      * Update last seen on backend and emit socket event
      * Prevents duplicate emissions using ref tracking
      */
-    const updateLastSeenOnBackend = useCallback(
-        async (messageId) => {
-            if (!socket?.connected) {
-                console.warn("Socket not connected - cannot update last seen");
-                return;
-            }
+ const updateLastSeenOnBackend = useCallback(
+  async (messageId) => {
+    console.log("🟢 ===== updateLastSeenOnBackend CALLED =====");
+    console.log("Incoming messageId:", messageId);
+    console.log("Current chatId:", chatId);
+    console.log("Current userId:", userId);
+    console.log("Socket connected:", socket?.connected);
 
-            // DEDUPLICATION: Don't emit if we just emitted this same ID
-            if (lastEmittedMessageIdRef.current === messageId) {
-                return;
-            }
+    if (!socket?.connected) {
+      console.warn("❌ Socket not connected - cannot update last seen");
+      return;
+    }
 
-            try {
-                lastEmittedMessageIdRef.current = messageId;
+    console.log("Last emitted messageId ref:", lastEmittedMessageIdRef.current);
 
-                // 1. Persist to backend
-                if (chatId) {
-                    await axiosBase
-                        .post(`/api/chat/${chatId}/last-seen`, {
-                            messageId,
-                        })
-                        .catch((err) => {
-                            console.warn("Failed to persist last seen on backend:", err);
-                            // Continue anyway - socket emission is more critical for real-time
-                        });
-                }
+    // DEDUPLICATION CHECK
+    if (lastEmittedMessageIdRef.current === messageId) {
+      console.warn("⚠️ Duplicate messageId - skipping emit");
+      return;
+    }
 
-                // 2. Emit real-time update via socket
-                socket.emit("updateLastSeen", {
-                    chatId,
-                    messageId,
-                    userId,
-                    timestamp: new Date().toISOString(),
-                });
-            } catch (error) {
-                console.error("Error updating last seen:", error);
-                lastEmittedMessageIdRef.current = null; // Reset on error
-            }
-        },
-        [socket, chatId, userId]
-    );
+    try {
+      console.log("✅ Passed deduplication check");
+      lastEmittedMessageIdRef.current = messageId;
+
+      // =========================
+      // 1️⃣ Persist via REST API
+      // =========================
+      if (chatId) {
+        console.log("📡 Sending REST request to persist last seen...");
+        console.log("POST URL:", `/api/chat/${chatId}/last-seen`);
+        console.log("Payload:", { messageId });
+
+        try {
+          const response = await axiosBase.post(
+            `/api/chat/${chatId}/last-seen`,
+            { messageId }
+          );
+
+          console.log("✅ REST persistence success");
+          console.log("Response:", response?.data);
+        } catch (err) {
+          console.warn("⚠️ REST persistence failed:");
+          console.warn(err);
+          console.warn("Continuing to socket emit anyway...");
+        }
+      } else {
+        console.warn("⚠️ chatId missing - REST call skipped");
+      }
+
+      // =========================
+      // 2️⃣ Emit via Socket
+      // =========================
+      const socketPayload = {
+        chatId,
+        messageId,
+        userId,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log("📡 Emitting socket event: updateLastSeen");
+      console.log("Socket payload:", socketPayload);
+
+      socket.emit("updateLastSeen", socketPayload);
+
+      console.log("✅ Socket emit completed");
+
+    } catch (error) {
+      console.error("🔥 Error inside updateLastSeenOnBackend:");
+      console.error(error);
+
+      lastEmittedMessageIdRef.current = null;
+      console.warn("Reset lastEmittedMessageIdRef due to error");
+    }
+
+    console.log("🟢 ===== updateLastSeenOnBackend FINISHED =====");
+  },
+  [socket, chatId, userId]
+);
 
     /**
      * Fetch last seen state from backend on chat open
@@ -268,6 +308,28 @@ export const useSeenManager = ({
         calculateUnseenBelowCount,
     ]);
 
+        // Add these refs at the top inside useSeenManager
+const lastScrollTop = useRef(0);
+const scrollStopTimer = useRef(null);
+
+// Scroll handler - only updates last seen when scrolling DOWN
+const onContainerScroll = useCallback(() => {
+  if (!containerRef.current) return;
+
+  const scrollTop = containerRef.current.scrollTop;
+  const direction = scrollTop > lastScrollTop.current ? 'down' : 'up';
+  lastScrollTop.current = scrollTop;
+
+  // Only mark last seen when scrolling down
+  if (direction === 'down') {
+    if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+
+    scrollStopTimer.current = setTimeout(() => {
+      handleScrollStop(); // already exists in your hook
+    }, scrollStopDebounce); // 1200ms by default
+  }
+}, [scrollStopDebounce, handleScrollStop]);
+
     /**
      * Scroll to bottom and mark as seen
      * Typically called when user clicks the scroll-down button
@@ -302,6 +364,7 @@ export const useSeenManager = ({
         const msgEl = document.getElementById(`msg_${lastSeenMessage._id}`);
         if (msgEl) {
             msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            console.log("scroll to the lastseen message...")
             return true;
         }
         return false;
@@ -481,6 +544,7 @@ export const useSeenManager = ({
         scrollToBottom,
         scrollToLastSeen,
         updateLastSeenOnBackend,
+        onContainerScroll,
 
         // Refs management
         setMessageRef: (messageId, element) => {

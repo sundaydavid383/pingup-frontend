@@ -26,6 +26,7 @@ const ChatMessagesFull = ({
   typingUser,
   typingUserFromId,
   showScrollButton,
+  onContainerScroll,
   scrollToBottom,
   scrollToMessage,
   scrollToReplyMessage,
@@ -88,6 +89,7 @@ const ChatMessagesFull = ({
   const longPressTimer = useRef(null);
   const isLongPress = useRef(false);
   const messageElementRefs = useRef({});
+  const hasScrolledToLastSeen = useRef(false);
 
   // Handle right-click, long-press, or double-click to show dropdown
   const handleMessageInteraction = useCallback((msg, event, messageEl) => {
@@ -175,34 +177,31 @@ const scrollToMessageAndHighlight = useCallback((messageId) => {
   }
 }, []);
 
-  // Scroll to last seen message on initial load
-  const scrollToLastSeenMessage = useCallback(() => {
-    if (!seenManager.lastSeenMessage || !containerRef?.current) return;
-    
-    const lastSeenMsg = seenManager.lastSeenMessage;
-    const msgEl = document.getElementById(`msg_${lastSeenMsg._id}`);
-    
-    if (msgEl) {
-      // Scroll to the last seen message with smooth behavior
-      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      // Fallback: scroll to bottom if message not found
-      seenManager.scrollToBottom(false); // false = no smooth animation for initial load
-    }
-  }, [seenManager.lastSeenMessage, seenManager.scrollToBottom]);
 
-  // Handle initial scroll to last seen message when chat loads
+
 useEffect(() => {
-  if (!chatId) return;
-  if (!seenManager.lastSeenMessage) return;
-  if (messages.length === 0) return;
+  if (!chatId || !seenManager.lastSeenMessage || messages.length === 0) return;
 
-  const timer = setTimeout(() => {
-    scrollToLastSeenMessage();
-  }, 200);
+  if (!hasScrolledToLastSeen.current) {
+    const timer = setTimeout(() => {
+      seenManager.scrollToLastSeen();
+      hasScrolledToLastSeen.current = true;
+    }, 200); // slight delay to allow DOM render
 
-  return () => clearTimeout(timer);
+    return () => clearTimeout(timer);
+  }
 }, [chatId, seenManager.lastSeenMessage, messages]);
+
+useEffect(() => {
+  if (!containerRef?.current) return;
+
+  const container = containerRef.current;
+  container.addEventListener('scroll', seenManager.onContainerScroll);
+
+  return () => {
+    container.removeEventListener('scroll', seenManager.onContainerScroll);
+  };
+}, [containerRef, seenManager.onContainerScroll]);
 
   // Expose scroll functions to parent
   useEffect(() => {

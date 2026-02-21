@@ -12,6 +12,7 @@ import axios from "../utils/axiosBase";
 import { FaArrowDown } from "react-icons/fa";
 import ChatMessagesSkeleton from "./skeleton/ChatMessagesSkeleton";
 import "../styles/message.css";
+import { defined } from "three/src/nodes/tsl/TSLCore.js";
 
 const GlobalPipModal = () => {
     const navigate = useNavigate();
@@ -163,26 +164,24 @@ const GlobalPipModal = () => {
     };
 
     // Handle scroll
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-            setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 10);
-        }
-    };
+   const handleScroll = () => {
+  if (!scrollRef.current) return;
+  const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
 
-    // Auto-scroll when new messages arrive
+  // 20px threshold so small scrolls don't trigger auto-scroll
+  const atBottom = scrollTop + clientHeight >= scrollHeight - 20;
+  setIsAtBottom(atBottom);
+};
+
+
     useEffect(() => {
-        if (!pipOpen || !activeChatId || activeChatHistory.length === 0) return;
+  if (!pipOpen || !activeChatId || activeChatHistory.length === 0) return;
 
-        const lastMessage = activeChatHistory[activeChatHistory.length - 1];
-        const sentByMe = lastMessage?.from_user_id === user?._id;
-
-        if (sentByMe) {
-            requestAnimationFrame(() => scrollToBottom());
-        } else if (isAtBottom) {
-            requestAnimationFrame(() => scrollToBottom());
-        }
-    }, [activeChatHistory, pipOpen, activeChatId, isAtBottom, user?._id]);
+  // Only auto-scroll if user was at the bottom
+  if (isAtBottom) {
+    requestAnimationFrame(() => scrollToBottom());
+  }
+}, [activeChatHistory, pipOpen, activeChatId]); // remove user?._id and isAtBottom from deps
 
     // Send message
     const handleSend = async () => {
@@ -310,25 +309,45 @@ const GlobalPipModal = () => {
             setAudioStream(null);
         }
     };
+    // Add this inside your GlobalPipModal component
+useEffect(() => {
+  if (pipOpen) {
+    const MODAL_WIDTH = 360; // same as your modal width
+    setPosition(pos => ({
+      x: window.innerWidth - MODAL_WIDTH - 39, // start at right
+      y: 20, // start near top
+    }));
+  }
+}, [pipOpen]);
 
     if (!pipOpen || !activeChatId) return null;
+    
+
 
     return (
-        <>
-            <div
-                ref={modalRef}
-                className="modal-glass"
-                style={{
-                    position: 'fixed',
-                    bottom: position.y > 0 ? 'auto' : '1.5rem',
-                    right: position.x !== 0 ? 'auto' : '1.5rem',
-                    left: position.x !== 0 ? `${position.x}px` : 'auto',
-                    top: position.y > 0 ? `${position.y}px` : 'auto',
-                    cursor: isDragging ? 'grabbing' : 'grab',
-                    transform: 'translate(0, 0)',
-                }}
-                onMouseDown={handleMouseDown}
-            >
+ <>
+    <div
+      style={{
+        position: "fixed", // fixed to viewport
+        right: 0,
+        top: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 99950, // ensures it’s on top
+      }}
+    >
+
+<div
+  ref={modalRef}
+  className="modal-glass"
+  style={{
+    position: "absolute",
+    left: position.x,
+    top: position.y,
+    cursor: isDragging ? "grabbing" : "grab",
+  }}
+  onMouseDown={handleMouseDown}
+>
                 <div className="modal-glass-header">
                     <div className="relative">
                         <ProfileAvatar user={activeUser} size={42} />
@@ -336,7 +355,7 @@ const GlobalPipModal = () => {
                     </div>
                     <p className="text-sm font-bold truncate">{activeUser?.username}</p>
                     <button
-                        onClick={() => navigate(`/chatbox/${activeChatId}`)}
+                        onClick={() => {navigate(`/chatbox/${activeChatId}`);closePipModal()}}
                         className="p-1 rounded-full hover:bg-gray-200 transition absolute right-8"
                         title="Maximize"
                     >
@@ -505,26 +524,45 @@ const GlobalPipModal = () => {
                         )}
                     </div>
                 </div>
+{/* Scroll to Bottom Button */}
+{!isAtBottom && (
+<button
+  onClick={() => scrollToBottom(true)}
+  className="scroll-to-bottom-btn"
+  style={{
+    position: "absolute",
+    bottom: "80px",
+    right: "20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    padding: "10px 14px",
+    borderRadius: "50px",
+    backgroundColor: "rgba(255, 255, 255, 0.85)", // semi-transparent glass
+    backdropFilter: "blur(10px)", // blur background
+    WebkitBackdropFilter: "blur(10px)",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.25)", // stronger shadow
+    color: "#111",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s ease-in-out",
+    zIndex: 100,
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.85)";
+    e.currentTarget.style.transform = "translateY(-2px)";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.75)";
+    e.currentTarget.style.transform = "translateY(0)";
+  }}
+>
+  <FaArrowDown size={18} strokeWidth={3} />
+</button>)}
             </div>
 
-            {/* Scroll to bottom button */}
-            {!isAtBottom && (
-                <button
-                    onClick={() => {
-                        requestAnimationFrame(() => scrollToBottom());
-                    }}
-                    className="fixed bottom-35 right-8 flex items-center justify-center w-8 h-8 rounded-full shadow-xl transition-all duration-300 z-50 cursor-pointer border border-white/40 hover:scale-110 active:scale-95"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.2)",
-                        backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)",
-                        boxShadow: "0 20px 32px 0 rgba(31, 38, 135, 0.65)",
-                        border: "1px solid rgba(105, 105, 105, 0.58)",
-                    }}
-                >
-                    <FaArrowDown size={10} className="text-gray-800 drop-shadow-sm" />
-                </button>
-            )}
+
 
             {/* Media Viewer */}
             {mediaViewerOpen && (
@@ -536,6 +574,7 @@ const GlobalPipModal = () => {
                     onClose={() => setMediaViewerOpen(false)}
                 />
             )}
+            </div>
         </>
     );
 };
