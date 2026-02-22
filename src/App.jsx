@@ -38,6 +38,8 @@ import Spinning3DSphere from './component/Spinning3DSphere';
 import LandingPage from './pages/LandingPage';
 import CommunityPage from './pages/CommunityPage';
 import AboutPage from './pages/AboutPage';
+import CallContainer from './component/CallUI/CallContainer';
+import GlobalPipModal from './component/GlobalPipModal';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location = useLocation();
@@ -47,15 +49,126 @@ const App = () => {
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthText, setOauthText] = useState("Loading…");
 
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  }
+
   useEffect(() => {
     const loading = sessionStorage.getItem("oauth_loading");
     const text = sessionStorage.getItem("oauth_text");
+
+    // Check if service worker is supported
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js') // sw.js in public folder
+        .then(registration => {
+          console.log('Service Worker registered:', registration);
+        })
+        .catch(err => {
+          console.error('Service Worker registration failed:', err);
+        });
+
+      // Listen for messages from service worker (notification deep linking)
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('📬 App received message from SW:', event.data);
+        
+        if (event.data && event.data.type) {
+          switch (event.data.type) {
+            case 'SCROLL_TO_MESSAGE':
+              // Handle scroll to message from notification click
+              console.log('📬 Need to scroll to message:', event.data.messageId);
+              // Store the message ID to scroll to after chat loads
+              sessionStorage.setItem('scrollToMessage', event.data.messageId);
+              break;
+            case 'REPLY_TO_MESSAGE':
+              // Handle reply intent
+              console.log('📬 Need to reply to message:', event.data.messageId);
+              sessionStorage.setItem('replyToMessage', event.data.messageId);
+              break;
+            case 'MARK_READ':
+              // Handle mark read
+              console.log('📬 Need to mark as read:', event.data.messageId);
+              break;
+            default:
+              console.log('📬 Unknown message type:', event.data.type);
+          }
+        }
+      });
+    }
 
     if (loading === "true") {
       setOauthLoading(true);
       setOauthText(text || "Loading…");
     }
   }, []);
+
+
+
+  const PUBLIC_VAPID_KEY = import.meta.env.VITE_PUBLIC_VAPID_KEY
+
+const requestNotificationPermission = async () => {
+  if (window.Notification.permission === 'granted') {
+    subscribeUserToPush();
+    return;
+  }
+
+  if (window.Notification.permission === 'denied') {
+    console.log('User has blocked window.notifications ❌');
+    return;
+  }
+
+  const permission = await window.Notification.requestPermission();
+
+  if (permission === 'granted') {
+    subscribeUserToPush();
+  }
+};
+
+useEffect(() => {
+  if (!user) return;
+  if (!PUBLIC_VAPID_KEY) {
+    console.error("Missing VAPID key");
+    return;
+  }
+
+  requestNotificationPermission();
+}, [user]);
+
+
+const subscribeUserToPush = async () => {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+
+    // Check if already subscribed
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+      });
+    }
+
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(subscription.toJSON()),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    console.log('User subscribed to push notifications ✅');
+
+  } catch (err) {
+    console.error('Failed to subscribe the user: ', err);
+  }
+};
+
   const toTitleCase = (str) => {
     return str
       ?.toLowerCase()
@@ -93,7 +206,7 @@ const App = () => {
     return () => (document.body.style.overflow = 'auto');
   }, [modalOpen, user]);
   return (
-    <>
+    <CallContainer user={user}>
       <Helmet>
         <title>SpringsConnect - Newsprings Youth</title>
         <meta name="description" content="Connect spiritually, share scriptures, and grow with SpringsConnect." />
@@ -106,6 +219,9 @@ const App = () => {
       <AppInstallPrompt />
       <GlobalAudioModal />
       {oauthLoading && <Loading text={oauthText} />}
+
+      {/* Global PiP Modal - renders outside of RightSidebar */}
+      <GlobalPipModal />
 
       <Routes>
 
@@ -154,7 +270,7 @@ const App = () => {
         <Route path="*" element={<NotFound />} />
 
       </Routes>
-    </>
+    </CallContainer>
   );
 };
 

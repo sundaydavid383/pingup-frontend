@@ -207,27 +207,13 @@ if (connRes.status === 'fulfilled') {
     socket.off("newMessageNotification");
     socket.off("messageRead");
 
-    socket.on("newMessageAlert", handleNewMessage);
+    // Use only one event to avoid duplicates - newMessageNotification is the primary
     socket.on("newMessageNotification", handleNewMessage);
     socket.on("messageRead", handleMessageRead);
 
-    const handleFrontendAlert = (e) => {
-      const detail = e?.detail;
-      if (!detail) return;
-      processIncoming({
-        from_user_id: detail.from_user_id || detail.from,
-        to_user_id: detail.to_user_id || detail.to,
-        message: detail.message || detail,
-      });
-    };
-
-    window.addEventListener("newMessageAlert", handleFrontendAlert);
-
     return () => {
-      socket.off("newMessageAlert", handleNewMessage);
       socket.off("newMessageNotification", handleNewMessage);
       socket.off("messageRead", handleMessageRead);
-      window.removeEventListener("newMessageAlert", handleFrontendAlert);
     };
   }, [socket, addUnread, clearUnread, user._id]);
 
@@ -268,6 +254,36 @@ const filteredConnections = sortedConnections.filter((usr) => {
   const borderColor = `rgba(${255 - Math.floor((syncProgress / 100) * 255)}, ${Math.floor(
     (syncProgress / 100) * 255
   )}, 50, 1)`;
+
+  // 🔎 Highlight matching text like WhatsApp
+const highlightMatch = (text, term) => {
+  if (!term || !text) return text;
+
+  const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex
+  const regex = new RegExp(`(${escapedTerm})`, "gi");
+
+  const parts = text.split(regex);
+
+  return parts.map((part, index) =>
+    regex.test(part) ? (
+      <span
+        key={index}
+        style={{
+          backgroundColor: "rgba(139, 92, 246, 0.25)", // soft violet
+          color: "var(--primary)",
+          fontWeight: 600,
+          borderRadius: "4px",
+          padding: "0 2px"
+        }}
+      >
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+};
+
 
   return (
     <div className="min-h-screen w-full flex bg-slate-50 overflow-hidden relative">
@@ -381,11 +397,12 @@ const filteredConnections = sortedConnections.filter((usr) => {
 
                   <div className="flex-1 min-w-0">
                     <p className="text-[var(--primary)] truncate">
-                      @{usr.username}
+                       @{highlightMatch(usr.username, searchTerm)}
                     </p>
-                    <p className="font-medium text-slate-700 truncate">
-                      {usr.full_name}
-                    </p>
+                    {/* <p className="font-medium text-slate-700 truncate">
+                      {highlightMatch(usr.name, searchTerm)}
+
+                    </p> */}
 
                     {last && (
                       <span

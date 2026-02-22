@@ -1,357 +1,328 @@
-/* -----------------------------
-   GLOBAL SAFETY RULES
------------------------------ */
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  height: 100%;
-}
+/* ===============================
+   CHATBOX MAIN LAYOUT
+   =============================== */
 
-/* -----------------------------
-   MAIN CHATBOX LAYOUT (WhatsApp-style)
------------------------------ */
+/* Chat container wrapper */
 .chatbox-wrapper {
   position: relative;
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--color-6);
-  overflow-x: hidden;
-  overflow-y: auto;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 }
 
+/* Ensure proper flex layout for header, messages, input */
+.chatbox-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
 
-/* -----------------------------
-   HEADER (STICKY)
------------------------------ */
+/* ===============================
+   CHAT HEADER - Sticky at top within flex container
+   =============================== */
+.chatbox-header-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  background: var(--color-6);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  height: 60px;
+}
 
-
-
-/* -----------------------------
-   MESSAGES AREA - WhatsApp-style background that scrolls with messages
------------------------------ */
+/* ===============================
+   MESSAGES AREA - Scrollable middle
+   =============================== */
 .chatbox-messages {
   flex: 1;
-  width: 100%;
-  max-width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 100px;
-  
-  /* WhatsApp-style warm background color */
-  background-color: #efe8dd;
-  
-  /* WhatsApp-style subtle pattern - diagonal lines */
+  /* Modern WhatsApp-style chat background with subtle pattern */
+  background-color: #f5f6f7;
   background-image: 
-    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20z' fill='%23000000' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #efe8dd 0%, #e5ded4 100%);
-  
+    radial-gradient(circle at 50% 50%, rgba(30, 64, 175, 0.02) 0%, transparent 50%),
+    linear-gradient(180deg, #f5f6f7 0%, #eceef1 100%);
   background-attachment: scroll;
   background-position: center top;
   background-repeat: repeat;
-  min-height: 100%;
+}
+
+/* Chat background pattern overlay - subtle dots like WhatsApp but customized */
+.chatbox-messages::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='32' height='32' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%231e40af' fill-opacity='0.04'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  z-index: 0;
+}
+
+/* Message container needs relative positioning for the pattern */
+.chatbox-messages > div {
   position: relative;
+  z-index: 1;
 }
 
-/* Responsive adjustments for different screen sizes */
-@media (max-width: 768px) {
-  .chatbox-messages {
-    background-image: 
-      url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20z' fill='%23000000' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E"),
-      linear-gradient(180deg, #efe8dd 0%, #e5ded4 100%);
-  }
+/* Empty state - centered */
+.chat-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 20px;
+  text-align: center;
 }
 
-@media (max-width: 480px) {
-  .chatbox-messages {
-    padding-bottom: 80px;
-    background-image: 
-      url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h30v30H0V0zm15 15h15v15H15V15z' fill='%23000000' fill-opacity='0.015' fill-rule='evenodd'/%3E%3C/svg%3E"),
-      linear-gradient(180deg, #f0e9de 0%, #e8e0d5 100%);
-  }
-}
-
-/* Ensure messages container has proper bottom padding */
-.messages-container {
-  padding-bottom: 80px; /* Prevent last message from being hidden behind input */
-}
-@media (max-width: 638px){
-  .mobilenav_intervention_inverse{
-    margin-top: .5rem;
-    height: 90%;
-  }
-}
-.image_composer{
-  background-color: red;
-}
-/* -----------------------------
-   FIXED INPUT BAR (WhatsApp-style)
------------------------------ */
+/* ===============================
+   CHAT INPUT - Sticky at bottom within flex container
+   =============================== */
 .chatbox-input {
   position: sticky;
   bottom: 0;
+  z-index: 100;
   flex-shrink: 0;
-  z-index: 50;
-  padding: 8px 8px;
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   background: var(--color-6);
+  padding: 8px 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
   border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+/* Input container - horizontal layout */
+.input-container {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  pointer-events: auto;
   width: 100%;
-  max-width: 100%;
 }
 
-/* Ensure children don't overflow */
-.chatbox-input > * {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-
-
-/* ensure children don't overflow the fixed container */
-.chatbox-input > div,
-.chatbox-input textarea,
-.chatbox-input button {
-  box-sizing: border-box;
-}
-
-.glassy-typing {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0.25rem 0.5rem; /* px-2 py-1 */
-  border-radius: 9999px; /* full pill */
-  
-  /* Glassy background */
-  background: rgba(233, 233, 233, 0.7); /* semi-transparent */
-  backdrop-filter: blur(8px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-
-  /* Inset shadow for depth */
-  box-shadow: inset 0 0px px rgb(255, 255, 255),
-              0 1px 3px rgba(0,0,0,0.1);
-
-  /* Text and transition */
-  color: var(--secondary);
-  font-size: 0.875rem; /* text-sm */
-  font-weight: 500;
-  transition: all 0.3s ease-in-out;
-}
-
-/* Typing dots animation */
-.typing-dots span {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  background-color: var(--secondary);
-  border-radius: 50%;
-  transform-origin: bottom;
-  animation: bounce 1.2s infinite ease-in-out;
-}
-
-.typing-dots span:nth-child(1) { animation-delay: 0s; }
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
-  40% { transform: translateY(-6px); opacity: 1; }
-}
-
-
-
-/* textarea specifics */
-.chatbox-input textarea {
-  width: 100%;
+/* Input field */
+.input-field {
+  flex: 1;
   min-height: 40px;
-  max-height: 120px;
-  resize: none;
-  border: none;
-  outline: none;
-  padding: 10px 12px;
+  max-height: 100px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 20px;
-  background: var(--input-bg, #fff);
-  color: var(--input-text-color, #000);
+  outline: none;
+  resize: none;
   font-size: 0.95rem;
-  box-sizing: border-box;
+  background: #fff;
+  color: #000;
+  line-height: 1.4;
 }
-@keyframes slideUp {
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0, 153, 255, 0.1);
+}
+
+/* Input controls - buttons row */
+.input-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Media button */
+.media-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.media-button:hover {
+  background: rgba(0,0,0,0.05);
+  color: var(--primary);
+}
+
+/* Send button */
+.send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.send-button:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.send-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   MEDIA DROPDOWN
+   =============================== */
+.media-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  overflow: hidden;
+  z-index: 200;
+  min-width: 160px;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
   from {
-    transform: translateY(40px);
     opacity: 0;
+    transform: translateY(8px);
   }
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.animate-slideUp {
-  animation: slideUp 0.25s ease-out;
-}
-
-/* -----------------------------
-   RESPONSIVE BEHAVIOR
------------------------------ */
-/* Medium screens (if your app changes sidebar width) */
-@media (max-width: 1000px) {
-  .chatbox-wrapper { padding-bottom: 0; }
-  .chatbox-input { padding: 8px 8px; }
-}
-
-/* Small screens / mobile */
-@media (max-width: 600px) {
-  .chatbox-wrapper { padding-bottom: 0; }
-  .chatbox-input { left: 0 !important; right: 0 !important; width: auto !important; padding: 8px 6px; }
-}
-
-/* -----------------------------
-   MAIN CHATBOX LAYOUT (WhatsApp-style)
------------------------------ */
-.chatbox-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  max-width: 100%;
-  background: var(--bg-main, #fff);
-  box-sizing: border-box;
-  overflow: hidden; /* hide overflow, messages will scroll inside */
-}
-
-/* -----------------------------
-   HEADER (STICKY)
------------------------------ */
-.chatbox-wrapper {
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.chatbox-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  flex-shrink: 0;
-}
-
-
-/* -----------------------------
-   MESSAGES AREA
------------------------------ */
-.chatbox-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* -----------------------------
-   INPUT BAR (INLINE FLEX)
------------------------------ */
-.chatbox-input {
-  flex-shrink: 0;          /* don’t shrink */
-  width: 100%;
+.media-dropdown label {
   display: flex;
   align-items: center;
-  padding: 6px 12px;
-  gap: 0.5rem;
-  box-sizing: border-box;
-  background: rgba(230, 227, 227, 0.95);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
-  border-left: none; /* remove left border */
-  border-right: none; /* remove right border */
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #333;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
 }
 
-/* -----------------------------
-   TEXTAREA
------------------------------ */
-.chatbox-input textarea {
-  flex: 1;
-  min-height: 40px;
-  max-height: 120px;
-  resize: none;
-  border: none;
-  outline: none;
-  border-radius: 20px;
-  padding: 10px 12px;
-  background: var(--input-bg, #fff);
-  color: var(--input-text-color, #000);
-  font-size: 0.95rem;
+.media-dropdown label:hover {
+  background: rgba(0, 153, 255, 0.08);
+  color: var(--primary);
 }
 
-/* -----------------------------
-   RESPONSIVE
------------------------------ */
-@media (max-width: 600px) {
-  .chatbox-wrapper { padding-bottom: 0; }
-  .chatbox-input { padding: 8px 6px; }
-}
-
-/* HTML: <div class="loader"></div> */
-.loader {
-  width: 100px;
+/* ===============================
+   SCROLL TO BOTTOM BUTTON
+   =============================== */
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 90px;
+  right: 20px;
+  z-index: 90;
+  width: 40px;
   height: 40px;
-  --g: radial-gradient(farthest-side,#0000 calc(95% - 3px),#0099ff calc(100% - 3px) 98%,#0000 101%) no-repeat;
-  background: var(--g), var(--g), var(--g);
-  background-size: 30px 30px;
-  animation: l9 1s infinite alternate;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+  opacity: 0.9;
 }
-@keyframes l9 {
+
+.scroll-to-bottom-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.scroll-to-bottom-btn:active {
+  transform: scale(0.95);
+}
+
+.scroll-to-bottom-btn.hidden {
+  display: none;
+}
+
+/* Floating scroll-to-bottom button - always visible, fixed position */
+.scroll-to-bottom-floating-btn {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+/* Animation for unread badge */
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.scroll-to-bottom-floating-btn .animate-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* ===============================
+   MESSAGE HIGHLIGHT
+   =============================== */
+@keyframes messageHighlight {
   0% {
-    background-position: 0 50%, 50% 50%, 100% 50%;
-  }
-  20% {
-    background-position: 0 0, 50% 50%, 100% 50%;
-  }
-  40% {
-    background-position: 0 100%, 50% 0, 100% 50%;
-  }
-  60% {
-    background-position: 0 50%, 50% 100%, 100% 0;
-  }
-  80% {
-    background-position: 0 50%, 50% 50%, 100% 100%;
+    background-color: rgba(0, 153, 255, 0.3);
   }
   100% {
-    background-position: 0 50%, 50% 50%, 100% 50%;
+    background-color: transparent;
   }
 }
 
-/* ==================================================
-   ENHANCED WHATSAPP-STYLE INPUT STYLING
-   ================================================== */
+.message-highlight {
+  animation: messageHighlight 1.5s ease-out forwards;
+}
 
-/* Reply bar styling */
+/* Legacy highlight */
+.highlight-scroll {
+  animation: highlightFade 1.5s ease forwards;
+  background-color: rgba(255, 255, 0, 0.4);
+}
+
+@keyframes highlightFade {
+  0% { background-color: rgba(255, 255, 0, 0.4); }
+  100% { background-color: transparent; }
+}
+
+/* ===============================
+   REPLY BAR
+   =============================== */
 .reply-bar {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   margin-bottom: 6px;
-  border-left: 3px solid var(--primary, #0099ff);
+  border-left: 3px solid var(--primary);
   border-radius: 8px;
-  background: linear-gradient(135deg, 
-    rgba(0, 153, 255, 0.08) 0%, 
-    rgba(0, 153, 255, 0.04) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  min-height: 50px;
-  animation: slideDownIn 0.25s ease-out;
+  background: rgba(0, 153, 255, 0.05);
+  animation: slideDownIn 0.2s ease;
 }
 
 @keyframes slideDownIn {
@@ -367,53 +338,41 @@ html, body {
 
 .reply-bar-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   min-width: 0;
 }
 
 .reply-bar-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--primary, #0099ff);
+  color: var(--primary);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  margin-bottom: 2px;
 }
 
 .reply-bar-text {
   font-size: 13px;
-  line-height: 1.3;
-  color: var(--secondary, #fff);
-  word-break: break-word;
-  white-space: pre-wrap;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  color: #666;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .reply-bar-close {
   flex-shrink: 0;
   padding: 4px;
   cursor: pointer;
-  color: var(--secondary, #fff);
-  opacity: 0.6;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: #999;
+  transition: color 0.2s;
 }
 
 .reply-bar-close:hover {
-  opacity: 1;
-  transform: scale(1.1);
+  color: #333;
 }
 
-/* Image preview styling */
+/* ===============================
+   IMAGE PREVIEW
+   =============================== */
 .image-preview {
   position: relative;
   display: inline-block;
@@ -422,753 +381,224 @@ html, body {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   margin-bottom: 8px;
-  animation: scaleIn 0.25s ease-out;
+  animation: scaleIn 0.2s ease;
 }
 
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .image-preview img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 
 .image-preview-remove {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
   background: #ff4444;
-  border: 2px solid white;
+  border: 2px solid #fff;
   border-radius: 50%;
-  color: white;
+  color: #fff;
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
 }
 
 .image-preview-remove:hover {
   background: #ff2222;
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
-/* Input field styling - WhatsApp like */
-.input-field {
-  flex: 1;
-  min-width: 0;
-  min-height: 40px;
-  max-height: 100px;
-  resize: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  outline: none;
-  border-radius: 20px;
-  padding: 10px 16px;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  background-color: #ffffff !important; /* Always solid white - force override */
-  color: #000000;
-  font-family: inherit;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  -webkit-overflow-scrolling: touch;
-  box-sizing: border-box;
-  /* Remove default browser focus styling - keep clean and neutral */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-.input-field:focus {
-  border-color: rgba(0, 0, 0, 0.15);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  background-color: #ffffff !important; /* Always solid white */
-  outline: none;
-  /* Remove any browser-default focus rings */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-.input-field:focus-visible {
-  outline: none;
-  border-color: rgba(0, 0, 0, 0.15);
-  /* Ensure no default focus ring */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-/* Also add important to any textarea in chatbox input */
-.chatbox-input textarea,
-.chatbox-input .input-field,
-.input-field {
-  background-color: #ffffff !important;
-  background: #ffffff !important;
-}
-
-.input-field::placeholder {
-  color: #999999;
-  opacity: 0.7;
-}
-
-.input-field::placeholder {
-  color: var(--input-placeholder, #999);
-  opacity: 0.7;
-}
-
-/* Input container styling */
-.input-container {
-  display: flex;
-  flex-direction: row; /* align items in a single row */
-  align-items: flex-end; /* make controls align to bottom of textarea */
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Controls row - buttons and actions */
-.input-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-  flex-shrink: 0; /* don't let controls shrink; keep them visible */
-}
-
-/* Input wrapper for the main input field and text area */
-.input-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0; /* allow textarea to shrink properly */
-  box-sizing: border-box;
-  position: relative;
-}
-
-/* Media buttons styling */
-.media-button,
-.send-button,
-.record-button {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 600;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-  position: relative;
-  overflow: hidden;
-  /* Prevent scroll on hover - use transform instead of margin/padding changes */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  /* Additional scroll prevention */
-  margin: 0 !important;
-  padding: 0 !important;
-  will-change: transform;
-}
-
-/* Fix hover behavior - prevent layout shift and scrolling */
-.media-button:hover,
-.send-button:hover,
-.record-button:hover {
-  transform: translateZ(0) scale(1.05);
-  /* Ensure no scroll triggers */
-  overflow: hidden;
-}
-
-.media-button:active,
-.send-button:active,
-.record-button:active {
-  transform: scale(0.95);
-}
-
-/* Media button wrapper for dropdown positioning */
-.media-button-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.media-button {
-  background: var(--input-accent, #6366f1);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
-}
-
-.media-button:hover {
-  background: var(--input-accent, #4f46e5);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-}
-
-.media-button:active {
-  transform: scale(0.95);
-}
-
-.send-button {
-  background: var(--input-accent, #6366f1);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
-}
-
-/* Force send icon to use theme secondary color (lucide uses currentColor) */
-.send-button svg,
-.send-button .lucide {
-  color: var(--secondary, #ffffff) !important;
-}
-
-.send-button:hover:not(:disabled) {
-  background: var(--input-accent, #4f46e5);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-}
-
-.send-button:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.send-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.record-button {
-  background: var(--input-accent, #6366f1);
-  color: white;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
-}
-
-.record-button:hover {
-  background: var(--input-accent, #4f46e5);
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
-}
-
-.record-button:active {
-  transform: scale(0.95);
-}
-
-/* Media dropdown styling - Fixed to prevent overflow */
-.media-dropdown {
-  position: absolute;
-  bottom: 48px;
-  right: 0;
-  min-width: 180px;
-  max-width: 220px;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  animation: slideUpDropdown 0.2s ease-out;
-  pointer-events: auto;
-}
-
-@media (max-width: 640px) {
-  .media-dropdown {
-    right: 0;
-    left: auto;
-    max-width: 200px;
-    bottom: 48px;
-    border-radius: 8px;
-  }
-}
-
-@keyframes slideUpDropdown {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.media-dropdown label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.media-dropdown label:hover {
-  background: var(--opaque-primary, rgba(99, 102, 241, 0.1));
-  color: var(--primary, #6366f1);
-}
-
-.media-dropdown label svg {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-}
-
-/* Recording bar styling - WhatsApp Style - Full Implementation */
-.recording-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  background: linear-gradient(90deg, #e8e8e8 0%, #f0f0f0 50%, #e8e8e8 100%);
-  border-radius: 24px;
-  min-height: 52px;
-}
-
-.recording-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Left side - Lock button (to lock recording) */
-.recording-lock {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 50%;
-  background: transparent;
-  color: #555;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.recording-lock:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.recording-lock svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Center section - Timer and Waveform */
-.recording-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-/* Timer display */
-.recording-timer {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ff3b30;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  min-width: 32px;
-  text-align: center;
-}
-
-/* Waveform - WhatsApp style horizontal bars */
-.recording-waveform {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  flex: 1;
-  min-width: 40px;
-  max-width: 120px;
-  height: 20px;
-}
-
-.recording-waveform .wave-bar {
-  width: 3px;
-  height: 100%;
-  background: #ff3b30;
-  border-radius: 2px;
-  animation: waveBounce 0.6s ease-in-out infinite;
-}
-
-.recording-waveform .wave-bar:nth-child(1) { animation-delay: 0s; }
-.recording-waveform .wave-bar:nth-child(2) { animation-delay: 0.08s; }
-.recording-waveform .wave-bar:nth-child(3) { animation-delay: 0.16s; }
-.recording-waveform .wave-bar:nth-child(4) { animation-delay: 0.24s; }
-.recording-waveform .wave-bar:nth-child(5) { animation-delay: 0.32s; }
-.recording-waveform .wave-bar:nth-child(6) { animation-delay: 0.4s; }
-.recording-waveform .wave-bar:nth-child(7) { animation-delay: 0.48s; }
-
-@keyframes waveBounce {
-  0%, 100% {
-    transform: scaleY(0.25);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-}
-
-/* Right side buttons container */
-.recording-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Delete button (X) - WhatsApp style */
-.recording-delete {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 50%;
-  background: #999;
-  color: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.recording-delete:hover {
-  background: #777;
-  transform: scale(1.05);
-}
-
-.recording-delete svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Pause button */
-.recording-pause {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border-radius: 50%;
-  background: #999;
-  color: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.recording-pause:hover {
-  background: #777;
-  transform: scale(1.05);
-}
-
-.recording-pause svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Send button - WhatsApp green style */
-.recording-send {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: 50%;
-  background: var(--primary, #6366f1);
-  color: white;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.recording-send:hover {
-  background: var(--primary-hover, #4f46e5);
-  transform: scale(1.05);
-}
-
-.recording-send svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Hide old progress bar styling */
-.recording-progress {
-  display: none;
-}
-
-/* Recording time (old class, keeping for compatibility) */
-.recording-time {
-  display: none;
-}
-
-/* Stop/Send button - keep for compatibility */
-.recording-stop {
-  display: none;
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .image-preview {
-    max-width: 100px;
+/* ===============================
+   RESPONSIVE DESIGN
+   =============================== */
+@media (max-width: 768px) {
+  /* No additional padding needed - sticky layout handles it */
+  .scroll-to-bottom-btn {
+    bottom: 85px;
+    right: 16px;
   }
   
   .media-dropdown {
-    max-width: 180px;
+    left: -60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chatbox-input {
+    padding: 6px 8px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
   
   .input-field {
+    padding: 8px 12px;
     font-size: 0.9rem;
   }
   
   .media-button,
-  .send-button,
-  .record-button {
+  .send-button {
     width: 36px;
     height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-  }
-  
-  .input-controls {
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-  
-  .reply-bar {
-    padding: 8px 10px;
-    min-height: 45px;
-  }
-  
-  .reply-bar-label {
-    font-size: 11px;
-  }
-  
-  .reply-bar-text {
-    font-size: 12px;
   }
 }
 
-/* Extra small screens */
-@media (max-width: 480px) {
-  .media-button,
-  .send-button,
-  .record-button {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
-  }
-  
-  .media-dropdown {
-    min-width: 160px;
-    max-width: 160px;
-    font-size: 12px;
-  }
-  
-  .media-dropdown label {
-    padding: 6px 10px;
-  }
-  
-  .input-field {
-    font-size: 0.85rem;
-    padding: 8px 12px;
-  }
-  
-  .input-container {
-    gap: 4px;
-  }
-}
-
-/* ==================================================
-   ADDITIONAL RESPONSIVE & EDGE CASE HANDLING
-   ================================================== */
-
-/* Landscape mode (height-based) */
-@media (max-height: 600px) and (orientation: landscape) {
-  .input-field {
-    max-height: 60px;
-  }
-
-  .image-preview {
-    max-width: 80px;
-  }
-
-  .reply-bar {
-    min-height: 40px;
-    padding: 6px 8px;
-  }
-}
-
-/* Very large screens (1400px+) */
-@media (min-width: 1400px) {
-  .input-container {
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .input-controls {
-    max-width: 100%;
-  }
-}
-
-/* Prevent layout shift when scrollbar appears/disappears */
-html {
-  overflow-y: scroll;
-}
-
-/* Ensure no horizontal scroll on any element */
-body, 
-#root,
-.chatbox-wrapper {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
-
-/* Smooth animations for content appearance */
-@keyframes inputExpand {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.input-container > * {
-  animation: inputExpand 0.2s ease-out;
-}
-
-/* Fix for touch devices */
-@media (hover: none) and (pointer: coarse) {
-  .media-button:active,
-  .send-button:active,
-  .record-button:active {
-    transform: scale(0.92);
-  }
-
-  .input-field {
-    font-size: 16px; /* Prevent zoom on iOS input focus */
-  }
-}
-
-/* Fix for browsers that support reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .reply-bar,
-  .image-preview,
-  .input-container > * {
-    animation: none;
-  }
-
-  .media-button,
-  .send-button,
-  .record-button,
-  .input-field {
-    transition: none;
-  }
-}
-
-/* Ensure input field doesn't have browser default styling */
-.input-field::-webkit-outer-spin-button,
-.input-field::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.input-field[type=number] {
-  -moz-appearance: textfield;
-}
-
-/* Additional focus style removal - ensure no blue border on any side */
-.input-field,
-.chatbox-input textarea,
-.chatbox-input input[type="text"],
-textarea.input-field {
-  /* Remove all default focus styling */
-  outline: none !important;
-  outline-offset: 0 !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-  appearance: none !important;
-  box-shadow: none !important;
-}
-
-/* But keep custom focus effect */
-.input-field:focus,
-.chatbox-input textarea:focus {
-  outline: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-  appearance: none !important;
-}
-
-/* Better focus states for accessibility */
-.media-button:focus-visible,
-.send-button:focus-visible,
-.record-button:focus-visible {
-  outline: 2px solid var(--primary, #6366f1);
-  outline-offset: 2px;
-}
-
-.input-field:focus-visible {
-  outline: none;
-}
-
-/* Support for dark mode if needed */
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .media-dropdown {
-    background: rgba(40, 40, 40, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #e0e0e0;
+    background: #2a2a2a;
   }
-
+  
   .media-dropdown label {
     color: #e0e0e0;
   }
-
+  
   .media-dropdown label:hover {
-    background: rgba(99, 102, 241, 0.2);
+    background: rgba(255,255,255,0.1);
   }
+  
+  .input-field {
+    background: #333;
+    color: #fff;
+    border-color: #444;
+  }
+}
+
+/* ===============================
+   AUDIO MESSAGE IMPROVEMENTS
+   =============================== */
+.fb-audio {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.fb-audio .play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.fb-audio .play-btn:hover {
+  transform: scale(1.05);
+}
+
+.fb-audio .progress-container {
+  flex: 1;
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.fb-audio .progress-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #d1d5db;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.fb-audio .progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.fb-audio .progress-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.fb-audio .time-display {
+  font-size: 11px;
+  color: #666;
+  min-width: 45px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ===============================
+   LOADING & SKELETON
+   =============================== */
+.loader {
+  width: 100px;
+  height: 40px;
+  --g: radial-gradient(farthest-side,#0000 calc(95% - 3px),#0099ff calc(100% - 3px) 98%,#0000 101%) no-repeat;
+  background: var(--g), var(--g), var(--g);
+  background-size: 30px 30px;
+  animation: l9 1s infinite alternate;
+}
+
+@keyframes l9 {
+  0% { background-position: 0 50%, 50% 50%, 100% 50%; }
+  20% { background-position: 0 0, 50% 50%, 100% 50%; }
+  40% { background-position: 0 100%, 50% 0, 100% 50%; }
+  60% { background-position: 0 50%, 50% 100%, 100% 0; }
+  80% { background-position: 0 50%, 50% 50%, 100% 100%; }
+  100% { background-position: 0 50%, 50% 50%, 100% 50%; }
+}
+
+/* ===============================
+   TYPING INDICATOR
+   =============================== */
+.typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 12px;
+}
+
+.typing-dots span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: #999;
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-6px); opacity: 1; }
 }

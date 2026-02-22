@@ -2,11 +2,10 @@ import React from "react";
 
 const ChatboxHeader = ({ sidebarOpen, sidebarWidth = 240, children }) => {
   const headerStyle = {
+    // Use sticky positioning to stay at top within the flex container
     position: "sticky",
     top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 40,
+    zIndex: 100,
     background: "var(--color-6)",
     boxSizing: "border-box",
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",

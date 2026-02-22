@@ -272,10 +272,12 @@ const CreatePost = () => {
       if (youtubePreview) {
         formData.append("youtubeVideoId", youtubePreview.videoId);
         formData.append("youtubeEmbedUrl", youtubePreview.embedUrl);
+        formData.append("youtubeType", youtubeType || 'url');
         if (isDev) console.log("YouTube Video ID:", youtubePreview.videoId);
+        if (isDev) console.log("YouTube Type:", youtubeType);
       }
 
-      if (isDev) console.log("FormData keys:", Array.from(formData.keys()));
+      if (isDev) console.log("FormData keys:", formData);
 
       const res = await axios.post(
         `${import.meta.env.VITE_SERVER}api/posts/add`,
@@ -301,6 +303,7 @@ const CreatePost = () => {
       );
 
       if (isDev) console.log("Response status:", res.status, "Data:", res.data);
+ X
 
       if (res.status >= 200 && res.status < 300) {
         showAlert("✅ Post published successfully!", "success");

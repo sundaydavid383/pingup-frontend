@@ -57,11 +57,11 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
 
       {/* Sidebar container */}
       <div
-        className={`fixed top-0 left-0 z-[50] flex flex-col justify-between
+        className={`fixed top-0 left-0 z-[50] flex flex-col
           transition-all duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isMessageTab || isSettingsTab || isProfileTab ? 'w-20' : 'w-52 md:w-56 lg:w-60'} 
-          h-screen
+          h-screen overflow-hidden
         `}
         style={{
           backgroundColor: 'var(--form-bg)',
@@ -77,7 +77,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
           onClick={() => setSidebarOpen(false)}
         />
 
-        <div className={`w-full pt-4 pb-6 flex-1 flex flex-col ${isMessageTab || isSettingsTab || isProfileTab ? 'items-center px-2' : 'px-4'}`}>
+        <div className={`w-full pt-4 pb-2 flex-1 flex flex-col overflow-y-auto ${isMessageTab || isSettingsTab || isProfileTab ? 'items-center px-2' : 'px-4'}`}>
           <img
             onClick={() => navigate('/')}
             src={assets.logo}
@@ -99,7 +99,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
           </Link>
         </div>
 
-        <div className={`w-full border-t border-[var(--input-border)] py-4 ${isMessageTab || isSettingsTab || isProfileTab ? 'px-2 flex justify-center' : 'px-7'}`}>
+        <div className={`w-full border-t border-[var(--input-border)] py-2 flex-shrink-0 ${isMessageTab || isSettingsTab || isProfileTab ? 'px-2 flex justify-center' : 'px-4'}`}>
           <UserProfileButton user={user} isCollapsed={isMessageTab} />
         </div>
       </div>

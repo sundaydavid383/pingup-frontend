@@ -9,7 +9,7 @@
 }
 body{
    overflow-x: hidden;
-   overflow-y: scroll;
+   overflow-y: auto;
 }
 .bottomnine{
   bottom: -57px;
@@ -35,6 +35,7 @@ input, textarea, select {
   --opaque-primary: rgba(18, 73, 253, 0.6);
   --glassy-white: rgba(232, 228, 228, 0.4);
   --really-bright-glass: rgba(255, 255, 255, 0.4);
+  --white-glass: rgba(255, 255, 255, 0.8);
 
   /* Animations */
   --animate-spin-slow: spin 3s linear infinite;

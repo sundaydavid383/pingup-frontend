@@ -157,7 +157,7 @@ useEffect(() => {
         cursor: "grab",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
-        backgroundColor: "var(--really-bright-glass)",
+        backgroundColor: "var(--white-glass)",
         boxShadow: "0 0px 10px 0 rgba(31, 38, 135, 0.37)",
         touchAction: "pan-y"
         

@@ -25,6 +25,8 @@ import ChatboxInput from "../component/shared/ChatboxInput";
 import MediaDropdown from "../component/MediaDropdown";
 import HeaderArrow from "../component/shared/HeaderArrow";
 import ImageComposer from "../component/shared/ImageComposer";
+import { CallContext, CALL_TYPES } from "../context/CallContext";
+import { Phone, Video } from "lucide-react";
 
 
 
@@ -32,6 +34,7 @@ import ImageComposer from "../component/shared/ImageComposer";
 
 
 const ChatBox = ({ userId: propUserId }) => {
+  const { initiateCall } = React.useContext(CallContext);
   const [replyTo, setReplyTo] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -139,8 +142,16 @@ const ChatBox = ({ userId: propUserId }) => {
 
   // Scroll-to-bottom when clicking the scroll button
   const scrollToMessage = (messageId) => {
-    if (!containerRef.current) return;
-    const messageEl = containerRef.current.querySelector(`[data-message-id="${messageId}"]`);
+    console.log("📬 ChatBox: scrollToMessage called with", messageId);
+    
+    // Try first with getElementById (most reliable)
+    let messageEl = document.getElementById(`msg_${messageId}`);
+    
+    // If not found, try with querySelector on container
+    if (!messageEl && containerRef.current) {
+      messageEl = containerRef.current.querySelector(`[data-message-id="${messageId}"]`);
+    }
+    
     if (messageEl) {
       messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // Add a temporary highlight effect
@@ -148,6 +159,9 @@ const ChatBox = ({ userId: propUserId }) => {
       setTimeout(() => {
         messageEl.classList.remove('message-highlight');
       }, 2000);
+      console.log("📬 ChatBox: Message found and scrolling to", messageId);
+    } else {
+      console.log("📬 ChatBox: Message element not found for", messageId);
     }
   };
 
@@ -156,11 +170,13 @@ const ChatBox = ({ userId: propUserId }) => {
   const scrollToReplyMessage = useCallback(async (replyToMessage) => {
     if (!containerRef.current || !replyToMessage || !replyToMessage._id) return;
 
+    console.log("📬 ChatBox: scrollToReplyMessage called with", replyToMessage._id);
+
     const replyId = replyToMessage._id;
     const container = containerRef.current;
 
     // First, check if the message is already in the DOM
-    let messageEl = container.querySelector(`[data-message-id="${replyId}"]`);
+    let messageEl = container.querySelector(`[data-message-id="${replyId}"]`) || document.getElementById(`msg_${replyId}`);
 
     if (messageEl) {
       // Message exists in DOM - scroll to it with highlight
@@ -267,18 +283,29 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // ===================== NEAR BOTTOM SCROLL DETECTION =====================
-
-
+  // Ref to track if user is near bottom (used for scroll button visibility)
   const isUserNearBottomRef = useRef(true);
+  // Ref to track if user is actively scrolling (to prevent auto-scroll bounce)
+  const isUserScrollingRef = useRef(false);
+  // Timeout ref for debouncing scroll stop
+  const scrollActivityTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
 
     const checkNearBottom = () => {
+      // Use a smaller threshold - show button when user scrolls just a few pixels away
+      // This ensures the button appears quickly when user scrolls up
+      const threshold = 50; // pixels from bottom to consider "near"
       const scrollPosition = container.scrollTop + container.clientHeight;
-      const threshold = 150; // px from bottom to consider "near"
-      isUserNearBottomRef.current = scrollPosition >= container.scrollHeight - threshold;
+      const scrollHeight = container.scrollHeight;
+
+      // User is near bottom if they're within threshold of the bottom
+      isUserNearBottomRef.current = scrollPosition >= scrollHeight - threshold;
+
+      // Show scroll button when NOT near bottom (i.e., user has scrolled up)
       setShowScrollButton(!isUserNearBottomRef.current);
     };
 
@@ -294,6 +321,19 @@ const ChatBox = ({ userId: propUserId }) => {
     const el = containerRef.current;
 
     const handleScroll = () => {
+      // Mark that user is actively scrolling
+      isUserScrollingRef.current = true;
+      
+      // Clear any existing timeout
+      if (scrollActivityTimeoutRef.current) {
+        clearTimeout(scrollActivityTimeoutRef.current);
+      }
+      
+      // Set a timeout to mark scrolling as stopped after user stops for 300ms
+      scrollActivityTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 300);
+
       const currentTop = el.scrollTop;
 
       const isDown = currentTop > lastScrollTop.current;
@@ -317,6 +357,7 @@ const ChatBox = ({ userId: propUserId }) => {
     return () => {
       el.removeEventListener("scroll", handleScroll);
       if (scrollStopTimeout.current) clearTimeout(scrollStopTimeout.current);
+      if (scrollActivityTimeoutRef.current) clearTimeout(scrollActivityTimeoutRef.current);
     };
   }, []);
 
@@ -799,14 +840,13 @@ const ChatBox = ({ userId: propUserId }) => {
       sortedMessages.length > 0 &&
       !hasInitialScrolledRef.current
     ) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: "auto", // instant, no animation
-      });
-
-      hasInitialScrolledRef.current = true; // 🔒 lock it forever
+      // Let ChatMessagesFull handle initial scroll to last seen message
+      // This ensures we scroll to the correct position after seenManager fetches last seen
+      hasInitialScrolledRef.current = true;
     }
   }, [loading, sortedMessages.length]);
+
+  // Auto-scroll to bottom when new messages are added\n  useEffect(() => {\n    if (containerRef.current && sortedMessages.length > 0) {\n      // Only auto-scroll if user is NOT actively scrolling - prevents bounce\n      if (isUserScrollingRef.current) {\n        return;\n      }\n      \n      const container = containerRef.current;\n      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;\n      \n      if (isNearBottom) {\n        containerRef.current.scrollTo({\n          top: containerRef.current.scrollHeight,\n          behavior: "smooth"\n        });\n      }\n    }\n  }, [sortedMessages]);
 
 
   // //================disconnect user================
@@ -830,11 +870,6 @@ const ChatBox = ({ userId: propUserId }) => {
   }, [onlineUsers, receiver]);
 
 
-  //=[==============================
-  // =====SCROLL TO BOTTOM ON FIRST LOAD=
-  // =============================
-  // ===================================]
-
   // Scroll to bottom on initial load
   useEffect(() => {
     if (containerRef.current && sortedMessages.length > 0) {
@@ -842,12 +877,8 @@ const ChatBox = ({ userId: propUserId }) => {
     }
   }, [sortedMessages]);
 
-
-  //======================================
   //========================================RETURN HEADER
   //===========================================
-  //=================================================
-  // Determines what header/content to show based on current state
   const renderHeader = () => {
     if (loading) {
       return (
@@ -904,6 +935,48 @@ const ChatBox = ({ userId: propUserId }) => {
           </div>
         </div>
         <div className="flex items-center gap-2 relative">
+          {/* Audio Call Button - WhatsApp Style */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("🎙️ Audio Call Button Clicked!");
+              console.log("📋 Receiver Info:", receiver);
+              console.log("📋 CallContext:", { initiateCall });
+              if (receiver?._id) {
+                console.log("✅ Calling audio to:", receiver._id, receiver.name);
+                initiateCall(receiver._id, receiver.name, CALL_TYPES.AUDIO, receiver.profile_picture);
+              } else {
+                console.error("❌ No receiver ID found!");
+              }
+            }}
+            className="p-2.5 rounded-full transition-all duration-200 hover:bg-green-100 active:scale-90 text-green-600"
+            aria-label="Audio call"
+            title="Voice call"
+          >
+            <Phone size={20} />
+          </button>
+
+          {/* Video Call Button - WhatsApp Style */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("📹 Video Call Button Clicked!");
+              console.log("📋 Receiver Info:", receiver);
+              console.log("📋 CallContext:", { initiateCall });
+              if (receiver?._id) {
+                console.log("✅ Calling video to:", receiver._id, receiver.name);
+                initiateCall(receiver._id, receiver.name, CALL_TYPES.VIDEO, receiver.profile_picture);
+              } else {
+                console.error("❌ No receiver ID found!");
+              }
+            }}
+            className="p-2.5 rounded-full transition-all duration-200 hover:bg-green-100 active:scale-90 text-green-600"
+            aria-label="Video call"
+            title="Video call"
+          >
+            <Video size={20} />
+          </button>
+
           {/* Three-dot button */}
           <button
             onClick={(e) => {
@@ -1160,35 +1233,102 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // =========================== RETURN UI =========================== 
+  // Fixed heights for header and input to ensure consistent layout
+  const HEADER_HEIGHT = 60;
+  const INPUT_HEIGHT = 90; // Account for input height + safe area insets + border radius
+
+  // State to track visual viewport height (for mobile keyboard handling)
+  // State to track visual viewport height (for mobile keyboard handling)
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateHeight = () => {
+      if (window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      } else {
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    // Set initial height
+    updateHeight();
+
+    // Listen for visual viewport resize (mobile keyboard)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateHeight);
+    }
+
+    // Fallback window resize
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", updateHeight);
+      }
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
+
+  // Handle visual viewport changes (mobile keyboard appearance)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleVisualViewportChange = () => {
+      if (window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      }
+    };
+
+    // Also listen for window resize as fallback
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleVisualViewportChange);
+    }
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleVisualViewportChange);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   return (
     <div
       ref={chatContainerRef}
-      className="chatbox-wrapper flex flex-col w-full overflow-hidden bg-[var(--bg-main)]"
+      className="chatbox-container"
       style={{
-        height: "100dvh", // Dynamic viewport height for mobile browsers
-        maxHeight: "100dvh",
-        minHeight: "100dvh",
+        position: "relative",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-
-
-
+      {/* Header - sticky at top within flex container */}
       <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
         {renderHeader()}
       </ChatboxHeader>
+
+      {/* Messages Container - scrollable area between header and input */}
       <div
         ref={containerRef}
-        className="flex-1 flex flex-col chatbox-wrapper 
-          chatbox-messages bg-[var(--input-chatbox-bg-gradient)] overflow-y-auto"
+        className="chatbox-messages flex-1 overflow-y-auto"
         style={{
-          background: "var(--input-chatbox-bg-gradient)",
-          color: "var(--input-text-color)",
-          paddingTop: "60px",
-          paddingBottom: "100px",
+          flex: 1,
           overflowY: "auto",
           WebkitOverflowY: "auto",
           overscrollBehavior: "contain",
-        }}>
+          scrollBehavior: "smooth",
+        }}
+      >
         {loading ?
           (
             <div className="flex flex-col min-h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
@@ -1290,21 +1430,22 @@ const ChatBox = ({ userId: propUserId }) => {
           : receiver && sortedMessages.length === 0 ?
             (
               <>
-                {/* Top bar */}
-
-                {/* Empty state */}
-                <div className="flex flex-col items-center justify-center flex-1 bg-multi-gradient text-center px-6 animate-fadeIn">
-                  <div className="bg-white/90 p-8 rounded-2xl shadow-md max-w-sm w-full"> <div className="flex justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-[var(--input-accent)] animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h8M8 14h5m-1 7a9 9 0 110-18 9 9 0 010 18z" /> </svg>
-                  </div> <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                {/* Empty state - properly centered */}
+                <div className="chat-empty-state" style={{ minHeight: 'calc(100vh - 150px)' }}>
+                  <div className="bg-white/90 p-8 rounded-2xl shadow-md max-w-sm w-full">
+                    <div className="flex justify-center mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-[var(--input-accent)] animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > 
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h8M8 14h5m-1 7a9 9 0 110-18 9 9 0 010 18z" /> 
+                      </svg>
+                    </div> 
+                    <h2 className="text-lg font-semibold text-gray-800 mb-2">
                       No messages yet 💬
                     </h2>
-                    <p className="text-sm text-gray-600 mb-6"> Start a new conversation with{" "}
-                      <span className="font-medium text-[var(--input-accent)]">
-                        {/* {receiver.full_name.split(" ")[0]} */}
-                      </span>{" "} by sending your first message. </p>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Start a new conversation by sending your first message.
+                    </p>
                     <button onClick={() => sendMessage("hello")}
-                      className="bg-black text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all" >
+                      className="bg-[var(--primary)] text-white px-6 py-2 rounded-full font-medium hover:opacity-90 transition-all" >
                       ✍️ Say Hello </button>
                   </div>
                 </div>
@@ -1333,7 +1474,6 @@ const ChatBox = ({ userId: propUserId }) => {
                 setReplyTo={setReplyTo}
                 receiver={receiver}
                 inputRef={inputRef}
-
               />
             )
               :
@@ -1700,3 +1840,6 @@ const ChatBox = ({ userId: propUserId }) => {
   );
 
 }; export default ChatBox;
+
+
+

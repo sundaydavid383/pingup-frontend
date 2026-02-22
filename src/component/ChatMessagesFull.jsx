@@ -3,10 +3,10 @@ import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import MediaViewer from "./shared/MediaViewer"; // Make sure this import exists
-import BackButton from "./shared/BackButton";
 import axiosBase from "../utils/axiosBase";
 import { useSocket } from "../context/SocketContext";
 import MessageOptionsDropdown from "./MessageOptionsDropdown";
+import useSeenManager from "../hooks/useSeenManager";
 
 const ChatMessagesFull = ({
   messages,
@@ -33,32 +33,19 @@ const ChatMessagesFull = ({
   receiver,
   inputRef,
 }) => {
-  /*
-   * ===========================================
-   * MESSAGE SEEN/LAST-SEEN SYSTEM
-   * ===========================================
-   * 
-   * DATA STRUCTURE:
-   * - Each conversation has a lastSeenMessage for each user
-   * - Each message has: isSeen (derived), seenBy (array of user IDs), seenAt (timestamp)
-   * 
-   * BIDIRECTIONAL SEEN STATUS:
-   * - Current user sees which messages the other user has read (via receiverLastSeen)
-   * - Other user sees which messages current user has read (via lastSeenMessage)
-   * 
-   * HOW IT WORKS:
-   * 1. When user opens a conversation, fetch lastSeenMessage from backend
-   * 2. When user scrolls and stops on a message, update lastSeenMessage
-   * 3. When new message arrives from other user, auto-mark as seen
-   * 4. Socket events sync seen status in real-time
-   * 
-   * BACKEND API ENDPOINTS NEEDED:
-   * - GET /api/chat/:chatId/last-seen - returns { message, receiverLastSeen }
-   * - POST /api/chat/:chatId/last-seen - body: { messageId }
-   * - Socket event: updateLastSeen - { chatId, messageId }
-   * - Socket event: receiverSeenMessage - { chatId, messageId, userId, createdAt }
-   * ===========================================
-   */
+  const { socket, connected, onlineUsers } = useSocket();
+
+  // Initialize seen manager hook
+  const seenManager = useSeenManager({
+    messages,
+    setMessages,
+    chatId,
+    userId: user._id,
+    socket,
+    containerRef,
+    scrollStopped,
+    scrollStopDebounce: 1200,
+  });
 
   // State for message options dropdown
   const [dropdownState, setDropdownState] = useState({
@@ -69,7 +56,8 @@ const ChatMessagesFull = ({
 
   // State for read-more functionality
   const [expandedMessages, setExpandedMessages] = useState(new Set());
-  const CHARACTER_THRESHOLD = 200;
+  // WhatsApp-style character threshold (around 100 chars like WhatsApp)
+  const CHARACTER_THRESHOLD = 100;
 
   const toggleMessageExpansion = useCallback((messageId) => {
     setExpandedMessages((prev) => {
@@ -86,7 +74,10 @@ const ChatMessagesFull = ({
   const getDisplayText = (text, messageId) => {
     if (!text || text.length <= CHARACTER_THRESHOLD) return text;
     if (expandedMessages.has(messageId)) return text;
-    return text.substring(0, CHARACTER_THRESHOLD) + "...";
+    // Find the last space before threshold to avoid cutting words (WhatsApp style)
+    const truncated = text.substring(0, CHARACTER_THRESHOLD);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return (lastSpace > -1 ? truncated.substring(0, lastSpace) : truncated) + '...';
   };
 
   const shouldShowReadMore = (text) => {
@@ -157,6 +148,71 @@ const ChatMessagesFull = ({
     }
   }, []);
 
+  // Scroll to a specific message by ID and highlight it briefly
+const scrollToMessageAndHighlight = useCallback((messageId) => {
+  console.log("📬 ChatMessagesFull: scrollToMessage called with", messageId);
+  const msgEl = document.getElementById(`msg_${messageId}`);
+  if (msgEl) {
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Add temporary highlight
+    msgEl.classList.add('message-highlight');
+    setTimeout(() => {
+      msgEl.classList.remove('message-highlight');
+    }, 1500);
+  } else {
+    // Try with data-message-id attribute
+    const msgEl2 = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (msgEl2) {
+      msgEl2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      msgEl2.classList.add('message-highlight');
+      setTimeout(() => {
+        msgEl2.classList.remove('message-highlight');
+      }, 1500);
+    } else {
+      console.log("📬 ChatMessagesFull: Message element not found for", messageId);
+    }
+  }
+}, []);
+
+  // Scroll to last seen message on initial load
+  const scrollToLastSeenMessage = useCallback(() => {
+    if (!seenManager.lastSeenMessage || !containerRef?.current) return;
+    
+    const lastSeenMsg = seenManager.lastSeenMessage;
+    const msgEl = document.getElementById(`msg_${lastSeenMsg._id}`);
+    
+    if (msgEl) {
+      // Scroll to the last seen message with smooth behavior
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // Fallback: scroll to bottom if message not found
+      seenManager.scrollToBottom(false); // false = no smooth animation for initial load
+    }
+  }, [seenManager.lastSeenMessage, seenManager.scrollToBottom]);
+
+  // Handle initial scroll to last seen message when chat loads
+useEffect(() => {
+  if (!chatId) return;
+  if (!seenManager.lastSeenMessage) return;
+  if (messages.length === 0) return;
+
+  const timer = setTimeout(() => {
+    scrollToLastSeenMessage();
+  }, 200);
+
+  return () => clearTimeout(timer);
+}, [chatId, seenManager.lastSeenMessage, messages]);
+
+  // Expose scroll functions to parent
+  useEffect(() => {
+    if (scrollToMessage) {
+      scrollToMessage.current = scrollToMessageAndHighlight;
+    }
+  }, [scrollToMessage, scrollToMessageAndHighlight]);
+
+
+
   // Close dropdown
   const closeDropdown = useCallback(() => {
     setDropdownState({
@@ -193,8 +249,6 @@ const ChatMessagesFull = ({
       navigator.clipboard.writeText(text);
     }
   }, []);
-
-  const { socket, connected, onlineUsers } = useSocket();
 
   // Handle delete message
   const handleDeleteMessage = useCallback(async (messageId, deleteForEveryone) => {
@@ -266,209 +320,15 @@ const ChatMessagesFull = ({
     const dateB = new Date(groupedMessages[b][0].createdAt);
     return dateA - dateB;
   });
-  const lastSeenMessageRef = useRef(null);
-  const messageRefs = useRef({});
-
-  // Replace with your user ID and chat session ID
-  const lastSeenKey = `last_seen_${user._id}_${chatId}`;
-
-  const [lastSeenMessage, setLastSeenMessage] = useState(null);
-  const [receiverLastSeen, setReceiverLastSeen] = useState(null);
-
-  // Helper to determine if a message is seen by the current user
-  const isMessageSeen = useCallback((msg) => {
-    if (!lastSeenMessage) return false;
-    // Message is seen if its ID or timestamp is <= lastSeenMessage
-    return new Date(msg.createdAt) <= new Date(lastSeenMessage.createdAt || lastSeenMessage);
-  }, [lastSeenMessage]);
-
-  // Fetch last seen when conversation opens
-  useEffect(() => {
-    if (!socket) return;
-    if (!chatId) return;
-
-    axiosBase
-      .get(`/api/chat/${chatId}/last-seen`)
-      .then(res => {
-        if (res.data?.message) {
-          setLastSeenMessage(res.data.message);
-        }
-        if (res.data?.receiverLastSeen) {
-          setReceiverLastSeen(res.data.receiverLastSeen);
-        }
-      })
-      .catch(err => console.error(err));
-  }, [chatId]);
-
-  // Update last seen only when user scrolls and stops on a message
-  useEffect(() => {
-    if (!messages.length) return;
-
-    // Get the latest message in the conversation
-    const latestMessage = messages[messages.length - 1];
-    if (!latestMessage) return;
-
-    // Remove auto-mark as seen when messages arrive - messages should only be marked as seen
-    // when the user actually scrolls to view them (handled in scroll effect below)
-    // This prevents messages from being marked seen just because they appeared in the chat
-  }, [messages, user._id]);
-
-  useEffect(() => {
-    // Mark seen when user scrolls and STOPS on any message (both up and down)
-    if (!scrollStopped) return;
-    if (!containerRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let visibleMessages = [];
-
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          const id = entry.target.dataset.id;
-          const msg = messages.find((m) => m._id === id);
-          if (msg) visibleMessages.push(msg);
-        });
-
-        if (visibleMessages.length === 0) return;
-
-        // ✅ Pick the LAST message actually visible in viewport
-        const lastVisibleMsg = visibleMessages.reduce((a, b) =>
-          new Date(a.createdAt) > new Date(b.createdAt) ? a : b
-        );
-
-        // Avoid duplicate updates
-        if (lastSeenMessage?._id === lastVisibleMsg._id) return;
-
-        // Update local state
-        setLastSeenMessage(lastVisibleMsg);
-
-        // ✅ Persist to backend (uncomment when backend is ready)
-        axiosBase.post(`/api/chat/${chatId}/last-seen`, {
-          messageId: lastVisibleMsg._id,
-        }).catch(console.error);
-
-        // ✅ Real-time sync
-        socket.emit("updateLastSeen", {
-          chatId,
-          messageId: lastVisibleMsg._id,
-        });
-      },
-      {
-        root: containerRef.current,
-        threshold: 0.6,
-      }
-    );
-
-    Object.values(messageRefs.current).forEach((el) => {
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, [scrollStopped, scrollDirection, messages]);
-
-  // Listen for receiver's seen updates
-  useEffect(() => {
-    if (!socket) return;
-
-    // When receiver sees our messages
-    socket.on(
-      "receiverSeenMessage",
-      ({ chatId: seenChatId, messageId, userId: seenByUserId, createdAt }) => {
-        if (chatId !== seenChatId) return;
-
-        // Update receiver's last seen
-        setReceiverLastSeen({
-          messageId,
-          createdAt,
-          userId: seenByUserId
-        });
-
-        // Update messages as seen
-        setMessages((prev) =>
-          prev.map((msg) =>
-            new Date(msg.createdAt) <= new Date(createdAt)
-              ? {
-                ...msg,
-                status: "seen",
-                seenBy: [...new Set([...(msg.seenBy || []), seenByUserId])],
-                seenAt: new Date(createdAt)
-              }
-              : msg
-          )
-        );
-      }
-    );
-
-    return () => {
-      socket.off("receiverSeenMessage");
-    };
-  }, [chatId, socket]);
-
-  // Original userSeenMessage listener (when we see someone's messages)
-  useEffect(() => {
-    if (!socket) return;
-    socket.on(
-      "userSeenMessage",
-      ({ chatId: seenChatId, userId: seenUserId, messageId, createdAt }) => {
-        if (chatId !== seenChatId) return;
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            // Compare by createdAt timestamp, not _id
-            new Date(msg.createdAt) <= new Date(createdAt)
-              ? {
-                ...msg,
-                seenBy: [...new Set([...(msg.seenBy || []), seenUserId])],
-              }
-              : msg
-          )
-        );
-      }
-    );
-
-    return () => socket.off("userSeenMessage");
-  }, [chatId, socket]);
-
-  // Listen for message deletion from other users
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on(
-      "messageDeleted",
-      ({ messageId, chatId: deletedChatId }) => {
-        if (chatId !== deletedChatId) return;
-
-        // Remove the deleted message from UI
-        setMessages((prev) =>
-          prev.filter((msg) => msg._id !== messageId)
-        );
-      }
-    );
-
-    return () => {
-      socket.off("messageDeleted");
-    };
-  }, [chatId, socket, setMessages]);
-
-
-  const hasScrolledToLastSeen = useRef(false);
-
-  useEffect(() => {
-    if (hasScrolledToLastSeen.current) return;
-
-    if (lastSeenMessageRef.current) {
-      lastSeenMessageRef.current.scrollIntoView({
-        behavior: "auto",
-        block: "center",
-      });
-      hasScrolledToLastSeen.current = true;
-    }
-  }, []);
+  // All socket listeners and seen logic now handled by useSeenManager hook
+  // Location: seenManager.lastSeenMessage, seenManager.receiverLastSeen, etc.
 
 
   return (
-    <div className="relative flex flex-col min-h-full pb-24">
+    <div
+      className="relative flex flex-col min-h-full pb-4"
+      style={{ paddingBottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}
+    >
       <div className="space-y-2 max-w-4xl mx-auto w-full px-2 pt-4">
         {sortedDates.map((date) => (
           <div key={date} className="flex flex-col">
@@ -500,10 +360,7 @@ const ChatMessagesFull = ({
                   data-message-id={msg._id}
                   id={`msg_${msg._id}`}
                   ref={(el) => {
-                    if (el) messageRefs.current[msg._id] = el;
-                    if (msg._id === lastSeenMessage?._id) {
-                      lastSeenMessageRef.current = el;
-                    }
+                    if (el) seenManager.setMessageRef(msg._id, el);
                   }}
                   onContextMenu={(e) => handleContextMenu(msg, e)}
                   onDoubleClick={(e) => handleDoubleClick(msg, e)}
@@ -568,24 +425,14 @@ const ChatMessagesFull = ({
 
                     {msg.message_type === "text" && (
                       <div className="flex flex-col gap-1">
-                        <p>{getDisplayText(msg.text, msg._id)}</p>
+                        <p className="whitespace-pre-wrap">{getDisplayText(msg.text, msg._id)}</p>
                         {shouldShowReadMore(msg.text) && (
                           <button
                             onClick={() => toggleMessageExpansion(msg._id)}
-                            className="flex items-center gap-1 text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity mt-1"
+                            className="text-xs font-medium opacity-80 hover:opacity-100 transition-opacity self-start mt-0.5"
                             style={{ color: sentByUser ? 'rgba(255, 255, 255, 0.9)' : 'var(--primary)' }}
                           >
-                            {expandedMessages.has(msg._id) ? (
-                              <>
-                                <ChevronUp size={14} />
-                                Read less
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown size={14} />
-                                Read more
-                              </>
-                            )}
+                            {expandedMessages.has(msg._id) ? 'Show less' : 'Read more'}
                           </button>
                         )}
                       </div>
@@ -632,17 +479,17 @@ const ChatMessagesFull = ({
                         )}
                         {msg.status !== "sending" && !msg.failed && (
                           <span className="flex items-center">
-                            {/* For sent messages, check if RECEIVER has seen them (receiverLastSeen) */}
+                            {/* For sent messages, check if RECEIVER has seen them (seenManager.receiverLastSeen) */}
                             {/* For sent messages, NEVER use isMessageSeen as that checks if WE have seen, not the receiver */}
                             {sentByUser ? (
-                              receiverLastSeen && new Date(msg.createdAt) <= new Date(receiverLastSeen.createdAt || receiverLastSeen) ? (
+                              seenManager.receiverLastSeen && new Date(msg.createdAt) <= new Date(seenManager.receiverLastSeen.createdAt || seenManager.receiverLastSeen) ? (
                                 // Blue double check - seen by receiver
                                 <CheckCheck
                                   size={14}
                                   className="text-blue-500"
-                                  title={`Seen at ${receiverLastSeen?.createdAt ? formatTime(receiverLastSeen.createdAt) : ''}`}
+                                  title={`Seen at ${seenManager.receiverLastSeen?.createdAt ? formatTime(seenManager.receiverLastSeen.createdAt) : ''}`}
                                 />
-                              ) : msg.status === "delivered" || receiverLastSeen ? (
+                              ) : msg.status === "delivered" || seenManager.receiverLastSeen ? (
                                 // Gray double check - delivered
                                 <CheckCheck
                                   size={14}
@@ -656,15 +503,15 @@ const ChatMessagesFull = ({
                                 />
                               )
                             ) : (
-                              /* For received messages, use isMessageSeen to show if WE have seen them */
-                              isMessageSeen(msg) ? (
+                              /* For received messages, use seenManager.isMessageSeen to show if WE have seen them */
+                              seenManager.isMessageSeen(msg) ? (
                                 // Blue double check - we have seen this message
                                 <CheckCheck
                                   size={14}
                                   className="text-blue-500"
                                   title={`Seen at ${msg.seenAt ? formatTime(msg.seenAt) : ''}`}
                                 />
-                              ) : msg.status === "delivered" || receiverLastSeen ? (
+                              ) : msg.status === "delivered" || seenManager.receiverLastSeen ? (
                                 // Gray double check - delivered
                                 <CheckCheck
                                   size={14}
@@ -719,25 +566,47 @@ const ChatMessagesFull = ({
         />
       )}
 
-      {/* Scroll to bottom button */}
-      {showScrollButton && (
-        <button
-          onClick={() => {
-            requestAnimationFrame(() => {
-              scrollToBottom();
-            });
-          }}
-          className="fixed bottom-35 right-8 flex items-center justify-center w-12 h-12 rounded-full shadow-xl transition-all duration-300 z-50 cursor-pointer border border-white/40 hover:scale-110 active:scale-95 z-[999999]"
-          style={{
-            background: "rgba(255, 255, 255, 0.2)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
-          }}
-        >
-          <FaArrowDown size={16} className="text-gray-800 drop-shadow-sm" />
-        </button>
-      )}
+      {/* Scroll to bottom button - Always visible, fixed position */}
+      <button
+  onClick={() => {
+    console.log("📬 ChatMessagesFull: Scroll to bottom button clicked");
+    requestAnimationFrame(() => {
+      seenManager.scrollToBottom();
+    });
+  }}
+  className="fixed flex items-center justify-center rounded-full transition-all duration-300 z-50 cursor-pointer border border-white/30 hover:scale-110 active:scale-95 scroll-to-bottom-floating-btn"
+  style={{
+    bottom: 'calc(85px + max(12px, env(safe-area-inset-bottom)))',
+    right: '20px',
+    width: '44px',
+    height: '44px',
+
+    // 🔥 Glass Effect
+    background: 'rgba(255, 255, 255, 0.55)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+
+    boxShadow: '0 4px 16px rgba(30, 64, 175, 0.35)',
+  }}
+  title="Scroll to latest message"
+>
+  <FaArrowDown 
+    size={18} 
+    className="text-[var(--secondary)] drop-shadow-md" 
+  />
+
+  {seenManager.unseenBelowCount > 0 && (
+    <span
+      className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold text-white animate-pulse"
+      style={{ 
+        backgroundColor: '#ef4444',
+        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+      }}
+    >
+      {seenManager.unseenBelowCount > 99 ? '99+' : seenManager.unseenBelowCount}
+    </span>
+  )}
+</button>
 
       {/* Message Options Dropdown - WhatsApp Style */}
       {dropdownState.isOpen && dropdownState.message && (

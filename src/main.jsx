@@ -14,6 +14,8 @@ import { NotificationProvider } from './context/NotificationContext.jsx';
 import { AudioPlayerProvider } from "./context/AudioPlayerContext";
 import { GlobalVideoProvider } from "./context/GlobalVideoContext";
 import { TTSProvider } from "./context/TTSContext";
+import { CallProvider } from "./context/CallContext";
+import { PipModalProvider } from "./context/PipModalContext";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -33,7 +35,11 @@ createRoot(document.getElementById('root')).render(
                   <BrowserRouter>
                     <AudioPlayerProvider>
                       <GlobalVideoProvider>
-                        <App />
+                        <CallProvider>
+                          <PipModalProvider>
+                            <App />
+                          </PipModalProvider>
+                        </CallProvider>
                       </GlobalVideoProvider>
                     </AudioPlayerProvider>
                   </BrowserRouter>
