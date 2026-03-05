@@ -146,23 +146,28 @@ const Messages = () => {
               </div>
             ))
           ) : filteredConnections.length > 0 ? (
-            filteredConnections.map((convo) => {
+            filteredConnections.map((convo, index) => {
               const otherUser = convo.otherUser;
               if (!otherUser) return null;
 
               const last = convo.lastMessage;
               const unreadCount = unreadCountsMap[convo._id] || 0;
               const isActive = activeChatId === otherUser._id;
+              
+              // Check if this is the first unread message in the list
+              const isFirstUnread = unreadCount > 0 && index === filteredConnections.findIndex(c => (unreadCountsMap[c._id] || 0) > 0);
 
               return (
                 <div
                   key={otherUser._id}
                   onClick={() => handleOpenChat(otherUser._id)}
-                  className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition
-                ${isActive
-                      ? "bg-violet-100"
-                      : "bg-[var(--white)] hover:bg-[var(--hover-light)]"
-                    }`}
+                  className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition ${
+                    isFirstUnread 
+                      ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
+                      : isActive
+                        ? "bg-violet-100"
+                        : "bg-[var(--white)] hover:bg-[var(--hover-light)]"
+                  }`}
                 >
                   <ProfileAvatar
                     user={{
@@ -174,23 +179,24 @@ const Messages = () => {
                   />
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[var(--primary)] truncate">
+                    <p className={`truncate ${isFirstUnread ? "text-red-600 font-semibold" : "text-[var(--primary)]"}`}>
                        @{highlightMatch(otherUser.username, searchTerm)}
                     </p>
                     
                     {last && (
                       <span
-                        className={`text-sm truncate flex items-center gap-1 ${unreadCount > 0 ? "text-[var(--error)] font-bold" : "text-slate-600"
-                          }`}
+                        className={`text-sm truncate flex items-center gap-1 ${
+                          unreadCount > 0 ? "text-red-600 font-bold" : "text-slate-600"
+                        }`}
                       >
                         {last.from_user_id === user._id && "You: "}
                         {last.message_type === "image" ? (
                           <>
-                            <ImageIcon size={16} className="text-[var(--primary)]" /> Image
+                            <ImageIcon size={16} className={unreadCount > 0 ? "text-red-600" : "text-[var(--primary)]"} /> Image
                           </>
                         ) : last.message_type === "audio" ? (
                           <>
-                            <Mic size={16} className="text-[var(--primary)]" /> Audio
+                            <Mic size={16} className={unreadCount > 0 ? "text-red-600" : "text-[var(--primary)]"} /> Audio
                           </>
                         ) : (
                           <p>{last.text?.substring(0, 17)}...</p>
@@ -200,8 +206,8 @@ const Messages = () => {
 
 
                     {unreadCount > 0 && (
-                      <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                        {unreadCount}
+                      <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                        {unreadCount} new
                       </span>
                     )}
                   </div>

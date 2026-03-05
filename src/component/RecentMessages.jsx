@@ -122,14 +122,22 @@ const RecentMessages = () => {
         <div className="w-full bg-white rounded-xl shadow-md p-0 m-0">
           <h3 className="font-semibold text-sm px-2 pt-2 mb-2">Recent Messages</h3>
           <div className="flex flex-col max-h-[60vh] overflow-y-auto no-scrollbar">
-            {loading ? <RecentMessagesSkeleton /> : connections.map((usr) => {
+            {loading ? <RecentMessagesSkeleton /> : connections.map((usr, index) => {
               const last = lastMessages[usr._id];
               const unread = unreadMessages[usr._id]?.length || 0;
+              
+              // Check if this is the first unread message in the list
+              const isFirstUnread = unread > 0 && index === connections.findIndex(u => (unreadMessages[u._id]?.length || 0) > 0);
+              
               return (
                 <div
                   key={usr._id}
                   onClick={() => handleUserClick(usr)}
-                  className="flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
+                  className={`flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 ${
+                    isFirstUnread 
+                      ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
+                      : "hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
+                  }`}
                 >
                   {/* Profile Avatar */}
                   <ProfileAvatar user={usr} size={44} />
@@ -139,8 +147,10 @@ const RecentMessages = () => {
                     {/* Top row: username and timestamp */}
                     <div className="flex justify-between items-center">
                       <span
-                        className="flex items-center gap-1 truncate text-xs min-w-0"
-                        style={{ color: "var(--text-secondary)" }}
+                        className={`flex items-center gap-1 truncate text-xs min-w-0 ${
+                          isFirstUnread ? "font-semibold text-red-600" : ""
+                        }`}
+                        style={!isFirstUnread ? { color: "var(--text-secondary)" } : {}}
                       >
                         @{usr.username}
                       </span>
@@ -201,9 +211,11 @@ const RecentMessages = () => {
 
                       {unread > 0 && (
                         <span
-                          className="flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-bold"
+                          className={`flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-bold ${
+                            isFirstUnread ? "animate-pulse" : ""
+                          }`}
                           style={{
-                            background: "var(--primary)",
+                            background: isFirstUnread ? "#ef4444" : "var(--primary)",
                             color: "var(--white)",
                           }}
                         >

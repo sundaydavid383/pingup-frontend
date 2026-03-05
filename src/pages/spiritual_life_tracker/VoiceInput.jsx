@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef,forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
 import { Mic, MicOff } from "lucide-react";
 import MicButton from "./MicButton";
 import Toast from "../../component/shared/Toast";
@@ -40,7 +40,7 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref
   const listeningRef = useRef(false);
   const backendRef = useRef(null);
   const speechEngineRef = useRef("lemonfox"); // "web" | "vosk" | "lemonfox"
-const errorRef = useRef(null);
+  const errorRef = useRef(null);
 
 
   // chunking config
@@ -179,34 +179,47 @@ const checkAvailability = async () => {
   });
 };
 
-const handleBackendChunk = (text) => {
+// 🎯 Optimized backend chunk handler with useCallback
+const handleBackendChunk = useCallback((text) => {
   if (!text) return;
 
-  console.log("📝 Vosk transcript:", text);
+  console.log("📝 Backend transcript:", text);
 
-  // 🚫 IMPORTANT: Vosk should NEVER use leftover
+  // 🚫 IMPORTANT: Backend engines should NEVER use leftover
   leftoverRef.current = "";
 
   // 1️⃣ Update textarea ONLY with current speech
   onTranscribe(null, text, {
     live: true,
-    source: "vosk",
+    source: speechEngineRef.current,
     replace: true, // 🔑 parent textarea must replace, not append
   });
 
   const words = text.trim().split(/\s+/);
 
   // 2️⃣ Only search if enough words
-  if (words.length < MIN_CHUNK_WORDS) return;
+  if (words.length < MIN_CHUNK_WORDS) {
+    // Reset to READY if not enough words
+    setVoiceState(VOICE_STATE.READY);
+    return;
+  }
 
   const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
 
-  // 3️⃣ Trigger search with ONLY this speech
+  // 3️⃣ Set processing state before search
+  setVoiceState(VOICE_STATE.PROCESSING);
+
+  // 4️⃣ Trigger search with ONLY this speech
   onTranscribe(chunk, "", {
     forceSearch: true,
-    source: "vosk",
+    source: speechEngineRef.current,
+    onComplete: () => {
+      // Reset to READY after search completes
+      console.log("🔹 Search complete, resetting to READY");
+      setVoiceState(VOICE_STATE.READY);
+    }
   });
-};
+}, [onTranscribe]);
 
 
 
@@ -228,7 +241,6 @@ const handleBackendChunk = (text) => {
 
 
   useEffect(() => {
-      if (speechEngineRef.current !== "web") return;
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       console.warn("SpeechRecognition API not supported in this browser.");
       return;
@@ -243,9 +255,11 @@ const handleBackendChunk = (text) => {
     recognition.lang = "en-US";
 
 recognition.onresult = (event) => {
+  // Only process if WebSpeech is active (use state for consistency with React rendering)
+  if (currentMode !== "web") return;
+  
   let interimText = "";
   let finalText = "";
-
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const result = event.results[i];
@@ -274,7 +288,17 @@ recognition.onresult = (event) => {
     const leftover = words.slice(take).join(" ");
     leftoverRef.current = leftover;
 
-    onTranscribe(chunk, leftover, { forceSearch: true });
+    // Set processing state before search
+    setVoiceState(VOICE_STATE.PROCESSING);
+
+    onTranscribe(chunk, leftover, {
+      forceSearch: true,
+      onComplete: () => {
+        // Reset to READY after search completes
+        console.log("🔹 WebSpeech search complete, resetting to READY");
+        setVoiceState(VOICE_STATE.READY);
+      }
+    });
   };
 
   // Rule 1: immediate search if 15+ words final
@@ -284,12 +308,9 @@ recognition.onresult = (event) => {
   }
 
   // Rule 2: search after 1s pause
-  pauseTimer.current = setTimeout(doSearch, 1000);
-    if (finalText.trim()) {
-    setIsTranscribing(false);
-    setVoiceState(VOICE_STATE.PROCESSING)
+  if (finalText.trim()) {
+    pauseTimer.current = setTimeout(doSearch, 1000);
   }
-
 };
 
 recognition.onerror = (event) => {
@@ -316,8 +337,6 @@ recognition.onerror = (event) => {
   stopListening(); // ⛔ hard stop
 };
 
-
-
  recognitionRef.current = recognition;
 
     return () => {
@@ -325,7 +344,7 @@ recognition.onerror = (event) => {
       recognitionRef.current = null;
       if (pauseTimer.current) clearTimeout(pauseTimer.current);
     };
-  }, [onTranscribe, listening]);
+  }, [onTranscribe]);
 
   
 useEffect(() => {
@@ -336,8 +355,8 @@ useEffect(() => {
   errorRef.current = error;
 }, [error]);
 
-// Start microphone listening
-const startListening = async () => {
+// 🎯 Optimized start/stop functions with useCallback
+const startListening = useCallback(async () => {
   // Block if TTS or processing is active
   if (shouldBlockVoice) {
     console.log("🔹 Voice input blocked - TTS or processing active");
@@ -378,11 +397,9 @@ const startListening = async () => {
   }
 
   setListening(true);
-};
+}, [shouldBlockVoice, disabled, listening]);
 
-
-
-const stopListening = () => {
+const stopListening = useCallback(() => {
   if (!listening) return;
 
   // WebSpeech
@@ -402,14 +419,20 @@ const stopListening = () => {
   setVoiceState(VOICE_STATE.IDLE);
   listeningRef.current = false;
   setListening(false);
-};
+}, [listening]);
 
 
 
 
 
-// Toggle mic
-const toggleListening = () => (listening ? stopListening() : startListening());
+// Toggle mic (memoized for performance)
+const toggleListening = useCallback(() => {
+  if (listening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}, [listening, stopListening, startListening]);
 
   const randomHeight = (idx) => {
     const base = 6 + (idx % 3) * 3;
@@ -423,28 +446,52 @@ const toggleListening = () => (listening ? stopListening() : startListening());
   isListening: () => listening,
   setMode: (m) => { speechEngineRef.current = m; }
 }));
-// When switching modes:
-const switchMode = async (newMode) => {
-  // Stop current engine
+
+// 🎯 Optimized mode switching with useCallback to prevent unnecessary re-renders
+const switchMode = useCallback((newMode) => {
+  // Early return if already in this mode
+  if (speechEngineRef.current === newMode) {
+    console.log(`Already in ${newMode} mode`);
+    return;
+  }
+  
+  console.log(`🔄 Switching mode from ${speechEngineRef.current} to ${newMode}`);
+  
+  // Stop current engine completely (synchronous for performance)
   if (listeningRef.current) {
-    if (speechEngineRef.current === "web") recognitionRef.current?.stop();
-    else backendRef.current?.stop();
-    setListening(false);
+    if (speechEngineRef.current === "web" && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.warn("Error stopping WebSpeech:", e);
+      }
+    } else if (backendRef.current) {
+      backendRef.current.stop();
+    }
   }
 
-  // Update ref and state
+  // Clear all state in one batch for better performance
+  leftoverRef.current = "";
+  isPausedRef.current = false;
+  
+  // Clear any pending timers
+  if (pauseTimer.current) {
+    clearTimeout(pauseTimer.current);
+    pauseTimer.current = null;
+  }
+
+  // Update ref first (synchronous)
   speechEngineRef.current = newMode;
+  
+  // Batch state updates to minimize re-renders
+  setListening(false);
+  setIsTranscribing(false);
+  setVoiceState(VOICE_STATE.IDLE);
+  setError(null);
   setCurrentMode(newMode); // ✅ triggers re-render
 
-  setVoiceState(VOICE_STATE.IDLE);
-
-  // Start backend if needed
-  if ((newMode === "vosk" || newMode === "hybrid" || newMode === "lemonfox") && backendRef.current) {
-    await backendRef.current.start();
-    setVoiceState(VOICE_STATE.READY);
-    setListening(true);
-  }
-};
+  console.log(`✅ Mode switched to ${newMode}`);
+}, []); // Empty deps since we use refs for all dynamic values
 
 
 return (
@@ -490,11 +537,11 @@ return (
 
 
     {/* Backend capture */}
-    {speechEngineRef.current !== "web" && (
+    {currentMode !== "web" && (
       <BackendAudioCapture
         ref={backendRef}
         userId={user._id}
-        mode={speechEngineRef.current}
+        mode={currentMode}
         onResult={(data)=>{
          if(!data?.transcript) return;
          handleBackendChunk(data.transcript)

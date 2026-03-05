@@ -106,8 +106,8 @@ const Settings = () => {
       </div>
 
       {/* Horizontal Tab Bar for Mobile - Always Visible */}
-      <div className="md:hidden overflow-x-auto border-b sticky top-14 z-40" style={{ borderColor: 'var(--input-border)', backgroundColor: 'var(--bg-main)' }}>
-        <div className="flex gap-1 p-2 min-w-min">
+      <div className="md:hidden overflow-x-auto border-b sticky top-14 sm:top-16 z-40 scrollbar-hide" style={{ borderColor: 'var(--input-border)', backgroundColor: 'var(--bg-main)' }}>
+        <div className="flex gap-1 sm:gap-2 p-2 min-w-min">
           {settingsCategories.map((category) => {
             const Icon = category.icon;
             const isActive = activeCategory === category.id;
@@ -115,7 +115,7 @@ const Settings = () => {
               <button
                 key={category.id}
                 onClick={() => handleCategoryChange(category.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap transition-all flex-shrink-0 text-xs sm:text-sm font-medium ${isActive
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg whitespace-nowrap transition-all flex-shrink-0 text-xs sm:text-sm font-medium ${isActive
                   ? 'custom-gradient text-white shadow-md'
                   : 'bg-white/5 text-gray-600 hover:bg-white/10'
                   }`}
@@ -124,7 +124,7 @@ const Settings = () => {
                 }
               >
                 <Icon className="w-4 h-4 flex-shrink-0" style={{ color: 'white' }} />
-                <span className="hidden sm:inline">{category.label}</span>
+                <span className="hidden xs:inline sm:inline">{category.label}</span>
               </button>
             );
           })}

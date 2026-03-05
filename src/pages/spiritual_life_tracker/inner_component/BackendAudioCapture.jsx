@@ -2,9 +2,9 @@ import { forwardRef, useImperativeHandle, useRef, useEffect } from "react";
 import axiosBase from "../../../utils/axiosBase";
 import { useTTS } from "../../../context/TTSContext";
 
-const MAX_RECORD_MS = 6000; // 6 seconds max
+const MAX_RECORD_MS = 12000; // 12 seconds max (as per requirements)
 const SILENCE_THRESHOLD = 0.01; // Optimized threshold for speech detection
-const SILENCE_DURATION = 1200; // 1.2 seconds of silence (faster response)
+const SILENCE_DURATION = 2000; // 2 seconds of silence (as per requirements)
 const TARGET_SAMPLE_RATE = 16000;
 const MIN_AUDIO_LENGTH_MS = 300; // Minimum audio to send (prevents tiny clips)
 
@@ -25,6 +25,8 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
   const streamRef = useRef(null);
   const isRecordingRef = useRef(false);
   const lastAudioTimeRef = useRef(Date.now());
+  const stoppingRef = useRef(false); // Prevent double-stop
+  const conversionAudioCtxRef = useRef(null); // Reusable AudioContext for conversion
 
   // Check if TTS is blocking before starting
   const canStart = () => {
@@ -82,8 +84,8 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
         return;
       }
 
-      // Otherwise use backend (vosk/hybrid)
-      const wavBuffer = await blobToWav(blob);
+      // Otherwise use backend (vosk/hybrid) - pass conversionCtxRef for reuse
+      const wavBuffer = await blobToWav(blob, conversionAudioCtxRef);
       const base64Audio = arrayBufferToBase64(wavBuffer);
 
       console.log("🔹 Sending audio to backend", {
@@ -112,8 +114,16 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
   };
 
   const stopRecording = (shouldSendAudio = true) => {
+    // Prevent double-stop (timer conflicts)
+    if (stoppingRef.current) {
+      console.log("🔹 Already stopping, ignoring duplicate stop call");
+      return;
+    }
+    
+    stoppingRef.current = true;
     console.log("🔹 Stopping recording, shouldSend:", shouldSendAudio);
     
+    // Clear ALL timers immediately to prevent conflicts
     if (stopTimerRef.current) {
       clearTimeout(stopTimerRef.current);
       stopTimerRef.current = null;
@@ -138,6 +148,9 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
     }
 
     recorderOnStopCleanup(stream);
+    
+    // Reset stopping flag after cleanup
+    stoppingRef.current = false;
     
     if (toggleListening) {
       toggleListening();
@@ -238,7 +251,7 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
 
       // Start recording with frequent chunks for low latency
       recorder.start(50); // 50ms chunk intervals for faster response
-      console.log("🎙 Recording started (max 6s, auto silence detection)");
+      console.log("🎙 Recording started (max 12s, auto-stop after 2s silence)");
 
       animationIdRef.current = requestAnimationFrame(checkSilence);
 
@@ -267,8 +280,18 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
     }
   }, [shouldBlockVoice]);
 
-  useImperativeHandle(ref, () => ({ 
-    start, 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Close conversion AudioContext on unmount
+      if (conversionAudioCtxRef.current && conversionAudioCtxRef.current.state !== 'closed') {
+        conversionAudioCtxRef.current.close();
+      }
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    start,
     stop,
     isRecording: () => isRecordingRef.current,
   }));
@@ -279,11 +302,17 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
 // =============================
 // Convert blob to 16kHz mono PCM16 WAV
 // =============================
-async function blobToWav(blob) {
+async function blobToWav(blob, conversionCtxRef) {
   console.log("🔹 Converting blob to WAV");
 
   const arrayBuffer = await blob.arrayBuffer();
-  const audioCtx = new AudioContext();
+  
+  // Reuse AudioContext if available, otherwise create new one
+  if (!conversionCtxRef.current || conversionCtxRef.current.state === 'closed') {
+    conversionCtxRef.current = new AudioContext();
+  }
+  
+  const audioCtx = conversionCtxRef.current;
   const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
   // Resample to 16 kHz

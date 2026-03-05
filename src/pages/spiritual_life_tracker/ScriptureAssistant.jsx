@@ -395,8 +395,16 @@ const runLocalSearch = async (query) => {
   };
 
 // ----------------- Process chunks with logging -----------------
-const processChunks = debounce(async (inputText) => {
-  if (!inputText.trim()) return;
+/**
+ * Process text chunks for scripture search with debouncing
+ * @param {string} inputText - The text to process and search for scripture references
+ * @param {Function} [onComplete] - Optional callback invoked when processing completes
+ */
+const processChunks = debounce(async (inputText, onComplete) => {
+  if (!inputText.trim()) {
+    if (onComplete) onComplete();
+    return;
+  }
 
   const chunks = getChunksSliding(inputText).filter(
     (c) => !processedChunksRef.current.includes(c)
@@ -424,6 +432,9 @@ const processChunks = debounce(async (inputText) => {
 
   setProcessedChunks([...processedChunksRef.current]);
   console.log("Processed chunks ref updated:", processedChunksRef.current);
+  
+  // Call completion callback
+  if (onComplete) onComplete();
 }, 250);
 
 
@@ -491,7 +502,7 @@ const processChunks = debounce(async (inputText) => {
       =========================
     */
 
-    processChunks(sentChunk);
+    processChunks(sentChunk, meta.onComplete);
   }}
 />
 
