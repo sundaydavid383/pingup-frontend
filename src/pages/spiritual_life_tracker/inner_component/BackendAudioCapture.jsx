@@ -8,8 +8,9 @@ const SILENCE_DURATION = 1200; // 1.2 seconds of silence (faster response)
 const TARGET_SAMPLE_RATE = 16000;
 const MIN_AUDIO_LENGTH_MS = 300; // Minimum audio to send (prevents tiny clips)
 
-const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening }, ref) => {
+const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mode = "vosk" }, ref) => {
   const { shouldBlockVoice, startProcessing, stopProcessing } = useTTS();
+  const apiKey = import.meta.env.VITE_LEMONFOX_API;
   
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -75,6 +76,13 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening }, r
     startProcessing();
     
     try {
+      // If mode is lemonfox, use Lemonfox API directly
+      if (mode === "lemonfox" && apiKey) {
+        await processLemonfoxAudio(blob, onResult, apiKey, stopProcessing);
+        return;
+      }
+
+      // Otherwise use backend (vosk/hybrid)
       const wavBuffer = await blobToWav(blob);
       const base64Audio = arrayBufferToBase64(wavBuffer);
 
@@ -90,7 +98,7 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening }, r
         audio: base64Audio,
         format: "wav",
         sampleRate: TARGET_SAMPLE_RATE,
-        mode: "vosk",
+        mode: mode,
       });
 
       console.log("🔹 Backend response received:", res.data);
@@ -364,6 +372,49 @@ function arrayBufferToBase64(buffer) {
     binary += String.fromCharCode(...bytes.slice(i, i + chunk));
   }
   return btoa(binary);
+}
+
+// =============================
+// Lemonfox AI STT API Integration
+// =============================
+async function processLemonfoxAudio(blob, onResult, apiKey, stopProcessing) {
+  console.log("🔹 Processing audio with Lemonfox API");
+  
+  try {
+    // Convert blob to File object for FormData
+    const audioFile = new File([blob], "audio.webm", { type: "audio/webm" });
+    
+    const body = new FormData();
+    body.append("file", audioFile);
+    body.append("language", "english");
+    body.append("response_format", "json");
+    
+    const response = await fetch("https://api.lemonfox.ai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: body
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Lemonfox API error:", response.status, errorText);
+      if (onResult) onResult({ transcript: "" });
+      return;
+    }
+    
+    const data = await response.json();
+    console.log("🔹 Lemonfox response:", data);
+    
+    const transcript = data.text || "";
+    if (onResult) {
+      onResult({ transcript });
+    }
+  } catch (err) {
+    console.error("❌ Error with Lemonfox API:", err);
+    if (onResult) onResult({ transcript: "" });
+  }
 }
 
 export default BackendAudioCapture;

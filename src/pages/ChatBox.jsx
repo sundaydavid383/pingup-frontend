@@ -20,7 +20,6 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/useSocket';
 import axiosBase from "../utils/axiosBase";
 import moment from "moment";
-//MONGO_URI=mongodb://sundayudoh383_db_user:E6Dhy9OOzpJsdpZl@ac-yz2n7rk-shard-00-00.lrw8sns.mongodb.net:27017,ac-yz2n7rk-shard-00-01.lrw8sns.mongodb.net:27017,ac-yz2n7rk-shard-00-02.lrw8sns.mongodb.net:27017/?replicaSet=atlas-iuavbx-shard-0&ssl=true&authSource=admin
 
 
 const ChatBox = ({ userId: propUserId }) => {
