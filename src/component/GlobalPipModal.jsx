@@ -356,17 +356,17 @@ useEffect(() => {
                     <p className="text-sm font-bold truncate">{activeUser?.username}</p>
                     <button
                         onClick={() => {navigate(`/chatbox/${activeChatId}`);closePipModal()}}
-                        className="p-1 rounded-full hover:bg-gray-200 transition absolute right-8"
+                        className="p-1 rounded-full hover:bg-gray-200 transition absolute right-13"
                         title="Maximize"
                     >
-                        <Maximize2 size={16} />
+                        <Maximize2 size={22} />
                     </button>
                     <button
                         onClick={closePipModal}
                         className="p-1 rounded-full hover:bg-red-100 transition absolute right-0"
                         title="Close"
                     >
-                        <X size={18} />
+                        <X size={22} />
                     </button>
                 </div>
 

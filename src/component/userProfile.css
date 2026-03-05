@@ -62,15 +62,7 @@ div[style*="border-radius: 50%"] img {
   gap: 4px; /* Add gap if they wrap */
 }
 
-@media (min-width: 768px) {
-  .connections-stack {
-    justify-content: flex-start;
-    gap: 0; /* Revert to overlapping on desktop */
-  }
-  .stack-item {
-    margin-left: -12px;
-  }
-}
+
   
   /* Make the avatar slightly smaller on mobile */
   .avatar-overlap-container img, 
@@ -90,7 +82,6 @@ div[style*="border-radius: 50%"] img {
 
 @media (min-width: 768px) {
   .connections-stack {
-    justify-content: flex-start;
     gap: 0; /* Revert to overlapping on desktop */
   }
   .stack-item {

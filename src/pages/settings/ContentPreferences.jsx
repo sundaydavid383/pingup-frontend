@@ -1,42 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import axiosBase from '../../utils/axiosBase';
+import toast from 'react-hot-toast';
 
 const ContentPreferences = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
-  const [preferences, setPreferences] = useState({
-    interests: {
-      spirituality: true,
-      technology: false,
-      sports: false,
-      entertainment: true,
-      news: true,
-      health: false,
-      education: true,
-      business: false
-    },
-    contentType: {
-      posts: true,
-      stories: true,
-      videos: true,
-      articles: true,
-      events: false
-    }
-  });
+  const { user } = useAuth();
+  const [interests, setInterests] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const togglePreference = (category, key) => {
-    setPreferences({
-      ...preferences,
-      [category]: {
-        ...preferences[category],
-        [key]: !preferences[category][key]
-      }
-    });
+  // All available interests
+  const availableInterests = [
+    'spirituality',
+    'technology',
+    'sports',
+    'entertainment',
+    'news',
+    'health',
+    'education',
+    'business',
+    'music',
+    'art',
+    'travel',
+    'food'
+  ];
+
+  // Load user interests on mount
+  useEffect(() => {
+    if (user?.interests) {
+      setInterests(user.interests);
+    }
+  }, [user]);
+
+  const toggleInterest = (interest) => {
+    setInterests(prev => 
+      prev.includes(interest)
+        ? prev.filter(i => i !== interest)
+        : [...prev, interest]
+    );
   };
 
-  const handleSave = () => {
-    console.log('Saving preferences:', preferences);
-    alert('Content preferences updated successfully');
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.put('/api/settings/content-preferences', {
+        interests
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success('Content preferences updated successfully');
+      } else {
+        toast.error(res.data.message || 'Error saving preferences');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error saving preferences');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,16 +90,17 @@ const ContentPreferences = ({ isEmbedded = false }) => {
             Your Interests
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {Object.entries(preferences.interests).map(([key, value]) => (
+            {availableInterests.map((interest) => (
               <button
-                key={key}
-                onClick={() => togglePreference('interests', key)}
-                className={`p-4 rounded-lg font-medium transition text-center capitalize ${value
+                key={interest}
+                onClick={() => toggleInterest(interest)}
+                className={`p-4 rounded-lg font-medium transition text-center capitalize ${
+                  interests.includes(interest)
                     ? 'custom-gradient text-white'
                     : 'border'
-                  }`}
+                }`}
                 style={
-                  !value
+                  !interests.includes(interest)
                     ? {
                       backgroundColor: 'var(--form-bg)',
                       borderColor: 'var(--input-border)',
@@ -84,48 +110,24 @@ const ContentPreferences = ({ isEmbedded = false }) => {
                 }
               >
                 <div className="flex items-center justify-center gap-2">
-                  {value && <Check className="w-4 h-4" style={{ color: 'white' }} />}
-                  <span>{key}</span>
+                  {interests.includes(interest) && <Check className="w-4 h-4" style={{ color: 'white' }} />}
+                  <span>{interest}</span>
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Content Types */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Content Types to Show
-          </h2>
-          <div className="space-y-3">
-            {Object.entries(preferences.contentType).map(([key, value]) => (
-              <label
-                key={key}
-                className="flex items-center gap-3 p-4 rounded-lg cursor-pointer hover:opacity-80 transition capitalize"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={value}
-                  onChange={() => togglePreference('contentType', key)}
-                  className="w-5 h-5 cursor-pointer"
-                />
-                <span style={{ color: 'var(--text-main)' }}>{key}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
         {/* Save Button */}
-        <button
-          onClick={handleSave}
-          className="w-full px-4 py-2 rounded-lg custom-gradient text-white font-semibold hover:opacity-90 transition"
-        >
-          Save Preferences
-        </button>
+        <div className="mt-6">
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="w-full py-3 px-6 rounded-lg font-semibold custom-gradient text-white hover:opacity-90 transition disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save Preferences'}
+          </button>
+        </div>
       </div>
     </div>
   );

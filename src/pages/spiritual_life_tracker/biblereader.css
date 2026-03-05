@@ -48,7 +48,7 @@
   background: var(--bg-main);
   color: var(--text-main);
   min-height: 100vh;
-  padding: 1rem;
+  padding: .1rem;
 }
 
 .bible-page .verse-text-paragraph {
@@ -61,7 +61,6 @@
 
 /* Theme toggle switch */
 .theme-switch {
-
   width: 60px;
   height: 30px;
   border-radius: 15px;
@@ -104,31 +103,31 @@
   display: flex;
   justify-content: center; /* centers inner content */
   color: var(--text-main);
-  padding-top: 55px; /* Account for mobile navbar height */
   box-sizing: border-box;
+
 }
 
 .bible-reader-inner {
   width: 100%;
   max-width: 700px; /* your original reading width */
-  padding: var(--padding);
+  padding: 0rem;
   padding-top: 0.4rem;
   display: flex;
   flex-direction: column;
   position: relative;
-  gap: 3rem;
+  gap: .5rem;
 }
 /* ===== Fixed Header ===== *//* ===== Fixed Header ===== */
 .fixed-header {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1;
   width: 100%;
   padding: 0.5rem 1rem;
   backdrop-filter: blur(20px);
   display: flex;
   justify-content: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   background: var(--header-background);
   color: var(--text-color);
   transition: background 0.3s ease, color 0.3s ease;
@@ -175,21 +174,23 @@
   left: 60%;
   transform: translateX(-50%);
   font-weight: 600;
-  font-size: 1.2rem;
-  color: var(--text-main);
+  font-size: 1rem;
   white-space: nowrap;
   pointer-events: none;
-  max-width: 60%; /* avoid overlap with right icons */
-  text-align: center;
+text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-color: var(--opaque-secondary);
+  padding: .3rem .5rem;
+  border-radius: 1rem;
+  z-index: 1;
 }
 
 /* ===== Header Right ===== */
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1rem;
   flex-shrink: 0;
   position: relative;
 }
@@ -215,7 +216,7 @@
 .search-dropdown {
   position: absolute; /* now absolute under icon */
   top: 2.5rem;       /* below icon */
-  right: 0;
+  right: 0rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -226,25 +227,23 @@
   box-shadow: var(--border-shadow);
   width: 320px;
   max-width: 90vw;
-  max-height: 80vh;
   overflow-y: auto;
   z-index: 9999990;
   border: 1px solid var(--input-border);
 }
 
 /* Ensure search dropdown stays in viewport on mobile */
-@media (max-width: 480px) {
+/* @media (max-width: 480px) {
   .search-dropdown {
     position: fixed;
-    top: auto;
     bottom: 20px;
     left: 50%;
     right: auto;
     transform: translateX(-50%);
     width: 90vw;
-    max-height: 60vh;
+  
   }
-}
+} */
 
 /* Search Input */
 .search-dropdown input {
@@ -411,13 +410,16 @@
 @media (max-width: 800px) {
   .chapter-center {
     font-size: 1rem;
-    max-width: 50%;
+
   }
   .bible-reader-inner {
   width: 100%;
   max-width: 700px;
   padding: 0rem;
 }
+  .bible-title {
+    margin-left: 2rem;
+  }
 }
 
 @media (max-width: 635px) {
@@ -442,12 +444,11 @@
   
   .chapter-center {
     font-size: 0.85rem;
-    max-width: 35%;
     left: 55%;
   }
   
   .header-right {
-    gap: 0.5rem;
+    gap: 1.1rem;
   }
   
   .search-toggle-icon,
@@ -462,16 +463,18 @@
   }
   
   .chapter-center {
-    display: none; /* Hide chapter center on very small screens to avoid overflow */
-  }
+  top:3.5rem
+}
   
   .header-right {
-    gap: 0.4rem;
+    gap: 1.3rem;
   }
   
   .search-dropdown {
     width: 85vw;
-    right: -10px;
+    right: 50%; 
+    left: 50%; 
+      transform: translateX(-50%);
   }
   
   .selectors-dropdown {
@@ -484,10 +487,8 @@
 @media (max-width: 768px) {
   .search-dropdown {
     width: 75vw;       /* almost full width on small screens */
-    right: 2.5%;      /* center it with some margin */
     max-width: none; 
-    /* remove max-width restriction */
-  }
+}
 
   .search-dropdown input,
   .search-dropdown button {
@@ -538,6 +539,7 @@
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
   transform: scale(1.02);
   border-left: 4px solid #3b82f6;
+  color: var(--white)
 }
 
 /* Light mode verse highlight */
@@ -779,7 +781,8 @@ background: linear-gradient(90deg,
   .bible-reader-container {
     width: 100% !important;
     max-width: 100% !important;
-    padding: 1rem; /* tighter padding */
+    margin-top: -5rem;
+    padding: .21rem; /* tighter padding */
     border-radius: 0; /* optional: remove rounding to prevent clipping */
     box-shadow: none; /* prevents right-side overflow */
   }

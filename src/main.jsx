@@ -9,6 +9,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from './context/SocketContext.jsx';
 import { MessageProvider } from "./context/MessageContext";
+import { MessageSeenProvider } from "../MessageSeenContext";
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import { AudioPlayerProvider } from "./context/AudioPlayerContext";
@@ -27,27 +28,29 @@ createRoot(document.getElementById('root')).render(
   <HelmetProvider>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
       <TTSProvider>
-        <MessageProvider>
-          <NotificationProvider>
+        <NotificationProvider>
+          <MessageProvider>
             <AuthProvider>
               <SocketProvider>
-                <ThemeProvider>
-                  <BrowserRouter>
-                    <AudioPlayerProvider>
-                      <GlobalVideoProvider>
-                        <CallProvider>
-                          <PipModalProvider>
-                            <App />
-                          </PipModalProvider>
-                        </CallProvider>
-                      </GlobalVideoProvider>
-                    </AudioPlayerProvider>
-                  </BrowserRouter>
-                </ThemeProvider>
+                <CallProvider>
+                  <MessageSeenProvider>
+                    <ThemeProvider>
+                      <BrowserRouter>
+                        <AudioPlayerProvider>
+                          <GlobalVideoProvider>
+                            <PipModalProvider>
+                              <App />
+                            </PipModalProvider>
+                          </GlobalVideoProvider>
+                        </AudioPlayerProvider>
+                      </BrowserRouter>
+                    </ThemeProvider>
+                  </MessageSeenProvider>
+                </CallProvider>
               </SocketProvider>
             </AuthProvider>
-          </NotificationProvider>
-        </MessageProvider>
+          </MessageProvider>
+        </NotificationProvider>
       </TTSProvider>
     </ClerkProvider>
   </HelmetProvider>

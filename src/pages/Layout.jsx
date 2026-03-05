@@ -15,9 +15,9 @@ const Layout = () => {
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
   const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
-
+  const isBibleTab = location.pathname.startsWith('/bible')
   // Hide mobile navbar on messages, chatbox, profile, and settings pages
-  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile');
+  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/bible');
   useEffect(() => {
     console.log(sidebarOpen, "sidebarOpen in Layout");
   }, [sidebarOpen]);

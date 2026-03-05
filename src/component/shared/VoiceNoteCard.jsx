@@ -13,7 +13,14 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     analyserRef,
     setActiveInView,
     currentTime, duration, formatTime,
+    audioRef,
   } = useAudioPlayer();
+
+  // Internal audio ref for seeking
+  const internalAudioRef = useRef(null);
+
+  // Use external ref if provided, otherwise use internal ref
+  const activeAudioRef = audioRef || internalAudioRef;
 
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
@@ -127,12 +134,14 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
         type="range"
         min={0}
         max={100}
-          value={duration ? (currentTime / duration) * 100 : 0}
-         onChange={(e) => {
-    const newTime = (Number(e.target.value) / 100) * duration;
-    audioRef.current.currentTime = newTime;
-    seek((newTime / duration) * 100);
-  }}className="voice-range"
+        value={duration ? (currentTime / duration) * 100 : 0}
+        onChange={(e) => {
+          if (!activeAudioRef?.current) return;
+          const newTime = (Number(e.target.value) / 100) * duration;
+          activeAudioRef.current.currentTime = newTime;
+          seek((newTime / duration) * 100);
+        }}
+        className="voice-range"
         style={{
           background: `linear-gradient(
       to right,

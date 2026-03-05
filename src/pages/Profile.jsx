@@ -277,10 +277,16 @@ const Profile = () => {
           {!isUnauthenticatedVisitor && <MediumSidebarToggle sponsors={sponsors} />}
           {!isUnauthenticatedVisitor && showEdit && <ProfileModal setShowEdit={setShowEdit} />}
           {isUnauthenticatedVisitor && (
-            <div className="w-full md:w-[40%] flex items-center justify-center p-4 sm:p-8">
-              <AuthContainer isModal={true} onClose={() => navigate("/")} initialTab="login" />
-            </div>
-          )}
+  <div className="w-full md:w-[40%] auth-side-wrapper">
+    <div className="auth-inner">
+      <AuthContainer
+        isModal={true}
+        onClose={() => navigate("/")}
+        initialTab="login"
+      />
+    </div>
+  </div>
+)}
         </div>
       </div>
     </>

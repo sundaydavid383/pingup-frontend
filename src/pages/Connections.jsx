@@ -250,6 +250,7 @@ const handleAccept = async (senderId) => {
                 })}
 
               </div>
+                <p className="connection_notice_text">click any option below only when you want to trigger fetching updated data</p>
 
               {/* Tabs */}
               <div

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import axiosBase from '../../utils/axiosBase';
 
 const NotificationSettings = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
@@ -11,34 +12,63 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     emailNotifications: false,
     muteAll: false
   });
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const notificationItems = [
-    {
-      id: 'pushNotifications',
-      label: 'Push Notifications',
-      description: 'Receive push notifications on your device'
-    },
-    {
-      id: 'messageAlerts',
-      label: 'Message Alerts',
-      description: 'Get notified when you receive messages'
-    },
-    {
-      id: 'commentAlerts',
-      label: 'Comment Alerts',
-      description: 'Get notified when someone comments on your posts'
-    },
-    {
-      id: 'emailNotifications',
-      label: 'Email Notifications',
-      description: 'Receive email notifications for important events'
-    },
-    {
-      id: 'muteAll',
-      label: 'Mute All',
-      description: 'Silence all notifications temporarily'
+  // Load settings from backend on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axiosBase.get('/api/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success && res.data.settings) {
+          const { notificationSettings } = res.data.settings;
+          setNotifications({
+            pushNotifications: notificationSettings?.push ?? true,
+            messageAlerts: notificationSettings?.mentions ?? true,
+            commentAlerts: notificationSettings?.phone ?? true,
+            emailNotifications: notificationSettings?.email ?? false,
+            muteAll: false
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch notification settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const saveSettings = useCallback(async () => {
+    setLoading(true);
+    setSaved(false);
+    try {
+      const token = localStorage.getItem('token');
+      await axiosBase.put('/api/settings/notifications', {
+        push: notifications.pushNotifications,
+        mentions: notifications.messageAlerts,
+        phone: notifications.commentAlerts,
+        email: notifications.emailNotifications
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save notification settings:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [notifications]);
+
+  // Auto-save when settings change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveSettings();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [notifications, saveSettings]);
 
   const toggleNotification = (id) => {
     setNotifications({
@@ -63,6 +93,9 @@ const NotificationSettings = ({ isEmbedded = false }) => {
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Notifications
             </h1>
+            {saved && (
+              <span className="text-green-500 text-sm ml-auto">Saved!</span>
+            )}
           </div>
         </div>
       )}
@@ -90,6 +123,7 @@ const NotificationSettings = ({ isEmbedded = false }) => {
                 onClick={() => toggleNotification(item.id)}
                 className={`relative w-12 h-7 rounded-full transition-all ${notifications[item.id] ? 'custom-gradient' : 'bg-gray-300'
                   }`}
+                disabled={loading}
               >
                 <div
                   className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${notifications[item.id] ? 'translate-x-5' : 'translate-x-0'
@@ -148,4 +182,33 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     </div>
   );
 };
+
+const notificationItems = [
+  {
+    id: 'pushNotifications',
+    label: 'Push Notifications',
+    description: 'Receive push notifications on your device'
+  },
+  {
+    id: 'messageAlerts',
+    label: 'Message Alerts',
+    description: 'Get notified when you receive messages'
+  },
+  {
+    id: 'commentAlerts',
+    label: 'Comment Alerts',
+    description: 'Get notified when someone comments on your posts'
+  },
+  {
+    id: 'emailNotifications',
+    label: 'Email Notifications',
+    description: 'Receive email notifications for important events'
+  },
+  {
+    id: 'muteAll',
+    label: 'Mute All',
+    description: 'Silence all notifications temporarily'
+  }
+];
+
 export default NotificationSettings;

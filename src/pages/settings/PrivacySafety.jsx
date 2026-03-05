@@ -1,18 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import axiosBase from '../../utils/axiosBase';
 
 const PrivacySafety = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedSetting, setSelectedSetting] = useState(null);
+  const [saved, setSaved] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
     viewPosts: 'everyone', // everyone, followers, only-me
     viewStories: 'everyone',
     messageMe: 'everyone',
     commentPosts: 'everyone'
   });
+
+  // Load settings from backend on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axiosBase.get('/api/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success && res.data.settings) {
+          const { privacySettings: serverPrivacy } = res.data.settings;
+          if (serverPrivacy?.profileVisibility) {
+            setPrivacySettings(prev => ({
+              ...prev,
+              viewPosts: serverPrivacy.profileVisibility,
+              viewStories: serverPrivacy.profileVisibility,
+              messageMe: serverPrivacy.profileVisibility,
+              commentPosts: serverPrivacy.profileVisibility
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch privacy settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const saveSettings = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axiosBase.put('/api/settings/privacy', {
+        profileVisibility: privacySettings.viewPosts
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save privacy settings:', err);
+    }
+  }, [privacySettings]);
 
   const privacyOptions = [
     { label: 'Everyone', value: 'everyone' },
@@ -50,6 +94,8 @@ const PrivacySafety = ({ isEmbedded = false }) => {
   const handleSettingChange = (settingId, value) => {
     setPrivacySettings({ ...privacySettings, [settingId]: value });
     setSelectedSetting(null);
+    // Save after change
+    setTimeout(saveSettings, 100);
   };
 
   const renderSubScreen = () => {
@@ -123,6 +169,9 @@ const PrivacySafety = ({ isEmbedded = false }) => {
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Privacy & Safety
             </h1>
+            {saved && (
+              <span className="text-green-500 text-sm ml-auto">Saved!</span>
+            )}
           </div>
         </div>
       )}

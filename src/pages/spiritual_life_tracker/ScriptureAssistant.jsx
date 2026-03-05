@@ -3,7 +3,6 @@ import VoiceInput from "./VoiceInput";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 import { BookOpen, Play } from "lucide-react";
-import Fuse from "fuse.js";
 import "./biblereader.css";
 import assets from "../../assets/assets";
 import IntroModal from "./IntroModal";
