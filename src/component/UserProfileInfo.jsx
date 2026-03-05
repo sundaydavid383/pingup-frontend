@@ -276,7 +276,7 @@ useEffect(() => {
       {/* 🤝 CONNECTIONS */}
       <div className="pt-4">
         <h3 className="text-lg font-bold text-gray-900 mb-4 text-center md:text-left">Connections</h3>
-        <div className="flex justify-center md:justify-start">
+        <div className="flex justify-center items-center md:justify-start m-auto">
           {connectionsLoading ? (
             <div className="connections-stack">
               {Array.from({ length: 5 }).map((_, i) => <div key={i} className="stack-img skeleton-circle" />)}

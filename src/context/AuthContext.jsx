@@ -62,18 +62,10 @@ const fetchNotifications = async () => {
 const handleRead = async (notificationId) => {
   if (!notificationId) return;
 
-  // Mark as read locally in NotificationContext immediately
-  markAsRead(notificationId);
+  // Mark as read locally in NotificationContext immediately (this now syncs with backend)
+  await markAsRead(notificationId);
 
-  try {
-    await axiosBase.get(
-      `api/user/notifications/read?notificationId=${notificationId}&userId=${user?._id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    console.log(`✅ Notification ${notificationId} marked as read on server`);
-  } catch (err) {
-    console.error("❌ Failed to mark notification as read:", err);
-  }
+  console.log(`✅ Notification ${notificationId} marked as read`);
 };
 
 // Run once on login or token load

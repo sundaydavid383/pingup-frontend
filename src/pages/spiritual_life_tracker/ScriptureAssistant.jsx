@@ -3,12 +3,12 @@ import VoiceInput from "./VoiceInput";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 import { BookOpen, Play } from "lucide-react";
-import Fuse from "fuse.js";
 import "./biblereader.css";
 import assets from "../../assets/assets";
 import IntroModal from "./IntroModal";
 import VerseCard from "../../component/shared/VerseCard";
 import { processCommand } from "../../utils/CommandProcessor"; // create this as shown before
+import { useTTS } from "../../context/TTSContext";
 
 // ---------------- Debounce helper ----------------
 const debounce = (func, delay) => {
@@ -134,6 +134,9 @@ export default function ScriptureAssistant({ currentUser }) {
     currentVerse: null
   });
 
+  // TTS Context for voice blocking
+  const { shouldBlockVoice, isSpeaking, isProcessing, startSpeaking, stopSpeaking, startProcessing, stopProcessing } = useTTS();
+
   const versesRef = useRef([]);
   const verseByIdRef = useRef(new Map());
   const invertedIndexRef = useRef(new Map());
@@ -173,19 +176,36 @@ export default function ScriptureAssistant({ currentUser }) {
     if (ttsPlaying) {
       window.speechSynthesis.cancel();
       setTtsPlaying(false);
+      stopSpeaking();
+      // Resume voice input after stopping
+      voiceInputRef.current?.start?.();
       return;
     }
 
+    // Stop voice input when TTS starts
     if (voiceInputRef.current?.stop) voiceInputRef.current.stop();
+    
+    // Notify TTS context that we're starting
+    startSpeaking();
 
     const utterance = new SpeechSynthesisUtterance(verse.text);
     utterance.lang = "en-US";
     utterance.rate = 1;
     utterance.pitch = 1;
 
-    utterance.onstart = () => setTtsPlaying(true);
+    utterance.onstart = () => {
+      setTtsPlaying(true);
+    };
     utterance.onend = () => {
       setTtsPlaying(false);
+      stopSpeaking();
+      // Resume voice input after TTS finishes
+      voiceInputRef.current?.start?.();
+    };
+    utterance.onerror = () => {
+      setTtsPlaying(false);
+      stopSpeaking();
+      // Resume voice input on error too
       voiceInputRef.current?.start?.();
     };
 

@@ -1,13 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import axiosBase from '../../utils/axiosBase';
 
 const Appearance = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+  const { currentTheme, setCurrentTheme } = useTheme();
   const [fontSize, setFontSize] = useState('medium');
   const [language, setLanguage] = useState('english');
+  const [saved, setSaved] = useState(false);
+
+  // Load settings from backend on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axiosBase.get('/api/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success && res.data.settings) {
+          const { themePreferences } = res.data.settings;
+          if (themePreferences) {
+            setFontSize(themePreferences.fontSize || 'medium');
+            setLanguage(themePreferences.language || 'english');
+            // Theme is handled by ThemeContext
+            if (themePreferences.theme) {
+              setCurrentTheme(themePreferences.theme);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch theme settings:', err);
+      }
+    };
+    fetchSettings();
+  }, [setCurrentTheme]);
+
+  const saveSettings = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axiosBase.put('/api/settings/theme', {
+        theme: currentTheme,
+        fontSize,
+        language
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save theme settings:', err);
+    }
+  }, [currentTheme, fontSize, language]);
+
+  // Auto-save when settings change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveSettings();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [currentTheme, fontSize, language, saveSettings]);
+
+  const handleThemeChange = (newTheme) => {
+    setCurrentTheme(newTheme);
+  };
+
+  const handleFontSizeChange = (newFontSize) => {
+    setFontSize(newFontSize);
+  };
+
+  const handleLanguageChange = (newLanguage) => {
+    setLanguage(newLanguage);
+  };
 
   const themeOptions = [
     { label: 'Light', value: 'light' },
@@ -30,10 +95,6 @@ const Appearance = ({ isEmbedded = false }) => {
     { label: 'Chinese', value: 'chinese' }
   ];
 
-  const handleThemeChange = (newTheme) => {
-    setTheme(newTheme);
-  };
-
   return (
     <div>
       {!isEmbedded && (
@@ -50,6 +111,9 @@ const Appearance = ({ isEmbedded = false }) => {
             <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
               Appearance
             </h1>
+            {saved && (
+              <span className="text-green-500 text-sm ml-auto">Saved!</span>
+            )}
           </div>
         </div>
       )}
@@ -73,7 +137,7 @@ const Appearance = ({ isEmbedded = false }) => {
                   type="radio"
                   name="theme"
                   value={option.value}
-                  checked={theme === option.value}
+                  checked={currentTheme === option.value}
                   onChange={(e) => handleThemeChange(e.target.value)}
                   className="w-5 h-5"
                 />
@@ -103,7 +167,7 @@ const Appearance = ({ isEmbedded = false }) => {
                   name="fontSize"
                   value={option.value}
                   checked={fontSize === option.value}
-                  onChange={(e) => setFontSize(e.target.value)}
+                  onChange={(e) => handleFontSizeChange(e.target.value)}
                   className="w-5 h-5"
                 />
                 <span style={{ color: 'var(--text-main)' }} className={`text-${option.value}`}>
@@ -134,7 +198,7 @@ const Appearance = ({ isEmbedded = false }) => {
                   name="language"
                   value={option.value}
                   checked={language === option.value}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
                   className="w-5 h-5"
                 />
                 <span style={{ color: 'var(--text-main)' }}>{option.label}</span>

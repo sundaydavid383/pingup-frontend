@@ -15,8 +15,10 @@ export const SocketProvider = ({ children }) => {
 
   // Import both helpers from the context
   const { addUnread, updateLastMessage, incrementUnread, markAsRead  } = useMessageContext();
-  const { addNotification } = useNotificationContext();
+  const { addNotification, notifications } = useNotificationContext();
 
+  // Track processed notification IDs to prevent duplication
+  const processedNotifications = useRef(new Set());
   // Track processed message IDs to prevent duplication
   const processed = useRef(new Set());
    
@@ -77,8 +79,6 @@ export const SocketProvider = ({ children }) => {
   setOnlineUsers(new Set(users)); // replace old snapshot entirely
 });
 
-
-
     return () => {
       console.log("🧹 Cleaning up global socket connection...");
       s.disconnect();
@@ -92,6 +92,25 @@ useEffect(() => {
 
   const handleNotification = (notif) => {
     console.log("🔔 New Notification:", notif);
+
+    // Prevent duplicates - check if notification already exists
+    const notifId = notif._id || notif.id || notif.notificationId;
+    if (notifId && processedNotifications.current.has(notifId)) {
+      console.log("🔔 Duplicate notification ignored:", notifId);
+      return;
+    }
+
+    // Add to processed set
+    if (notifId) {
+      processedNotifications.current.add(notifId);
+    }
+
+    // Check if notification was previously deleted (stored in localStorage)
+    const deletedNotifications = JSON.parse(localStorage.getItem('deletedNotifications') || '[]');
+    if (deletedNotifications.includes(notifId)) {
+      console.log("🔔 Previously deleted notification ignored:", notifId);
+      return;
+    }
 
     // Add to global state
     addNotification(notif);

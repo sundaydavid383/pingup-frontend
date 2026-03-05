@@ -1,4 +1,6 @@
-import React, { createContext, useState, useCallback, useRef } from "react";
+import React, { createContext, useState, useEffect, useCallback, useRef, useContext } from "react";
+import { useAuth } from "./AuthContext";
+import { useSocket } from "./SocketContext";
 
 /**
  * CallContext - Manages global WebRTC call state
@@ -40,6 +42,99 @@ export const CallProvider = ({ children }) => {
   // Error state
   const [callError, setCallError] = useState(null);
 
+  // Get user and socket from context
+  const { user } = useAuth();
+  const { socket } = useSocket();
+
+  // Listen for socket events related to calls
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    // Handle incoming call from another user
+    const handleIncomingCall = (callData) => {
+      console.log("📞 Incoming call received:", callData);
+      
+      if (currentCall && currentCall.status !== CALL_STATES.ENDED && currentCall.status !== CALL_STATES.IDLE) {
+        // Already in a call, reject the incoming one
+        socket.emit("callRejected", {
+          callId: callData.callId,
+          rejecterId: user._id,
+          reason: "busy"
+        });
+        return;
+      }
+
+      setCurrentCall({
+        ...callData,
+        status: CALL_STATES.RINGING,
+        direction: "incoming",
+        startTime: null,
+        endTime: null,
+        duration: 0,
+        muted: false,
+        videoDisabled: false,
+        speakerOn: true,
+        remoteStream: null,
+        localStream: null
+      });
+    };
+
+    // Handle call accepted by remote user
+    const handleCallAcceptedAck = (data) => {
+      console.log("📞 Call accepted by remote user:", data);
+      setCurrentCall(prev => {
+        if (!prev) return prev;
+        return { ...prev, status: CALL_STATES.CONNECTING };
+      });
+    };
+
+    // Handle call rejected by remote user
+    const handleCallRejectedAck = (data) => {
+      console.log("📞 Call rejected by remote user:", data);
+      setCurrentCall(prev => {
+        if (!prev) return prev;
+        return { ...prev, status: CALL_STATES.REJECTED, rejectReason: data.reason };
+      });
+    };
+
+    // Handle call ended by remote user
+    const handleCallEndedAck = (data) => {
+      console.log("📞 Call ended by remote user:", data);
+      setCurrentCall(prev => {
+        if (!prev) return prev;
+        const endTime = new Date();
+        const duration = Math.floor((endTime - (prev.startTime || endTime)) / 1000);
+        
+        // Add to history
+        setCallHistory(prevHistory => [
+          {
+            ...prev,
+            status: CALL_STATES.ENDED,
+            endTime,
+            duration
+          },
+          ...prevHistory.slice(0, 49)
+        ]);
+        
+        return null;
+      });
+    };
+
+    // Register listeners
+    socket.on("incomingCall", handleIncomingCall);
+    socket.on("callAcceptedAck", handleCallAcceptedAck);
+    socket.on("callRejectedAck", handleCallRejectedAck);
+    socket.on("callEndedAck", handleCallEndedAck);
+
+    // Cleanup
+    return () => {
+      socket.off("incomingCall", handleIncomingCall);
+      socket.off("callAcceptedAck", handleCallAcceptedAck);
+      socket.off("callRejectedAck", handleCallRejectedAck);
+      socket.off("callEndedAck", handleCallEndedAck);
+    };
+  }, [socket, user, currentCall]);
+
   // Media constraints (can be adjusted for mobile vs desktop)
   const [mediaConstraints, setMediaConstraints] = useState({
     audio: {
@@ -64,6 +159,8 @@ export const CallProvider = ({ children }) => {
     console.log("  callType:", callType);
     console.log("  receiverImage:", receiverImage);
     console.log("  currentCall:", currentCall);
+    console.log("  user:", user);
+    console.log("  socket:", socket);
     
     // Allow new call if currentCall is null or if the call has ended
     if (currentCall && currentCall.status !== CALL_STATES.ENDED && currentCall.status !== CALL_STATES.IDLE) {
@@ -79,12 +176,13 @@ export const CallProvider = ({ children }) => {
       callId,
       type: callType,
       status: CALL_STATES.INITIATING,
-      initiatorId: null,              // Will be set by component via user context
-      initiatorName: null,
+      initiatorId: user?._id || null,
+      initiatorName: user?.name || null,
+      initiatorImage: user?.profile_picture || null,
       receiverId,
       receiverName,
       receiverImage: receiverImage,
-      direction: "outgoing",          // outgoing or incoming
+      direction: "outgoing",
       startTime: null,
       endTime: null,
       duration: 0,
@@ -95,8 +193,23 @@ export const CallProvider = ({ children }) => {
       localStream: null
     });
 
+    // Emit call initiated event to backend via socket
+    if (socket && user) {
+      socket.emit("callInitiated", {
+        callId,
+        initiatorId: user._id,
+        initiatorName: user.name,
+        receiverId,
+        callType,
+        timestamp: new Date().toISOString()
+      });
+      console.log("📤 Emitted callInitiated to socket");
+    } else {
+      console.warn("⚠️ Cannot emit callInitiated - socket or user not available");
+    }
+
     return callId;
-  }, [currentCall]);
+  }, [currentCall, user, socket]);
 
   /**
    * Receive an incoming call
@@ -132,7 +245,17 @@ export const CallProvider = ({ children }) => {
       if (!prev) return prev;
       return { ...prev, status: CALL_STATES.CONNECTING };
     });
-  }, []);
+    
+    // Emit acceptance to backend via socket
+    if (socket && currentCall) {
+      socket.emit("callAccepted", {
+        callId: currentCall.callId,
+        acceptorId: user?._id,
+        timestamp: new Date().toISOString()
+      });
+      console.log("📤 Emitted callAccepted to socket");
+    }
+  }, [socket, currentCall, user]);
 
   /**
    * Reject the current incoming call
@@ -142,7 +265,18 @@ export const CallProvider = ({ children }) => {
       if (!prev) return prev;
       return { ...prev, status: CALL_STATES.REJECTED, rejectReason: reason };
     });
-  }, []);
+    
+    // Emit rejection to backend via socket
+    if (socket && currentCall) {
+      socket.emit("callRejected", {
+        callId: currentCall.callId,
+        rejecterId: user?._id,
+        reason,
+        timestamp: new Date().toISOString()
+      });
+      console.log("📤 Emitted callRejected to socket");
+    }
+  }, [socket, currentCall, user]);
 
   /**
    * Call is now connected with media flowing
@@ -205,10 +339,21 @@ export const CallProvider = ({ children }) => {
         ...prevHistory.slice(0, 49) // Keep last 50 calls
       ]);
 
+      // Emit end call to backend via socket
+      if (socket) {
+        socket.emit("callEnded", {
+          callId: prev.callId,
+          endedBy: user?._id,
+          duration,
+          timestamp: new Date().toISOString()
+        });
+        console.log("📤 Emitted callEnded to socket");
+      }
+
       // Reset to null to allow new calls
       return null;
     });
-  }, []);
+  }, [socket, user]);
 
   /**
    * Clear call state and go back to IDLE

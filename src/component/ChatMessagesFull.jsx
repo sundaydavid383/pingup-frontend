@@ -41,7 +41,7 @@ const ChatMessagesFull = ({
     messages,
     setMessages,
     chatId,
-    userId: user._id,
+    userId: user?._id,
     socket,
     containerRef,
     scrollStopped,
@@ -57,6 +57,9 @@ const ChatMessagesFull = ({
 
   // State for read-more functionality
   const [expandedMessages, setExpandedMessages] = useState(new Set());
+  
+  const [isNearBottom, setIsNearBottom] = useState(true);
+
   // WhatsApp-style character threshold (around 100 chars like WhatsApp)
   const CHARACTER_THRESHOLD = 100;
 
@@ -71,6 +74,8 @@ const ChatMessagesFull = ({
       return newSet;
     });
   }, []);
+
+  console.log("user_id in chatmessagefull.jsx ", user?._id);
 
   const getDisplayText = (text, messageId) => {
     if (!text || text.length <= CHARACTER_THRESHOLD) return text;
@@ -149,6 +154,30 @@ const ChatMessagesFull = ({
       longPressTimer.current = null;
     }
   }, []);
+
+  useEffect(() => {
+  if (!containerRef?.current) return;
+
+  const container = containerRef.current;
+
+  const checkIfNearBottom = () => {
+    const threshold = 120; // px from bottom (adjust if needed)
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    setIsNearBottom(distanceFromBottom <= threshold);
+  };
+
+  // Run initially
+  checkIfNearBottom();
+
+  container.addEventListener("scroll", checkIfNearBottom);
+
+  return () => {
+    container.removeEventListener("scroll", checkIfNearBottom);
+  };
+}, [containerRef]);
 
   // Scroll to a specific message by ID and highlight it briefly
 const scrollToMessageAndHighlight = useCallback((messageId) => {
@@ -240,7 +269,7 @@ useEffect(() => {
         }
       }, 100);
     }
-  }, [setReplyTo, user._id, receiver, inputRef]);
+  }, [setReplyTo, user?._id, receiver, inputRef]);
 
   // Handle copy text
   const handleCopyText = useCallback((text) => {
@@ -383,11 +412,11 @@ useEffect(() => {
                     {/* Replied Message Preview - WhatsApp Style - Clickable to scroll to original */}
                     {msg.replyTo && (
                       <div
-                        e v className={`mb-2 pb-2 px-2 py-1.5 -mx-1 cursor-pointer hover:opacity-85 transition-opacity rounded-md`}
+                         className={`mb-2 pb-2 px-2 py-1.5 -mx-1 cursor-pointer hover:opacity-85 transition-opacity rounded-md`}
                         style={{
                           backgroundColor: sentByUser
                             ? 'rgba(255, 255, 255, 0.15)'
-                            : 'rgba(255, 255, 255, 0.12)',
+                            : 'rgba(32, 66, 219, 0.72)',
                           backdropFilter: 'blur(8px)',
                           WebkitBackdropFilter: 'blur(8px)',
                           border: sentByUser
@@ -566,7 +595,7 @@ useEffect(() => {
       )}
 
       {/* Scroll to bottom button - Always visible, fixed position */}
-      <button
+      {!isNearBottom  && <button
   onClick={() => {
     console.log("📬 ChatMessagesFull: Scroll to bottom button clicked");
     requestAnimationFrame(() => {
@@ -605,7 +634,7 @@ useEffect(() => {
       {seenManager.unseenBelowCount > 99 ? '99+' : seenManager.unseenBelowCount}
     </span>
   )}
-</button>
+</button>}
 
       {/* Message Options Dropdown - WhatsApp Style */}
       {dropdownState.isOpen && dropdownState.message && (

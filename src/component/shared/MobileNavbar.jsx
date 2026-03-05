@@ -2,21 +2,23 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { Home, Users, User, Bell, MessageSquareText, Compass, Menu } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useMessageContext } from "../../context/MessageContext";
+import { useMessageSeen } from "../../../MessageSeenContext";
+import { useNotificationContext } from "../../context/NotificationContext";
 import "./mobilenavbar.css"; // CSS file
 import BackButton from "./BackButton";
 
 const MobileNavbar = ({ setSidebarOpen }) => {
-  const { user, unreadCount } = useAuth();
-  const { getTotalUnread } = useMessageContext();
+  const { user } = useAuth();
+  const { totalUnreadCount } = useMessageSeen();
+  const { unreadCount: notificationUnreadCount } = useNotificationContext();
 
   const menuItems = [
     { to: "/", icon: Home },
-    { to: "/messages", icon: MessageSquareText, badge: getTotalUnread() },
+    { to: "/messages", icon: MessageSquareText, badge: totalUnreadCount },
     { to: "/discover", icon: Compass },
     { to: "/connections", icon: Users },
     { to: `/profile/${user?._id}`, icon: User },
-    { to: "/notification", icon: Bell, badge: unreadCount },
+    { to: "/notification", icon: Bell, badge: notificationUnreadCount },
   ];
 
   return (

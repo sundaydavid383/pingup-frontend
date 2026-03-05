@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import axiosBase from '../../utils/axiosBase';
+import toast from 'react-hot-toast';
 
 const AccountSettings = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [email, setEmail] = useState("")
   const [activeTab, setActiveTab] = useState('password'); // password, email, activity, devices
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
 
   // Form states
   const [passwords, setPasswords] = useState({
@@ -17,24 +21,40 @@ const AccountSettings = ({ isEmbedded = false }) => {
     confirm: ''
   });
 
-  const [email, setEmail] = useState(user?.email || '');
+  const [emailData, setEmailData] = useState({
+    newEmail: user?.email || '',
+    password: ''
+  });
+
   const [emailLoading, setEmailLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
     setPasswordLoading(true);
     try {
-      // TODO: Implement password change API call
-      console.log('Password change:', passwords);
-      alert('Password changed successfully');
-      setPasswords({ current: '', new: '', confirm: '' });
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.put('/api/settings/change-password', {
+        currentPassword: passwords.current,
+        newPassword: passwords.new
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success('Password changed successfully');
+        setPasswords({ current: '', new: '', confirm: '' });
+      } else {
+        toast.error(res.data.message || 'Error changing password');
+      }
     } catch (error) {
-      alert('Error changing password');
+      toast.error(error.response?.data?.message || 'Error changing password');
     } finally {
       setPasswordLoading(false);
     }
@@ -44,27 +64,76 @@ const AccountSettings = ({ isEmbedded = false }) => {
     e.preventDefault();
     setEmailLoading(true);
     try {
-      // TODO: Implement email change API call
-      console.log('Email change:', email);
-      alert('Email updated successfully');
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.put('/api/settings/change-email', {
+        newEmail: emailData.newEmail,
+        password: emailData.password
+      });
+      
+      if (res.data.success) {
+        toast.success('Email updated successfully');
+        setEmailData({ ...emailData, password: '' });
+      } else {
+        toast.error(res.data.message || 'Error updating email');
+      }
     } catch (error) {
-      alert('Error updating email');
+      toast.error(error.response?.data?.message || 'Error updating email');
     } finally {
       setEmailLoading(false);
     }
   };
 
-  const handleDeactivateAccount = () => {
-    if (window.confirm('Are you sure you want to deactivate your account? This action can be undone within 30 days.')) {
-      // TODO: Implement account deactivation
-      console.log('Account deactivation initiated');
+  const handleDeactivateAccount = async () => {
+    const password = window.prompt('Enter your password to deactivate account:');
+    if (!password) return;
+    
+    setDeactivateLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.post('/api/settings/deactivate', 
+        { password },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (res.data.success) {
+        toast.success('Account deactivated successfully');
+        logout();
+      } else {
+        toast.error(res.data.message || 'Error deactivating account');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error deactivating account');
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
-  const handleDeleteAccount = () => {
-    if (window.confirm('This action is irreversible. Are you sure you want to permanently delete your account?')) {
-      // TODO: Implement account deletion
-      console.log('Account deletion initiated');
+  const handleDeleteAccount = async () => {
+    const password = window.prompt('Enter your password to permanently delete your account. This cannot be undone:');
+    if (!password) return;
+    
+    if (!window.confirm('Are you absolutely sure? This is PERMANENT and cannot be undone!')) {
+      return;
+    }
+    
+    setDeleteLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.delete('/api/settings/account', {
+        data: { password },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success('Account permanently deleted');
+        logout();
+      } else {
+        toast.error(res.data.message || 'Error deleting account');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error deleting account');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -98,7 +167,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--white)]"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -125,7 +194,7 @@ const AccountSettings = ({ isEmbedded = false }) => {
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--white)]"
                     >
                       {showNewPassword ? <EyeOff className="w-4 h-4" style={{ color: 'var(--white)' }} /> : <Eye className="w-4 h-4" style={{ color: '[var(--white)]' }} />}
                     </button>

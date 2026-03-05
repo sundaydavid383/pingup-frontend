@@ -22,6 +22,8 @@ const CreatePost = () => {
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadState, setUploadState] = useState("");
+  const streamRef = useRef(null); // To store the media stream for cleanup
+
   const [audio, setAudio] = useState(null); // stores the recorded/selected audio
   const [recording, setRecording] = useState(false); // is recording active
   const mediaRecorderRef = useRef(null); // media recorder ref
@@ -277,7 +279,7 @@ const CreatePost = () => {
         if (isDev) console.log("YouTube Type:", youtubeType);
       }
 
-      if (isDev) console.log("FormData keys:", formData);
+      if (isDev) console.log("FormData entries:", Array.from(formData.entries()).map(([k, v]) => [k, v instanceof File ? { name: v.name, size: v.size, type: v.type } : v]));
 
       const res = await axios.post(
         `${import.meta.env.VITE_SERVER}api/posts/add`,
@@ -308,7 +310,7 @@ const CreatePost = () => {
       if (res.status >= 200 && res.status < 300) {
         showAlert("✅ Post published successfully!", "success");
 
-        setContent(" ");
+        setContent("");
         setImages([]);
         setVideos([]);
         setVisibility("public");
@@ -351,6 +353,14 @@ const CreatePost = () => {
   };
 
 
+  // Clean up recording stream properly
+  const cleanupRecording = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
   const startRecording = async () => {
     if (images.length > 0 || videos.length > 0) {
       return showAlert("You cannot record audio while images or videos are selected. Delete them first.", "warning");
@@ -363,18 +373,21 @@ const CreatePost = () => {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream; // Store stream for cleanup
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = []
+      audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
         audioChunksRef.current.push(e.data);
       };
 
       mediaRecorder.onstop = () => {
+        cleanupRecording(); // Clean up the stream when recording stops
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const file = new File([blob], `recording_${Date.now()}.webm`, { type: "audio/webm" });
         setAudio(file);
+        console.log("✅ Audio recorded:", file.name, file.size, file.type);
       };
 
       mediaRecorder.start();
@@ -387,8 +400,9 @@ const CreatePost = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      // Note: Stream cleanup happens in onstop callback
       setRecording(false);
     }
   };

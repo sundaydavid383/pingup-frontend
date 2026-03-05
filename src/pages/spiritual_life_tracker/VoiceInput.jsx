@@ -8,16 +8,16 @@ import { useAuth } from "../../context/AuthContext";
 import { useTTS } from "../../context/TTSContext";
 
 
-const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => {
+const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref) => {
   const [listening, setListening] = useState(false);
   const [micAvailable, setMicAvailable] = useState(true);
   const [speechAvailable, setSpeechAvailable] = useState(true);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const { user } = useAuth();
-  const [currentMode, setCurrentMode] = useState("web");
+  const [currentMode, setCurrentMode] = useState("lemonfox");
 
   // TTS Context for blocking voice during TTS/processing
-  const { shouldBlockVoice, isSpeaking, isProcessing, startSpeaking, stopSpeaking, startProcessing, stopProcessing } = useTTS();
+  const { shouldBlockVoice } = useTTS();
 
 
   const VOICE_STATE = {
@@ -39,7 +39,7 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "web"}, ref) => 
   const isPausedRef = useRef(false);
   const listeningRef = useRef(false);
   const backendRef = useRef(null);
-  const speechEngineRef = useRef("web"); // "web" | "vosk" | "hybrid"
+  const speechEngineRef = useRef("lemonfox"); // "web" | "vosk" | "lemonfox"
 const errorRef = useRef(null);
 
 
@@ -370,8 +370,8 @@ const startListening = async () => {
     }
   }
 
-  // Backend capture (vosk/hybrid)
- else if (backendRef.current) {
+  // Backend capture (vosk/hybrid/lemonfox)
+  else if (backendRef.current) {
     leftoverRef.current = "";
     backendRef.current.start();
     setVoiceState(VOICE_STATE.READY);
@@ -393,7 +393,7 @@ const stopListening = () => {
   }
 
   // Backend capture
- else if (backendRef.current) {
+  else if (backendRef.current) {
     leftoverRef.current = "";
     backendRef.current.stop();
   }
@@ -439,7 +439,7 @@ const switchMode = async (newMode) => {
   setVoiceState(VOICE_STATE.IDLE);
 
   // Start backend if needed
-  if ((newMode === "vosk" || newMode === "hybrid") && backendRef.current) {
+  if ((newMode === "vosk" || newMode === "hybrid" || newMode === "lemonfox") && backendRef.current) {
     await backendRef.current.start();
     setVoiceState(VOICE_STATE.READY);
     setListening(true);
@@ -461,22 +461,25 @@ return (
   <button
     onClick={() => switchMode("web")}
     disabled={currentMode === "web"}
+    className={currentMode === "web" ? "active" : ""}
   >
-    {currentMode === "web" ? "WebSpeech" : "W"}
+    {currentMode === "web" ? "Web" : "W"}
   </button>
 
   <button
     onClick={() => switchMode("vosk")}
     disabled={currentMode === "vosk"}
+    className={currentMode === "vosk" ? "active" : ""}
   >
     {currentMode === "vosk" ? "Vosk" : "V"}
   </button>
 
   <button
-    onClick={() => switchMode("hybrid")}
-    disabled={currentMode === "hybrid"}
+    onClick={() => switchMode("lemonfox")}
+    disabled={currentMode === "lemonfox"}
+    className={currentMode === "lemonfox" ? "active" : ""}
   >
-    {currentMode === "hybrid" ? "Hybrid" : "H"}
+    {currentMode === "lemonfox" ? "Lemonfox" : "L"}
   </button>
 </div>
 

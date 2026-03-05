@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ChatBox from "../pages/ChatBox.jsx";
 import { useNavigate } from "react-router-dom";
 import { Eye, MessageSquare, ImageIcon, Mic } from "lucide-react";
@@ -6,8 +6,8 @@ import axios from "../utils/axiosBase";
 import BackButton from "../component/shared/BackButton";
 import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
-import { useSocket } from "../context/useSocket";
-import { useMessageContext } from "../context/MessageContext";
+import { useSocket } from "../context/SocketContext"; // Corrected import path
+import { useMessageSeen } from "../../MessageSeenContext"; // Corrected import path
 import "../styles/message.css"
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
@@ -15,274 +15,79 @@ import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 const Messages = () => {
 
   const [activeChatId, setActiveChatId] = useState(null);
-
-  // 1. IMMEDIATE LOAD: Initialize state directly from localStorage
-  const [connections, setConnections] = useState(() => {
-    const cached = localStorage.getItem("springsconnect_connections");
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [syncProgress, setSyncProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [syncing, setSyncing] = useState(false); // optional, to show/hide the progress bar
-
-
-  const [lastMessages, setLastMessages] = useState(() => {
-    const savedLast = localStorage.getItem("lastMessages");
-    return savedLast ? JSON.parse(savedLast) : {};
-  });
-
-  // Only show loading skeleton if we have NO cached data at all
-  const [loading, setLoading] = useState(connections.length === 0);
-
-  const [unreadMap, setUnreadMap] = useState({});
-  const { user, sponsors } = useAuth();
-  const { unreadMessages, addUnread, clearUnread, getTotalUnread } = useMessageContext();
+  const { user } = useAuth();
   const { socket } = useSocket();
   const navigate = useNavigate();
-  const hasSyncedRef = useRef(false);
-  const processedMessages = useRef(new Set());
 
-  /*** 1️⃣ Load cached data on mount ***/
-  useEffect(() => {
-    const cachedConnections = localStorage.getItem("springsconnect_connections");
-    const cachedMessages = localStorage.getItem("lastMessages");
-    const cachedUnread = localStorage.getItem("unreadMap");
+  // Get data from the new MessageSeenContext
+  const { conversations, unreadCountsMap, totalUnreadCount } = useMessageSeen();
 
-    if (cachedConnections) setConnections(JSON.parse(cachedConnections));
-    if (cachedMessages) setLastMessages(JSON.parse(cachedMessages));
-    if (cachedUnread) setUnreadMap(JSON.parse(cachedUnread));
-
-    setLoading(false); // only stop skeleton after initial render
-  }, []);
-
-  const syncData = async () => {
-    try {
-      setSyncing(true);
-      setSyncProgress(20); // started
-
-      // Fetch both connections and last messages
-      const [connRes, msgRes] = await Promise.allSettled([
-        axios.get("api/user/connections"),
-        axios.get("api/messages/last")
-      ]);
-
-      setSyncProgress(50); // mid-progress
-
-      // Sync Connections
-     // ------------------- Step 1 -------------------
-if (connRes.status === 'fulfilled') {
-  const data = connRes.value.data.data;
-
-  // Only include users who have a confirmed connection
-  const confirmedConnections = (data.connections || [])
-
-  setConnections(confirmedConnections);
-  localStorage.setItem("springsconnect_connections", JSON.stringify(confirmedConnections));
-}
-
-
-      setSyncProgress(70); // more progress
-
-      // Sync Last Messages
-      if (msgRes.status === 'fulfilled' && msgRes.value.data.success) {
-        const incomingMsgs = msgRes.value.data.data;
-        setLastMessages(prev => {
-          const merged = { ...prev };
-          let hasChange = false;
-
-          Object.keys(incomingMsgs).forEach(id => {
-            const current = prev[id];
-            const incoming = incomingMsgs[id];
-
-            if (!current || new Date(incoming.createdAt) > new Date(current.createdAt)) {
-              merged[id] = incoming;
-              hasChange = true;
-            }
-          });
-
-          if (hasChange) localStorage.setItem("lastMessages", JSON.stringify(merged));
-          return merged;
-        });
-      }
-
-      setSyncProgress(100); // done
-    } catch (err) {
-      console.error("Background sync failed", err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
+  const [loading, setLoading] = useState(conversations.length === 0);
 
   useEffect(() => {
-  if (hasSyncedRef.current) return;
-    hasSyncedRef.current = true;
-    syncData();
-    // Optional: Refresh background data every 60 seconds
-    const interval = setInterval(syncData, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Keep existing Socket and Event listener logic below...
-  useEffect(() => {
-    const handleSelfMessage = (e) => {
-      const detail = e?.detail;
-      if (!detail) return;
-
-      const { to_user_id, message } = detail;
-      if (!to_user_id) return;
-
-      const type = message?.message_type || "text";
-      const text = type === "image" ? "[Image]" : type === "audio" ? "[Audio]" : message?.text || "[media]";
+    setLoading(conversations.length === 0);
+  }, [conversations]);
 
 
-      setLastMessages((prev) => ({
-        ...prev,
-        [to_user_id]: {
-          text,
-          createdAt: new Date().toISOString(),
-          type,
-          senderId: user._id,
-        },
-      }));
-    };
-    window.addEventListener("selfMessageSent", handleSelfMessage);
-    return () => window.removeEventListener("selfMessageSent", handleSelfMessage);
-  }, [user._id]);
-
-
-  /*** 6️⃣ Central processor for incoming messages ***/
-  const processIncoming = ({ from_user_id, to_user_id, message }) => {
-    if (!message) return;
-
-    const otherUserId = from_user_id === user._id ? to_user_id : from_user_id;
-    if (!otherUserId) return;
-
-    const type = message.message_type || "text";
-    const text =
-      type === "image" ? "[Image]" : type === "audio" ? "[Audio]" : message.text || "[media]";
-    const createdAt = message.createdAt || new Date().toISOString();
-    const messageKey = message._id || `${otherUserId}_${createdAt}`;
-
-    if (processedMessages.current.has(messageKey)) return;
-    processedMessages.current.add(messageKey);
-
-    setLastMessages((prev) => {
-      const prevTime = new Date(prev[otherUserId]?.createdAt || 0).getTime();
-      const newTime = new Date(createdAt).getTime();
-      if (newTime >= prevTime) {
-        const updated = { ...prev, [otherUserId]: { text, createdAt, type, senderId: from_user_id } };
-        localStorage.setItem("lastMessages", JSON.stringify(updated));
-        return updated;
-      }
-      return prev;
+  /*** Sorting connections by last message ***/
+  const sortedConversations = useMemo(() => {
+    if (!conversations) return [];
+    return [...conversations].sort((a, b) => {
+        const timeA = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+        const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+        return timeB - timeA;
     });
-
-    if (from_user_id !== user._id) {
-      addUnread(otherUserId, { text, createdAt });
-      setUnreadMap((prev) => ({ ...prev, [otherUserId]: (prev[otherUserId] || 0) + 1 }));
-    }
-
-    if (processedMessages.current.size > 200) {
-      processedMessages.current = new Set(Array.from(processedMessages.current).slice(-100));
-    }
-  };
-
-  /*** 7️⃣ Socket events ***/
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewMessage = (data) => processIncoming(data);
-    const handleMessageRead = ({ chatId, from_user_id }) => {
-      const target = from_user_id || chatId;
-      setUnreadMap((prev) => {
-        const updated = { ...prev };
-        delete updated[target];
-        return updated;
-      });
-      clearUnread(target);
-    };
-
-    socket.off("newMessageAlert");
-    socket.off("newMessageNotification");
-    socket.off("messageRead");
-
-    // Use only one event to avoid duplicates - newMessageNotification is the primary
-    socket.on("newMessageNotification", handleNewMessage);
-    socket.on("messageRead", handleMessageRead);
-
-    return () => {
-      socket.off("newMessageNotification", handleNewMessage);
-      socket.off("messageRead", handleMessageRead);
-    };
-  }, [socket, addUnread, clearUnread, user._id]);
-
-  /*** 8️⃣ Sorting connections by last message ***/
-  const getLastMessageTime = (userId) => {
-    const msg = lastMessages[userId];
-    return msg ? new Date(msg.createdAt).getTime() : 0;
-  };
-  const sortedConnections = [...connections].sort((a, b) => {
-    return getLastMessageTime(b._id) - getLastMessageTime(a._id);
-  });
+  }, [conversations]);
 
 
-const filteredConnections = sortedConnections.filter((usr) => {
-  if(!searchTerm) return true;
-  const term = searchTerm.toLowerCase();
-  return (
-    usr.name.toLowerCase().includes(term) ||
-    usr.username.toLowerCase().includes(term) ||
-    (usr.full_name && usr.full_name.toLowerCase().includes(term))
-  );
-});
+  const filteredConnections = useMemo(() => sortedConversations.filter((convo) => {
+    if(!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    const otherUser = convo.otherUser;
+    if (!otherUser) return false;
+    return (
+      otherUser.name?.toLowerCase().includes(term) ||
+      otherUser.username?.toLowerCase().includes(term)
+    );
+  }), [sortedConversations, searchTerm]);
 
-  /*** 9️⃣ Open chat ***/
+  /*** Open chat ***/
   const handleOpenChat = (userId) => {
-    clearUnread(userId);
-    setUnreadMap((prev) => {
-      const updated = { ...prev };
-      delete updated[userId];
-      localStorage.setItem("unreadMap", JSON.stringify(updated));
-      return updated;
-    });
-    socket?.emit("markAsRead", { userId });
+    // The seen logic will be handled in the ChatBox component when messages are viewed.
+    // No need to clear unread here anymore.
     setActiveChatId(userId);
     if (window.innerWidth < 768) navigate(`/chatbox/${userId}`);
   };
 
-  const borderColor = `rgba(${255 - Math.floor((syncProgress / 100) * 255)}, ${Math.floor(
-    (syncProgress / 100) * 255
-  )}, 50, 1)`;
-
   // 🔎 Highlight matching text like WhatsApp
-const highlightMatch = (text, term) => {
-  if (!term || !text) return text;
+  const highlightMatch = (text, term) => {
+    if (!term || !text) return text;
 
-  const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex
-  const regex = new RegExp(`(${escapedTerm})`, "gi");
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex
+    const regex = new RegExp(`(${escapedTerm})`, "gi");
 
-  const parts = text.split(regex);
+    const parts = text.split(regex);
 
-  return parts.map((part, index) =>
-    regex.test(part) ? (
-      <span
-        key={index}
-        style={{
-          backgroundColor: "rgba(139, 92, 246, 0.25)", // soft violet
-          color: "var(--primary)",
-          fontWeight: 600,
-          borderRadius: "4px",
-          padding: "0 2px"
-        }}
-      >
-        {part}
-      </span>
-    ) : (
-      part
-    )
-  );
-};
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span
+          key={index}
+          style={{
+            backgroundColor: "rgba(139, 92, 246, 0.25)", // soft violet
+            color: "var(--primary)",
+            fontWeight: 600,
+            borderRadius: "4px",
+            padding: "0 2px"
+          }}
+        >
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
 
 
   return (
@@ -301,57 +106,27 @@ const highlightMatch = (text, term) => {
           </h1>
           <p className="text-slate-600">People you’ve connected with</p>
         </div>
-
-        {/* 🔄 Sync progress bar */}
-                  {syncing && (
-  <div className="absolute top-5 z-50 right-0 -translate-x-1/2">
-    <div
-      className="relative w-12 h-12 rounded-full flex items-center justify-center"
-      style={{
-        background: `conic-gradient(
-          var(--primary) ${syncProgress * 3.6}deg,
-          var(--hover-light) 0deg
-        )`,
-      }}
-    >
-      {/* Inner circle (creates the border effect) */}
-      <div
-        className="absolute w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium"
-        style={{
-          backgroundColor: "var(--white)",
-          color: "var(--secondary)",
-        }}
-      >
-        {syncProgress}%
-      </div>
-    </div>
-  </div>
-)}
-
-
-
-<div className="mb-4 flex items-center gap-2 search-input">
-<input
-  type="text"
-  placeholder="Search users..."
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") e.target.blur();
-  }}
-  className=" bg-[var(--color-1)] flex-1 outline-none border-none focus:ring-0"
-/>
-
-
-  {searchTerm && (
-    <button
-      onClick={() => setSearchTerm("")}
-      className="px-3 py-1 text-sm  rounded-xl bg-[var(--hover-light)]  hover:bg-[var(--hover-dark)] cursor-pointer transition"
-    >
-      ✕
-    </button>
-  )}
-</div>
+        
+        <div className="mb-4 flex items-center gap-2 search-input">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.target.blur();
+              }}
+              className=" bg-[var(--color-1)] flex-1 outline-none border-none focus:ring-0"
+            />
+            {searchTerm && (
+                <button
+                onClick={() => setSearchTerm("")}
+                className="px-3 py-1 text-sm  rounded-xl bg-[var(--hover-light)]  hover:bg-[var(--hover-dark)] cursor-pointer transition"
+                >
+                ✕
+                </button>
+            )}
+        </div>
 
 
 
@@ -370,16 +145,19 @@ const highlightMatch = (text, term) => {
                 </div>
               </div>
             ))
-          ) : sortedConnections.length > 0 ? (
-            filteredConnections.map((usr) => {
-              const last = lastMessages[usr._id];
-              const unreadCount = unreadMap[usr._id] || 0;
-              const isActive = activeChatId === usr._id;
+          ) : filteredConnections.length > 0 ? (
+            filteredConnections.map((convo) => {
+              const otherUser = convo.otherUser;
+              if (!otherUser) return null;
+
+              const last = convo.lastMessage;
+              const unreadCount = unreadCountsMap[convo._id] || 0;
+              const isActive = activeChatId === otherUser._id;
 
               return (
                 <div
-                  key={usr._id}
-                  onClick={() => handleOpenChat(usr._id)}
+                  key={otherUser._id}
+                  onClick={() => handleOpenChat(otherUser._id)}
                   className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition
                 ${isActive
                       ? "bg-violet-100"
@@ -388,38 +166,34 @@ const highlightMatch = (text, term) => {
                 >
                   <ProfileAvatar
                     user={{
-                      name: usr.name || "User",
-                      profilePicUrl: usr.profilePicUrl,
-                      profilePicBackground: usr.profilePicBackground,
+                      name: otherUser.name || "User",
+                      profilePicUrl: otherUser.profile_picture,
+                      profilePicBackground: otherUser.profilePicBackground,
                     }}
                     size={48}
                   />
 
                   <div className="flex-1 min-w-0">
                     <p className="text-[var(--primary)] truncate">
-                       @{highlightMatch(usr.username, searchTerm)}
+                       @{highlightMatch(otherUser.username, searchTerm)}
                     </p>
-                    {/* <p className="font-medium text-slate-700 truncate">
-                      {highlightMatch(usr.name, searchTerm)}
-
-                    </p> */}
-
+                    
                     {last && (
                       <span
-                        className={`text-sm truncate flex items-center gap-1 ${unreadCount > 0 ? "text-[var(--error)]" : "text-slate-600"
+                        className={`text-sm truncate flex items-center gap-1 ${unreadCount > 0 ? "text-[var(--error)] font-bold" : "text-slate-600"
                           }`}
                       >
-                        {last.senderId === user._id && "You: "}
-                        {last.type === "image" ? (
+                        {last.from_user_id === user._id && "You: "}
+                        {last.message_type === "image" ? (
                           <>
                             <ImageIcon size={16} className="text-[var(--primary)]" /> Image
                           </>
-                        ) : last.type === "audio" ? (
+                        ) : last.message_type === "audio" ? (
                           <>
                             <Mic size={16} className="text-[var(--primary)]" /> Audio
                           </>
                         ) : (
-                          <p>{last.text.substring(0, 17)}...</p>
+                          <p>{last.text?.substring(0, 17)}...</p>
                         )}
                       </span>
                     )}

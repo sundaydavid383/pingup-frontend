@@ -52,7 +52,8 @@ export default function Discover() {
         params: { page: 1, limit: 20 },
       });
       const fetched = normalizeArray(res.data);
-      setUsers(fetched || []);
+      localStorage.setItem("springsConnectDiscoveredSuggestedUsers", fetched)
+      setUsers(fetched || localStorage.getItem("springsConnectDiscoveredSuggestedUsers") || []);
       setHasMore(fetched.length === 20);
       setPage(1);
       pageRef.current = 1;
@@ -231,44 +232,44 @@ export default function Discover() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* USERS GRID */}
-        <div className="max-w-6xl mx-auto px-5 mt-30 md:mt-4">
-          <div className="discoveries_grid">
-            {users.map((userItem) => (
-              <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
-            ))}
+      {/* USERS GRID - Scrollable container */}
+      <div className="max-w-6xl mx-auto px-5 mt-4 md:mt-4 pt-24 md:pt-4">
+        <div className="discoveries_grid pb-20">
+          {users.map((userItem) => (
+            <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
+          ))}
+        </div>
+
+        {loadingInitial && (
+          <div className="grid discoveries_grid mt-8">
+            {Array.from({ length: 6 }).map((_, idx) => <SkeletonUserCard key={idx} />)}
           </div>
+        )}
 
-          {loadingInitial && (
-            <div className="grid discoveries_grid mt-8">
-              {Array.from({ length: 6 }).map((_, idx) => <SkeletonUserCard key={idx} />)}
+        {/* LOADING & ERROR STATES */}
+        <div className="flex flex-col items-center py-10">
+          {loadingMore && <div className="animate-pulse text-blue-600 font-medium">Loading more...</div>}
+          {fetchError && (
+            <button onClick={() => searchUsers()} className="px-6 py-2 bg-blue-600 text-white rounded-full">
+              Retry
+            </button>
+          )}
+          {!loadingInitial && users.length === 0 && (
+            <div className="text-gray-400 text-center">
+              <Users size={48} className="mx-auto mb-2 opacity-20" />
+              <p>No results found</p>
             </div>
           )}
-
-          {/* LOADING & ERROR STATES */}
-          <div className="flex flex-col items-center py-10">
-            {loadingMore && <div className="animate-pulse text-blue-600 font-medium">Loading more...</div>}
-            {fetchError && (
-              <button onClick={() => searchUsers()} className="px-6 py-2 bg-blue-600 text-white rounded-full">
-                Retry
-              </button>
-            )}
-            {!loadingInitial && users.length === 0 && (
-              <div className="text-gray-400 text-center">
-                <Users size={48} className="mx-auto mb-2 opacity-20" />
-                <p>No results found</p>
-              </div>
-            )}
-          </div>
         </div>
+      </div>
 
-        <InfiniteScrollTrigger onReachBottom={fetchMore} enabled={hasMore && !loadingInitial} />
+      <InfiniteScrollTrigger onReachBottom={fetchMore} enabled={hasMore && !loadingInitial} />
 
-        <div className="mt-20 pb-10 text-gray-400 flex flex-col items-center gap-2">
-          <Sprout size={24} className="text-green-500 opacity-50" />
-          <span className="text-xs uppercase tracking-widest">Connect & Grow</span>
-        </div>
+      <div className="mt-20 pb-10 text-gray-400 flex flex-col items-center gap-2">
+        <Sprout size={24} className="text-green-500 opacity-50" />
+        <span className="text-xs uppercase tracking-widest">Connect & Grow</span>
       </div>
     </div>
   );

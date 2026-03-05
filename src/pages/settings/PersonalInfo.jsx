@@ -1,22 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, MapPin } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import axiosBase from '../../utils/axiosBase';
+import toast from 'react-hot-toast';
 
 const PersonalInfo = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [personalInfo, setPersonalInfo] = useState({
-    dateOfBirth: '1995-01-15',
-    gender: 'prefer-not-to-say',
-    location: 'New York, USA'
+    dateOfBirth: '',
+    gender: '',
+    location: ''
   });
+  const [loading, setLoading] = useState(false);
+
+  // Load user data on mount
+  useEffect(() => {
+    if (user) {
+      setPersonalInfo({
+        dateOfBirth: user.dob ? new Date(user.dob).toISOString().split('T')[0] : '',
+        gender: user.gender || '',
+        location: user.location || ''
+      });
+    }
+  }, [user]);
 
   const handleInputChange = (field, value) => {
     setPersonalInfo({ ...personalInfo, [field]: value });
   };
 
-  const handleSave = () => {
-    console.log('Saving personal info:', personalInfo);
-    alert('Personal information updated successfully');
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axiosBase.put('/api/settings/personal-info', {
+        dob: personalInfo.dateOfBirth,
+        gender: personalInfo.gender,
+        location: personalInfo.location
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        toast.success('Personal information updated successfully');
+      } else {
+        toast.error(res.data.message || 'Error saving personal info');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error saving personal info');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownloadData = () => {

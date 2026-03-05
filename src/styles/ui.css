@@ -5,6 +5,19 @@
   display: grid;
 }
 
+.connection_notice_text{
+  color: var(--secondary);
+  background-color: var(--hover-light);
+  backdrop-filter: blur(33px);
+  text-align: center;
+  margin: 9px auto;
+  padding: .3rem .5rem;
+  border-radius: .4rem;
+  font-size: .9rem;
+  font-style: italic;
+  
+}
+
 .chat-loader::before,
 .chat-loader::after {
   content: "";

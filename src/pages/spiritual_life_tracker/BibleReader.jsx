@@ -652,14 +652,14 @@ export default function BibleReader() {
               {/* Center: Chapter */}
               {selectedBookName && (
                 <div className="chapter-center flex items-center gap-3">
-                  <span className="text-[var(--hover-light)]">
+                  <span className="text-[var(--white)]">
                     {selectedBookName} {selectedChapterNumber}
                   </span>
                 </div>
               )}
 
               {/* Right: Search, Selectors & Theme Toggle */}
-              <div className="header-right flex items-center gap-3">
+              <div className="header-right flex items-center">
                 {/* Existing Search */}
                 <div className="search-container" ref={searchRef}>
                   <FaSearch

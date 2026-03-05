@@ -41,7 +41,6 @@ export const useSeenManager = ({
     userId,
     socket,
     containerRef,
-    scrollStopped,
     scrollStopDebounce = 1200,
 }) => {
     // ==========================================
@@ -277,58 +276,74 @@ export const useSeenManager = ({
      * Handle scroll stop - main entry point for updating seen status
      * Called when user stops scrolling for 1.2 seconds
      */
-    const handleScrollStop = useCallback(() => {
-        if (!scrollStopped) return;
-        if (!containerRef.current) return;
-        if (messages.length === 0) return;
+const handleScrollStop = useCallback(() => {
+    if (!containerRef.current) return;
+    if (messages.length === 0) return;
 
-        // Get the last visible message
-        const lastVisible = getLastVisibleMessage();
-        if (!lastVisible) return;
+    // Only allow if scrolling DOWN
+    if (scrollDirectionRef.current !== "down") return;
 
-        // Only update if it's a NEW message (not current threshold)
-        if (lastSeenMessage?._id === lastVisible._id) {
-            return;
-        }
+    const lastVisible = getLastVisibleMessage();
+    if (!lastVisible) return;
 
-        // Update local state
-        setLastSeenMessage(lastVisible);
+    // 🚫 Prevent backward movement (CRITICAL FIX)
+    if (
+        lastSeenMessage &&
+        new Date(lastVisible.createdAt) <= new Date(lastSeenMessage.createdAt)
+    ) {
+        return;
+    }
 
-        // Persist to backend & emit socket
-        updateLastSeenOnBackend(lastVisible._id);
+    // Avoid duplicate update
+    if (lastSeenMessage?._id === lastVisible._id) return;
 
-        // Recalculate unseen count
-        calculateUnseenBelowCount();
-    }, [
-        scrollStopped,
-        messages,
-        lastSeenMessage,
-        getLastVisibleMessage,
-        updateLastSeenOnBackend,
-        calculateUnseenBelowCount,
-    ]);
+    setLastSeenMessage(lastVisible);
+    updateLastSeenOnBackend(lastVisible._id);
+    calculateUnseenBelowCount();
+}, [
+    messages,
+    lastSeenMessage,
+    getLastVisibleMessage,
+    updateLastSeenOnBackend,
+    calculateUnseenBelowCount,
+]);
 
         // Add these refs at the top inside useSeenManager
 const lastScrollTop = useRef(0);
 const scrollStopTimer = useRef(null);
+const scrollDirectionRef = useRef(null);
 
-// Scroll handler - only updates last seen when scrolling DOWN
 const onContainerScroll = useCallback(() => {
   if (!containerRef.current) return;
 
   const scrollTop = containerRef.current.scrollTop;
-  const direction = scrollTop > lastScrollTop.current ? 'down' : 'up';
+
+  const direction =
+    scrollTop > lastScrollTop.current ? "down" : "up";
+
+  scrollDirectionRef.current = direction;
   lastScrollTop.current = scrollTop;
 
-  // Only mark last seen when scrolling down
-  if (direction === 'down') {
-    if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
-
-    scrollStopTimer.current = setTimeout(() => {
-      handleScrollStop(); // already exists in your hook
-    }, scrollStopDebounce); // 1200ms by default
+  // 🚫 If scrolling UP → NEVER update last seen
+  if (direction === "up") {
+    if (scrollStopTimer.current) {
+      clearTimeout(scrollStopTimer.current);
+    }
+    return;
   }
-}, [scrollStopDebounce, handleScrollStop]);
+
+  // ✅ Only when scrolling DOWN
+  if (scrollStopTimer.current) {
+    clearTimeout(scrollStopTimer.current);
+  }
+
+  scrollStopTimer.current = setTimeout(() => {
+    // Extra safety check
+    if (scrollDirectionRef.current === "down") {
+      handleScrollStop();
+    }
+  }, 1500); // 1.5 seconds pause
+}, [handleScrollStop, containerRef]);
 
     /**
      * Scroll to bottom and mark as seen
@@ -391,13 +406,6 @@ const onContainerScroll = useCallback(() => {
         fetchLastSeenFromBackend();
     }, [chatId, fetchLastSeenFromBackend]);
 
-    /**
-     * Handle scroll stop detection
-     * This is the MAIN trigger for marking messages as seen
-     */
-    useEffect(() => {
-        handleScrollStop();
-    }, [scrollStopped, handleScrollStop]);
 
     /**
      * Recalculate unseen count when messages change or lastSeenMessage changes

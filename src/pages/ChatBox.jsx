@@ -1,51 +1,43 @@
-// src/pages/ChatBox.jsx
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ImageIcon, SendHorizonal, Mic, ImageUpIcon, FileIcon, VideoIcon } from "lucide-react";
-import axiosBase from "../utils/axiosBase";
-import moment from "moment";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useMessageSeen } from '../../MessageSeenContext'; // Corrected import path
 import ProfileAvatar from "../component/shared/ProfileAvatar";
-import { useAuth } from "../context/AuthContext";
-import "../styles/ui.css";
-import { useIntersectionObserver } from "../hooks/useIntersectionObserver";
-import { useSocket } from "../context/SocketContext";
-import { useMessageContext } from "../context/MessageContext";
-import { FaArrowDown } from "react-icons/fa";
 import ThemeDropdown from "../component/ThemeDropdown";
-import BackButton from "../component/shared/BackButton";
 import "../component/themeDropdown.css";
 import './chatbox.css'
 import '../styles/chat-highlight.css'
 import { useTheme } from "../context/ThemeContext";
 import AudioMessage from "../component/shared/AudioMessage";
 import ChatMessagesFull from "../component/ChatMessagesFull";
-import { ArrowLeft } from "lucide-react";
 import ChatboxHeader from "../component/shared/ChatboxHeader";
 import ChatboxInput from "../component/shared/ChatboxInput";
-import MediaDropdown from "../component/MediaDropdown";
 import HeaderArrow from "../component/shared/HeaderArrow";
 import ImageComposer from "../component/shared/ImageComposer";
 import { CallContext, CALL_TYPES } from "../context/CallContext";
-import { Phone, Video } from "lucide-react";
-
-
-
-
+import useCall from "../hooks/useCall";
+import { Phone, Video, ImageUpIcon, Mic, SendHorizonal, ImageIcon, FileIcon, VideoIcon } from "lucide-react";
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/useSocket';
+import axiosBase from "../utils/axiosBase";
+import moment from "moment";
 
 
 const ChatBox = ({ userId: propUserId }) => {
-  const { initiateCall } = React.useContext(CallContext);
+  const { initiateCall: initiateCallFromContext, currentCall } = React.useContext(CallContext);
+  const { initiateAudioCall, initiateVideoCall } = useCall();
   const [replyTo, setReplyTo] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const params = useParams();
-  const userId = propUserId || params.userId;
   const navigate = useNavigate();
   const { user, sidebarOpen } = useAuth();
+   const userId = propUserId || params.userId || user?._id;
   const { socket, connected, onlineUsers } = useSocket();
-  // use the connected flag from context 
-  const { unreadMessages, addUnread, clearUnread, getTotalUnread, incrementUnread } = useMessageContext();
+
+  // Use the new MessageSeenContext
+  const { setLastSeenMessageForChat } = useMessageSeen();
+
   // 1. INITIALIZE FROM LOCAL STORAGE
   // Use a state initializer that depends on userId
   const [messages, setMessages] = useState(() => {
@@ -125,7 +117,7 @@ const ChatBox = ({ userId: propUserId }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex(prev => (prev + 1) % placeholders.length);
-    }, 500000);
+    }, 20000);
     return () => clearInterval(interval);
   }, []);
 
@@ -203,7 +195,7 @@ const ChatBox = ({ userId: propUserId }) => {
 
     try {
       // Fetch older messages - using the chat room API with before parameter
-      const response = await axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}&before=${oldestTimestamp}&limit=50`);
+      const response = await axiosBase.get(`/api/chat/room?user1=${user?._id}&user2=${userId}&before=${oldestTimestamp}&limit=50`);
 
       if (response.data?.messages && response.data.messages.length > 0) {
         // Add new messages to the existing ones (prepend since they're older)
@@ -237,7 +229,7 @@ const ChatBox = ({ userId: propUserId }) => {
     } catch (err) {
       console.error('Error loading older messages:', err);
     }
-  }, [containerRef, messages, user._id, userId]);
+  }, [containerRef, messages, user?._id, userId]);
 
   const scrollToBottom = () => {
     if (containerRef.current) {
@@ -383,7 +375,7 @@ const ChatBox = ({ userId: propUserId }) => {
 
         const [receiverRes, chatRes] = await Promise.all([
           axiosBase.get(`/api/user/${userId}`),
-          axiosBase.get(`/api/chat/room?user1=${user._id}&user2=${userId}`),
+          axiosBase.get(`/api/chat/room?user1=${user?._id}&user2=${userId}`),
         ]);
 
         setReceiver(receiverRes.data.user || null);
@@ -406,7 +398,8 @@ const ChatBox = ({ userId: propUserId }) => {
           setMessages(newMessages);
         }
 
-        clearUnread(userId);
+        // This is now handled by the intersection observer
+        // clearUnread(userId);
       } catch (err) {
         console.error("❌ Error fetching chat:", err);
       }
@@ -517,29 +510,42 @@ const ChatBox = ({ userId: propUserId }) => {
     }
   }, [chatId, connected, socket]);
   // ============================== Intersection Observer (mark read) ==========================
-  let lastReadSent = 0;
-
-  function sendRead(messageId, chatId) {
-    const now = Date.now();
-    if (now - lastReadSent < 500) return; // throttle 500ms
-    lastReadSent = now;
-
-    socket.emit("messageRead", { messageId, chatId });
-  }
-  useIntersectionObserver({
-    containerRef,
-    messages,
-    onVisible: (messageId) => {
-      const msg = messages.find(m => m._id === messageId);
-      if (!msg) return;
-      if (msg._id.startsWith("temp_")) return;
-
-      sendRead(messageId, chatId);
-
-      // remove from unread
-      clearUnread(msg.from_user_id);
-    }
-  });
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const messageId = entry.target.getAttribute('data-message-id');
+            if (messageId) {
+              const msg = messages.find(m => m._id === messageId);
+              if (!msg) return;
+              if (msg._id.startsWith('temp_')) return;
+              
+              // Only mark received messages as seen
+              if (msg.from_user_id !== user?._id) {
+                setLastSeenMessageForChat(chatId, msg);
+              }
+            }
+          }
+        });
+      },
+      {
+        root: container,
+        threshold: 0.5
+      }
+    );
+    
+    // Observe all message elements
+    const messageElements = container.querySelectorAll('[data-message-id]');
+    messageElements.forEach((el) => observer.observe(el));
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [messages, chatId, user?._id, setLastSeenMessageForChat]);
 
 
 
@@ -562,7 +568,7 @@ const ChatBox = ({ userId: propUserId }) => {
     const tempMsg = {
       _id: tempId,
       chatId,
-      from_user_id: user._id,
+      from_user_id: user?._id,
       to_user_id: userId,
       text: currentText || "",
       replyTo: replyInfo,
@@ -584,7 +590,7 @@ const ChatBox = ({ userId: propUserId }) => {
       setSending(true);
       const formData = new FormData();
       formData.append("chatId", chatId || "");
-      formData.append("from_user_id", user._id);
+      formData.append("from_user_id", user?._id);
       formData.append("to_user_id", userId);
       formData.append("text", tempMsg.text);
       formData.append("tempId", tempId);
@@ -646,7 +652,7 @@ const ChatBox = ({ userId: propUserId }) => {
     try {
       const formData = new FormData();
       formData.append("chatId", chatId);
-      formData.append("from_user_id", user._id);
+      formData.append("from_user_id", user?._id);
       formData.append("to_user_id", userId);
       formData.append("text", text);
       formData.append("tempId", newTempId);
@@ -861,13 +867,50 @@ const ChatBox = ({ userId: propUserId }) => {
   // }, [socket, user]);
 
 
+  // ========================= LAST SEEN & ONLINE STATUS =========================
+  // Proper last seen logic - only show online when truly online
   useEffect(() => {
     if (!receiver) return;
 
-    if (!onlineUsers.has(receiver._id)) {
-      setLastActive(receiver.lastActiveAt || new Date().toISOString());
+    // If user is in onlineUsers set, they're truly online
+    if (onlineUsers.has(receiver._id)) {
+      setLastActive(null); // Clear lastActive to show "Online"
+    } else {
+      // User is offline - use their lastActiveAt timestamp
+      const lastSeenTime = receiver.lastActiveAt ? new Date(receiver.lastActiveAt) : new Date();
+      setLastActive(lastSeenTime.toISOString());
     }
   }, [onlineUsers, receiver]);
+
+  // Format last seen properly - fix "Active a few seconds ago" bug
+  const formatLastSeen = (lastActiveIso) => {
+    if (!lastActiveIso) return "Online";
+    
+    const lastSeen = new Date(lastActiveIso);
+    const now = new Date();
+    const diffMs = now - lastSeen;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    // Only show "Active X ago" if within 5 minutes (prevent false "Active now")
+    if (diffSecs < 60) {
+      return "Online";
+    } else if (diffMins < 60) {
+      return `Last seen ${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `Last seen ${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffDays < 7) {
+      return `Last seen ${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffWeeks < 4) {
+      return `Last seen ${diffWeeks} week${diffWeeks > 1 ? 's' : ''} ago`;
+    } else {
+      return `Last seen ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+    }
+  };
 
 
   // Scroll to bottom on initial load
@@ -941,10 +984,9 @@ const ChatBox = ({ userId: propUserId }) => {
               e.stopPropagation();
               console.log("🎙️ Audio Call Button Clicked!");
               console.log("📋 Receiver Info:", receiver);
-              console.log("📋 CallContext:", { initiateCall });
               if (receiver?._id) {
                 console.log("✅ Calling audio to:", receiver._id, receiver.name);
-                initiateCall(receiver._id, receiver.name, CALL_TYPES.AUDIO, receiver.profile_picture);
+                initiateAudioCall(receiver._id, receiver.name, receiver.profile_picture);
               } else {
                 console.error("❌ No receiver ID found!");
               }
@@ -965,7 +1007,7 @@ const ChatBox = ({ userId: propUserId }) => {
               console.log("📋 CallContext:", { initiateCall });
               if (receiver?._id) {
                 console.log("✅ Calling video to:", receiver._id, receiver.name);
-                initiateCall(receiver._id, receiver.name, CALL_TYPES.VIDEO, receiver.profile_picture);
+                initiateVideoCall(receiver._id, receiver.name, receiver.profile_picture);
               } else {
                 console.error("❌ No receiver ID found!");
               }
@@ -1300,6 +1342,8 @@ const ChatBox = ({ userId: propUserId }) => {
     };
   }, []);
 
+    console.log("user in chatbox.jsx ", user?._id);
+
   return (
     <div
       ref={chatContainerRef}
@@ -1509,7 +1553,7 @@ const ChatBox = ({ userId: propUserId }) => {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 10h10a8 8 0 0 1 8 8v4M3 10l6 6M3 10l6-6" />
                 </svg>
-                Replying to {replyTo.from_user_id === user._id ? 'yourself' : (replyTo.name || 'message')}
+                Replying to {replyTo.from_user_id === user?._id ? 'yourself' : (replyTo.name || 'message')}
               </div>
               <div className="reply-bar-text">
                 {replyTo.text || (replyTo.message_type === 'image' ? '📷 Image' : replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
@@ -1544,7 +1588,7 @@ const ChatBox = ({ userId: propUserId }) => {
                 const newHeight = Math.min(e.target.scrollHeight, 100);
                 e.target.style.height = `${newHeight}px`;
                 if (socket && chatId && user?._id)
-                  socket.emit("typing", { chatId, from_user_id: user._id });
+                  socket.emit("typing", { chatId, from_user_id: user?._id });
               }}
               onKeyDown={async (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {

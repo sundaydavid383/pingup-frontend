@@ -205,6 +205,20 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     }
   }, [callContext, socket, user, webrtcManager]);
 
+  // Emit join event with user info when socket becomes available
+  useEffect(() => {
+    if (!socket || !user) return;
+    
+    // Join call handler room with user info
+    socket.emit('join', {
+      userId: user._id,
+      userName: user.name,
+      userImage: user.profilePicUrl
+    });
+    
+    console.log('📞 useCallManager: Joined call handlers with user info');
+  }, [socket, user]);
+
   /**
    * Setup socket listeners for incoming calls
    */

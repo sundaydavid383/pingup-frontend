@@ -239,9 +239,16 @@ const PostCard = ({ post,
   const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
   const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
 
-  // Check for YouTube data (either as attachment or separate fields)
-  const hasYouTube = post.youtubeVideoId || post.youtubeEmbedUrl || post.attachments?.some(att => att.type === "youtube");
-  const youTubeUrl = post.youtubeEmbedUrl || (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null);
+  // Check for YouTube data (either as attachment or separate fields or nested object)
+  const hasYouTube = post.youtubeVideoId || post.youtubeEmbedUrl || 
+                     post.attachments?.some(att => att.type === "youtube") || 
+                     post.youtubeVideo?.videoId; // Handle nested youtubeVideo object from backend
+  
+  // Get YouTube URL from multiple possible sources
+  const youTubeUrl = post.youtubeEmbedUrl || 
+                     (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null) ||
+                     post.youtubeVideo?.embedUrl ||
+                     (post.youtubeVideo?.videoId ? `https://www.youtube.com/embed/${post.youtubeVideo.videoId}` : null);
 
 
   const handleShowLikes = async (postId) => {
@@ -370,8 +377,8 @@ const PostCard = ({ post,
         </div>
       )}
 
-      {/* YouTube Video - when sent as separate fields */}
-      {hasYouTube && !post.attachments?.some(att => att.type === "youtube") && youTubeUrl && (
+      {/* YouTube Video - when sent as separate fields or nested object */}
+      {hasYouTube && youTubeUrl && !post.attachments?.some(att => att.type === "youtube") && (
         <div className="w-full rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "16/9" }}>
           <iframe
             src={youTubeUrl}
