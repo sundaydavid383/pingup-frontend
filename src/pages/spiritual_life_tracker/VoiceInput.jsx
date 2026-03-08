@@ -197,20 +197,33 @@ const handleBackendChunk = useCallback((text) => {
 
   const words = text.trim().split(/\s+/);
 
-  // 2️⃣ Only search if enough words
+  // 2️⃣ ALWAYS trigger search pipeline - even for short transcripts
+  // This ensures Lemonfox behaves like WebSpeech/Vosk
+  const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
+  const leftover = words.length > MAX_CHUNK_WORDS ? words.slice(MAX_CHUNK_WORDS).join(" ") : "";
+
+  // If not enough words, still trigger search but with shorter delay logic
   if (words.length < MIN_CHUNK_WORDS) {
-    // Reset to READY if not enough words
-    setVoiceState(VOICE_STATE.READY);
+    // For short transcripts, still set processing state
+    setVoiceState(VOICE_STATE.PROCESSING);
+    
+    // Trigger search - processChunks will handle the short input
+    onTranscribe(chunk, leftover, {
+      forceSearch: true,
+      source: speechEngineRef.current,
+      onComplete: () => {
+        console.log("🔹 Short transcript search complete, resetting to READY");
+        setVoiceState(VOICE_STATE.READY);
+      }
+    });
     return;
   }
-
-  const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
 
   // 3️⃣ Set processing state before search
   setVoiceState(VOICE_STATE.PROCESSING);
 
   // 4️⃣ Trigger search with ONLY this speech
-  onTranscribe(chunk, "", {
+  onTranscribe(chunk, leftover, {
     forceSearch: true,
     source: speechEngineRef.current,
     onComplete: () => {
