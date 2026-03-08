@@ -66,17 +66,17 @@
   border-radius: 50%;
   background: var(--primary);
   box-shadow: 0 0 6px var(--opaque-primary);
-}.loader {
+}
+.loader-simple {
   width: 16px;
   height: 16px;
-  border: 2px solid #ccc;
-  border-top: 2px solid #1e40af;
+  border: 2px solid transparent;      /* thin and light */
+  border-top: 2px solid white;        /* spinning part */
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin-simple 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes spin-simple {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

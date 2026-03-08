@@ -114,17 +114,18 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
   return (
     <div ref={cardRef} className={`voice-card ${isActive ? "active" : ""}`}>
       <div className="voice-top">
-        <button
-          className="voice-play"
-          onClick={() => togglePlay(audioUrl)}
-        >
-           {isLoading && currentUrl === audioUrl ? (
-    <div className="loader"></div>
+<button
+  className="voice-play"
+  onClick={() => togglePlay(audioUrl)}
+>
+  {isLoading && currentUrl === audioUrl ? (
+    <div className="loader-simple"></div>
   ) : isActive ? (
     <Pause size={16} />
   ) : (
     <Play size={16} />
-  )}</button>
+  )}
+</button>
 
         <div className="voice-body">
           <p className="voice-label">Voice Note</p>

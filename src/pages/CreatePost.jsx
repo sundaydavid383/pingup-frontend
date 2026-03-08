@@ -318,9 +318,9 @@ const CreatePost = () => {
         setYoutubePreview(null);
         setYoutubeError("");
         setYoutubeType(null);
-        setTimeout(() => {
-          navigate("/");
-        }, 3000);
+        // setTimeout(() => {
+        //   navigate("/");
+        // }, 3000);
 
 
 
@@ -699,13 +699,14 @@ const CreatePost = () => {
                 Cancel
               </button>
             )}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn px-6 py-2 bg-[var(--accent)] text-white rounded-md hover:bg-[var(--accent-dark)] transition flex-1 sm:flex-none"
-            >
-              {loading ? "Publishing..." : "Publish Post"}
-            </button>
+            {!recording && (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="btn px-6 py-2 bg-[var(--accent)] text-white rounded-md hover:bg-[var(--accent-dark)] transition flex-1 sm:flex-none"
+              >
+                {loading ? "Publishing..." : "Publish Post"}
+            </button>)}
 
             {uploadProgress > 0 && (
               <div className="w-full mt-3 flex flex-col gap-1">
