@@ -14,6 +14,7 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     setActiveInView,
     currentTime, duration, formatTime,
     audioRef,
+    isLoading,
   } = useAudioPlayer();
 
   // Internal audio ref for seeking
@@ -117,8 +118,13 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
           className="voice-play"
           onClick={() => togglePlay(audioUrl)}
         >
-          {isActive ? <Pause size={16} /> : <Play size={16} />}
-        </button>
+           {isLoading && currentUrl === audioUrl ? (
+    <div className="loader"></div>
+  ) : isActive ? (
+    <Pause size={16} />
+  ) : (
+    <Play size={16} />
+  )}</button>
 
         <div className="voice-body">
           <p className="voice-label">Voice Note</p>

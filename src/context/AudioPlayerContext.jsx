@@ -36,6 +36,7 @@ export const AudioPlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeInView, setActiveInView] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   //timer
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -58,11 +59,14 @@ export const AudioPlayerProvider = ({ children }) => {
   useEffect(() => {
     const audio = new Audio();
 
+
     // 🔑 REQUIRED for Cloudinary / remote audio analysis
     audio.crossOrigin = "anonymous";
 
     audio.preload = "metadata";
     audioRef.current = audio;
+    const handleWaiting = () => setIsLoading(true);
+    const handleCanPlay = () => setIsLoading(false);
 
     const handleTimeUpdate = () => {
       if (!audio.duration) return;
@@ -77,11 +81,17 @@ export const AudioPlayerProvider = ({ children }) => {
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("playing", () => setIsLoading(false));
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("playing", () => setIsLoading(false));
     };
   }, [audioRef]);
 
@@ -140,11 +150,13 @@ export const AudioPlayerProvider = ({ children }) => {
       setCurrentUrl(url);
     }
 
+    setIsLoading(true);
     try {
       await audio.play();
       setIsPlaying(true);
     } catch (err) {
       console.error("Audio play failed:", err);
+      setIsLoading(false);
     }
   };
 
@@ -212,6 +224,7 @@ export const AudioPlayerProvider = ({ children }) => {
         setActiveInView,
         audioRefs,               // <-- add this
         scrollToCurrentAudio,
+        isLoading,
 
         // timer
         currentTime,
