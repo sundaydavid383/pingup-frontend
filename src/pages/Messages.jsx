@@ -11,6 +11,7 @@ import { useMessageSeen } from "../../MessageSeenContext"; // Corrected import p
 import "../styles/message.css"
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
+import { connect } from "socket.io-client";
 
 const Messages = () => {
 
@@ -23,11 +24,14 @@ const Messages = () => {
   // Get data from the new MessageSeenContext
   const { conversations, unreadCountsMap, totalUnreadCount } = useMessageSeen();
 
-  const [loading, setLoading] = useState(conversations.length === 0);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(conversations.length === 0);
-  }, [conversations]);
+useEffect(() => {
+  // simulate fetching or use your real fetching logic
+  if (conversations) {
+    setLoading(false);
+  }
+}, [conversations]);
 
 
   /*** Sorting connections by last message ***/
@@ -219,6 +223,14 @@ const Messages = () => {
               {searchTerm ? "No users found." : "No accepted connections yet."}
             </p>
           )}
+            {!searchTerm && conversations.length === 0 && (
+    <button
+      onClick={() => navigate("/discover")} // redirect to your discover page
+      className="btn "
+    >
+      Find People
+    </button>
+  )}
         </div>
       </div>
 
