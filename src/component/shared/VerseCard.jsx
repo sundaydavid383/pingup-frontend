@@ -90,7 +90,7 @@ const handleNavigateToVerse = () => {
 
         {isFirst && (
           <button
-            className="mt-3 w-10 h-10 flex items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg hover:bg-indigo-700 transition-[var(--transition-default)] relative z-10"
+            className="mt-3 w-10 h-10 flex items-center justify-center rounded-full bg-[var(--primary-color)] text-white shadow-lg hover:bg-[var(--primary-color)] transition-[var(--transition-default)] relative z-10"
             onClick={(e) =>{ e.stopPropagation();onToggleSpeak(verse)}}
             title={ttsPlaying ? "Pause" : "Play"}
           >

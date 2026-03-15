@@ -59,6 +59,7 @@ div[style*="border-radius: 50%"] img {
   display: flex;
   flex-wrap: wrap; /* Allow wrapping if there are many */
   justify-content: center;
+  margin: auto;
   gap: 4px; /* Add gap if they wrap */
 }
 
@@ -67,8 +68,8 @@ div[style*="border-radius: 50%"] img {
   /* Make the avatar slightly smaller on mobile */
   .avatar-overlap-container img, 
   .avatar-overlap-container .profile-avatar-placeholder {
-    width: 90px !important;
-    height: 90px !important;
+    width: 120px !important;
+    height: 120px !important;
   }
 
 

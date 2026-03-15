@@ -41,6 +41,7 @@ export default function VideoPlayer({
   const [userPaused, setUserPaused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
   // hide controls after inactivity
   const hideTimerRef = useRef(null);
@@ -323,19 +324,43 @@ export default function VideoPlayer({
   // fullscreen helpers (accept optional event)
   function toggleFullscreen(e) {
     if (e && e.stopPropagation) e.stopPropagation();
+    const vid = videoRef.current;
     const el = containerRef.current;
     if (!el) return;
     const doc = document;
+    
     if (!doc.fullscreenElement) {
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      // Enter true fullscreen - use the video element for better experience
+      const fullscreenTarget = vid || el;
+      if (fullscreenTarget.requestFullscreen) {
+        fullscreenTarget.requestFullscreen();
+      } else if (fullscreenTarget.webkitRequestFullscreen) {
+        fullscreenTarget.webkitRequestFullscreen();
+      }
       setIsFullscreen(true);
     } else {
-      if (doc.exitFullscreen) doc.exitFullscreen();
-      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen && doc.webkitExitFullscreen();
+      // Exit fullscreen
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      }
       setIsFullscreen(false);
     }
   }
+
+  // Listen for fullscreen changes (ESC key or other)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement || !!document.webkitFullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // play/pause click handler (accept optional event)
   function handlePlayPause() {
@@ -454,13 +479,15 @@ export default function VideoPlayer({
       onClick={(e) => { e.stopPropagation(); resetHideTimer(); }}
       style={{
         maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
-        height: "80vh",   // ✅ increase from 50vh
+        height: "auto",                    // ← changed from 80vh
+        minHeight: "180px",
         width: "100%",
+        maxWidth: "100%",
         "--vp-primary": "var(--primary)",
         "--vp-played-pct": `${playedPct}%`,
       }}
       onMouseMove={resetHideTimer}
-      onTouchStart={resetHideTimer} // 👈 mobile tap also resets timer
+      onTouchStart={resetHideTimer}
     >
       <video
         ref={videoRef}
@@ -470,11 +497,12 @@ export default function VideoPlayer({
         playsInline
         preload="metadata"
         muted={muted}
-        style={{
+               style={{
           width: "100%",
-          height: "100%",
+          height: "auto",
+          maxHeight: "82vh",           // ← safety cap
           objectFit: "contain",
-          cursor: "pointer", // ✅ shows user it’s clickable
+          cursor: "pointer",
         }}
         onClick={handleCenterClick}
         controlsList="nodownload"
@@ -544,32 +572,42 @@ export default function VideoPlayer({
             </div>
           </div>
           <div className="vp-right">
-            {/* Mute/unmute button */}
-            <button
-              className="vp-btn vp-btn-large"
-              onClick={handleMuteToggle}
-              aria-label={muted ? "Unmute" : "Mute"}
+            {/* Volume control with vertical slider */}
+            <div 
+              className="vp-volume-container"
+              onMouseEnter={() => setShowVolumeSlider(true)}
+              onMouseLeave={() => setShowVolumeSlider(false)}
             >
-              {muted ? <BsFillVolumeMuteFill className="vp-icon vp-icon-bigger" /> :
-                <BsFillVolumeUpFill className="vp-icon vp-icon-bigger" />}
-            </button>
+              {/* Mute/unmute button */}
+              <button
+                className="vp-btn vp-btn-large"
+                onClick={handleMuteToggle}
+                onMouseEnter={() => setShowVolumeSlider(true)}
+                aria-label={muted ? "Unmute" : "Mute"}
+              >
+                {muted ? <BsFillVolumeMuteFill className="vp-icon vp-icon-bigger" /> :
+                  <BsFillVolumeUpFill className="vp-icon vp-icon-bigger" />}
+              </button>
 
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                setVolume(val);
-                setMuted(val === 0);
-              }}
-              className="vp-volume"
-              style={{ "--vol": `${volume * 100}%` }}
-              aria-label="Volume"
-            />
-
+              {/* Vertical volume slider - only visible on hover/click */}
+              <div className={`vp-volume-slider-container ${showVolumeSlider ? 'visible' : ''}`}>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setVolume(val);
+                    setMuted(val === 0);
+                  }}
+                  className="vp-volume-range-vertical"
+                  style={{ "--vol": `${volume * 100}%` }}
+                  aria-label="Volume"
+                />
+              </div>
+            </div>
 
             {/* Fullscreen button */}
             <button className="vp-btn vp-btn-large" onClick={toggleFullscreen} aria-label="Fullscreen">

@@ -120,7 +120,7 @@ const LoginForm = ({ onSwitchToSignUp }) => {
 
         <button
           type="submit"
-          className="w-full py-3 bg-[var(--accent)] hover:bg-indigo-700 text-white font-semibold rounded-xl transition"
+          className="w-full py-3 bg-[var(--accent)] hover:bg-[var(--primary-color)] text-white font-semibold rounded-xl transition"
         >
           Login
         </button>

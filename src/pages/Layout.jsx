@@ -15,9 +15,10 @@ const Layout = () => {
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
   const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
-  const isBibleTab = location.pathname.startsWith('/bible')
+  const isBibleTab = location.pathname.startsWith('/bible');
+  const isDiscoverTab = location.pathname.startsWith('/discover') || location.pathname === '/discover';
   // Hide mobile navbar on messages, chatbox, profile, and settings pages
-  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/bible');
+  const hideMobileNavbar = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chatbox') || location.pathname.startsWith('/settings') || location.pathname.startsWith('/bible') || location.pathname.startsWith('/discover') || location.pathname.startsWith('/profile');
   useEffect(() => {
     console.log(sidebarOpen, "sidebarOpen in Layout");
   }, [sidebarOpen]);
@@ -30,7 +31,7 @@ const Layout = () => {
       <div
         className={`flex-1 bg-slate-50 transition-all duration-300
           ${sidebarOpen
-            ? (isMessageTab || isSettingsTab || isProfileTab)
+            ? (isMessageTab || isSettingsTab || isProfileTab  || isDiscoverTab)
               ? 'ml-20' // Matches Sidebar reduced width
               : 'ml-52 md:ml-56 lg:ml-60' // Matches Sidebar full width
             : 'ml-0'

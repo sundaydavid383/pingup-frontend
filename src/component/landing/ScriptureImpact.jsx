@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_NAME } from '../../constants/appConfig';
 
 const ScriptureImpact = ({ onAuthClick }) => {
   return (
@@ -24,7 +25,7 @@ const ScriptureImpact = ({ onAuthClick }) => {
               Now imagine thousands gathering daily.
             </p>
             <p className="text-gray-400 max-w-2xl mx-auto">
-              On SpringsConnect, believers from around the world connect, pray, and grow together. Every shared scripture, every encouraging comment, and every prayer request builds our global faith community.
+              On {APP_NAME}, believers from around the world connect, pray, and grow together. Every shared scripture, every encouraging comment, and every prayer request builds our global faith community.
             </p>
           </div>
 

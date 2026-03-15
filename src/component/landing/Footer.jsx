@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_NAME } from '../../constants/appConfig';
 
 const LandingFooter = () => {
   const footerLinks = {
@@ -24,11 +25,11 @@ const LandingFooter = () => {
               <div className="w-12 h-12 flex items-center justify-center">
                 <img 
                   src="/icons/icon-192.png" 
-                  alt="SpringsConnect Logo" 
+                  alt="{APP_NAME} Logo" 
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="font-bold text-lg hidden sm:inline text-white">SpringsConnect</span>
+              <span className="font-bold text-lg hidden sm:inline text-white">{APP_NAME}</span>
             </div>
             <p className="text-gray-400 text-sm">
               Where faith meets community. Connect spiritually, grow together.
@@ -89,7 +90,7 @@ const LandingFooter = () => {
         {/* Bottom Divider */}
         <div className="border-t border-white/10 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-            <p>© 2026 SpringsConnect. All rights reserved.</p>
+            <p>© 2026 {APP_NAME}. All rights reserved.</p>
             <div className="flex gap-6">
               <a href="/privacy-policy" className="hover:text-white transition">Privacy Policy</a>
               <a href="/terms-of-service" className="hover:text-white transition">Terms of Service</a>

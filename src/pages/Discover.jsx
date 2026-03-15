@@ -156,7 +156,7 @@ export default function Discover() {
   return (
     <div className="bg-slate-50 min-h-screen pb-10">
       {/* STICKY SEARCH HEADER */}
-      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-50 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
+      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-5 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
         <div className="max-w-6xl mx-auto px-5">
           <div className="discover_search_bar w-full rounded-2xl px-4 py-3">
             <div className="flex flex-col gap-4">

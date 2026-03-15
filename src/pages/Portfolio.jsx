@@ -133,14 +133,14 @@ const SOCIAL = [
           <div className="font-bold text-xl title">David</div>
           <div className="hidden md:flex gap-6 items-center">
             {NAV_LINKS.map((link) => (
-              <a key={link.href} href={link.href} className="hover:text-indigo-600">
+              <a key={link.href} href={link.href} className="hover:text-[var(--primary-color)]">
                 {link.label}
               </a>
             ))}
 
             <a
               href="#projects"
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700 transition"
+              className="px-4 py-2 rounded-lg bg-[var(--primary-color)] text-white shadow hover:bg-indigo-700 transition"
             >
               View Work
             </a>
@@ -149,7 +149,7 @@ const SOCIAL = [
       </nav>
 
       {/* HERO SECTION */}
-      <header id="hero" className="bg-gradient-to-br from-indigo-700 to-blue-600 text-white">
+      <header id="hero" className="bg-gradient-to-br from-[var(--primary-color)] to-blue-600 text-white">
         <div className="max-w-6xl mx-auto px-6 py-24 md:py-32 flex flex-col md:flex-row items-center gap-10">
           {/* Left - Intro */}
           <div className="flex-1">
@@ -326,8 +326,8 @@ const SOCIAL = [
 
                   <div className="mt-4 flex items-center justify-between">
                     <div className="flex gap-3">
-                      <a href={p.demo} className="text-indigo-600 text-sm font-semibold">Demo</a>
-                      <a href={p.code} className="text-indigo-600 text-sm font-semibold">Code</a>
+                      <a href={p.demo} className="text-[var(--primary-color)] text-sm font-semibold">Demo</a>
+                      <a href={p.code} className="text-[var(--primary-color)] text-sm font-semibold">Code</a>
                     </div>
                     <a href={`#${p.id}`} className="text-sm text-gray-400">Details →</a>
                   </div>
@@ -341,7 +341,7 @@ const SOCIAL = [
       {/* CONTACT SECTION */}
 <section id="contact" className="py-16 bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 text-center">
-        <h2 className="text-3xl font-bold mb-6 text-indigo-700">Get in Touch</h2>
+        <h2 className="text-3xl font-bold mb-6 text-[var(--primary-color)]">Get in Touch</h2>
         <p className="text-gray-600 mb-10">
           You can reach me easily through any of the platforms below 👇
         </p>
@@ -374,7 +374,7 @@ const SOCIAL = [
             href="tel:+2349032197266"
             className="flex items-center gap-2 bg-white border rounded-lg px-4 py-3 shadow hover:shadow-md transition"
           >
-            <FaPhoneAlt className="text-indigo-600 text-2xl" />
+            <FaPhoneAlt className="text-[var(--primary-color)] text-2xl" />
             <span>Call Me</span>
           </a>
 

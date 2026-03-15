@@ -20,7 +20,9 @@
   min-height: 100vh;
   position: relative;
 }
-
+.profile_max_width{
+  max-width: 700px !important;
+}
 /* Optional subtle gradient overlay for depth */
 .auth-side-wrapper::before {
   content: "";

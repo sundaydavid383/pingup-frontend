@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { APP_NAME } from '../../constants/appConfig';
 
 const LandingNavbar = ({ onAuthClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -27,11 +28,11 @@ const LandingNavbar = ({ onAuthClick }) => {
             <div className="w-10 h-10 flex items-center justify-center">
               <img 
                 src="/icons/icon-192.png" 
-                alt="SpringsConnect Logo" 
+                alt="{APP_NAME} Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <span className="font-bold text-lg hidden sm:inline text-white">SpringsConnect</span>
+            <span className="font-bold text-lg hidden sm:inline text-white">{APP_NAME}</span>
           </Link>
 
           {/* Desktop Menu */}

@@ -28,7 +28,7 @@ const ProfileAvatar = ({ user, size = 50 }) => {
     position: "relative",
     borderRadius: "50%",
     overflow: "hidden",
-    border: "3px solid var(--hover-dark)",
+    border: "1px solid var(--primary)",
     userSelect: "none",
     backgroundColor: bgColor,
     display: "flex",

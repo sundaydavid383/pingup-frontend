@@ -1097,7 +1097,7 @@ const ChatBox = ({ userId: propUserId }) => {
                     }}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
                   >
-                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--primary-color)]" />
                     View Profile
                   </button>
 

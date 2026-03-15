@@ -36,6 +36,7 @@
   border: 1px solid rgba(255,255,255,0.6);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   pointer-events: auto;
+  margin-top: -1.2rem;
 }
 
 /* Primary search button (icon) */
@@ -76,8 +77,6 @@
   width: 100%;
   box-sizing: border-box; /* Ensure padding doesn't break layout */
   padding: 1rem 0;
-  overflow-y: auto; /* Enable vertical scrolling */
-  max-height: calc(100vh - 200px); /* Limit height on larger screens */
 }
 
 /* On mobile, allow full height scrolling */

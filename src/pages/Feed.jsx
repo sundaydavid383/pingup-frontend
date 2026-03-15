@@ -135,7 +135,7 @@ useEffect(() => {
 
 
   return (
-    <div className="w-full min-h-screen no-scrollbar bg-slate-50 flex justify-center relative overflow-x-hidden">
+    <div className="w-full min-h-screen no-scrollbar bg-[var(--white)] flex justify-center relative overflow-x-hidden">
       <div className="w-full max-w-[100vw] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0">
         {/* Main Feed */}
         <main
@@ -174,7 +174,7 @@ useEffect(() => {
           {/* Live Map Floating Button */}
           <button
             onClick={() => setShowLiveMap(true)}
-            className="fixed bottom-6 right-6 z-40 bg-[var(--primary)] text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-300 flex items-center gap-2 group"
+            className="fixed bottom-6 right-6 z-40 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-lg shadow-[var(--primary-color)]/30 hover:shadow-xl hover:shadow-[var(--primary-color)]/40 hover:scale-105 transition-all duration-300 flex items-center gap-2 group"
             title="View Live Map"
           >
             <Globe className="w-5 h-5 group-hover:animate-spin-slow" />

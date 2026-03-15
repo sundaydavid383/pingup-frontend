@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { APP_NAME } from '../../constants/appConfig';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 
 const HelpAbout = ({ isEmbedded = false }) => {
@@ -33,7 +34,7 @@ const HelpAbout = ({ isEmbedded = false }) => {
   ];
 
   const appInfo = {
-    name: 'SpringsConnect',
+    name: APP_NAME,
     version: '1.0.0',
     buildNumber: '2026.02.01',
     lastUpdated: 'February 1, 2026'
@@ -121,7 +122,7 @@ const HelpAbout = ({ isEmbedded = false }) => {
               className="text-sm pt-4"
               style={{ color: 'var(--text-secondary)', borderTop: '1px solid var(--input-border)' }}
             >
-              Connecting spiritually, sharing scriptures, and growing with SpringsConnect.
+              Connecting spiritually, sharing scriptures, and growing with {APP_NAME}.
             </p>
           </div>
         </div>

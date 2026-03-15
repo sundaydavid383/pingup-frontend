@@ -95,7 +95,7 @@ useEffect(() => {
 
 
   return (
-    <div className="min-h-screen w-full flex bg-slate-50 overflow-hidden relative">
+    <div className="min-h-screen w-full flex bg-[var(--white)] overflow-hidden relative">
       {/* LEFT: Conversation list */}
       <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r relative"
       style={{
@@ -165,7 +165,7 @@ useEffect(() => {
                 <div
                   key={otherUser._id}
                   onClick={() => handleOpenChat(otherUser._id)}
-                  className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition ${
+                  className={`flex gap-5 px-3 py-2 rounded-md items-center  cursor-pointer transition ${
                     isFirstUnread 
                       ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
                       : isActive

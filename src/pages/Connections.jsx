@@ -19,6 +19,7 @@ import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import { IconButton } from "../component/shared/IconButton"; // ✅ import IconButton
 import { User } from "lucide-react"; // ✅ import User icon
+import { div } from "three/src/nodes/math/OperatorNode.js";
 const Connections = () => {
   const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState("Followers");
@@ -140,7 +141,7 @@ const handleAccept = async (senderId) => {
   ];
 
   return (
-    <div className="w-full min-h-screen overflow-y-auto bg-slate-50 flex">
+    <div className="w-full max-h-screen overflow-y-auto bg-slate-50 flex">
       <div className="max-w-6xl mx-auto p-6 animate-fadeIn">
         <BackButton top="2" right="2" />
 
@@ -228,7 +229,7 @@ const handleAccept = async (senderId) => {
 
         ${isActive
                           ? "bg-[var(--hover-light)] text-[var(--secondary)]  border border-gray-300"
-                          : "bg-white border-gray-200 hover:bg-[var(--hover-light)] hover:text-[var(--secondary)]"
+                          : "bg-[var(--white-glass)] border-gray-200 hover:bg-[var(--hover-light)] hover:text-[var(--secondary)]"
                         }
       `}
                     >
@@ -350,6 +351,7 @@ const handleAccept = async (senderId) => {
             type={alertData.type}
             onClose={() => setAlertData(null)}
           />
+  
         )}
       </div>
       {/* Sidebar */}

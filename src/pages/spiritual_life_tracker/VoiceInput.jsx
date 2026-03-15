@@ -10,6 +10,7 @@ import { useTTS } from "../../context/TTSContext";
 
 const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref) => {
   const [listening, setListening] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [micAvailable, setMicAvailable] = useState(true);
   const [speechAvailable, setSpeechAvailable] = useState(true);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -181,55 +182,34 @@ const checkAvailability = async () => {
 
 // 🎯 Optimized backend chunk handler with useCallback
 const handleBackendChunk = useCallback((text) => {
-  if (!text) return;
+  if (!text?.trim()) return;
 
-  console.log("📝 Backend transcript:", text);
+  console.log("📝 Backend transcript (full):", text);
 
-  // 🚫 IMPORTANT: Backend engines should NEVER use leftover
+  // 🚫 Backend engines are ONE-SHOT (full transcription) → NEVER cap or use leftover
   leftoverRef.current = "";
 
-  // 1️⃣ Update textarea ONLY with current speech
+  setIsThinking(true);
+
+  // 1️⃣ Live textarea update (replace full text)
   onTranscribe(null, text, {
     live: true,
     source: speechEngineRef.current,
-    replace: true, // 🔑 parent textarea must replace, not append
+    replace: true,
   });
 
-  const words = text.trim().split(/\s+/);
+  // 2️⃣ ALWAYS trigger search on the FULL transcript (this was the bug!)
+  const fullTranscript = text.trim();
 
-  // 2️⃣ ALWAYS trigger search pipeline - even for short transcripts
-  // This ensures Lemonfox behaves like WebSpeech/Vosk
-  const chunk = words.slice(0, MAX_CHUNK_WORDS).join(" ");
-  const leftover = words.length > MAX_CHUNK_WORDS ? words.slice(MAX_CHUNK_WORDS).join(" ") : "";
-
-  // If not enough words, still trigger search but with shorter delay logic
-  if (words.length < MIN_CHUNK_WORDS) {
-    // For short transcripts, still set processing state
-    setVoiceState(VOICE_STATE.PROCESSING);
-    
-    // Trigger search - processChunks will handle the short input
-    onTranscribe(chunk, leftover, {
-      forceSearch: true,
-      source: speechEngineRef.current,
-      onComplete: () => {
-        console.log("🔹 Short transcript search complete, resetting to READY");
-        setVoiceState(VOICE_STATE.READY);
-      }
-    });
-    return;
-  }
-
-  // 3️⃣ Set processing state before search
   setVoiceState(VOICE_STATE.PROCESSING);
 
-  // 4️⃣ Trigger search with ONLY this speech
-  onTranscribe(chunk, leftover, {
+  onTranscribe(fullTranscript, "", {  // ← send FULL text, empty leftover
     forceSearch: true,
     source: speechEngineRef.current,
     onComplete: () => {
-      // Reset to READY after search completes
-      console.log("🔹 Search complete, resetting to READY");
+      console.log("🔹 Search complete (Lemonfox/Vosk), resetting to READY");
       setVoiceState(VOICE_STATE.READY);
+      setIsThinking(false);
     }
   });
 }, [onTranscribe]);
@@ -503,6 +483,7 @@ const switchMode = useCallback((newMode) => {
   setError(null);
   setCurrentMode(newMode); // ✅ triggers re-render
 
+
   console.log(`✅ Mode switched to ${newMode}`);
 }, []); // Empty deps since we use refs for all dynamic values
 
@@ -511,11 +492,12 @@ return (
   <>
     {/* Mic Wrapper (Centered) */}
     <MicButton
-      listening={listening}
-      toggleListening={toggleListening}
-      disabled={false}
-      statusMessage={statusMessage}
-    />
+  listening={listening}                    // remains for recording logic
+  isThinking={isThinking}                  // ← new prop
+  toggleListening={toggleListening}
+  disabled={false}
+  statusMessage={statusMessage}
+/>
 
 <div className="mode-buttons">
   <button

@@ -2,6 +2,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Helmet, HelmetProvider } from "react-helmet-async";
+import { APP_NAME } from './constants/appConfig';
+import { log, logger } from './utils/logger';
 import AuthContainer from './pages/AuthContainer';
 import Feed from './pages/Feed';
 import Messages from './pages/Messages';
@@ -14,6 +16,7 @@ import { useAuth } from "./context/AuthContext";
 import Layout from './pages/Layout';
 import UserModal from "./component/UserModal";
 import { Toaster } from 'react-hot-toast';
+import Loading from './component/shared/Loading'
 import Notification from "./pages/Notification"
 import Portfolio from './pages/Portfolio';
 import ReloadNotice from './component/ReloadNotice';
@@ -38,8 +41,10 @@ import Spinning3DSphere from './component/Spinning3DSphere';
 import LandingPage from './pages/LandingPage';
 import CommunityPage from './pages/CommunityPage';
 import AboutPage from './pages/AboutPage';
+import { openInstalledApp } from './utils/openInstalledApp';
 import CallContainer from './component/CallUI/CallContainer';
 import GlobalPipModal from './component/GlobalPipModal';
+import SidebarTooltipPortal from './component/shared/SidebarTooltipPortal';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location = useLocation();
@@ -69,7 +74,7 @@ const App = () => {
       navigator.serviceWorker
         .register('/sw.js') // sw.js in public folder
         .then(registration => {
-          console.log('Service Worker registered:', registration);
+          log('Service Worker registered:', registration);
         })
         .catch(err => {
           console.error('Service Worker registration failed:', err);
@@ -77,27 +82,27 @@ const App = () => {
 
       // Listen for messages from service worker (notification deep linking)
       navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('📬 App received message from SW:', event.data);
+        log('📬 App received message from SW:', event.data);
         
         if (event.data && event.data.type) {
           switch (event.data.type) {
             case 'SCROLL_TO_MESSAGE':
               // Handle scroll to message from notification click
-              console.log('📬 Need to scroll to message:', event.data.messageId);
+              log('📬 Need to scroll to message:', event.data.messageId);
               // Store the message ID to scroll to after chat loads
               sessionStorage.setItem('scrollToMessage', event.data.messageId);
               break;
             case 'REPLY_TO_MESSAGE':
               // Handle reply intent
-              console.log('📬 Need to reply to message:', event.data.messageId);
+              log('📬 Need to reply to message:', event.data.messageId);
               sessionStorage.setItem('replyToMessage', event.data.messageId);
               break;
             case 'MARK_READ':
               // Handle mark read
-              console.log('📬 Need to mark as read:', event.data.messageId);
+              log('📬 Need to mark as read:', event.data.messageId);
               break;
             default:
-              console.log('📬 Unknown message type:', event.data.type);
+              log('📬 Unknown message type:', event.data.type);
           }
         }
       });
@@ -108,6 +113,16 @@ const App = () => {
       setOauthText(text || "Loading…");
     }
   }, []);
+
+  // open app if launched from notification and not already open
+  useEffect(() => {
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches;
+
+  if (!isStandalone) {
+    openInstalledApp();
+  }
+}, []);
 
 
 
@@ -201,15 +216,15 @@ const subscribeUserToPush = async () => {
   }, []);
 
   useEffect(() => {
-    document.title = modalOpen ? toTitleCase(user?.name) : "SpringsConnect – News Feed";
+    document.title = modalOpen ? toTitleCase(user?.name) : "{APP_NAME} – News Feed";
     document.body.style.overflow = modalOpen ? 'hidden' : 'auto';
     return () => (document.body.style.overflow = 'auto');
   }, [modalOpen, user]);
   return (
     <CallContainer user={user}>
       <Helmet>
-        <title>SpringsConnect - Newsprings Youth</title>
-        <meta name="description" content="Connect spiritually, share scriptures, and grow with SpringsConnect." />
+        <title>{APP_NAME} - Newsprings Youth</title>
+        <meta name="description" content="Connect spiritually, share scriptures, and grow with {APP_NAME}." />
       </Helmet>
 
       {modalOpen && <UserModal user={user} onClose={() => setModalOpen(false)} />}
@@ -222,6 +237,8 @@ const subscribeUserToPush = async () => {
 
       {/* Global PiP Modal - renders outside of RightSidebar */}
       <GlobalPipModal />
+
+      <SidebarTooltipPortal />
 
       <Routes>
 

@@ -114,6 +114,17 @@ useEffect(() => {
 
     // Add to global state
     addNotification(notif);
+
+    // Dispatch global event for components to react (like notification indicator)
+    window.dispatchEvent(
+      new CustomEvent("newNotificationReceived", {
+        detail: {
+          notification: notif,
+          notificationId: notifId,
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
   };
 
   socket.on("newNotification", handleNotification);
