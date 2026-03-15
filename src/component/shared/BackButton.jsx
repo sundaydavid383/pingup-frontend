@@ -24,18 +24,17 @@ const BackButton = ({
   };
 
   const finalClassName = `
-    fixed z-50
-    flex items-center gap-2
-    px-3 py-2
-    rounded-full
-    backdrop-blur-sm
-    shadow-md
-    transition-all
-    ${hasBgColor(className) ? "" : "bg-[var(--accent)]/80"}
-    ${hasTextColor(className) ? "" : "text-white"}
-    hover:bg-white hover:text-[var(--accent)]
-    ${className}
-  `;
+  fixed z-50
+  flex items-center gap-2
+  px-3 py-2
+  rounded-full
+
+  transition-all
+  text-[var(--accent)] 
+  focus:outline-none
+
+  ${className}
+`;
 
   return (
     <button
@@ -43,7 +42,7 @@ const BackButton = ({
       style={{ top, left }}
       className={finalClassName}
     >
-      <ArrowLeft size={18} />
+      <ArrowLeft size={22} />
     </button>
   );
 };

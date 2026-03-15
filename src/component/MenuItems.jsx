@@ -87,7 +87,7 @@ const MenuItems = ({ setSidebarOpen }) => {
               </span>
             )}
           </div>
-          {!isCollapsed && <span className="truncate text-sm">{label}</span>}
+          {!isCollapsed && <span className="truncate text-[13px]">{label}</span>}
         </NavLink>
       ))}
 
@@ -115,7 +115,7 @@ const MenuItems = ({ setSidebarOpen }) => {
         <div className="relative flex items-center justify-center">
           <Settings className="w-5 h-5" />
         </div>
-        {!isCollapsed && <span className="truncate text-sm">Settings</span>}
+        {!isCollapsed && <span className="truncate text-[13px]">Settings</span>}
       </NavLink>
 
       {/* Logout */}
@@ -129,7 +129,7 @@ const MenuItems = ({ setSidebarOpen }) => {
         <div className="relative flex items-center justify-center">
           <LogOut className="w-5 h-5" />
         </div>
-        {!isCollapsed && <span className="truncate text-sm">Logout</span>}
+        {!isCollapsed && <span className="truncate text-[13px]">Logout</span>}
       </button>
     </div>
   );

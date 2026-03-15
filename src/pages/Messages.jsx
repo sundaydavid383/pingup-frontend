@@ -102,7 +102,7 @@ useEffect(() => {
         borderRightColor: "var(--hover-light)",
         borderRightStyle: "solid",
         borderRightWidth: "1px",}}>
-        <BackButton />
+        <BackButton top="0px" left={"80px"}  />
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900 mb-1 title">

@@ -91,12 +91,12 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
           onClick={() => setSidebarOpen(false)}
         />}
 
-        <div className={`w-full pt-4 pb-2 flex-1 flex flex-col overflow-y-auto ${onlyIconPage ? 'items-center px-2' : 'px-4'}`}>
+        <div className={`w-full pt-0 pb-2 flex-1 flex flex-col overflow-y-auto ${onlyIconPage ? 'items-center px-2' : 'px-4'}`}>
           <img
             onClick={() => navigate('/')}
             src={assets.logo}
             alt="Logo"
-            className={`cursor-pointer mb-3 transition-all ${onlyIconPage ? 'w-8' : 'w-20'}`}
+            className={`cursor-pointer mb-0 transition-all ${onlyIconPage ? 'w-8 h-8' : 'w-20 h-10'}`}
           />
           <hr className="border-[var(--input-border)] mb-3 w-full" />
 
