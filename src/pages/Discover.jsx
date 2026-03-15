@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { Users, Search, Sprout, MapPin, X } from "lucide-react";
+import { Users, Search, Sprout, MapPin, X, ChevronDown, ChevronUp } from "lucide-react";
 import UserCard from "../component/UserCard";
 import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
 import CustomDropdown from "../component/shared/CustomDropdown";
@@ -27,6 +27,7 @@ export default function Discover() {
   const hasFetched = useRef(false);
 
   const [isSticky, setIsSticky] = useState(false);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const readToken = () => localStorage.getItem("token");
   const authHeaders = () => {
@@ -196,8 +197,28 @@ export default function Discover() {
                 )}
               </div>
 
+              {/* FILTER TOGGLE BUTTON (Mobile Only) */}
+              <button
+                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                className="md:hidden flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  color: 'var(--primary)'
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <span>Filters</span>
+                  {(filters.city || filters.country || filters.occupation) && (
+                    <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                </span>
+                {isFilterExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+
               {/* FILTER DROPDOWNS */}
-              <div className="flex flex-wrap gap-2 overflow-visible">
+              <div className={`flex-wrap gap-2 overflow-visible ${isFilterExpanded ? 'flex' : 'hidden md:flex'}`}>
                 <CustomDropdown
                   id="city"
                   label="City"
@@ -228,6 +249,27 @@ export default function Discover() {
                   setOpenDropdownId={setOpenDropdownId}
                   setInput={setInput}
                 />
+                
+                {/* Mobile Clear Button */}
+                {(input || filters.city || filters.country || filters.occupation) && (
+                  <button
+                    onClick={() => {
+                      setInput("");
+                      setFilters({ city: "", country: "", occupation: "" });
+                      hasFetched.current = false;
+                      fetchSuggestions();
+                      setIsFilterExpanded(false);
+                    }}
+                    className="md:hidden w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                      color: '#dc2626'
+                    }}
+                  >
+                    <X size={16} />
+                    <span>Clear All Filters</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -230,26 +230,35 @@ const PostCard = ({ post,
     setShowConfirm(true);
   };
 
-  // Detect attachment types
-  const hasImageAttachment = post.attachments?.some(att => att.type === "image");
-  const hasAudioAttachment = post.attachments?.some(att => att.type === "audio");
-  const isMixedImageAudio = hasImageAttachment && hasAudioAttachment;
+ // 1️⃣ Detect attachment types
+const hasImageAttachment = post.attachments?.some(att => att.type === "image") || false;
+const hasAudioAttachment = post.attachments?.some(att => att.type === "audio") || false;
 
-  // Separate attachments
-  const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
-  const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
 
-  // Check for YouTube data (either as attachment or separate fields or nested object)
-  const hasYouTube = post.youtubeVideoId || post.youtubeEmbedUrl || 
-                     post.attachments?.some(att => att.type === "youtube") || 
-                     post.youtubeVideo?.videoId; // Handle nested youtubeVideo object from backend
-  
-  // Get YouTube URL from multiple possible sources
-  const youTubeUrl = post.youtubeEmbedUrl || 
-                     (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null) ||
-                     post.youtubeVideo?.embedUrl ||
-                     (post.youtubeVideo?.videoId ? `https://www.youtube.com/embed/${post.youtubeVideo.videoId}` : null);
+// 2️⃣ Check if the post has a mix of images + audio
+//const isMixedImageAudio = hasImageAttachment && hasAudioAttachment;
 
+// 3️⃣ Separate attachments into arrays for easier rendering
+const audioAttachments = post.attachments?.filter(att => att.type === "audio") || [];
+//const imageAttachments = post.attachments?.filter(att => att.type === "image") || [];
+//const videoAttachments = post.attachments?.filter(att => att.type === "video") || [];
+const youtubeAttachments = post.attachments?.filter(att => att.type === "youtube") || [];
+const nonAudioAttachments = post.attachments?.filter(att => att.type !== "audio") || [];
+
+// 4️⃣ Check for YouTube data (supports multiple backend formats)
+const hasYouTube = !!(
+  post.youtubeVideoId ||
+  post.youtubeEmbedUrl ||
+  youtubeAttachments.length > 0 ||
+  post.youtubeVideo?.videoId
+);
+
+// 5️⃣ Get YouTube embed URL from multiple possible sources
+const youTubeUrl =
+  post.youtubeEmbedUrl ||
+  (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null) ||
+  post.youtubeVideo?.embedUrl ||
+  (post.youtubeVideo?.videoId ? `https://www.youtube.com/embed/${post.youtubeVideo.videoId}` : null);
 
   const handleShowLikes = async (postId) => {
     setShowLikesBar(true);
@@ -393,14 +402,15 @@ const PostCard = ({ post,
 
 
       {/* Attachments */}
-      {isMixedImageAudio && audioAttachments.map((file, index) => (
-        <VoiceNoteCard
-          audioUrl={file.url}
-          ref={(el) => {
-            if (el) audioRefs.current[file.url] = el;
-          }}
-        />
-      ))}
+   {audioAttachments.length > 0 && audioAttachments.map((file, index) => (
+  <VoiceNoteCard
+    key={file.url || index}
+    audioUrl={file.url}
+    ref={(el) => {
+      if (el) audioRefs.current[file.url] = el;
+    }}
+  />
+))}
 
       {nonAudioAttachments?.length > 0 && (
         <div
@@ -418,7 +428,7 @@ const PostCard = ({ post,
             const isImage = file.type === "image";
             const isVideo = file.type === "video";
             const isYouTube = file.type === "youtube";
-            const isAudio = file.type === "audio";
+
 
             // ✅ Detect portrait / mobile-shaped images
             const isMobileShaped = isImage && file?.aspect === "tall" && !single;
@@ -528,18 +538,7 @@ const PostCard = ({ post,
                   </div>
                 )}
 
-                {isAudio && (
-                  !isMixedImageAudio &&
-                  (
-                    // ✅ KEEP ORIGINAL AUDIO-ONLY BEHAVIOR
-                    <VoiceNoteCard
-                      audioUrl={file.url}
-                      ref={(el) => {
-                        if (el) audioRefs.current[file.url] = el;
-                      }}
-                    />
-                  )
-                )}
+
 
                 {/* ✅ YOUTUBE IFRAME */}
                 {isYouTube && (

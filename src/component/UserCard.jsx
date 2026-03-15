@@ -102,21 +102,36 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
     }
   };
 
-  const handleAccept = async () => {
-    if (!activeUser?._id) return;
-    setIsProcessing(true);
-    try {
-      const res = await axios.get(`${BASE}api/user/accept?userId=${activeUser._id}&id=${user._id}`, { headers: authHeaders() });
-      if (res.data.success) {
-        setConnectionStatus("connected");
-        showAlert("Connection accepted!", "success");
-      }
-    } catch (err) {
-      showAlert("Error accepting connection.", "error");
-    } finally {
-      setIsProcessing(false);
+const handleAccept = async () => {
+  if (!activeUser?._id) return;
+
+  // Optimistic update: assume success immediately for better UX
+  setConnectionStatus("connected");
+  setIsProcessing(true);
+  showAlert("Accepting connection...", "info");
+
+  try {
+    const res = await axios.get(
+      `${BASE}api/user/accept?userId=${activeUser._id}&id=${user._id}`,
+      { headers: authHeaders() }
+    );
+
+    if (res.data.success) {
+      // Confirm success
+      showAlert(res.data.message || "Connection accepted!", "success");
+    } else {
+      // Backend failed, revert optimistic update
+      setConnectionStatus("pending_in");
+      showAlert(res.data.message || "Failed to accept connection.", "error");
     }
-  };
+  } catch (err) {
+    // Revert optimistic update on error
+    setConnectionStatus("pending_in");
+    showAlert("Error accepting connection. Try again.", "error");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <>

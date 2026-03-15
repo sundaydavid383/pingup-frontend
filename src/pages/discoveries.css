@@ -115,14 +115,24 @@
   }
 
   .discoveries_btn {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
+    padding: 0.5rem;
   }
 
   /* Make dropdown filters full width */
   #discover-search-wrapper .flex.flex-wrap {
     flex-direction: column;
     gap: 0.6rem;
+  }
+}
+
+/* Improve mobile padding and spacing */
+@media (max-width: 768px) {
+  .discover_search_wrapper {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .discover_search_bar {
+    padding: 0.75rem;
   }
 }
