@@ -1,4 +1,5 @@
 /* video-player.css - normal CSS (no Tailwind). Tune variables at top. */
+/* Volume slider YouTube-style - horizontal, appears next to icon */
 :root {
   --vp-bg: rgba(0, 0, 0, 0.6);
   --vp-control-height: 46px;
@@ -142,6 +143,64 @@
 /* time */
 .vp-time { color: rgba(255,255,255,0.9); font-family: var(--vp-font); font-size: 12px; }
 
+/* YouTube-style horizontal volume slider */
+.vp-volume-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vp-volume-slider-container {
+  width: 0;
+  overflow: hidden;
+  transition: width 200ms ease, opacity 200ms ease;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+}
+
+.vp-volume-slider-container.visible {
+  width: 80px;
+  opacity: 1;
+}
+
+/* Horizontal volume range (YouTube style) */
+.vp-volume-range-vertical {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--vp-primary) 0%, var(--vp-primary) var(--vol, 80%), rgba(255,255,255,0.3) var(--vol, 80%), rgba(255,255,255,0.3) 100%);
+  cursor: pointer;
+  outline: none;
+}
+
+.vp-volume-range-vertical::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.1s ease;
+}
+
+.vp-volume-range-vertical::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.vp-volume-range-vertical::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
 /* progress range */
 .vp-range {
   -webkit-appearance: none;
@@ -284,6 +343,19 @@
   .vp-time { font-size: 11px; }
   .vp-center-icon { width: 22px; height: 22px; }
   .vp-center-btn { width: 56px; height: 56px; }
+  
+  /* Show volume slider on mobile */
+  .vp-volume-slider-container {
+    width: 60px;
+  }
+  .vp-volume-range-vertical {
+    width: 55px;
+    height: 5px;
+  }
+  .vp-volume-range-vertical::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 /* ============================================

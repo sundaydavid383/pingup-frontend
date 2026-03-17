@@ -37,7 +37,7 @@ input, textarea, select {
   --glassy-white: rgba(232, 228, 228, 0.4);
   --really-bright-glass: rgba(255, 255, 255, 0.4);
   --white-glass: rgba(255, 255, 255, 0.8);
-  --off-white: rgba(246, 244, 244, 0.9);
+  --off-white: rgba(249, 249, 249, 1);
 
   /* Animations */
   --animate-spin-slow: spin 3s linear infinite;
@@ -459,7 +459,8 @@ option{
 /* Volume popover ONLY — styled exactly like WhatsApp volume popup (clean, soft, minimal), using existing --vp-primary color, nothing else touched */
 
 /* =================== Video Player Vertical Volume Slider ======================= */
-.vp-volume-container {
+/* Note: Horizontal YouTube-style volume is now in videoplayer.css */
+.vp-volume-control {
   position: relative;
   display: flex;
   align-items: center;
