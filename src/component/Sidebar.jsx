@@ -96,7 +96,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
             onClick={() => navigate('/')}
             src={assets.logo}
             alt="Logo"
-            className={`cursor-pointer mb-0 transition-all ${onlyIconPage ? 'w-8 h-8' : 'w-20 h-10'}`}
+            className={`cursor-pointer mb-0 transition-all ${onlyIconPage ? 'w-25 h-8' : 'w-20 h-10'}`}
           />
           <hr className="border-[var(--input-border)] mb-3 w-full" />
 

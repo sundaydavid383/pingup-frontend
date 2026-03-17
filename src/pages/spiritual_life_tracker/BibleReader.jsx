@@ -4,7 +4,7 @@ import { useParams, useLocation } from "react-router-dom";
 import bible from "../../data/en_kjv.json";
 import { flattenBible } from "../../utils/flattenBible";
 
-import { FaSearch, FaBook, FaRocketchat, FaSlidersH } from "react-icons/fa";
+import { FaSearch, FaBook, FaRocketchat } from "react-icons/fa";
 import "./biblereader.css";
 import CustomSelect from "../../component/shared/CustomSelect";
 import axiosBase from "../../utils/axiosBase";
@@ -98,7 +98,8 @@ export default function BibleReader() {
   const [verseSeen, setVerseSeen] = useState([]);
   const [ttsSpeed, setTtsSpeed] = useState(0.7);
   const { sidebarOpen } = useAuth();
-  const [seeControls, setSeeControls] = useState(false)
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const hideTimerRef = useRef(null);
 
   const touchStartX = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -446,7 +447,6 @@ export default function BibleReader() {
 
 
 
-
   const moveChapter = (direction) => {
     if (!selectedBookName) {
       console.debug("moveChapter: no selectedBookName (we're on random view) - ignoring");
@@ -497,6 +497,7 @@ export default function BibleReader() {
     // update displayed verses
     displayChapterVerses(newBook, newChapter);
   };
+
 
   let speechBlocked = false;
 
@@ -597,15 +598,9 @@ export default function BibleReader() {
 
 
 
-  // Close BibleControls if clicked outside
+  // Close search/selectors if clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        controlsRef.current &&
-        !controlsRef.current.contains(event.target)
-      ) {
-        setSeeControls(false); // ✅ hide the controls
-      }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setSearchVisible(false);
       }
@@ -619,8 +614,39 @@ export default function BibleReader() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [controlsRef]);
+  }, []);
 
+  // Show controls on mouse activity
+  const showControls = useCallback(() => {
+    // Clear any existing hide timer
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+    setControlsVisible(true);
+  }, []);
+
+  // Hide controls after delay
+  const hideControls = useCallback(() => {
+    hideTimerRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, 3500);
+  }, []);
+
+  // Handle mouse movement in verses container
+  const handleVersesMouseMove = useCallback(() => {
+    showControls();
+  }, [showControls]);
+
+  // Handle mouse leaving verses container
+  const handleVersesMouseLeave = useCallback(() => {
+    hideControls();
+  }, [hideControls]);
+
+  // Handle touch on verses container
+  const handleVersesTouchStart = useCallback(() => {
+    showControls();
+    hideControls();
+  }, [showControls, hideControls]);
 
 
 
@@ -732,7 +758,6 @@ export default function BibleReader() {
 
 
 
-
           {isReadingChapter && <>
             <ChapterTTS
               ref={ttsRef}
@@ -743,35 +768,22 @@ export default function BibleReader() {
               verseOffsetsRef={verseOffsetsRef}
             />
 
-
-            {!seeControls && <div
-              onClick={() => setSeeControls(prev => !prev)}
-              className="bible_controls_toggler"
-              style={{
-                left: sidebarOpen ? "20rem" : "0.1rem",
-                transition: "left 0.3s ease",
-              }}>
-              <FaSlidersH />
-            </div>
-            }
-            {seeControls && <div ref={controlsRef}>
-              <BibleControls
-                ttsSpeed={ttsSpeed}
-                setTtsSpeed={setTtsSpeed}
-                progress={progress}
-                setProgress={setProgress}
-                ttsRef={ttsRef}
-              /></div>}
+            <BibleControls
+              ttsSpeed={ttsSpeed}
+              setTtsSpeed={setTtsSpeed}
+              progress={progress}
+              setProgress={setProgress}
+              ttsRef={ttsRef}
+              isVisible={controlsVisible}
+            />
           </>}
 
           <div
             className="verses-container"
-            onTouchStart={(e) => {
-              if (!selectedBookName) return;
-              const touch = e.touches[0];
-              touchStartX.current = touch.clientX;
-              touchStartY.current = touch.clientY; // add vertical reference
-            }}
+            onMouseEnter={handleVersesMouseMove}
+            onMouseMove={handleVersesMouseMove}
+            onMouseLeave={handleVersesMouseLeave}
+            onTouchStart={handleVersesTouchStart}
             onTouchEnd={(e) => {
               if (!selectedBookName) return;
               const touch = e.changedTouches[0];
@@ -809,7 +821,7 @@ export default function BibleReader() {
             ) : hasSearched && !isSearching ? (
               // No search results message
               <p className="text-gray-400 text-center py-8">
-                No results found for “{searchQuery}”
+                No results found for "{searchQuery}"
               </p>
             ) : displayedVerses.length > 0 ? (
               // Normal chapter / random verses

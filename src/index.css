@@ -26,8 +26,8 @@ input, textarea, select {
 /* Root Colors */
 :root {
   /* Primary Theme Colors */
-  --primary-color: #1e40af; /* Unified Primary Color */
-  --primary: #1e40af; /* Indigo-800 */
+  --primary-color: #3055d1; /* Unified Primary Color */
+  --primary: #3055d1; /* Indigo-800 */
   --secondary: #1a294a; /* Slate-900 */
   --accent: var(--primary-color);
   --gold: rgb(223, 190, 61);
@@ -37,6 +37,7 @@ input, textarea, select {
   --glassy-white: rgba(232, 228, 228, 0.4);
   --really-bright-glass: rgba(255, 255, 255, 0.4);
   --white-glass: rgba(255, 255, 255, 0.8);
+  --off-white: rgba(246, 244, 244, 0.9);
 
   /* Animations */
   --animate-spin-slow: spin 3s linear infinite;
@@ -454,6 +455,9 @@ option{
   animation: dash 1.5s ease-in-out infinite;
 }
 
+/* FILE: src/index.css */
+/* Volume popover ONLY — styled exactly like WhatsApp volume popup (clean, soft, minimal), using existing --vp-primary color, nothing else touched */
+
 /* =================== Video Player Vertical Volume Slider ======================= */
 .vp-volume-container {
   position: relative;
@@ -466,27 +470,32 @@ option{
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: 8px;
-  padding: 12px 8px;
+  background: rgba(20, 20, 25, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 14px;
+  padding: 1.25rem 0.8rem;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transform: translateX(-50%) translateY(10px) scale(0.95);
+  transition: all 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
   z-index: 100;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.3);
 }
 
 .vp-volume-slider-container.visible {
   opacity: 1;
   visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .vp-volume-range-vertical {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
+  width: 150px;
   height: 6px;
-  background: linear-gradient(to right, var(--vp-primary) 0%, var(--vp-primary) var(--vol), rgba(255,255,255,0.3) var(--vol), rgba(255,255,255,0.3) 100%);
+  background: linear-gradient(to right, var(--vp-primary) 0%, var(--vp-primary) var(--vol), rgba(255,255,255,0.25) var(--vol), rgba(255,255,255,0.25) 100%);
   border-radius: 3px;
   cursor: pointer;
   transform: rotate(-90deg);
@@ -496,22 +505,27 @@ option{
 .vp-volume-range-vertical::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: white;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  transition: box-shadow 0.2s ease;
+}
+
+.vp-volume-range-vertical::-webkit-slider-thumb:hover {
+  box-shadow: 0 2px 10px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.35);
 }
 
 .vp-volume-range-vertical::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: white;
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
 }
 
 /* =================== Button Shimmer Hover Effect ======================= */

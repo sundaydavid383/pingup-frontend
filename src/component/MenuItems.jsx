@@ -63,7 +63,7 @@ const MenuItems = ({ setSidebarOpen }) => {
             `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
             } ${isActive
               ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
-              : `hover:text-[var(--text-accent-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
+              : `hover:text-[var(--hover-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
             }`
           }
           onClick={() => {
@@ -75,7 +75,7 @@ const MenuItems = ({ setSidebarOpen }) => {
           onMouseLeave={handleMouseLeave}
         >
           <div className="relative flex items-center justify-center">
-            <Icon className="w-5 h-5" />
+            <Icon className="w-[18px] h-5" />
             {(label === "Message" && totalUnreadCount > 0) && (
               <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
                 {totalUnreadCount}
@@ -97,13 +97,21 @@ const MenuItems = ({ setSidebarOpen }) => {
       {/* Settings */}
       <NavLink
         to="/settings"
-        className={({ isActive }) =>
-          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
-          } ${isActive
-            ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
-            : `hover:text-[var(--text-accent-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
-          }`
-        }
+ className={({ isActive }) =>
+  `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
+    isCollapsed
+      ? "w-10 h-10 justify-center group"
+      : "pl-3 py-[7px] gap-3 w-full"
+  } ${
+    isActive
+      ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${
+          !isCollapsed ? "translate-x-3" : ""
+        }`
+      : isCollapsed
+      ? "hover:text-[var(--hover-dark)]"
+      : "hover:text-[var(--text-accent-dark)] hover:translate-x-3 gradient-hover"
+  }`
+}
         onClick={() => {
           if (typeof setSidebarOpen === "function" && isSmallScreen) {
             setSidebarOpen(false);
@@ -113,7 +121,7 @@ const MenuItems = ({ setSidebarOpen }) => {
         onMouseLeave={handleMouseLeave}
       >
         <div className="relative flex items-center justify-center">
-          <Settings className="w-5 h-5" />
+          <Settings className="w-[18px] h-5" />
         </div>
         {!isCollapsed && <span className="truncate text-[13px]">Settings</span>}
       </NavLink>
@@ -127,7 +135,7 @@ const MenuItems = ({ setSidebarOpen }) => {
         onMouseLeave={handleMouseLeave}
       >
         <div className="relative flex items-center justify-center">
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-[18px] h-5" />
         </div>
         {!isCollapsed && <span className="truncate text-[13px]">Logout</span>}
       </button>

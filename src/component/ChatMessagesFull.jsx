@@ -401,7 +401,7 @@ useEffect(() => {
                   <div
                     data-id={msg._id}
                     id={`msg_${msg._id}`}
-                    className={`p-2 text-sm max-w-[75%] min-w-[120px] rounded-[18px] shadow-sm break-words relative transition-all duration-200
+                    className={`p-2 text-sm max-w-[300px] min-w-[100px] rounded-[18px] shadow-sm break-words relative transition-all duration-200
                       ${sentByUser
                         ? msg.failed
                           ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"
@@ -469,7 +469,7 @@ useEffect(() => {
                       <img
                         src={msg.media_url}
                         alt="chat media"
-                        className="w-full max-w-xs rounded-lg mb-1 object-cover cursor-pointer transition-transform hover:scale-[1.02]"
+                        className="w-full max-w-[60px] rounded-lg mb-1 object-cover cursor-pointer transition-transform hover:scale-[1.02]"
                         onClick={() => {
                           const index = imageMessages.findIndex(
                             (img) => img.media_url === msg.media_url

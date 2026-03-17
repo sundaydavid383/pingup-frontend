@@ -43,24 +43,26 @@ const SidebarTooltipPortal = () => {
   if (!tooltip.visible) return null;
 
   // Position tooltip to the right of the icon
-  const style = {
-    position: "fixed",
-    left: tooltip.x + 20, // 20px to the right of cursor/icon
-    top: tooltip.y,
-    transform: "translateY(-50%)",
-    padding: "6px 12px",
-    background: "#1f2937",
-    color: "white",
-    fontSize: "0.75rem",
-    fontWeight: 500,
-    whiteSpace: "nowrap",
-    borderRadius: "6px",
-    zIndex: 99999,
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    pointerEvents: "none",
-    opacity: 1,
-    transition: "opacity 0.15s ease, left 0.15s ease",
-  };
+const style = {
+  position: "fixed",
+  left: tooltip.x + 28,
+  top: tooltip.y,
+  transform: "translateY(-50%)",
+  padding: "6px 12px",
+  background: "var(--primary)",
+  color: "white",
+  fontSize: "0.75rem",
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  borderRadius: "6px",
+  zIndex: 99999,
+  boxShadow: "6px 4px 13px color-mix(in srgb, var(--primary) 40%, transparent)",
+  pointerEvents: "none",
+  opacity: 1,
+  transition: "opacity 0.15s ease, left 0.15s ease",
+};
+
+
 
   return createPortal(
     <div style={style}>

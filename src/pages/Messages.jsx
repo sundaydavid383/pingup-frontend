@@ -234,19 +234,22 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* RIGHT: Chat box (desktop only) */}
-      <div className="hidden md:flex flex-1 bg-white">
-        {activeChatId ? (
-          <ChatBox userId={activeChatId} />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
-            <div className="chat-loader" />
-            <span className="text-sm tracking-wide">
-              Select a conversation
-            </span>
-          </div>
-        )}
-      </div>
+     
+   {/* RIGHT: Chat box (desktop only) */}
+<div className="hidden md:flex flex-1 bg-[var(--white)] h-full overflow-hidden">
+  {activeChatId ? (
+    <div className="w-full h-full">
+      <ChatBox userId={activeChatId} />
+    </div>
+  ) : (
+    <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
+      <div className="chat-loader" />
+      <span className="text-sm tracking-wide">
+        Select a conversation
+      </span>
+    </div>
+  )}
+</div>
 
 
     </div>

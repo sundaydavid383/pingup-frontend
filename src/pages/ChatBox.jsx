@@ -1220,9 +1220,7 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // ============================= sidebar widht ==============
-  // -------------------------------
-  // measurement using ResizeObserver
-  // -------------------------------
+  // measurement using ResizeObserver  // -------------------------------
   const [sidebarWidth, setSidebarWidth] = useState(0);
 
   useEffect(() => {
@@ -1348,13 +1346,13 @@ const ChatBox = ({ userId: propUserId }) => {
     <div
       ref={chatContainerRef}
       className="chatbox-container"
-      style={{
-        position: "relative",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      // style={{
+      //   position: "relative",
+      //   height: "100vh",
+      //   display: "flex",
+      //   flexDirection: "column",
+      //   overflow: "hidden",
+      // }}
     >
       {/* Header - sticky at top within flex container */}
       <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
@@ -1364,14 +1362,15 @@ const ChatBox = ({ userId: propUserId }) => {
       {/* Messages Container - scrollable area between header and input */}
       <div
         ref={containerRef}
-        className="chatbox-messages flex-1 overflow-y-auto"
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          WebkitOverflowY: "auto",
-          overscrollBehavior: "contain",
-          scrollBehavior: "smooth",
-        }}
+        className="chatbox-messages 
+        // flex-1 overflow-y-auto"
+        // style={{
+        //   flex: 1,
+        //   overflowY: "auto",
+        //   WebkitOverflowY: "auto",
+        //   overscrollBehavior: "contain",
+        //   scrollBehavior: "smooth",
+        // }}
       >
         {loading ?
           (
@@ -1475,7 +1474,9 @@ const ChatBox = ({ userId: propUserId }) => {
             (
               <>
                 {/* Empty state - properly centered */}
-                <div className="chat-empty-state" style={{ minHeight: 'calc(100vh - 150px)' }}>
+                <div className="chat-empty-state"
+                //  style={{ minHeight: 'calc(100vh - 150px)' }}
+                >
                   <div className="bg-white/90 p-8 rounded-2xl shadow-md max-w-sm w-full">
                     <div className="flex justify-center mb-4">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-[var(--input-accent)] animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} > 
@@ -1539,7 +1540,8 @@ const ChatBox = ({ userId: propUserId }) => {
                 </div>
               )
         }
-
+      {/* Extra padding so last message isn't hidden under input */}
+      <div className="h-24" aria-hidden="true"></div>
       </div >
 
 

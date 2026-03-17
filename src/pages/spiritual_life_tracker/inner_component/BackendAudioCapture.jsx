@@ -48,40 +48,53 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
   };
 
   // ====================== LEMONFOX SPECIFIC ======================
-  const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
-    console.log("🚀 [LEMONFOX] Step 1: Sending audio to Lemonfox API for transcription...");
+const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
+  console.log("🚀 [LEMONFOX] Step 1: Sending audio to Lemonfox API...");
 
-    try {
-      const audioFile = new File([blob], "audio.webm", { type: "audio/webm" });
-      
-      const body = new FormData();
-      body.append("file", audioFile);
-      body.append("language", "english");
-      body.append("response_format", "json");
+  if (!apiKey) {
+    console.error("❌ No Lemonfox API key found in .env");
+    onResult?.({ transcript: "" });
+    stopProcessing();
+    return;
+  }
 
-      const response = await fetch("https://api.lemonfox.ai/v1/audio/transcriptions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${apiKey}` },
-        body
-      });
+  try {
+    const audioFile = new File([blob], "audio.webm", { type: "audio/webm" });
+    
+    const body = new FormData();
+    body.append("file", audioFile);
+    body.append("language", "english");
+    body.append("response_format", "json");
+    // Optional but recommended for clarity
+    body.append("model", "whisper-large-v3");
 
-      if (!response.ok) throw new Error(`Lemonfox error ${response.status}`);
+    const response = await fetch("https://api.lemonfox.ai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { 
+        "Authorization": `Bearer ${apiKey}` 
+      },
+      body
+    });
 
-      const data = await response.json();
-      const transcript = data.text || "";
-
-      console.log("✅ [LEMONFOX] Step 2: Transcript received →", transcript);
-      console.log("🔥 [LEMONFOX] Step 3: NOW triggering verse search IMMEDIATELY");
-
-      if (onResult) onResult({ transcript });
-
-    } catch (err) {
-      console.error("❌ Lemonfox API failed:", err);
-      if (onResult) onResult({ transcript: "" });
-    } finally {
-      stopProcessing();
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Lemonfox HTTP ${response.status}: ${errorText}`);
     }
-  };
+
+    const data = await response.json();
+    const transcript = data.text?.trim() || "";
+
+    console.log("✅ [LEMONFOX] Transcript received →", transcript);
+    onResult?.({ transcript });
+
+  } catch (err) {
+    console.error("❌ Lemonfox API failed:", err.message || err);
+    // Still call onResult so your app doesn't hang
+    onResult?.({ transcript: "" });
+  } finally {
+    stopProcessing();
+  }
+};
 
   const processAndSendAudio = async (chunks) => {
     if (chunks.length === 0) return;

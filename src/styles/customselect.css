@@ -35,16 +35,26 @@
 .custom-select-options {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
-  width: 100%;
+  left: -5rem;                    /* ← reset unless you really need the offset */
+  min-width: 200%;            /* or use width: 220px / 280px etc. */
+  width: max-content;         /* grows with content but respects max-width */
+  max-width: 760px;           /* ← prevent it from becoming too wide */
+  
   background: var(--dropdown-bg);
   border-radius: 10px;
   box-shadow: var(--border-shadow);
   z-index: 10;
+  
   max-height: 60vh;
   overflow-y: auto;
+  
   padding: 0.25rem 0;
   border: 1px solid var(--input-border);
+  
+  /* ── The actual 2-column grid ── */
+  display: grid;
+  grid-template-columns: 1fr 1fr;         
+  gap: 0.5rem 1rem;                     
 }
 
 .custom-select-option {

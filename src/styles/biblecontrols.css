@@ -1,7 +1,304 @@
+/* FILE: biblecontrols.css */
+/* UI polish only: spacing, padding, margins inside controls bar and popovers */
+
+/* ============================= */
+/* BibleControls - YouTube Style */
+/* ============================= */
+
+/* Main bottom bar */
+.bible-controls-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  padding: 0 1.5rem;
+}
+
+.bible-controls-bar.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.bible-controls-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Inner flex container */
+.bible-controls-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Progress Section - takes most space */
+.progress-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.progress-control {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.progress-control input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.progress-control input[type="range"]:hover {
+  height: 8px;
+}
+
+/* YouTube-style progress track colors */
+.chapter-progress-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--gold, #fbbf24) 0%, var(--gold, #fbbf24) var(--progress, 0%), rgba(255,255,255,0.2) var(--progress, 0%), rgba(255,255,255,0.2) 100%);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.chapter-progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #fbbf24);
+  cursor: pointer;
+  margin-top: -4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.progress-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold, #fbbf24);
+  min-width: 45px;
+  text-align: right;
+}
+
+/* Right controls section */
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Control icon buttons */
+.control-icon-wrapper {
+  position: relative;
+}
+
+.control-icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.control-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.control-icon-btn.active {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--gold, #fbbf24);
+  color: var(--gold, #fbbf24);
+}
+
+.control-icon-btn svg {
+  font-size: 1rem;
+}
+
+.icon-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Popover sliders */
+.popover-slider {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 220px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1001;
+  animation: popoverSlideIn 0.2s ease;
+}
+
+@keyframes popoverSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.popover-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.popover-slider-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.popover-slider-inner input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.popover-slider-inner input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #fbbf24);
+  cursor: pointer;
+}
+
+.popover-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold, #fbbf24);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Mood popover - wider for dropdown */
+.mood-popover {
+  min-width: 260px;
+  padding: 0.75rem;
+}
+
+/* ============================= */
+/* Mobile Responsive */
+/* ============================= */
+@media (max-width: 768px) {
+  .bible-controls-bar {
+    height: 110px;
+    padding: 0 1rem;
+  }
+
+  .bible-controls-inner {
+    flex-direction: column;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.75rem;
+  }
+
+  .progress-section {
+    width: 100%;
+    order: 2;
+  }
+
+  .controls-right {
+    order: 1;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .control-icon-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .icon-label {
+    display: none;
+  }
+
+  .popover-slider {
+    min-width: 180px;
+    padding: 0.8rem;
+  }
+
+  .mood-popover {
+    min-width: 220px;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  @keyframes popoverSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .bible-controls-bar {
+    height: 120px;
+  }
+
+  .controls-right {
+    gap: 0.4rem;
+  }
+
+  .control-icon-btn {
+    padding: 0.5rem;
+  }
+}
+
+/* ============================= */
+/* Existing styles preserved */
+/* ============================= */
+
 .bible-controls-fixed {
   position: fixed;
   top: 1rem;
-z-index: 999;
+  z-index: 999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -14,25 +311,10 @@ z-index: 999;
   backdrop-filter: blur(10px);
   box-shadow: var(--border-shadow);
 }
-@media (max-width: 640px) {
-  .bible-controls-fixed {
-    left: 0;
-    right: 0;
-    top: 0;
 
-    width: 100%;
-    max-width: 100%;
-
-    align-items: stretch;
-    border-radius: 0;
-
-    padding: 0.6rem;
-  }
-}
-
-.bible_controls_toggler{
+.bible_controls_toggler {
   position: fixed;
-bottom: 10px;
+  bottom: 10px;
   width: 3rem;
   height: 3rem;
   color: var(--white);
@@ -47,11 +329,10 @@ bottom: 10px;
   background-color: var(--opaque-secondary);
   font-size: 1.4rem;
   transition: .2s linear;
-
-  /* backdrop blur */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
 .bible_controls_toggler:hover {
   transform: scale(1.15);
   opacity: 1;
@@ -107,9 +388,6 @@ bottom: 10px;
   cursor: pointer;
 }
 
-/* ============================= */
-/* Speed Dropdown Container */
-/* ============================= */
 .speed-dropdown {
   background: var(--form-bg);
   backdrop-filter: var(--backdrop-blur);
@@ -117,44 +395,31 @@ bottom: 10px;
   padding: 0.75rem 1rem;
   color: var(--text-main);
   width: 97%;
- box-shadow: 0px 0px 2px ;
+  box-shadow: 0px 0px 2px;
 }
 
-/* Label */
 .speed-label {
   font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--white);
   margin-bottom: 0.2rem;
-
   display: block;
 }
 
-/* ============================= */
-/* Speed Control Layout */
-/* ============================= */
 .speed-control {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-/* Horizontal */
 .speed-control.horizontal {
   flex-direction: row;
 }
 
-/* Vertical */
 .speed-control.vertical {
   flex-direction: column;
 }
 
-
-
-
-/* ============================= */
-/* Range Input */
-/* ============================= */
 .speed-control input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -167,7 +432,6 @@ bottom: 10px;
   margin-bottom: 1.5rem;
 }
 
-/* Track */
 .speed-control input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
@@ -178,7 +442,6 @@ bottom: 10px;
   border-radius: 999px;
 }
 
-/* Thumb */
 .speed-control input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
@@ -204,9 +467,6 @@ bottom: 10px;
   cursor: pointer;
 }
 
-/* ============================= */
-/* Speed Value */
-/* ============================= */
 .speed-value {
   font-size: 0.9rem;
   font-weight: 600;
@@ -214,9 +474,6 @@ bottom: 10px;
   min-width: 36px;
   text-align: right;
 }
-
-/* ============================= */
-/* Mood Selector Styles */  
 
 .mood-selector-container {
   position: relative;
@@ -241,7 +498,6 @@ bottom: 10px;
   display: block;
 }
 
-
 .mood-input-wrapper {
   position: relative;
   display: flex;
@@ -261,7 +517,6 @@ bottom: 10px;
 .mood-input:focus {
   border-color: var(--gold);
 }
-
 
 .mood-dropdown {
   position: absolute;
@@ -288,6 +543,7 @@ bottom: 10px;
   align-items: center;
   justify-content: center;
 }
+
 .mood-option {
   display: flex;
   align-items: center;
@@ -299,13 +555,11 @@ bottom: 10px;
   transition: background 0.18s ease, color 0.18s ease;
 }
 
-/* Hover — subtle */
 .mood-option:hover {
   background: var(--hover-light);
   color: var(--secondary);
 }
 
-/* Active (playing) — clear but calm */
 .mood-option.active {
   background: linear-gradient(
     90deg,
@@ -319,6 +573,7 @@ bottom: 10px;
   flex: 1;
   cursor: pointer;
 }
+
 .eq {
   display: flex;
   gap: 2px;
@@ -333,6 +588,7 @@ bottom: 10px;
   border-radius: 2px;
   transition: background 0.2s;
 }
+
 .mood-play-btn .loader {
   width: 12px;
   height: 12px;
@@ -347,8 +603,6 @@ bottom: 10px;
   100% { transform: rotate(360deg); }
 }
 
-
-/* Playing animation */
 .mood-play-btn.playing .eq span {
   background: var(--gold);
   animation: eqMove 0.9s infinite ease-in-out;

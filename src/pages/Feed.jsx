@@ -135,7 +135,7 @@ useEffect(() => {
 
 
   return (
-    <div className="w-full min-h-screen no-scrollbar bg-[var(--white)] flex justify-center relative overflow-x-hidden">
+    <div className="w-full min-h-screen no-scrollbar bg-[var(--off-white)] flex justify-center relative overflow-x-hidden">
       <div className="w-full max-w-[100vw] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0">
         {/* Main Feed */}
         <main
@@ -182,7 +182,7 @@ useEffect(() => {
           </button>
 
 
-          <div className="space-y-6 py-5 no-scrollbar pb-25 relative">
+          <div className="space-y-6 py-5 no-scrollbar pb-25 relative max-w-[550px] mx-auto">
             {loadingInitial ? (
       <PostCardSkeleton />
     ) :    feeds.length === 0 ? (

@@ -323,7 +323,7 @@ const youTubeUrl =
 
 
   return (
-    <div className="bg-white rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
+    <div className="bg-[var(--white-glass)] rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
 
       {/* Header */}
       {/* Header */}

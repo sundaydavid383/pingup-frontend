@@ -1,3 +1,5 @@
+// FILE: src/component/landing/HeroSection.jsx  // Landing page only — fixed mobile gap + overall spacing polish
+
 import React from 'react';
 import { Play, Users, Activity, Clock } from 'lucide-react';
 import assets from '../../assets/assets';
@@ -12,25 +14,25 @@ const HeroSection = ({ onAuthClick }) => {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[var(--inverse-dark-indigo-gradient)]">
-      <div className="w-full h-full flex flex-col md:flex-row">
+      <div className="w-full h-full flex flex-col md:flex-row mt-0 md:mt-[-5rem]">
 
         {/* -------- LEFT SIDE (Hero + Stats) -------- */}
-        <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left text-white relative overflow-hidden p-6 sm:p-10 md:p-12 lg:p-20 min-h-[70vh] md:min-h-screen">
+        <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left text-white relative overflow-hidden p-4 sm:p-6 md:p-12 lg:p-20 min-h-[60vh] md:min-h-screen">
           
           {/* Radial highlight */}
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--radial-highlight)] to-transparent opacity-40 pointer-events-none"></div>
 
           {/* Hero headline */}
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-white via-[var(--primary)] to-white bg-clip-text text-transparent mb-4">
+          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-white via-[var(--primary)] to-white bg-clip-text text-transparent mb-3 sm:mb-4">
            More than just friends-truly connect
           </h1>
 
-          <p className="text-white/80 md:text-lg mb-8 max-w-md">
+          <p className="text-white/80 md:text-lg mb-6 sm:mb-8 max-w-md">
            Search Bible verses by text or voice, share scriptures, and engage with a spiritual community in real time.
           </p>
 
           {/* Real-time stats / icons */}
-          <div className="flex flex-wrap justify-center md:justify-start gap-6 mb-8">
+          <div className="flex flex-wrap justify-center md:justify-start gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="flex items-center gap-2">
               <Users size={24} className="text-[var(--primary)]" />
                <UserStats />
@@ -46,10 +48,10 @@ const HeroSection = ({ onAuthClick }) => {
           </div>
 
           {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex gap-4">
+          <div className="hidden md:flex gap-4 mt-2">
             <button
               onClick={() => handleAuthClick('signup')}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 active:scale-95"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3.5 rounded-lg font-semibold transition transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/25"
             >
               Join Free
             </button>
@@ -139,13 +141,13 @@ const HeroSection = ({ onAuthClick }) => {
         </div>
 
         {/* Mobile CTA Section */}
-        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8">
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-white text-center">Where Faith Meets Community.</h2>
+        <div className="md:hidden absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 sm:p-8">
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="text-lg sm:text-xl font-bold text-white text-center">Where Faith Meets Community.</h2>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => handleAuthClick('signup')}
-                className="bg-[var(--primary)] hover:brightness-110 text-white px-6 py-4 rounded-xl font-bold transition transform active:scale-95"
+                className="bg-[var(--primary)] hover:brightness-110 text-white px-6 py-4 rounded-xl font-bold transition transform active:scale-95 shadow-lg shadow-blue-500/30"
               >
                 Join Free
               </button>
