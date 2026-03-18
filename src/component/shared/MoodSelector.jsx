@@ -1,134 +1,63 @@
+// MoodSelector.jsx - Integrated with Global MoodStore
 import React, { useState, useRef, useEffect } from "react";
+import { useMoodStore, MOODS } from "../../store/MoodStore";
 import "../../styles/biblecontrols.css";
 
-let globalMoodAudio = null;
-let globalMoodName = null;
-
-const moods = [
-  { name: "Calm", file: "/audio/calm.mp3" },
-  { name: "Grateful", file: "/audio/grateful.mp3" },
-  { name: "Thoughtful", file: "/audio/thoughtful.mp3" },
-  { name: "Awakening", file: "/audio/awakening.mp3" },
-  { name: "Cinematic", file: "/audio/cinematic.mp3" },
-  { name: "Relax", file: "/audio/relax.mp3" },
-  { name: "Epic", file: "/audio/epic.mp3" },
-];
-
-const CALM_VOLUME = 0.6;
-const DEFAULT_VOLUME = 0.3;
-
 export default function MoodSelector({ moodVolume, setMoodVolume }) {
+  // Use global mood store instead of local state
+  const {
+    volume,
+    selectedMood,
+    currentMoodId,
+    isPlaying,
+    isLoading,
+    setVolume,
+    playMood,
+    togglePlayPause,
+    moods: storeMoods,
+  } = useMoodStore();
 
-const [selectedMood, setSelectedMood] = useState("");
-  const [searchText, setSearchText] = useState("");
+  // Local UI state
+  const [searchText, setSearchText] = useState(selectedMood || "");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // ✅ New state
-
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  const filteredMoods = moods.filter((m) =>
+  // Sync searchText when selectedMood changes from store
+  useEffect(() => {
+    if (selectedMood) {
+      setSearchText(selectedMood);
+    }
+  }, [selectedMood]);
+
+  // Volume change handler - sync with global store
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+    // Also call prop callback if provided (for backward compatibility)
+    if (setMoodVolume) {
+      setMoodVolume(newVolume);
+    }
+  };
+
+  // Handle mood selection
+  const handleMoodSelect = (e, mood) => {
+    e.stopPropagation(); // Prevent popover from closing
+    playMood(mood.id);
+    setSearchText(mood.name);
+    setIsDropdownOpen(false);
+  };
+
+  // Toggle play/pause
+  const handleTogglePlay = () => {
+    togglePlayPause();
+  };
+
+  const filteredMoods = storeMoods.filter((m) =>
     m.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const playMood = (mood) => {
-    if (!mood?.file) return;
-
-  // SAME mood → toggle
-    if (globalMoodAudio && globalMoodName === mood.name) {
-      if (globalMoodAudio.paused) {
-        globalMoodAudio.play().catch(() => {});
-        setIsPlaying(true);
-        setIsLoading(false);
-   } else {
-        globalMoodAudio.pause();
-        setIsPlaying(false);
-      }
-      return;
-    }
-
-    // DIFFERENT mood → HARD replace
-    if (globalMoodAudio) {
-      globalMoodAudio.pause();
-      globalMoodAudio.currentTime = 0;
-    }
-
-    const audio = new Audio(mood.file);
-    audio.loop = true;
-    audio.volume =
-      mood.name.toLowerCase() === "calm"
-        ? CALM_VOLUME
-        : moodVolume ?? DEFAULT_VOLUME;
-
-    setIsLoading(true); // start loading
-    audio.oncanplaythrough = () => {
-      setIsLoading(false); // loaded
-      setIsPlaying(true);
-      audio.play().catch(() => {});
-    };
-
-    audio.onended = () => setIsPlaying(false);
-   globalMoodAudio = audio;
-    globalMoodName = mood.name;
-
-    setSelectedMood(mood.name);
-    setSearchText(mood.name);
-
- setIsDropdownOpen(false);
-
-    localStorage.setItem("selectedMood", mood.name);
-  };
-
-const toggleInputPlay = () => {
-  if (!globalMoodAudio) return;
-
-  // If paused → try to play
-  if (globalMoodAudio.paused) {
-    setIsLoading(true); // show loader
-    globalMoodAudio.play()
-      .then(() => {
-        setIsPlaying(true);   // now it is actually playing
-        setIsLoading(false);  // hide loader
-      })
-      .catch((err) => {
-        console.error("Audio play failed:", err);
-        setIsPlaying(false);
-        setIsLoading(false);
-      });
-  } else {
-    // If playing → pause
-    globalMoodAudio.pause();
-    setIsPlaying(false);
-    setIsLoading(false); // make sure loader is hidden
-  }
-};
-
-useEffect(() => {
-    const savedMood = localStorage.getItem("selectedMood");
-    const savedVolume = localStorage.getItem("moodVolume");
-    if (savedVolume !== null) setMoodVolume(Number(savedVolume));
-
- if (globalMoodAudio && globalMoodName) {
-      setSelectedMood(globalMoodName);
-      setSearchText(globalMoodName);
-      setIsPlaying(!globalMoodAudio.paused);
-      return;
-    }
-
- if (savedMood) {
-      setSelectedMood(savedMood);
-      setSearchText(savedMood);
-    }
-  }, []);
-
-
+  // Close dropdown when clicking outside
   useEffect(() => {
-    if (globalMoodAudio) globalMoodAudio.volume = moodVolume;
-    localStorage.setItem("moodVolume", moodVolume);
-  }, [moodVolume]);
-
- useEffect(() => {
     const handleClickOutside = (e) => {
       if (
         dropdownRef.current &&
@@ -139,13 +68,30 @@ useEffect(() => {
         setIsDropdownOpen(false);
       }
     };
-     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
- return (
+  return (
     <div className="mood-selector-container">
       <label className="mood-label">Mood</label>
+
+      {/* Volume Slider - integrated into mood selector */}
+      <div className="mood-volume-slider">
+        <label className="popover-label">Volume</label>
+        <div className="popover-slider-inner">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => handleVolumeChange(Number(e.target.value))}
+            style={{ background: `linear-gradient(to right, var(--hover-dark) ${volume * 100}%, rgba(255,255,255,0.15) ${volume * 100}%)` }}
+          />
+          <span className="popover-value">{Math.round(volume * 100)}%</span>
+        </div>
+      </div>
 
       <div className="mood-input-wrapper">
         <input
@@ -164,10 +110,10 @@ useEffect(() => {
             className={`mood-play-btn ${
               isLoading ? "loading" : isPlaying ? "playing" : ""
             }`}
-            onClick={toggleInputPlay}
+            onClick={handleTogglePlay}
           >
             {isLoading ? (
-              <span className="loader"></span> // small animation
+              <span className="loader"></span>
             ) : isPlaying ? (
               <span className="eq">
                 <span />
@@ -175,30 +121,30 @@ useEffect(() => {
                 <span />
               </span>
             ) : (
-              <span className="text-[var(--gold)]">▶</span> // play button
+              <span className="text-[var(--gold)]">▶</span>
             )}
-     </button>
+          </button>
         )}
       </div>
 
       {isDropdownOpen && (
         <ul ref={dropdownRef} className="mood-dropdown">
           {filteredMoods.map((m) => {
-            const active = selectedMood === m.name;
+            const isActive = currentMoodId === m.id;
 
             return (
               <li
-                key={m.name}
-                className={`mood-option ${active ? "active" : ""}`}
-                onClick={() => playMood(m)}
+                key={m.id}
+                className={`mood-option ${isActive ? "active" : ""}`}
+                onClick={(e) => handleMoodSelect(e, m)}
               >
                 <span className="mood-name">{m.name}</span>
-   <span
+                <span
                   className={`mood-play-btn ${
-                    active && isPlaying ? "playing" : ""
+                    isActive && isPlaying ? "playing" : ""
                   }`}
                 >
-                  {active && isPlaying ? (
+                  {isActive && isPlaying ? (
                     <span className="eq">
                       <span />
                       <span />
@@ -207,7 +153,7 @@ useEffect(() => {
                   ) : (
                     <span>▶</span>
                   )}
-       </span>
+                </span>
               </li>
             );
           })}

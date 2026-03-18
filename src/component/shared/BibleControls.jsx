@@ -2,6 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { FaVolumeUp, FaMusic, FaClock } from "react-icons/fa";
 import MoodSelector from "./MoodSelector";
+import { useMoodStore } from "../../store/MoodStore";
 import "../../styles/biblecontrols.css";
 
 export default function BibleControls({
@@ -13,7 +14,9 @@ export default function BibleControls({
   isVisible = false,
 }) {
   const speedRef = useRef(null);
-  const [moodVolume, setMoodVolume] = useState(0.3);
+  
+  // Use global mood store
+  const { volume, setVolume } = useMoodStore();
   
   // Popover states
   const [openPopover, setOpenPopover] = useState(null);
@@ -68,7 +71,7 @@ export default function BibleControls({
   -------------------------------*/
   const handleVolumeChange = (e) => {
     const val = Number(e.target.value);
-    setMoodVolume(val);
+    setVolume(val); // Updates global store, saves to localStorage, and applies to audio
   };
 
   /* -------------------------------
@@ -156,7 +159,7 @@ export default function BibleControls({
               title="Mood Volume"
             >
               <FaVolumeUp />
-              <span className="icon-label">{Math.round(moodVolume * 100)}%</span>
+              <span className="icon-label">{Math.round(volume * 100)}%</span>
             </button>
             {openPopover === 'volume' && (
               <div className="popover-slider volume-popover">
@@ -167,11 +170,11 @@ export default function BibleControls({
                     min="0"
                     max="1"
                     step="0.01"
-                    value={moodVolume}
+                    value={volume}
                     onChange={handleVolumeChange}
-                    style={{ background: getSliderBackground(moodVolume * 100) }}
+                    style={{ background: getSliderBackground(volume * 100) }}
                   />
-                  <span className="popover-value">{Math.round(moodVolume * 100)}%</span>
+                  <span className="popover-value">{Math.round(volume * 100)}%</span>
                 </div>
               </div>
             )}
@@ -189,7 +192,7 @@ export default function BibleControls({
             </button>
             {openPopover === 'mood' && (
               <div className="popover-slider mood-popover">
-                <MoodSelector moodVolume={moodVolume} setMoodVolume={setMoodVolume} />
+                <MoodSelector moodVolume={volume} setMoodVolume={setVolume} />
               </div>
             )}
           </div>

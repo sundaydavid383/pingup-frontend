@@ -82,6 +82,26 @@
 
   .profile-main {
     max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Mobile-specific fixes - ensure full width and proper centering */
+@media (max-width: 640px) {
+  .profile_main {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  .profile-card {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  .cover-wrapper {
+    border-radius: 0;
   }
 }
 

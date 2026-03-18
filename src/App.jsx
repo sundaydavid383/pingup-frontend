@@ -45,6 +45,9 @@ import { openInstalledApp } from './utils/openInstalledApp';
 import CallContainer from './component/CallUI/CallContainer';
 import GlobalPipModal from './component/GlobalPipModal';
 import SidebarTooltipPortal from './component/shared/SidebarTooltipPortal';
+import { MoodProvider } from './store/MoodStore';
+import { ScriptureProvider } from './context/ScriptureContext';
+import GlobalScriptureModal from './component/shared/GlobalScriptureModal';
 const App = () => {
   const { user, modalOpen, setModalOpen } = useAuth();
   const location = useLocation();
@@ -221,73 +224,80 @@ const subscribeUserToPush = async () => {
     return () => (document.body.style.overflow = 'auto');
   }, [modalOpen, user]);
   return (
-    <CallContainer user={user}>
-      <Helmet>
-        <title>{APP_NAME} - Newsprings Youth</title>
-        <meta name="description" content="Connect spiritually, share scriptures, and grow with {APP_NAME}." />
-      </Helmet>
+    <MoodProvider>
+      <ScriptureProvider>
+        <CallContainer user={user}>
+          <Helmet>
+            <title>{APP_NAME} - Newsprings Youth</title>
+            <meta name="description" content="Connect spiritually, share scriptures, and grow with {APP_NAME}." />
+          </Helmet>
 
-      {modalOpen && <UserModal user={user} onClose={() => setModalOpen(false)} />}
-      <Toaster />
-      {/* <ReloadNotice /> */}
+          {modalOpen && <UserModal user={user} onClose={() => setModalOpen(false)} />}
+          <Toaster />
+          {/* <ReloadNotice /> */}
 
-      <AppInstallPrompt />
-      <GlobalAudioModal />
-      {oauthLoading && <Loading text={oauthText} />}
+          <AppInstallPrompt />
+          <GlobalAudioModal />
+          {oauthLoading && <Loading text={oauthText} />}
 
-      {/* Global PiP Modal - renders outside of RightSidebar */}
-      <GlobalPipModal />
+          {/* Global PiP Modal - renders outside of RightSidebar */}
+          <GlobalPipModal />
 
-      <SidebarTooltipPortal />
+          {/* Global Scripture Modal */}
+          <GlobalScriptureModal />
 
-      <Routes>
+          <SidebarTooltipPortal />
 
-        {/* Public or Auth route */}
-        <Route path="/auth/success" element={<AuthSuccess />} />
+        <Routes>
 
-        {/* Public Pages */}
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/about" element={<AboutPage />} />
+          {/* Public or Auth route */}
+          <Route path="/auth/success" element={<AuthSuccess />} />
 
-        {/* Landing Page - visible before login */}
-        <Route path="/" element={!user ? <LandingPage /> : <Layout />}>
-          {user && <Route index element={<Feed />} />}
-          {user && <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />}
-          {user && (
-            <Route path="bible">
-              <Route index element={<BibleReader />} />
-              <Route path=":book/:chapter" element={<BibleReader />} />
-              <Route path=":book/:chapter/:verse" element={<BibleReader />} />
-            </Route>
-          )}
-          {user && <Route path="messages" element={<Messages />} />}
-          {user && <Route path="chatbox/:userId" element={<ChatBox />} />}
-          {user && <Route path="connections" element={<Connections />} />}
-          {user && <Route path="discover" element={<Discover />} />}
-          {user && <Route path="profile" element={<Profile />} />}
-          {user && <Route path="profile/:profileId" element={<Profile />} />}
+          {/* Public Pages */}
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/about" element={<AboutPage />} />
 
-          {user && <Route path="create-post" element={<CreatePost />} />}
-          {user && <Route path="notification" element={<Notification userId={user?._id} />} />}
-          {user && <Route path='portfolio' element={<Portfolio />} />}
-          {user && <Route path="post/:postId" element={<SinglePostPage />} />}
-          {user && <Route path="settings" element={<Settings />} />}
-        </Route>
+          {/* Landing Page - visible before login */}
+          <Route path="/" element={!user ? <LandingPage /> : <Layout />}>
+            {user && <Route index element={<Feed />} />}
+            {user && <Route path="scriptures" element={<ScriptureAssistant currentUser={user} />} />}
+            {user && (
+              <Route path="bible">
+                <Route index element={<BibleReader />} />
+                <Route path=":book/:chapter" element={<BibleReader />} />
+                <Route path=":book/:chapter/:verse" element={<BibleReader />} />
+              </Route>
+            )}
+            {user && <Route path="messages" element={<Messages />} />}
+            {user && <Route path="chatbox/:userId" element={<ChatBox />} />}
+            {user && <Route path="connections" element={<Connections />} />}
+            {user && <Route path="discover" element={<Discover />} />}
+            {user && <Route path="profile" element={<Profile />} />}
+            {user && <Route path="profile/:profileId" element={<Profile />} />}
 
-        {/* Public profile page for unauthenticated users */}
-        {!user && <Route path="profile/:profileId" element={<Profile />} />}
+            {user && <Route path="create-post" element={<CreatePost />} />}
+            {user && <Route path="notification" element={<Notification userId={user?._id} />} />}
+            {user && <Route path='portfolio' element={<Portfolio />} />}
+            {user && <Route path="post/:postId" element={<SinglePostPage />} />}
+            {user && <Route path="settings" element={<Settings />} />}
+          </Route>
 
-        {/* Auth page - for login/signup */}
-        <Route path="/auth" element={!user ? <AuthContainer initialError={oauthError} /> : <Navigate to="/" />} />
+          {/* Public profile page for unauthenticated users */}
+          {!user && <Route path="profile/:profileId" element={<Profile />} />}
 
-        {/* 3D Sphere Demo */}
-        <Route path="/sphere" element={<Spinning3DSphere />} />
+          {/* Auth page - for login/signup */}
+          <Route path="/auth" element={!user ? <AuthContainer initialError={oauthError} /> : <Navigate to="/" />} />
 
-        {/* 404 Not Found */}
-        <Route path="*" element={<NotFound />} />
+          {/* 3D Sphere Demo */}
+          <Route path="/sphere" element={<Spinning3DSphere />} />
 
-      </Routes>
-    </CallContainer>
+          {/* 404 Not Found */}
+          <Route path="*" element={<NotFound />} />
+
+        </Routes>
+          </CallContainer>
+        </ScriptureProvider>
+      </MoodProvider>
   );
 };
 

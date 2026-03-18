@@ -51,12 +51,24 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
 const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
   console.log("🚀 [LEMONFOX] Step 1: Sending audio to Lemonfox API...");
 
-  if (!apiKey) {
-    console.error("❌ No Lemonfox API key found in .env");
-    onResult?.({ transcript: "" });
+  // Check for offline
+  if (!navigator.onLine) {
+    console.error("❌ Device is offline");
+    onResult?.({ transcript: "", error: "offline" });
     stopProcessing();
     return;
   }
+
+  if (!apiKey) {
+    console.error("❌ No Lemonfox API key found in .env");
+    onResult?.({ transcript: "", error: "No API key" });
+    stopProcessing();
+    return;
+  }
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
   try {
     const audioFile = new File([blob], "audio.webm", { type: "audio/webm" });
@@ -73,8 +85,11 @@ const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
       headers: { 
         "Authorization": `Bearer ${apiKey}` 
       },
-      body
+      body,
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -85,13 +100,26 @@ const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
     const transcript = data.text?.trim() || "";
 
     console.log("✅ [LEMONFOX] Transcript received →", transcript);
-    onResult?.({ transcript });
+    
+    // Immediately call onResult with success - no waiting!
+    onResult?.({ transcript, success: true });
 
   } catch (err) {
-    console.error("❌ Lemonfox API failed:", err.message || err);
-    // Still call onResult so your app doesn't hang
-    onResult?.({ transcript: "" });
+    clearTimeout(timeoutId);
+    
+    if (err.name === 'AbortError') {
+      console.error("❌ Lemonfox request timed out");
+      onResult?.({ transcript: "", error: "timeout" });
+    } else if (!navigator.onLine) {
+      console.error("❌ Device went offline during request");
+      onResult?.({ transcript: "", error: "offline" });
+    } else {
+      console.error("❌ Lemonfox API failed:", err.message || err);
+      // Call onResult with empty transcript so the UI can recover
+      onResult?.({ transcript: "", error: err.message });
+    }
   } finally {
+    clearTimeout(timeoutId);
     stopProcessing();
   }
 };

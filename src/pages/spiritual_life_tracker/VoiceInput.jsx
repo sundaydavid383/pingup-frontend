@@ -181,14 +181,22 @@ const checkAvailability = async () => {
 };
 
 // 🎯 Optimized backend chunk handler with useCallback
+// Deep fix: Ensure Bible references are parsed and navigation is triggered immediately
 const handleBackendChunk = useCallback((text) => {
-  if (!text?.trim()) return;
+  if (!text?.trim()) {
+    console.log("📝 Empty transcript received, resetting state");
+    setVoiceState(VOICE_STATE.READY);
+    setIsThinking(false);
+    return;
+  }
 
   console.log("📝 Backend transcript (full):", text);
 
   // 🚫 Backend engines are ONE-SHOT (full transcription) → NEVER cap or use leftover
   leftoverRef.current = "";
 
+  // IMMEDIATELY clear loading state (<50ms requirement)
+  setVoiceState(VOICE_STATE.TRANSCRIBING);
   setIsThinking(true);
 
   // 1️⃣ Live textarea update (replace full text)
@@ -198,21 +206,85 @@ const handleBackendChunk = useCallback((text) => {
     replace: true,
   });
 
-  // 2️⃣ ALWAYS trigger search on the FULL transcript (this was the bug!)
+  // 2️⃣ Parse Bible references immediately
   const fullTranscript = text.trim();
+  
+  // Check for Bible references in the transcript
+  const bibleReference = detectBibleReference(fullTranscript);
+  
+  if (bibleReference) {
+    console.log("📖 Bible reference detected:", bibleReference);
+    // Directly trigger navigation
+    onTranscribe(`Reference detected: ${bibleReference.book} ${bibleReference.chapter}:${bibleReference.verse}`, "", {
+      forceSearch: true,
+      source: speechEngineRef.current,
+      isVerseReference: true,
+      onComplete: () => {
+        console.log("🔹 Bible reference search complete, resetting to READY");
+        setVoiceState(VOICE_STATE.READY);
+        setIsThinking(false);
+      },
+      onError: (err) => {
+        console.error("🔹 Bible reference error:", err);
+        setVoiceState(VOICE_STATE.ERROR);
+        setIsThinking(false);
+      }
+    });
+    return;
+  }
 
-  setVoiceState(VOICE_STATE.PROCESSING);
+  // 3️⃣ No verse reference - proceed with full search
+  setTimeout(() => {
+    setVoiceState(VOICE_STATE.PROCESSING);
 
-  onTranscribe(fullTranscript, "", {  // ← send FULL text, empty leftover
-    forceSearch: true,
-    source: speechEngineRef.current,
-    onComplete: () => {
-      console.log("🔹 Search complete (Lemonfox/Vosk), resetting to READY");
-      setVoiceState(VOICE_STATE.READY);
-      setIsThinking(false);
-    }
-  });
+    onTranscribe(fullTranscript, "", {  // ← send FULL text, empty leftover
+      forceSearch: true,
+      source: speechEngineRef.current,
+      onComplete: () => {
+        console.log("🔹 Search complete (Lemonfox/Vosk), resetting to READY");
+        setVoiceState(VOICE_STATE.READY);
+        setIsThinking(false);
+      },
+      onError: (err) => {
+        console.error("🔹 Search error:", err);
+        setVoiceState(VOICE_STATE.ERROR);
+        setIsThinking(false);
+        setError("Search failed. Please try again.");
+      }
+    });
+  }, 100); // 100ms delay to show loading state
 }, [onTranscribe]);
+
+// Helper to detect Bible references with NLP-lite
+const detectBibleReference = (text) => {
+  const normalized = text.toLowerCase().replace(/chapter|verse|explain|what does|mean/gi, "").trim();
+  
+  // Common Bible book patterns
+  for (const book of bibleBooks) {
+    const patterns = [
+      // Exact name or alias
+      new RegExp(`^${book.name.toLowerCase()}\\s*(\\d+)[\\s:.-]*(\\d+)?`, 'i'),
+      new RegExp(`${book.name.toLowerCase()}\\s*(\\d+)[\\s:.-]*(\\d+)?`, 'i'),
+      // Common abbreviations
+      ...book.aliases?.map(alias => 
+        new RegExp(`^${alias.toLowerCase()}\\s*(\\d+)[\\s:.-]*(\\d+)?`, 'i')
+      ) || []
+    ];
+    
+    for (const pattern of patterns) {
+      const match = normalized.match(pattern);
+      if (match) {
+        return {
+          book: book.name,
+          chapter: match[1],
+          verse: match[2] || '1'
+        };
+      }
+    }
+  }
+  
+  return null;
+};
 
 
 
@@ -225,10 +297,17 @@ const handleBackendChunk = useCallback((text) => {
     }
   };
 
+  const handleOnline = () => {
+    // Optionally notify user that connection is restored
+    console.log("📡 Connection restored");
+  };
+
   window.addEventListener("offline", handleOffline);
+  window.addEventListener("online", handleOnline);
 
   return () => {
     window.removeEventListener("offline", handleOffline);
+    window.removeEventListener("online", handleOnline);
   };
 }, [listening]);
 
@@ -538,8 +617,23 @@ return (
         userId={user._id}
         mode={currentMode}
         onResult={(data)=>{
-         if(!data?.transcript) return;
-         handleBackendChunk(data.transcript)
+          // Handle error cases
+          if (data?.error) {
+            console.error("📝 Lemonfox error:", data.error);
+            if (data.error === "offline") {
+              setError("No internet connection. Please try again when online.");
+            } else if (data.error === "timeout") {
+              setError("Request timed out. Please try again.");
+            } else {
+              setError("Voice recognition failed. Please try again.");
+            }
+            setVoiceState(VOICE_STATE.ERROR);
+            setIsThinking(false);
+            return;
+          }
+          
+          if(!data?.transcript) return;
+          handleBackendChunk(data.transcript)
         }}
         toggleListening={toggleListening}
       />

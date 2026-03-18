@@ -34,6 +34,7 @@ input, textarea, select {
   --opaque-secondary: rgba(5, 13, 58, 0.6);
   --deeper-opaque-secondary: rgba(5, 13, 58, 0.8);
   --opaque-primary: rgba(18, 73, 253, 0.6);
+  --very-light-opaque-primary: rgba(18, 73, 253, 0.4);
   --glassy-white: rgba(232, 228, 228, 0.4);
   --really-bright-glass: rgba(255, 255, 255, 0.4);
   --white-glass: rgba(255, 255, 255, 0.8);

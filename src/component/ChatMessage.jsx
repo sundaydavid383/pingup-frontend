@@ -3,6 +3,20 @@ import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck, Send } from "lucide-react";
 
 const READ_MORE_LIMIT = 200;
+const READ_MORE_LINES = 3;
+
+// Helper to count lines (split by \n)
+const countLines = (text) => {
+  if (!text) return 0;
+  return text.split('\n').length;
+};
+
+// Helper to get first N lines
+const getFirstNLines = (text, n) => {
+  if (!text) return '';
+  const lines = text.split('\n');
+  return lines.slice(0, n).join('\n');
+};
 
 const ChatMessage = ({
   message,
@@ -37,15 +51,21 @@ const ChatMessage = ({
 
   const sentByUser = message.from_user_id === userId;
 
-  // Check if message should show "Read more"
+  // Check if message should show "Read more" - based on character count OR line count
+  const lineCount = countLines(message.text || '');
   const shouldShowReadMore = message.message_type === "text" && 
     message.text && 
-    message.text.length > READ_MORE_LIMIT;
+    (message.text.length > READ_MORE_LIMIT || lineCount > READ_MORE_LINES);
 
   // Get display text based on expansion state
   const getDisplayText = () => {
     if (!shouldShowReadMore || isExpanded) {
       return message.text;
+    }
+    // Show first N lines or first N characters, whichever is shorter
+    const firstLines = getFirstNLines(message.text, READ_MORE_LINES);
+    if (firstLines.length < message.text.length) {
+      return firstLines;
     }
     return message.text.slice(0, READ_MORE_LIMIT);
   };

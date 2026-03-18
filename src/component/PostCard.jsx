@@ -258,11 +258,33 @@ const hasYouTube = !!(
 );
 
 // 5️⃣ Get YouTube embed URL from multiple possible sources
-const youTubeUrl =
-  post.youtubeEmbedUrl ||
-  (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null) ||
-  post.youtubeVideo?.embedUrl ||
-  (post.youtubeVideo?.videoId ? `https://www.youtube.com/embed/${post.youtubeVideo.videoId}` : null);
+const getYouTubeEmbedUrl = (post) => {
+  // 1. Check for pre-processed embed URL
+  if (post.youtubeEmbedUrl) return post.youtubeEmbedUrl;
+  
+  // 2. Check for YouTube video ID
+  if (post.youtubeVideoId) {
+    return `https://www.youtube.com/embed/${post.youtubeVideoId}?playsinline=1`;
+  }
+  
+  // 3. Check nested YouTube object
+  if (post.youtubeVideo?.embedUrl) return post.youtubeVideo.embedUrl;
+  if (post.youtubeVideo?.videoId) {
+    return `https://www.youtube.com/embed/${post.youtubeVideo.videoId}?playsinline=1`;
+  }
+  
+  // 4. Check if text contains YouTube URL and convert to embed
+  const text = post.text || post.content || '';
+  const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = text.match(youtubeRegex);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}?playsinline=1`;
+  }
+  
+  return null;
+};
+
+const youTubeUrl = getYouTubeEmbedUrl(post);
 
   const handleShowLikes = async (postId) => {
     setShowLikesBar(true);
@@ -397,8 +419,9 @@ const youTubeUrl =
             src={youTubeUrl}
             title="YouTube video"
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            loading="lazy"
             className="w-full h-full"
           />
         </div>
@@ -456,7 +479,7 @@ const youTubeUrl =
             } else if (count === 3) {
               maxHeight = "400px"; // balanced grid
             } else if (isMobileShaped) {
-              maxHeight = "600px"; // tall portrait - allow natural height
+              maxHeight = "350px"; // tall portrait - constrain to match video player
             } else if (isLandscapeShaped) {
               maxHeight = "350px"; // wide landscape - constrain height
             } else {

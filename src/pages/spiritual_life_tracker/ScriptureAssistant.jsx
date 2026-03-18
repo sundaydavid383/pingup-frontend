@@ -511,7 +511,20 @@ const processChunks = debounce(async (inputText, onComplete, forceNewSearch = fa
 
     /*
       =========================
-      3️⃣ FINAL RESULT + SEARCH
+      3️⃣ VERSE REFERENCE DETECTED (from LemonFox)
+      =========================
+    */
+    if (meta.isVerseReference) {
+      console.log("📖 Processing verse reference from LemonFox:", sentChunk);
+      setText(sentChunk);
+      // Force a new search for verse reference
+      processChunks(sentChunk, meta.onComplete, true);
+      return;
+    }
+
+    /*
+      =========================
+      4️⃣ FINAL RESULT + SEARCH
       =========================
     */
     setText(sentChunk);
