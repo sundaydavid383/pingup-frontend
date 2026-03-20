@@ -398,91 +398,151 @@ useEffect(() => {
                     }`}
                 >
                   {/* Message bubble */}
-                  <div
-                    data-id={msg._id}
-                    id={`msg_${msg._id}`}
-                    className={`p-2 text-sm max-w-[300px] min-w-[100px] rounded-[18px] shadow-sm break-words relative transition-all duration-200
-                      ${sentByUser
-                        ? msg.failed
-                          ? "bg-red-100 text-red-700 border mb-2 border-red-400 rounded-br-none"
-                          : "bg-[var(--primary)] text-white rounded-bl-lg"
-                        : "bg-white text-gray-900 rounded-br-lg"
-                      }`}
-                  >
-                    {/* Replied Message Preview - WhatsApp Style - Clickable to scroll to original */}
-                    {msg.replyTo && (
-                      <div
-                         className={`mb-2 pb-2 px-2 py-1.5 -mx-1 cursor-pointer hover:opacity-85 transition-opacity rounded-md`}
-                        style={{
-                          backgroundColor: sentByUser
-                            ? 'rgba(255, 255, 255, 0.15)'
-                            : 'rgba(32, 66, 219, 0.72)',
-                          backdropFilter: 'blur(8px)',
-                          WebkitBackdropFilter: 'blur(8px)',
-                          border: sentByUser
-                            ? '1px solid rgba(255, 255, 255, 0.2)'
-                            : '1px solid rgba(255, 255, 255, 0.15)',
-                        }}
-                        onClick={() => {
-                          if (scrollToReplyMessage && msg.replyTo) {
-                            scrollToReplyMessage(msg.replyTo);
-                          }
-                        }}
-                        title="Click to view original message"
-                      >
-                        <div className="flex items-start gap-2">
-                          {/* Vertical line indicator */}
-                          <div
-                            className="w-0.5 rounded-full mt-1 flex-shrink-0"
-                            style={{ backgroundColor: sentByUser ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.5)' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <span
-                              className="text-xs font-medium"
-                              style={{ color: sentByUser ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.9)' }}
-                            >
-                              {msg.replyTo.from_user_id === user._id ? 'You' : (receiver?.name || 'User')}
-                            </span>
-                            <p className={`text-xs truncate ${sentByUser ? 'text-white/60' : 'text-white/60'}`}>
-                              {msg.replyTo.text || (msg.replyTo.message_type === 'image' ? '📷 Image' : msg.replyTo.message_type === 'audio' ? '🎤 Audio' : 'Message')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+              <div
+  data-id={msg._id}
+  id={`msg_${msg._id}`}
+  className={`
+    p-3 text-sm max-w-[85%] sm:max-w-[70%] md:max-w-[400px] min-w-[120px]
+    rounded-2xl shadow-sm break-words relative transition-all duration-200
+    ${sentByUser
+      ? msg.failed
+        ? "bg-red-100 text-red-800 border border-red-300 rounded-br-none"
+        : "bg-[var(--primary)] text-white rounded-bl-3xl"
+      : "bg-[var(--white)] text-gray-900 rounded-br-3xl"
+    }
+  `}
+>
+  {/* ─── Replied / Quoted Message Preview ─── */}
+  {msg.replyTo && (
+    <div
+      className={`
+        mb-2.5 -mx-2 px-3 py-2 rounded-xl cursor-pointer
+        transition-all duration-150 hover:brightness-[1.04] active:brightness-95
+        border-l-4
+        ${sentByUser
+          ? "bg-white/10 border-[var(--white)]/60"
+          : "bg-gray-200/40 border-[var(--primary)]/35"
+        }
+      `}
+      onClick={() => {
+        if (scrollToReplyMessage && msg.replyTo) {
+          scrollToReplyMessage(msg.replyTo);
+        }
+      }}
+      title="Click to scroll to original message"
+    >
+      <div className="flex items-start gap-2.5 text-xs leading-tight">
+        {/* Thin colored line indicator */}
+        <div
+          className={`
+            w-0.5 h-5 mt-0.5 rounded-full flex-shrink-0
+            ${sentByUser
+              ? "bg-[var(--primary)]/55"
+              : "bg-[var(--primary)]/50"
+            }
+          `}
+        />
 
-                    {msg.message_type === "text" && (
-                      <div className="flex flex-col gap-1">
-                        <p className="whitespace-pre-wrap">{getDisplayText(msg.text, msg._id)}</p>
-                        {shouldShowReadMore(msg.text) && (
-                          <button
-                            onClick={() => toggleMessageExpansion(msg._id)}
-                            className="text-xs font-medium opacity-80 hover:opacity-100 transition-opacity self-start mt-0.5"
-                            style={{ color: sentByUser ? 'rgba(255, 255, 255, 0.9)' : 'var(--primary)' }}
-                          >
-                            {expandedMessages.has(msg._id) ? 'Show less' : 'Read more'}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {msg.message_type === "image" && msg.media_url && (
-                      <img
-                        src={msg.media_url}
-                        alt="chat media"
-                        className="w-full max-w-[60px] rounded-lg mb-1 object-cover cursor-pointer transition-transform hover:scale-[1.02]"
-                        onClick={() => {
-                          const index = imageMessages.findIndex(
-                            (img) => img.media_url === msg.media_url
-                          );
-                          setCurrentImageIndex(index);
-                          setShowMediaViewer(true);
-                        }}
-                      />
-                    )}
-                    {msg.message_type === "audio" && msg.media_url && (
-                      <AudioMessage msg={msg} />
-                    )}
-                  </div>
+        <div className="flex-1 min-w-0 space-y-0.5">
+          {/* Sender name – different intensity per bubble type */}
+          <div
+            className={`
+              font-semibold truncate
+              ${sentByUser
+                ? "text-white/90"
+                : "text-[var(--primary)]/85"
+              }
+            `}
+          >
+            {msg.replyTo.from_user_id === user._id
+              ? "You"
+              : (msg.replyTo.senderName || receiver?.name || "User")}
+          </div>
+
+          {/* Content preview */}
+          <p
+            className={`
+              truncate leading-snug
+              ${sentByUser
+                ? "text-white/70"
+                : "text-gray-700/90"
+              }
+            `}
+          >
+            {msg.replyTo.text
+              ? msg.replyTo.text
+              : msg.replyTo.message_type === "image"
+              ? "🖼️ Photo"
+              : msg.replyTo.message_type === "audio"
+              ? "🎙️ Voice message"
+              : msg.replyTo.message_type === "video"
+              ? "🎥 Video"
+              : "Message"}
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* ─── Main Message Content ─── */}
+  {msg.message_type === "text" && (
+    <div className="flex flex-col gap-1">
+      <p className="whitespace-pre-wrap leading-relaxed">
+        {getDisplayText(msg.text, msg._id)}
+      </p>
+
+      {shouldShowReadMore(msg.text) && (
+        <button
+          onClick={() => toggleMessageExpansion(msg._id)}
+          className={`
+            text-xs font-medium mt-1 self-start transition-opacity
+            ${sentByUser
+              ? "text-white/80 hover:text-white"
+              : "text-[var(--primary)] hover:text-[var(--primary)]/80"
+            }
+          `}
+        >
+          {expandedMessages.has(msg._id) ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  )}
+
+  {msg.message_type === "image" && msg.media_url && (
+    <img
+      src={msg.media_url}
+      alt="Shared image"
+      className={`
+        w-full max-w-[240px] rounded-lg border-0 mt-1
+        object-cover cursor-pointer transition-transform
+        hover:scale-[1.015] active:scale-100
+      `}
+      onClick={() => {
+        const index = imageMessages.findIndex(
+          (img) => img.media_url === msg.media_url
+        );
+        if (index !== -1) {
+          setCurrentImageIndex(index);
+          setShowMediaViewer(true);
+        }
+      }}
+    />
+  )}
+
+  {msg.message_type === "audio" && msg.media_url && (
+    <div className="mt-1">
+      <AudioMessage msg={msg} />
+    </div>
+  )}
+
+  {/* Optional: timestamp / status – if you want to add it inside bubble */}
+  {/* 
+  <div className="text-[10px] opacity-70 mt-1 text-right">
+    {formatTime(msg.createdAt)}
+    {sentByUser && !msg.failed && <span className="ml-1">✓✓</span>}
+  </div> 
+  */}
+</div>
 
                   {/* Message status - only show for sent messages, not received */}
                   <div

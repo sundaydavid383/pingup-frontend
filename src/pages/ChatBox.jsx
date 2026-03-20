@@ -1346,13 +1346,6 @@ const ChatBox = ({ userId: propUserId }) => {
     <div
       ref={chatContainerRef}
       className="chatbox-container"
-      // style={{
-      //   position: "relative",
-      //   height: "100vh",
-      //   display: "flex",
-      //   flexDirection: "column",
-      //   overflow: "hidden",
-      // }}
     >
       {/* Header - sticky at top within flex container */}
       <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
@@ -1362,15 +1355,7 @@ const ChatBox = ({ userId: propUserId }) => {
       {/* Messages Container - scrollable area between header and input */}
       <div
         ref={containerRef}
-        className="chatbox-messages 
-        // flex-1 overflow-y-auto"
-        // style={{
-        //   flex: 1,
-        //   overflowY: "auto",
-        //   WebkitOverflowY: "auto",
-        //   overscrollBehavior: "contain",
-        //   scrollBehavior: "smooth",
-        // }}
+        className="chatbox-messages"
       >
         {loading ?
           (

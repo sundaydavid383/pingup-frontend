@@ -95,9 +95,9 @@ useEffect(() => {
 
 
   return (
-    <div className="min-h-screen w-full flex bg-[var(--white)] overflow-hidden relative">
+    <div className="h-screen w-full flex bg-[var(--white)] overflow-hidden relative">
       {/* LEFT: Conversation list */}
-      <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r relative"
+      <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r h-full"
       style={{
         borderRightColor: "var(--hover-light)",
         borderRightStyle: "solid",

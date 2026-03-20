@@ -16,8 +16,8 @@ const ChatboxInput = ({
   }, [sidebarOpen, sidebarWidth]);
 
   const inputStyle = {
-    // Use sticky positioning to stay at bottom within the flex container
-    position: "sticky",
+    // Fixed positioning within flex container
+    position: "relative",
     bottom: 0,
     zIndex: 100,
     display: "flex",
