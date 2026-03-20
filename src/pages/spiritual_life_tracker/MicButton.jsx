@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import "./micbutton.css"
-
-export default function MicButton({ listening, toggleListening, disabled, statusMessage }) {
+export default function MicButton({ listening, isThinking, toggleListening, disabled, statusMessage }) {
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const micStreamRef = useRef(null);
@@ -11,6 +10,7 @@ export default function MicButton({ listening, toggleListening, disabled, status
   const [volume, setVolume] = useState(0);
   const [permissionDenied, setPermissionDenied] = useState(false);
 
+  // ─── Animation only when actually listening (before silence) ───
   useEffect(() => { 
     if (!listening) {
       cancelAnimationFrame(rafRef.current);
@@ -28,7 +28,7 @@ export default function MicButton({ listening, toggleListening, disabled, status
         audioCtxRef.current = audioCtx;
 
         const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256; // smaller fft for faster responsiveness
+        analyser.fftSize = 256;
         analyserRef.current = analyser;
 
         const source = audioCtx.createMediaStreamSource(stream);
@@ -59,47 +59,57 @@ export default function MicButton({ listening, toggleListening, disabled, status
     };
   }, [listening]);
 
-  const getStatusClass = () => {
-  if (!statusMessage) return "";
-  if (statusMessage.toLowerCase().includes("loading")) return "loading";
-  if (statusMessage.toLowerCase().includes("not")) return "error";
-  if (listening) return "listening";
-  return "";
-};
+  const showMicOff = listening || isThinking;
 
+  const getStatusClass = () => {
+    if (!statusMessage) return "";
+    if (statusMessage.toLowerCase().includes("loading") || isThinking) return "loading";
+    if (statusMessage.toLowerCase().includes("not")) return "error";
+    if (listening) return "listening";
+    return "";
+  };
 
   const glowIntensity = Math.min(1, volume * 3.5);
   const speaking = volume > 0.15;
-
-  // Calculate dynamic pulsating scale for outer ring
-  const pulsateScale = 1 + volume * 0.8; // 1 → 1.8
+  const pulsateScale = 1 + volume * 0.8;
 
   return (
     <div className="flex flex-col gap-6 w-full items-center justify-center py-6">
       <div
         className={`relative flex items-center justify-center rounded-full transition-all duration-150 ease-out ${
-          listening ? "w-[90px] h-[90px]" : "w-[48px] h-[48px]"
+          showMicOff ? "w-[90px] h-[90px]" : "w-[48px] h-[48px]"
         }`}
       >
-        {/* ===== OUTER RING (PULSATING) ===== */}
+        {/* OUTER RING + GLOW only when actually recording (not during thinking) */}
         {listening && !permissionDenied && (
-          <div
-            className="absolute inset-0 rounded-full animate-[spin_6s_linear_infinite]"
-            style={{
-              background:
-                "conic-gradient(from 0deg, var(--primary), var(--color-5), var(--color-3), var(--primary))",
-              transform: `scale(${pulsateScale})`,
-              transition: "transform 50ms ease-out", // very quick transition to match voice
-              boxShadow: `
-                0 0 ${50 + volume * 120}px rgba(30,64,175,${0.8 * glowIntensity}),
-                0 0 ${100 + volume * 200}px rgba(99,102,241,${0.6 * glowIntensity}),
-                0 0 ${150 + volume * 300}px rgba(99,102,241,${0.4 * glowIntensity})
-              `,
-            }}
-          />
+          <>
+            <div
+              className="absolute inset-0 rounded-full animate-[spin_6s_linear_infinite]"
+              style={{
+                background: "conic-gradient(from 0deg, var(--primary), var(--color-5), var(--color-3), var(--primary))",
+                transform: `scale(${pulsateScale})`,
+                transition: "transform 50ms ease-out",
+                boxShadow: `
+                  0 0 ${50 + volume * 120}px rgba(30,64,175,${0.8 * glowIntensity}),
+                  0 0 ${100 + volume * 200}px rgba(99,102,241,${0.6 * glowIntensity}),
+                  0 0 ${150 + volume * 300}px rgba(99,102,241,${0.4 * glowIntensity})
+                `,
+              }}
+            />
+            <div
+              className="absolute rounded-full"
+              style={{
+                inset: `-${15 + volume * 20}px`,
+                background: "var(--primary)",
+                opacity: speaking ? 1 : 0.25 + glowIntensity * 0.5,
+                filter: `blur(${speaking ? 30 : 20}px)`,
+                transition: "all 50ms ease-out",
+              }}
+            />
+          </>
         )}
 
-        {/* ===== PERMISSION DENIED RING ===== */}
+        {/* PERMISSION DENIED RING */}
         {permissionDenied && (
           <div
             className="absolute inset-0 rounded-full bg-red-600 opacity-80 animate-pulse"
@@ -107,38 +117,24 @@ export default function MicButton({ listening, toggleListening, disabled, status
           />
         )}
 
-        {/* ===== AMBIENT GLOW ===== */}
-        {listening && !permissionDenied && (
-          <div
-            className="absolute rounded-full "
-            style={{
-              inset: `-${15 + volume * 20}px`,
-              background: "var(--primary)",
-              opacity: speaking ? 1 : 0.25 + glowIntensity * 0.5,
-              filter: `blur(${speaking ? 30 : 20}px)`,
-              transition: "all 50ms ease-out", // match outer pulsation
-            }}
-          />
-        )}
-
-        {/* ===== INNER BUTTON ===== */}
+        {/* INNER BUTTON */}
         <button
           type="button"
           onClick={toggleListening}
-          aria-pressed={listening}
-          disabled={disabled || false}
+          aria-pressed={showMicOff}
+          disabled={disabled}
           aria-label={
             permissionDenied
               ? "Microphone permission denied"
-              : listening
-              ? "Stop voice input"
+              : showMicOff
+              ? "Stop voice input (thinking)"
               : "Start voice input"
           }
           title={
             permissionDenied
               ? "Microphone access denied"
-              : listening
-              ? "Stop Recording"
+              : showMicOff
+              ? "Processing..."
               : "Start Recording"
           }
           className={`relative z-10 flex items-center justify-center rounded-full
@@ -146,19 +142,21 @@ export default function MicButton({ listening, toggleListening, disabled, status
             backdrop-blur-[10px]
             shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]
             text-[var(--btn-text)]
-            ${listening ? "w-[64px] h-[64px] bg-[var(--form-bg)]" : "w-[54px] h-[54px] bg-[var(--btn-bg)]"}
+            ${showMicOff 
+              ? "w-[64px] h-[64px] bg-[var(--form-bg)]" 
+              : "w-[54px] h-[54px] bg-[var(--btn-bg)]"}
             ${disabled ? "bg-red-600 cursor-not-allowed opacity-60" : ""}
           `}
         >
-           {listening ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+          {showMicOff ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
         </button>
       </div>
-          {statusMessage && <div className={`mic-status ${getStatusClass()}`}>
-             {statusMessage}
-           </div>
-}
 
-    
+      {statusMessage && (
+        <div className={`mic-status ${getStatusClass()}`}>
+          {statusMessage}
+        </div>
+      )}
     </div>
   );
 }

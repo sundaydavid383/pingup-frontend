@@ -1,6 +1,7 @@
 export default function ProfileSkeleton() {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-8 animate-pulse overflow-visible">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-8 animate-pulse overflow-visible
+    min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden flex-1">
 
       {/* COVER */}
       <div className="w-full h-40 sm:h-48 md:h-56 bg-gray-200 rounded-xl" />

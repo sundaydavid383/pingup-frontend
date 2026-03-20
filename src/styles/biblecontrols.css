@@ -1,7 +1,353 @@
+/* FILE: biblecontrols.css */
+/* UI polish only: spacing, padding, margins inside controls bar and popovers */
+
+/* ============================= */
+/* BibleControls - YouTube Style */
+/* ============================= */
+
+/* Main bottom bar - only applies within bible reader context */
+.bible-page .bible-controls-bar,
+.bible-controls-bar.bible-page-context {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85px;
+  background: var(--form-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  padding: 0 1.5rem;
+}
+
+.bible-controls-bar.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.bible-controls-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Inner flex container */
+.bible-controls-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Progress Section - takes most space */
+.progress-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.progress-control {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.progress-control input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.progress-control input[type="range"]:hover {
+  height: 8px;
+}
+
+/* YouTube-style progress track colors */
+.chapter-progress-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--gold, #fbbf24) 0%, var(--gold, #fbbf24) var(--progress, 0%), rgba(255,255,255,0.2) var(--progress, 0%), rgba(255,255,255,0.2) 100%);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.chapter-progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #fbbf24);
+  cursor: pointer;
+  margin-top: -4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.progress-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold, #fbbf24);
+  min-width: 45px;
+  text-align: right;
+}
+
+/* Right controls section */
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Control icon buttons */
+.control-icon-wrapper {
+  position: relative;
+}
+
+.control-icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.control-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.control-icon-btn.active {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--gold, #fbbf24);
+  color: var(--gold, #fbbf24);
+}
+
+.control-icon-btn svg {
+  font-size: 1rem;
+}
+
+.icon-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Popover sliders */
+.popover-slider {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 16px;
+  padding: 1.25rem;
+  min-width: 260px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  z-index: 1001;
+  animation: popoverSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.popover-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.85);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+.popover-slider-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.popover-slider-inner input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.popover-slider-inner input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #fbbf24);
+  cursor: pointer;
+}
+
+.popover-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold, #fbbf24);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Mood popover - wider for dropdown */
+.mood-popover {
+  min-width: 280px;
+  padding: 0.75rem;
+  /* Dynamic positioning to prevent overflow */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Ensure dropdown doesn't overflow viewport */
+@media (max-width: 640px) {
+  .mood-popover {
+    min-width: 260px;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+/* Dropdown list styling */
+.mood-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 1rem);
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--secondary);
+  border: 1px solid var(--hover-dark);
+  border-radius: 0.6rem;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  z-index: 1000;
+  padding: 0.35rem;
+  list-style: none;
+}
+
+/* On mobile, align dropdown to right edge */
+@media (max-width: 640px) {
+  .mood-dropdown {
+    left: auto;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-height: 180px;
+  }
+}
+
+/* ============================= */
+/* Mobile Responsive */
+/* ============================= */
+@media (max-width: 768px) {
+  .bible-controls-bar {
+    height: 110px;
+    padding: 0 1rem;
+  }
+
+  .bible-controls-inner {
+    flex-direction: column;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.75rem;
+  }
+
+  .progress-section {
+    width: 100%;
+    order: 2;
+  }
+
+  .controls-right {
+    order: 1;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .control-icon-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .icon-label {
+    display: none;
+  }
+
+  .popover-slider {
+    min-width: 200px;
+    padding: 0.8rem;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .mood-popover {
+    min-width: 260px;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  @keyframes popoverSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .bible-controls-bar {
+    height: 120px;
+  }
+
+  .controls-right {
+    gap: 0.4rem;
+  }
+
+  .control-icon-btn {
+    padding: 0.5rem;
+  }
+}
+
+/* ============================= */
+/* Existing styles preserved */
+/* ============================= */
+
 .bible-controls-fixed {
   position: fixed;
   top: 1rem;
-z-index: 999;
+  z-index: 999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -14,25 +360,10 @@ z-index: 999;
   backdrop-filter: blur(10px);
   box-shadow: var(--border-shadow);
 }
-@media (max-width: 640px) {
-  .bible-controls-fixed {
-    left: 0;
-    right: 0;
-    top: 0;
 
-    width: 100%;
-    max-width: 100%;
-
-    align-items: stretch;
-    border-radius: 0;
-
-    padding: 0.6rem;
-  }
-}
-
-.bible_controls_toggler{
+.bible_controls_toggler {
   position: fixed;
-bottom: 10px;
+  bottom: 10px;
   width: 3rem;
   height: 3rem;
   color: var(--white);
@@ -47,11 +378,10 @@ bottom: 10px;
   background-color: var(--opaque-secondary);
   font-size: 1.4rem;
   transition: .2s linear;
-
-  /* backdrop blur */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
 .bible_controls_toggler:hover {
   transform: scale(1.15);
   opacity: 1;
@@ -107,9 +437,6 @@ bottom: 10px;
   cursor: pointer;
 }
 
-/* ============================= */
-/* Speed Dropdown Container */
-/* ============================= */
 .speed-dropdown {
   background: var(--form-bg);
   backdrop-filter: var(--backdrop-blur);
@@ -117,44 +444,31 @@ bottom: 10px;
   padding: 0.75rem 1rem;
   color: var(--text-main);
   width: 97%;
- box-shadow: 0px 0px 2px ;
+  box-shadow: 0px 0px 2px;
 }
 
-/* Label */
 .speed-label {
   font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--white);
   margin-bottom: 0.2rem;
-
   display: block;
 }
 
-/* ============================= */
-/* Speed Control Layout */
-/* ============================= */
 .speed-control {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-/* Horizontal */
 .speed-control.horizontal {
   flex-direction: row;
 }
 
-/* Vertical */
 .speed-control.vertical {
   flex-direction: column;
 }
 
-
-
-
-/* ============================= */
-/* Range Input */
-/* ============================= */
 .speed-control input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -167,7 +481,6 @@ bottom: 10px;
   margin-bottom: 1.5rem;
 }
 
-/* Track */
 .speed-control input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
@@ -178,7 +491,6 @@ bottom: 10px;
   border-radius: 999px;
 }
 
-/* Thumb */
 .speed-control input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
@@ -204,9 +516,6 @@ bottom: 10px;
   cursor: pointer;
 }
 
-/* ============================= */
-/* Speed Value */
-/* ============================= */
 .speed-value {
   font-size: 0.9rem;
   font-weight: 600;
@@ -214,9 +523,6 @@ bottom: 10px;
   min-width: 36px;
   text-align: right;
 }
-
-/* ============================= */
-/* Mood Selector Styles */  
 
 .mood-selector-container {
   position: relative;
@@ -236,11 +542,41 @@ bottom: 10px;
 
 .mood-label {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--white);
   margin-bottom: 0.25rem;
   display: block;
 }
 
+/* Volume slider inside mood selector */
+.mood-volume-slider {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mood-volume-slider .popover-label {
+  margin-bottom: 0.5rem;
+}
+
+.mood-volume-slider input[type="range"] {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mood-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold, #fbbf24);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
 
 .mood-input-wrapper {
   position: relative;
@@ -250,32 +586,41 @@ bottom: 10px;
 
 .mood-input {
   width: 100%;
-  padding: 0.6rem 2.4rem 0.6rem 0.75rem;
-  border-radius: 0.55rem;
-  border: 1px solid var(--hover-dark);
-  background: var(--form-bg);
-  color: var(--text-main);
+  padding: 0.7rem 2.6rem 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+  color: #f8fafc;
+  font-size: 0.9rem;
   outline: none;
+  transition: all 0.2s ease;
 }
 
 .mood-input:focus {
-  border-color: var(--gold);
+  border-color: rgba(251, 191, 36, 0.7);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
 }
 
+.mood-input::placeholder {
+  color: rgba(248, 250, 252, 0.4);
+}
 
 .mood-dropdown {
   position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  width: 100%;
-  max-height: 200px;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 1rem);
+  max-height: 220px;
   overflow-y: auto;
-  background: var(--secondary);
-  border: 1px solid var(--hover-dark);
-  border-radius: 0.6rem;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 12px;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   z-index: 1000;
-  padding: 0.35rem;
+  padding: 0.4rem;
   list-style: none;
 }
 
@@ -288,37 +633,39 @@ bottom: 10px;
   align-items: center;
   justify-content: center;
 }
+
 .mood-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 0.7rem;
-  border-radius: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
   cursor: pointer;
-  color: var(--text-main);
-  transition: background 0.18s ease, color 0.18s ease;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  transition: all 0.18s ease;
 }
 
-/* Hover — subtle */
 .mood-option:hover {
-  background: var(--hover-light);
-  color: var(--secondary);
+  background: rgba(251, 191, 36, 0.12);
+  color: #f8fafc;
 }
 
-/* Active (playing) — clear but calm */
 .mood-option.active {
   background: linear-gradient(
     90deg,
-    rgba(255, 215, 0, 0.48),
-    rgba(255, 215, 0, 0.26)
+    rgba(251, 191, 36, 0.25),
+    rgba(251, 191, 36, 0.12)
   );
-  color: var(--gold);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .mood-name {
   flex: 1;
   cursor: pointer;
 }
+
 .eq {
   display: flex;
   gap: 2px;
@@ -333,6 +680,7 @@ bottom: 10px;
   border-radius: 2px;
   transition: background 0.2s;
 }
+
 .mood-play-btn .loader {
   width: 12px;
   height: 12px;
@@ -347,8 +695,6 @@ bottom: 10px;
   100% { transform: rotate(360deg); }
 }
 
-
-/* Playing animation */
 .mood-play-btn.playing .eq span {
   background: var(--gold);
   animation: eqMove 0.9s infinite ease-in-out;

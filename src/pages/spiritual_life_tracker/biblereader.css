@@ -1,4 +1,7 @@
 
+/* FILE: biblereader.css */
+/* UI polish only: spacing, padding, margins, redundancy cleanup */
+
 /* Dark mode (default) */
 .bible-page[data-theme="dark"] {
   --bg-main: #0f172a;
@@ -109,13 +112,13 @@
 
 .bible-reader-inner {
   width: 100%;
-  max-width: 700px; /* your original reading width */
-  padding: 0rem;
-  padding-top: 0.4rem;
+  max-width: 720px;
+  padding: 0 1rem;
+  padding-top: 1.5rem;
   display: flex;
   flex-direction: column;
   position: relative;
-  gap: .5rem;
+  gap: 0;
 }
 /* ===== Fixed Header ===== *//* ===== Fixed Header ===== */
 .fixed-header {
@@ -127,7 +130,7 @@
   backdrop-filter: blur(20px);
   display: flex;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  /* box-shadow: 0 2px 4px rgba(0,0,0,0.3); */
   background: var(--header-background);
   color: var(--text-color);
   transition: background 0.3s ease, color 0.3s ease;
@@ -296,7 +299,7 @@ text-align: center;
   color: #fff;
   border-radius: 50%;
   cursor: pointer;
-  z-index: 444;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -410,15 +413,15 @@ text-align: center;
 @media (max-width: 800px) {
   .chapter-center {
     font-size: 1rem;
-
   }
   .bible-reader-inner {
-  width: 100%;
-  max-width: 700px;
-  padding: 0rem;
-}
+    width: 100%;
+    max-width: 700px;
+    padding: 0 1.25rem;
+    padding-top: 1.25rem;
+  }
   .bible-title {
-    margin-left: 2rem;
+    margin-left: 1.5rem;
   }
 }
 
@@ -426,16 +429,16 @@ text-align: center;
   .fixed-header {
     position: sticky;
     top: 0;
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
   }
   
   .header-inner {
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
   
   .bible-title {
-    font-size: 1.3rem;
-    line-height: 1.2rem;
+    font-size: 1.75rem;
+    line-height: 1.6rem;
   }
   
   .bible-title span {
@@ -443,38 +446,56 @@ text-align: center;
   }
   
   .chapter-center {
-    font-size: 0.85rem;
-    left: 55%;
+    font-size: 0.8rem;
+    left: 52%;
+    padding: 0.35rem 0.6rem;
   }
   
   .header-right {
-    gap: 1.1rem;
+    gap: 1rem;
   }
   
   .search-toggle-icon,
   .selectors-toggle-icon {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 }
 
 @media (max-width: 480px) {
   .bible-title {
-    font-size: 1.1rem;
+    font-size: 1.5rem;
+    line-height: 1.4rem;
+  }
+  
+  .bible-reader-inner {
+    padding: 0 1rem;
+    padding-top: 1rem;
+  }
+  
+  .verses-container {
+    padding-top: 0.75rem;
+  }
+  
+  .verse-text-paragraph {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.75rem;
   }
   
   .chapter-center {
-  top:3.5rem
-}
+    top: 3.25rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+  }
   
   .header-right {
-    gap: 1.3rem;
+    gap: 1rem;
   }
   
   .search-dropdown {
-    width: 85vw;
+    width: 90vw;
     right: 50%; 
     left: 50%; 
-      transform: translateX(-50%);
+    transform: translateX(-50%);
   }
   
   .selectors-dropdown {
@@ -509,28 +530,32 @@ text-align: center;
 .verses-container {
   display: block;
   color: var(--text-main);
+  padding-top: 1rem;
+  padding-bottom: 120px;
 }
 
 .verse-text-paragraph {
-  margin-bottom: 1.5rem;
-  font-size: 1.05rem;
-  line-height: 1.85rem;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.9rem;
   color: var(--text-main);
   background: rgba(30,40,80,0.2);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
+  padding: 1.125rem 1.5rem;
+  border-radius: 8px;
   transition: background 0.3s ease;
 }
 
-.verse-text-paragraph:hover {
-  background: rgba(30,40,80,0.35);
-}
+/* .verse-text-paragraph:hover {
+  background: var(--hover-dark);
+  color: var(--white) !important;
+} */
 
 .verse-label {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--gold);
-  margin-right: 0.25rem;
+  margin-right: 0.5rem;
+  display: inline-block;
 }
 
 /* ============== Verse Highlight ============== */
@@ -552,7 +577,7 @@ text-align: center;
 /* ============== mode button ============== */
 .mode-buttons {
   position: fixed;
-  top: 20%;
+  top: 2%;
   right: 10px;
   display: flex;
   flex-direction: column;
@@ -662,10 +687,11 @@ background: linear-gradient(90deg,
 /* ===== Random 3 Verse Cards ===== */
 .random-verse-card {
   background: linear-gradient(135deg, rgba(30,64,175,0.85), rgba(15,23,42,0.85));
-  padding: 1.75rem 2rem;
-  border-radius: calc(var(--radius) * 1.5);
+  padding: 2rem 2.25rem;
+  border-radius: 12px;
   box-shadow: 0 12px 28px rgba(0,0,0,0.6);
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  margin-top: 1rem;
   backdrop-filter: blur(6px);
   transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
@@ -803,7 +829,7 @@ background: linear-gradient(90deg,
   }
 
   .verse-text-paragraph {
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1.7rem;
     padding: 0.75rem;
   }

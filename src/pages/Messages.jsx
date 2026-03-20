@@ -95,14 +95,14 @@ useEffect(() => {
 
 
   return (
-    <div className="min-h-screen w-full flex bg-slate-50 overflow-hidden relative">
+    <div className="min-h-screen w-full flex bg-[var(--white)] overflow-hidden relative">
       {/* LEFT: Conversation list */}
       <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r relative"
       style={{
         borderRightColor: "var(--hover-light)",
         borderRightStyle: "solid",
         borderRightWidth: "1px",}}>
-        <BackButton />
+        <BackButton top="0px" left={"80px"}  />
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900 mb-1 title">
@@ -165,7 +165,7 @@ useEffect(() => {
                 <div
                   key={otherUser._id}
                   onClick={() => handleOpenChat(otherUser._id)}
-                  className={`flex gap-5 px-3 py-2 rounded-md items-center cursor-pointer transition ${
+                  className={`flex gap-5 px-3 py-2 rounded-md items-center  cursor-pointer transition ${
                     isFirstUnread 
                       ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
                       : isActive
@@ -234,19 +234,22 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* RIGHT: Chat box (desktop only) */}
-      <div className="hidden md:flex flex-1 bg-white">
-        {activeChatId ? (
-          <ChatBox userId={activeChatId} />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
-            <div className="chat-loader" />
-            <span className="text-sm tracking-wide">
-              Select a conversation
-            </span>
-          </div>
-        )}
-      </div>
+     
+   {/* RIGHT: Chat box (desktop only) */}
+<div className="hidden md:flex flex-1 bg-[var(--white)] h-full overflow-hidden">
+  {activeChatId ? (
+    <div className="w-full h-full">
+      <ChatBox userId={activeChatId} />
+    </div>
+  ) : (
+    <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
+      <div className="chat-loader" />
+      <span className="text-sm tracking-wide">
+        Select a conversation
+      </span>
+    </div>
+  )}
+</div>
 
 
     </div>

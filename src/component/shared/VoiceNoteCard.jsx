@@ -12,16 +12,21 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     seek,
     analyserRef,
     setActiveInView,
-    currentTime, duration, formatTime,
     audioRef,
     isLoading,
+    currentTime,
+    duration,
   } = useAudioPlayer();
 
-  // Internal audio ref for seeking
-  const internalAudioRef = useRef(null);
+  // Local state for independent timer per audio player
+  const [localCurrentTime, setLocalCurrentTime] = useState(0);
+  const [localDuration, setLocalDuration] = useState(0);
+
+  // Internal audio ref for local playback tracking
+  const localAudioRef = useRef(null);
 
   // Use external ref if provided, otherwise use internal ref
-  const activeAudioRef = audioRef || internalAudioRef;
+  const activeAudioRef = audioRef || localAudioRef;
 
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
@@ -29,7 +34,25 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
   // Use the forwarded ref, fallback to internal if not provided
   const cardRef = useRef(null);
 
+  // Determine if this card is currently active
+  const isThisPlaying = currentUrl === audioUrl && isPlaying;
+  const isActive = isThisPlaying;
 
+  // Sync local state when global state changes
+  useEffect(() => {
+    if (isThisPlaying) {
+      setLocalCurrentTime(currentTime);
+      setLocalDuration(duration);
+    }
+  }, [isThisPlaying, currentTime, duration]);
+
+  // Format time function (local)
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   useEffect(() => {
   if (!forwardedRef) return;
@@ -41,8 +64,6 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
   }
 }, [forwardedRef]);
 
-
-  const isActive = currentUrl === audioUrl && isPlaying;
 
   /* ------------------ VISUALIZER ------------------ */
   useEffect(() => {
@@ -110,6 +131,10 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     return () => observer.disconnect();
   }, [isActive]);
 
+  // Use local time when this card is not playing, global time when it is
+  const displayTime = isThisPlaying ? currentTime : localCurrentTime;
+  const displayDuration = localDuration || duration;
+
   /* ------------------ RENDER ------------------ */
   return (
     <div ref={cardRef} className={`voice-card ${isActive ? "active" : ""}`}>
@@ -133,27 +158,29 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
         </div>
       </div>
       <div className="voice-timer flex justify-between text-sm text-gray-400 mt-1">
-  <span>{formatTime(currentTime)}</span>
-  <span>{formatTime(duration)}</span>
+  <span>{formatTime(displayTime)}</span>
+  <span>{formatTime(displayDuration)}</span>
 </div>
 
       <input
         type="range"
         min={0}
         max={100}
-        value={duration ? (currentTime / duration) * 100 : 0}
+        value={displayDuration ? (displayTime / displayDuration) * 100 : 0}
         onChange={(e) => {
           if (!activeAudioRef?.current) return;
-          const newTime = (Number(e.target.value) / 100) * duration;
+          const dur = displayDuration;
+          const newTime = (Number(e.target.value) / 100) * dur;
           activeAudioRef.current.currentTime = newTime;
-          seek((newTime / duration) * 100);
+          setLocalCurrentTime(newTime);
+          seek((newTime / dur) * 100);
         }}
         className="voice-range"
         style={{
           background: `linear-gradient(
       to right,
-      var(--primary) ${(currentTime / duration) * 100}%,
-      var(--hover-light) ${(currentTime / duration) * 100}%
+      var(--primary) ${displayDuration ? (displayTime / displayDuration) * 100 : 0}%,
+      var(--hover-light) ${displayDuration ? (displayTime / displayDuration) * 100 : 0}%
           )`,
         }}
       />

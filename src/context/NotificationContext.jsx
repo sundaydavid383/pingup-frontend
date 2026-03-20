@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import axiosBase from "../utils/axiosBase";
 
 const NotificationContext = createContext();
@@ -6,6 +6,8 @@ const NotificationContext = createContext();
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [lastFetched, setLastFetched] = useState(null);
+  const pollingIntervalRef = useRef(null);
 
   // Load deleted notifications from localStorage on mount
   const [deletedNotificationIds, setDeletedNotificationIds] = useState(() => {
@@ -15,6 +17,49 @@ export const NotificationProvider = ({ children }) => {
       return new Set();
     }
   });
+
+  // Poll for new notifications (fallback for when WebSocket fails)
+  const pollNotifications = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await axiosBase.get('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success && res.data.notifications) {
+        const newNotifications = res.data.notifications;
+        setNotifications(prev => {
+          // Merge new notifications with existing ones, avoiding duplicates
+          const existingIds = new Set(prev.map(n => n._id));
+          const trulyNew = newNotifications.filter(n => !existingIds.has(n._id));
+          if (trulyNew.length > 0) {
+            return [...trulyNew, ...prev];
+          }
+          return prev;
+        });
+        setLastFetched(new Date());
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, []);
+
+  // Start polling when component mounts (fallback mechanism)
+  useEffect(() => {
+    // Poll immediately
+    pollNotifications();
+    
+    // Then poll every 30 seconds as fallback
+    pollingIntervalRef.current = setInterval(pollNotifications, 30000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [pollNotifications]);
 
   // Add new notification (filter out duplicates and deleted ones)
   const addNotification = useCallback((notif) => {
@@ -100,6 +145,8 @@ export const NotificationProvider = ({ children }) => {
         unreadCount,
         loadingNotifications,
         setLoadingNotifications,
+        lastFetched,
+        pollNotifications,
       }}
     >
       {children}

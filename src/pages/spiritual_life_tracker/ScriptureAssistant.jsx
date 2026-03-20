@@ -400,43 +400,70 @@ const runLocalSearch = async (query) => {
  * @param {string} inputText - The text to process and search for scripture references
  * @param {Function} [onComplete] - Optional callback invoked when processing completes
  */
-const processChunks = debounce(async (inputText, onComplete) => {
+
+
+
+// ----------------- Process chunks with logging -----------------
+const processChunks = debounce(async (inputText, onComplete, forceNewSearch = false) => {
   if (!inputText.trim()) {
     if (onComplete) onComplete();
     return;
   }
 
-  const chunks = getChunksSliding(inputText).filter(
-    (c) => !processedChunksRef.current.includes(c)
-  );
-  console.log("=== PROCESS CHUNKS ===");
-  console.log("Input text:", inputText);
+  console.log("=== PROCESS CHUNKS ===", { 
+    inputText, 
+    forceNewSearch, 
+    source: "backend" 
+  });
+
+  // ───────────────────────────────────────────────────────────────
+  // Step 1: First try navigation on the FULL text (most important for commands)
+  // ───────────────────────────────────────────────────────────────
+  const fullCmdResult = processCommand(inputText, currentContext);
+  console.log("FULL TEXT COMMAND RESULT:", fullCmdResult);
+
+  if (fullCmdResult.type === "navigation") {
+    console.log("Navigation command found in FULL transcript → executing");
+    const result = await runLocalSearch(inputText); // will handle navigation
+    if (result === "commandHandled") {
+      if (onComplete) onComplete();
+      return;
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  // Step 2: If no navigation → proceed with chunking & search
+  // ───────────────────────────────────────────────────────────────
+  let chunks;
+  if (forceNewSearch) {
+    const words = inputText.trim().split(/\s+/).filter(Boolean);
+    chunks = words.length <= 10 
+      ? [inputText.trim()] 
+      : getChunksSliding(inputText);
+  } else {
+    chunks = getChunksSliding(inputText).filter(
+      (c) => !processedChunksRef.current.includes(c)
+    );
+  }
+
   console.log("Chunks to process:", chunks);
 
   for (const chunk of chunks) {
     console.log("Processing chunk:", chunk);
-
     const result = await runLocalSearch(chunk);
-    console.log("runLocalSearch result:", result);
+    console.log("runLocalSearch result for chunk:", result);
 
-    // Mark this chunk as processed regardless of result
     processedChunksRef.current.push(chunk);
 
     if (result === "commandHandled") {
-      console.log(
-        "Chunk was a navigation command. Skipping further chunks in this batch."
-      );
-      break; // stops further chunks in THIS batch
+      console.log("Navigation found in chunk → stopping further processing");
+      break;
     }
   }
 
   setProcessedChunks([...processedChunksRef.current]);
-  console.log("Processed chunks ref updated:", processedChunksRef.current);
-  
-  // Call completion callback
   if (onComplete) onComplete();
 }, 250);
-
 
 
 
@@ -465,16 +492,12 @@ const processChunks = debounce(async (inputText, onComplete) => {
 <VoiceInput
   ref={voiceInputRef}
   onTranscribe={(sentChunk, leftover, meta = {}) => {
-
     /*
       =========================
       1️⃣ LIVE UPDATES
       =========================
     */
-
     if (meta.live && leftover) {
-      // 🔴 Vosk → replace
-      // 🔵 WebSpeech → safe to display as-is
       setText(leftover);
       return;
     }
@@ -484,25 +507,33 @@ const processChunks = debounce(async (inputText, onComplete) => {
       2️⃣ NO FINAL RESULT
       =========================
     */
-
     if (!sentChunk) return;
 
     /*
       =========================
-      3️⃣ FINAL RESULT
+      3️⃣ VERSE REFERENCE DETECTED (from LemonFox)
       =========================
     */
-
-    // BOTH engines end here
-    setText(sentChunk);
+    if (meta.isVerseReference) {
+      console.log("📖 Processing verse reference from LemonFox:", sentChunk);
+      setText(sentChunk);
+      // Force a new search for verse reference
+      processChunks(sentChunk, meta.onComplete, true);
+      return;
+    }
 
     /*
       =========================
-      4️⃣ PROCESS FINAL TEXT
+      4️⃣ FINAL RESULT + SEARCH
       =========================
     */
+    setText(sentChunk);
 
-    processChunks(sentChunk, meta.onComplete);
+    // 🔥 NEW: Backend (Lemonfox/Vosk) must ALWAYS search (bypass deduplication)
+    const isBackend = meta.source && meta.source !== "web";
+    const forceNewSearch = isBackend || meta.forceSearch;
+
+    processChunks(sentChunk, meta.onComplete, forceNewSearch);
   }}
 />
 

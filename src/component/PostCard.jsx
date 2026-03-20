@@ -110,8 +110,12 @@ const PostCard = ({ post,
     text?.replace(/(#\w+)/g, `<span style="color:var(--primary)">$1</span>`) || "";
 
   const maxLength = 200;
+  const maxNewlines = 3; // Maximum allowed newlines before triggering "Read More"
   const [isExpanded, setIsExpanded] = useState(false);
-  const shouldTruncate = post.content && post.content.length > maxLength;
+  
+  // Check if content should be truncated based on BOTH character count AND newline count
+  const newlineCount = (post.content || '').split('\n').length - 1;
+  const shouldTruncate = post.content && (post.content.length > maxLength || newlineCount > maxNewlines);
   const contentToShow = isExpanded || !shouldTruncate ? post.content : post.content.slice(0, maxLength) + "...";
   const displayContent = DOMPurify.sanitize(highlightHashtags(contentToShow));
   function linkify(text) {
@@ -254,11 +258,33 @@ const hasYouTube = !!(
 );
 
 // 5️⃣ Get YouTube embed URL from multiple possible sources
-const youTubeUrl =
-  post.youtubeEmbedUrl ||
-  (post.youtubeVideoId ? `https://www.youtube.com/embed/${post.youtubeVideoId}` : null) ||
-  post.youtubeVideo?.embedUrl ||
-  (post.youtubeVideo?.videoId ? `https://www.youtube.com/embed/${post.youtubeVideo.videoId}` : null);
+const getYouTubeEmbedUrl = (post) => {
+  // 1. Check for pre-processed embed URL
+  if (post.youtubeEmbedUrl) return post.youtubeEmbedUrl;
+  
+  // 2. Check for YouTube video ID
+  if (post.youtubeVideoId) {
+    return `https://www.youtube.com/embed/${post.youtubeVideoId}?playsinline=1`;
+  }
+  
+  // 3. Check nested YouTube object
+  if (post.youtubeVideo?.embedUrl) return post.youtubeVideo.embedUrl;
+  if (post.youtubeVideo?.videoId) {
+    return `https://www.youtube.com/embed/${post.youtubeVideo.videoId}?playsinline=1`;
+  }
+  
+  // 4. Check if text contains YouTube URL and convert to embed
+  const text = post.text || post.content || '';
+  const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = text.match(youtubeRegex);
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}?playsinline=1`;
+  }
+  
+  return null;
+};
+
+const youTubeUrl = getYouTubeEmbedUrl(post);
 
   const handleShowLikes = async (postId) => {
     setShowLikesBar(true);
@@ -319,7 +345,7 @@ const youTubeUrl =
 
 
   return (
-    <div className="bg-white rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
+    <div className="bg-[var(--white-glass)] rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
 
       {/* Header */}
       {/* Header */}
@@ -393,8 +419,9 @@ const youTubeUrl =
             src={youTubeUrl}
             title="YouTube video"
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            loading="lazy"
             className="w-full h-full"
           />
         </div>
@@ -434,12 +461,16 @@ const youTubeUrl =
             const isMobileShaped = isImage && file?.aspect === "tall" && !single;
             // ✅ Detect landscape / desktop-shaped images
             const isLandscapeShaped = isImage && file?.aspect === "wide" && !single;
+            const isPortraitVideo = isVideo && file?.aspect === "tall";
+      
+             //const isPortraitVideo = isVideo && file?.height && file?.width && (file.height / file.width > 1.35);
 
             // ✅ Special case: last item in 3 attachments
             const isLastOfThree = count === 3 && index === 2;
 
             // ✅ Dynamic max height (GRID SAFE)
             let maxHeight;
+
 
             if (single) {
               maxHeight = "500px"; // 1 image - allow more height
@@ -448,13 +479,12 @@ const youTubeUrl =
             } else if (count === 3) {
               maxHeight = "400px"; // balanced grid
             } else if (isMobileShaped) {
-              maxHeight = "600px"; // tall portrait - allow natural height
+              maxHeight = "350px"; // tall portrait - constrain to match video player
             } else if (isLandscapeShaped) {
               maxHeight = "350px"; // wide landscape - constrain height
             } else {
               maxHeight = "450px"; // default grid
             }
-
             let widthClass = "w-full";
             if (count === 2) {
               widthClass = "w-1/2"; // 2 side-by-side
@@ -462,6 +492,16 @@ const youTubeUrl =
               widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
             } else if (count === 4) {
               widthClass = "w-1/2"; // 2x2 grid
+            }
+
+            // ✅ Make portrait videos slightly wider (less thin)
+            let portraitWidthClass = "";
+            if (isPortraitVideo) {
+              if (single) {
+                portraitWidthClass = "max-w-[420px] mx-auto";
+              } else {
+                portraitWidthClass = "max-w-[380px] mx-auto";
+              }
             }
 
 
@@ -484,6 +524,7 @@ const youTubeUrl =
     ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
     ${single ? "rounded-lg" : "rounded-sm"}
     ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+    ${portraitWidthClass}
   `}
                 style={isYouTube ? { aspectRatio: "16/9" } : {}}
               >
@@ -511,30 +552,32 @@ const youTubeUrl =
 
                 {/* ✅ VIDEO */}
 
-                {isVideo && (
+                              {isVideo && (
                   <div className="w-full h-full flex items-center justify-center bg-black">
-                    <div className="w-full h-full max-h-full flex items-center justify-center">
-                      <VideoPlayer
-                        src={file.url}
-                        poster={file.poster || ""}
-                        className="max-h-full max-w-full"
-                        primaryColor="#FF4D4F"
-                        autoPlayOnView={true}
-                        sectionId={`feed-${post._id}`}
-                        ref={(ref) => {
-                          if (ref?.videoRef?.current) {
-                            setVideoState({
-                              src: file.url,
-                              poster: file.poster || "",
-                              inlineRef: ref.videoRef.current,
-                              playing: !ref.videoRef.current.paused,
-                              currentTime: ref.videoRef.current.currentTime,
-                            });
-                          }
-                        }}
-                      />
-
-                    </div>
+                    <VideoPlayer
+                      src={file.url}
+                      poster={file.poster || ""}
+                      className={`
+                        w-full 
+                        ${isPortraitVideo ? "max-w-[420px] mx-auto" : "max-w-full"}
+                        h-auto
+                        object-contain
+                      `}
+                      primaryColor="#FF4D4F"
+                      autoPlayOnView={true}
+                      sectionId={`feed-${post._id}`}
+                      ref={(ref) => {
+                        if (ref?.videoRef?.current) {
+                          setVideoState({
+                            src: file.url,
+                            poster: file.poster || "",
+                            inlineRef: ref.videoRef.current,
+                            playing: !ref.videoRef.current.paused,
+                            currentTime: ref.videoRef.current.currentTime,
+                          });
+                        }
+                      }}
+                    />
                   </div>
                 )}
 

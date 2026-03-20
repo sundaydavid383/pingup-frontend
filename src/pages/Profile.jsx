@@ -170,8 +170,8 @@ const Profile = () => {
           {loading && !profileUser ? (
             <ProfileSkeleton />
           ) : (
-            <main
-              className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden`}
+<main
+  className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen profile_max_width overflow-y-auto py-4 md:py-8 mx-auto box-border overflow-x-hidden`}
             >
               {alert.show && (
                 <CustomAlert
@@ -181,7 +181,7 @@ const Profile = () => {
                 />
               )}
 
-              <BackButton top="2" right="2" />
+              {/* <BackButton top="2" right="2" /> */}
 
               <div className="profile-card">
                 <div className="cover-wrapper bg-multi-gradient">

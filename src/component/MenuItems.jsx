@@ -5,6 +5,7 @@ import { useMessageSeen } from '../../MessageSeenContext';
 import { Home, Users, User, Bell, Book, MessageSquareText, Compass, BookOpen, Settings, LogOut } from 'lucide-react';
 import "../styles/ui.css";
 import useMediaQuery from "../hooks/useMediaQuery";
+import { useSidebarTooltip } from "./shared/SidebarTooltipPortal";
 
 const MenuItems = ({ setSidebarOpen }) => {
   const { user, unreadCount: unreadNotifications, logout } = useAuth();
@@ -12,9 +13,15 @@ const MenuItems = ({ setSidebarOpen }) => {
   const isSmallScreen = useMediaQuery("(max-width: 768px)");
   const location = useLocation();
   const navigate = useNavigate();
+  const { showTooltip, hideTooltip } = useSidebarTooltip();
+  
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
+  const isDiscoveriesTab = location.pathname.startsWith('/discover');
   const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
+  
+  // Combined condition for collapsed sidebar
+  const isCollapsed = isMessageTab || isSettingsTab || isDiscoveriesTab || isProfileTab;
 
   const menuItems = [
     { to: "/", label: "Home", icon: Home },
@@ -32,18 +39,31 @@ const MenuItems = ({ setSidebarOpen }) => {
     navigate('/auth');
   };
 
+  // Handle mouse enter for tooltip
+  const handleMouseEnter = (e, label) => {
+    if (isCollapsed && e.currentTarget) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      showTooltip(label, rect.right, rect.top + rect.height / 2);
+    }
+  };
+
+  // Handle mouse leave to hide tooltip
+  const handleMouseLeave = () => {
+    hideTooltip();
+  };
+
   return (
-    <div className={`space-y-2 flex flex-col ${isMessageTab || isSettingsTab || isProfileTab ? 'items-center' : ''}`}>
+    <div className={`space-y-1 flex flex-col ${isCollapsed ? 'items-center' : ''}`}>
       {menuItems.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           end={to === "/"}
           className={({ isActive }) =>
-            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
             } ${isActive
-              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && !isProfileTab && "translate-x-3"}`
-              : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`
+              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
+              : `hover:text-[var(--hover-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
             }`
           }
           onClick={() => {
@@ -51,55 +71,73 @@ const MenuItems = ({ setSidebarOpen }) => {
               setSidebarOpen(false);
             }
           }}
+          onMouseEnter={(e) => handleMouseEnter(e, label)}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="relative flex items-center justify-center">
-            <Icon className="w-5 h-5" />
+            <Icon className="w-[18px] h-5" />
             {(label === "Message" && totalUnreadCount > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab || isProfileTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
+              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
                 {totalUnreadCount}
               </span>
             )}
             {(label === "Notification" && unreadNotifications > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isMessageTab || isSettingsTab || isProfileTab ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
+              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
                 {unreadNotifications}
               </span>
             )}
           </div>
-          {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">{label}</span>}
+          {!isCollapsed && <span className="truncate text-[13px]">{label}</span>}
         </NavLink>
       ))}
 
       {/* Separator */}
-      {!isMessageTab && !isSettingsTab && !isProfileTab && <hr className="my-2 border-[var(--input-border)]" />}
+      {!isCollapsed && <hr className="my-2 border-[var(--input-border)]" />}
 
       {/* Settings */}
       <NavLink
         to="/settings"
-        className={({ isActive }) =>
-          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-          } ${isActive
-            ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isMessageTab && !isSettingsTab && !isProfileTab && "translate-x-3"}`
-            : `hover:text-[var(--text-accent-dark)] ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`
-          }`
-        }
+ className={({ isActive }) =>
+  `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
+    isCollapsed
+      ? "w-10 h-10 justify-center group"
+      : "pl-3 py-[7px] gap-3 w-full"
+  } ${
+    isActive
+      ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${
+          !isCollapsed ? "translate-x-3" : ""
+        }`
+      : isCollapsed
+      ? "hover:text-[var(--hover-dark)]"
+      : "hover:text-[var(--text-accent-dark)] hover:translate-x-3 gradient-hover"
+  }`
+}
         onClick={() => {
           if (typeof setSidebarOpen === "function" && isSmallScreen) {
             setSidebarOpen(false);
           }
         }}
+        onMouseEnter={(e) => handleMouseEnter(e, "Settings")}
+        onMouseLeave={handleMouseLeave}
       >
-        <Settings className="w-5 h-5" />
-        {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">Settings</span>}
+        <div className="relative flex items-center justify-center">
+          <Settings className="w-[18px] h-5" />
+        </div>
+        {!isCollapsed && <span className="truncate text-[13px]">Settings</span>}
       </NavLink>
 
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 ${isMessageTab || isSettingsTab || isProfileTab ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-          } ${!isMessageTab && !isSettingsTab && !isProfileTab ? "hover:translate-x-3 gradient-hover" : ""}`}
+        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 group ${isCollapsed ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+          } ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`}
+        onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
+        onMouseLeave={handleMouseLeave}
       >
-        <LogOut className="w-5 h-5" />
-        {!isMessageTab && !isSettingsTab && !isProfileTab && <span className="truncate text-sm">Logout</span>}
+        <div className="relative flex items-center justify-center">
+          <LogOut className="w-[18px] h-5" />
+        </div>
+        {!isCollapsed && <span className="truncate text-[13px]">Logout</span>}
       </button>
     </div>
   );

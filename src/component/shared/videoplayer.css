@@ -1,4 +1,5 @@
 /* video-player.css - normal CSS (no Tailwind). Tune variables at top. */
+/* Volume slider YouTube-style - horizontal, appears next to icon */
 :root {
   --vp-bg: rgba(0, 0, 0, 0.6);
   --vp-control-height: 46px;
@@ -7,16 +8,22 @@
   --vp-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* container */
+
+/* container - updated for tall portrait videos */
 .vp-container {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 180px;
+  max-height: 82vh;
+  margin: 0 auto;
   background: #000;
   border-radius: var(--vp-radius);
   overflow: hidden;
   display: flex;
-  justify-content: center; /* horizontal centering */
-  align-items: center;   
+  justify-content: center;
+  align-items: center;
   touch-action: manipulation;
 }
 
@@ -42,11 +49,10 @@
 /* video fits container */
 .vp-video {
   display: block;
-   max-width: 100%;
-  max-height: 100%;
-  width: auto;
+  max-width: 100%;
+  max-height: 82vh;
+  width: 100%;
   height: auto;
-
   object-fit: contain;
   border-radius: 2px;
 }
@@ -136,6 +142,64 @@
 
 /* time */
 .vp-time { color: rgba(255,255,255,0.9); font-family: var(--vp-font); font-size: 12px; }
+
+/* YouTube-style horizontal volume slider */
+.vp-volume-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vp-volume-slider-container {
+  width: 0;
+  overflow: hidden;
+  transition: width 200ms ease, opacity 200ms ease;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+}
+
+.vp-volume-slider-container.visible {
+  width: 80px;
+  opacity: 1;
+}
+
+/* Horizontal volume range (YouTube style) */
+.vp-volume-range-vertical {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--vp-primary) 0%, var(--vp-primary) var(--vol, 80%), rgba(255,255,255,0.3) var(--vol, 80%), rgba(255,255,255,0.3) 100%);
+  cursor: pointer;
+  outline: none;
+}
+
+.vp-volume-range-vertical::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.1s ease;
+}
+
+.vp-volume-range-vertical::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.vp-volume-range-vertical::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
 
 /* progress range */
 .vp-range {
@@ -279,4 +343,179 @@
   .vp-time { font-size: 11px; }
   .vp-center-icon { width: 22px; height: 22px; }
   .vp-center-btn { width: 56px; height: 56px; }
+  
+  /* Show volume slider on mobile */
+  .vp-volume-slider-container {
+    width: 60px;
+  }
+  .vp-volume-range-vertical {
+    width: 55px;
+    height: 5px;
+  }
+  .vp-volume-range-vertical::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ============================================
+   MOBILE PORTRAIT OPTIMIZATIONS (TikTok/Reels style)
+   ============================================ */
+
+/* Container styles for mobile portrait */
+.vp-container.vp-mobile-portrait {
+  max-height: 100vh;
+  height: 100vh;
+  width: 100%;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+}
+
+/* Video element for portrait mode - fills screen like TikTok/Reels */
+.vp-video-portrait {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0;
+}
+
+/* Mobile portrait controls - ensure they're always visible */
+.vp-container.vp-mobile-portrait .vp-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 20px; /* Extra bottom padding for safe area */
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.85) 100%);
+  border-radius: 0;
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 100;
+}
+
+/* Always show controls in mobile portrait */
+.vp-container.vp-mobile-portrait .vp-controls.hidden {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Bottom bar in mobile portrait - use flexbox for better spacing */
+.vp-container.vp-mobile-portrait .vp-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+/* Left controls in mobile portrait - smaller and more compact */
+.vp-container.vp-mobile-portrait .vp-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: auto;
+  margin-right: 4px;
+}
+
+/* Right controls in mobile portrait - compact */
+.vp-container.vp-mobile-portrait .vp-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+/* Compact time display for mobile portrait */
+.vp-container.vp-mobile-portrait .vp-time {
+  font-size: 12px;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+
+/* Larger touch targets for buttons in mobile portrait */
+.vp-container.vp-mobile-portrait .vp-btn-large {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vp-container.vp-mobile-portrait .vp-icon-bigger {
+  width: 28px;
+  height: 28px;
+}
+
+/* Hide volume slider in mobile portrait to save space */
+.vp-container.vp-mobile-portrait .vp-volume {
+  display: none;
+}
+
+/* Progress bar wrapper - full width in mobile portrait */
+.vp-container.vp-mobile-portrait .vp-progress-wrapper {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* Center play button - larger for mobile portrait */
+.vp-container.vp-mobile-portrait .vp-center-btn {
+  width: 72px;
+  height: 72px;
+}
+
+.vp-container.vp-mobile-portrait .vp-center-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Loading spinner - centered in mobile portrait */
+.vp-container.vp-mobile-portrait .vp-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.4);
+  z-index: 50;
+}
+
+/* Media query for very narrow screens (small phones) */
+@media (max-width: 380px) {
+  .vp-container.vp-mobile-portrait .vp-controls {
+    padding: 10px 12px 16px;
+  }
+  
+  .vp-container.vp-mobile-portrait .vp-btn-large {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+  
+  .vp-container.vp-mobile-portrait .vp-icon-bigger {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .vp-container.vp-mobile-portrait .vp-time {
+    font-size: 11px;
+  }
+}
+
+/* Handle very tall/narrow videos in portrait mode */
+@media (min-aspect-ratio: 9/16) {
+  .vp-container.vp-mobile-portrait .vp-video-portrait {
+    object-fit: cover !important;
+    width: 100%;
+    height: 100%;
+  }
 }

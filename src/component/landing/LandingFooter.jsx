@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_NAME } from '../../constants/appConfig';
 
 const FinalCTA = ({ onAuthClick }) => {
 
@@ -11,7 +12,7 @@ const FinalCTA = ({ onAuthClick }) => {
           </h2>
 
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join SpringsConnect Today — Free.
+            Join {APP_NAME} Today — Free.
           </p>
 
           <button

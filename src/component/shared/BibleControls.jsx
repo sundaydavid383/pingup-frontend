@@ -1,19 +1,26 @@
-import React, { useRef, useState } from "react";
-import { FaSearch, FaVolumeUp } from "react-icons/fa";
+// BibleControls.jsx
+import React, { useRef, useState, useEffect } from "react";
+import { FaVolumeUp, FaMusic, FaClock } from "react-icons/fa";
 import MoodSelector from "./MoodSelector";
+import { useMoodStore } from "../../store/MoodStore";
 import "../../styles/biblecontrols.css";
-import { useAuth } from "../../context/AuthContext";
 
 export default function BibleControls({
   ttsSpeed,
   setTtsSpeed,
   progress,
   setProgress,
-  ttsRef, // ChapterTTS ref
+  ttsRef,
+  isVisible = false,
 }) {
   const speedRef = useRef(null);
-  const [moodVolume, setMoodVolume] = useState(0.3);
-  const { sidebarOpen } = useAuth();
+  
+  // Use global mood store
+  const { volume, setVolume } = useMoodStore();
+  
+  // Popover states
+  const [openPopover, setOpenPopover] = useState(null);
+  const popoverRef = useRef(null);
 
   // Prevent progress conflicts while dragging
   const isSeekingRef = useRef(false);
@@ -35,16 +42,15 @@ export default function BibleControls({
   -------------------------------*/
   const handleProgressChange = (e) => {
     const val = Number(e.target.value);
-    isSeekingRef.current = true; // mark that user is actively seeking
-    setProgress(val); // visually update slider immediately
+    isSeekingRef.current = true;
+    setProgress(val);
   };
 
   const handleProgressCommit = () => {
     if (!ttsRef?.current) return;
-
     console.log("▶ Seek commit → jumpToPercent");
-    ttsRef.current.jumpToPercent(progress); // tell ChapterTTS to seek
-    isSeekingRef.current = false; // done seeking
+    ttsRef.current.jumpToPercent(progress);
+    isSeekingRef.current = false;
   };
 
   /* -------------------------------
@@ -56,7 +62,7 @@ export default function BibleControls({
 
     if (ttsRef?.current) {
       console.log("⏹ Pausing TTS to apply new speed");
-      ttsRef.current.pauseForSpeedChange(val); // ChapterTTS handles restart
+      ttsRef.current.pauseForSpeedChange(val);
     }
   };
 
@@ -65,79 +71,133 @@ export default function BibleControls({
   -------------------------------*/
   const handleVolumeChange = (e) => {
     const val = Number(e.target.value);
-    setMoodVolume(val);
-    // volume applies automatically on next utterance
+    setVolume(val); // Updates global store, saves to localStorage, and applies to audio
+  };
+
+  /* -------------------------------
+     Close popovers when clicking outside
+  -------------------------------*/
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setOpenPopover(null);
+      }
+    };
+
+    if (openPopover) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openPopover]);
+
+  const togglePopover = (popoverName) => {
+    setOpenPopover(openPopover === popoverName ? null : popoverName);
   };
 
   return (
-    <div className="bible-controls-fixed "  style={{
-    left: sidebarOpen ? "20rem" : ".1rem", // shifts with sidebar
-    transition: "left 0.3s ease",         // smooth animation
-  }}>
- <div className="dropdown speed-dropdown" ref={speedRef}>
-        {/* Progress */}
-        <label className="speed-label">Chapter Progress</label>
-        <div className="speed-control horizontal" style={{ marginTop: "10px" }}>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={progress}
-            onChange={handleProgressChange}
-            onMouseUp={handleProgressCommit}
-            onTouchEnd={handleProgressCommit}
-            style={{ background: getSliderBackground(progress) }}
-          />
-          <span style={{ fontSize: "0.8rem" }}>{progress}%</span>
+    <div className={`bible-controls-bar ${isVisible ? 'visible' : 'hidden'}`} ref={popoverRef}>
+      <div className="bible-controls-inner">
+        {/* Chapter Progress - Main Focus */}
+        <div className="progress-section">
+          <div className="progress-control horizontal">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={progress}
+              onChange={handleProgressChange}
+              onMouseUp={handleProgressCommit}
+              onTouchEnd={handleProgressCommit}
+              style={{ background: getSliderBackground(progress) }}
+              className="chapter-progress-slider"
+            />
+            <span className="progress-value">{progress}%</span>
+          </div>
         </div>
 
-        {/* Reading Speed */}
-        <label className="speed-label">Reading Speed</label>
-        <div className="speed-control horizontal">
-          <input
-            type="range"
-            min="0.5"
-            max="1.5"
-            step="0.1"
-            value={ttsSpeed}
-            onChange={handleSpeedChange}
-            style={{
-              background: getSliderBackground(((ttsSpeed - 0.5) / 1) * 100),
-            }}
-          />
-          <span className="speed-value">{ttsSpeed}×</span>
-        </div>
+        {/* Right side controls */}
+        <div className="controls-right">
+          {/* Speed Control */}
+          <div className="control-icon-wrapper" ref={speedRef}>
+            <button 
+              className={`control-icon-btn ${openPopover === 'speed' ? 'active' : ''}`}
+              onClick={() => togglePopover('speed')}
+              title="Reading Speed"
+            >
+              <FaClock />
+              <span className="icon-label">{ttsSpeed}×</span>
+            </button>
+            {openPopover === 'speed' && (
+              <div className="popover-slider speed-popover">
+                <label className="popover-label">Reading Speed</label>
+                <div className="popover-slider-inner">
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="1.5"
+                    step="0.1"
+                    value={ttsSpeed}
+                    onChange={handleSpeedChange}
+                    style={{
+                      background: getSliderBackground(((ttsSpeed - 0.5) / 1) * 100),
+                    }}
+                  />
+                  <span className="popover-value">{ttsSpeed}×</span>
+                </div>
+              </div>
+            )}
+          </div>
 
-        {/* Mood Volume */}
-        <label className="speed-label">Mood Volume</label>
-        <div className="speed-control horizontal">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={moodVolume}
-            onChange={handleVolumeChange}
-            style={{ background: getSliderBackground(moodVolume * 100) }}
-          />
-          <span style={{ fontSize: "0.75rem" }}>
-            {Math.round(moodVolume * 100)}%
-          </span>
-        </div>
+          {/* Volume Control */}
+          <div className="control-icon-wrapper">
+            <button 
+              className={`control-icon-btn ${openPopover === 'volume' ? 'active' : ''}`}
+              onClick={() => togglePopover('volume')}
+              title="Mood Volume"
+            >
+              <FaVolumeUp />
+              <span className="icon-label">{Math.round(volume * 100)}%</span>
+            </button>
+            {openPopover === 'volume' && (
+              <div className="popover-slider volume-popover">
+                <label className="popover-label">Mood Volume</label>
+                <div className="popover-slider-inner">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    style={{ background: getSliderBackground(volume * 100) }}
+                  />
+                  <span className="popover-value">{Math.round(volume * 100)}%</span>
+                </div>
+              </div>
+            )}
+          </div>
 
-        <p
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--gold)",
-            marginTop: "4px",
-          }}
-        >
-          ⚠ Speed & volume apply instantly or on next play.
-        </p>
+          {/* Mood Selector */}
+          <div className="control-icon-wrapper">
+            <button 
+              className={`control-icon-btn ${openPopover === 'mood' ? 'active' : ''}`}
+              onClick={() => togglePopover('mood')}
+              title="Background Mood"
+            >
+              <FaMusic />
+              <span className="icon-label">Mood</span>
+            </button>
+            {openPopover === 'mood' && (
+              <div className="popover-slider mood-popover">
+                <MoodSelector moodVolume={volume} setMoodVolume={setVolume} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      <MoodSelector moodVolume={moodVolume} setMoodVolume={setMoodVolume} />
     </div>
   );
 }

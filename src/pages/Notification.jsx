@@ -1,14 +1,39 @@
-import { useCallback, useMemo } from "react"; 
-import { Bell, Mail, UserPlus, AlertCircle } from "lucide-react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react"; 
+import { Bell, Mail, UserPlus, AlertCircle, ArrowDown } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import NotificationSkeleton from "../component/NotificationSkeleton";
 import BackButton from "../component/shared/BackButton";
 import NotificationRemovalBar from "../component/shared/NotificationRemovalBar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import RightSidebar from "../component/RightSidebar";
+import { useNavigate } from "react-router-dom";
 
 const Notification = () => {
   const { notifications, handleRead, loadingNotifications, sponsors } = useAuth();
+  const navigate = useNavigate();
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const prevNotificationCount = useRef(0);
+  const notificationsEndRef = useRef(null);
+
+  // Track new notifications arriving while on this page
+  useEffect(() => {
+    if (notifications && notifications.length > prevNotificationCount.current) {
+      // Check if we have new unread notifications
+      const newUnread = notifications.filter(n => !n.isRead);
+      if (newUnread.length > 0 && prevNotificationCount.current > 0) {
+        setHasNewNotifications(true);
+      }
+    }
+    prevNotificationCount.current = notifications?.length || 0;
+  }, [notifications]);
+
+  // Scroll to bottom to see new notifications
+  const scrollToBottom = () => {
+    if (notificationsEndRef.current) {
+      notificationsEndRef.current.scrollIntoView({ behavior: "smooth" });
+      setHasNewNotifications(false);
+    }
+  };
 
   const getIcon = (type) => {
     switch (type) {
@@ -23,11 +48,12 @@ const Notification = () => {
     (notif) => {
       handleRead(notif._id);
       if (notif.link) {
-        const baseUrl = import.meta.env.VITE_CLIENT_URL || "http://localhost:5173";
-        window.location.href = baseUrl + notif.link;
+        // Use React Router navigation instead of window.location.href
+        // This ensures proper SPA navigation without full page reload
+        navigate(notif.link);
       }
     },
-    [handleRead]
+    [handleRead, navigate]
   );
 
   const sortedNotifications = useMemo(() => {
@@ -94,7 +120,20 @@ const Notification = () => {
 </div>
 
         )}
+        {/* Ref for scrolling to new notifications */}
+        <div ref={notificationsEndRef} />
       </div>
+
+      {/* New Notifications Indicator */}
+      {hasNewNotifications && (
+        <button
+          onClick={scrollToBottom}
+          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all animate-bounce z-50"
+        >
+          <ArrowDown className="w-4 h-4" />
+          <span className="text-sm font-medium">New notifications</span>
+        </button>
+      )}
 
       {/* Bottom bar */}
 {sortedNotifications.length > 0 && (
