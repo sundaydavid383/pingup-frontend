@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import "./micbutton.css"
-export default function MicButton({ listening, isThinking, toggleListening, disabled, statusMessage }) {
+export default function MicButton({ listening, isThinking, toggleListening, disabled, statusMessage, isSending }) {
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const micStreamRef = useRef(null);
@@ -154,6 +154,7 @@ export default function MicButton({ listening, isThinking, toggleListening, disa
 
       {statusMessage && (
         <div className={`mic-status ${getStatusClass()}`}>
+          {isSending && <span className="inline-block animate-spin mr-2">⏳</span>}
           {statusMessage}
         </div>
       )}

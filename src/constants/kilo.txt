@@ -1,0 +1,274 @@
+Part 7 – Comment Likes + Fast Comment Posting
+Current state: no likes on comments + comment posting feels very slow
+
+Deliver:
+A. Like functionality (YouTube/Instagram style)
+   - Heart icon per comment (outline → filled red + count update)
+   - Optimistic toggle: click → instant UI change (count ±1)
+   - Double-click / second click → unlike
+   - Backend must enforce: one like per user per comment
+   - Prevent double-click spam (brief disable or debounce)
+   - Optional: small tooltip / popover showing recent likers (if easy)
+
+B. Comment posting speed & UX
+   - Optimistic UI: new comment appears immediately with subtle “Sending…” indicator
+   - No long spinner – max ~300–400 ms perceived wait
+   - Silent backend sync after optimistic render
+   - On failure → remove optimistic comment + toast("Failed to post – try again")
+   - Keyboard: Ctrl/Cmd + Enter = submit
+   - Add aria-live region so screen readers announce new comments
+
+Reuse existing like button styles/components for consistency.
+
+─────────────────────────────────────────────────────────────
+Part 8 – Complete Settings Page Overhaul & Backend Sync
+Current state: almost nothing works (theme switch does nothing, no backend persistence, broken sections)
+
+Full audit & fix required – take your time, be thorough:
+
+Must deliver:
+1. Theme toggle (Light / Dark / System)
+   - Instant visual change (CSS class / data-theme attribute)
+   - Persist in localStorage + save to backend
+   - System preference detection & respect
+   - Smooth transition (no flash)
+
+2. Every other setting must:
+   - Load current value from backend on mount
+   - Save changes to backend on toggle/save
+   - Optimistic UI where appropriate (toggle flips instantly, then sync)
+   - Show loading spinner only during actual network call
+   - Proper validation + error messages / toasts
+   - No console errors or unhandled promises
+
+3. General improvements:
+   - Group settings logically (appearance, notifications, privacy, account…)
+   - Add “Save” button at bottom if needed (or auto-save with debounce)
+   - Success toast on save (“Settings updated”)
+   - Revert button or “Reset to defaults” if sensible
+
+Test **every single setting** carefully.  Part 7 – Comment Likes + Fast Comment Posting
+Current state: no likes on comments + comment posting feels very slow
+
+Deliver:
+A. Like functionality (YouTube/Instagram style)
+   - Heart icon per comment (outline → filled red + count update)
+   - Optimistic toggle: click → instant UI change (count ±1)
+   - Double-click / second click → unlike
+   - Backend must enforce: one like per user per comment
+   - Prevent double-click spam (brief disable or debounce)
+   - Optional: small tooltip / popover showing recent likers (if easy)
+
+B. Comment posting speed & UX
+   - Optimistic UI: new comment appears immediately with subtle “Sending…” indicator
+   - No long spinner – max ~300–400 ms perceived wait
+   - Silent backend sync after optimistic render
+   - On failure → remove optimistic comment + toast("Failed to post – try again")
+   - Keyboard: Ctrl/Cmd + Enter = submit
+   - Add aria-live region so screen readers announce new comments
+
+Reuse existing like button styles/components for consistency.
+
+─────────────────────────────────────────────────────────────
+Part 8 – Complete Settings Page Overhaul & Backend Sync
+Current state: almost nothing works (theme switch does nothing, no backend persistence, broken sections)
+
+Full audit & fix required – take your time, be thorough:
+
+Must deliver:
+1. Theme toggle (Light / Dark / System)
+   - Instant visual change (CSS class / data-theme attribute)
+   - Persist in localStorage + save to backend
+   - System preference detection & respect
+   - Smooth transition (no flash)
+
+2. Every other setting must:
+   - Load current value from backend on mount
+   - Save changes to backend on toggle/save
+   - Optimistic UI where appropriate (toggle flips instantly, then sync)
+   - Show loading spinner only during actual network call
+   - Proper validation + error messages / toasts
+   - No console errors or unhandled promises
+
+3. General improvements:
+   - Group settings logically (appearance, notifications, privacy, account…)
+   - Add “Save” button at bottom if needed (or auto-save with debounce)
+   - Success toast on save (“Settings updated”)
+   - Revert button or “Reset to defaults” if sensible
+
+Test **every single setting** carefully.Part 7 – Comment Likes + Fast Comment Posting
+Current state: no likes on comments + comment posting feels very slow
+
+Deliver:
+A. Like functionality (YouTube/Instagram style)
+   - Heart icon per comment (outline → filled red + count update)
+   - Optimistic toggle: click → instant UI change (count ±1)
+   - Double-click / second click → unlike
+   - Backend must enforce: one like per user per comment
+   - Prevent double-click spam (brief disable or debounce)
+   - Optional: small tooltip / popover showing recent likers (if easy)
+
+B. Comment posting speed & UX
+   - Optimistic UI: new comment appears immediately with subtle “Sending…” indicator
+   - No long spinner – max ~300–400 ms perceived wait
+   - Silent backend sync after optimistic render
+   - On failure → remove optimistic comment + toast("Failed to post – try again")
+   - Keyboard: Ctrl/Cmd + Enter = submit
+   - Add aria-live region so screen readers announce new comments
+
+Reuse existing like button styles/components for consistency.
+
+─────────────────────────────────────────────────────────────
+Part 8 – Complete Settings Page Overhaul & Backend Sync
+Current state: almost nothing works (theme switch does nothing, no backend persistence, broken sections)
+
+Full audit & fix required – take your time, be thorough:
+
+Must deliver:
+1. Theme toggle (Light / Dark / System)
+   - Instant visual change (CSS class / data-theme attribute)
+   - Persist in localStorage + save to backend
+   - System preference detection & respect
+   - Smooth transition (no flash)
+
+2. Every other setting must:
+   - Load current value from backend on mount
+   - Save changes to backend on toggle/save
+   - Optimistic UI where appropriate (toggle flips instantly, then sync)
+   - Show loading spinner only during actual network call
+   - Proper validation + error messages / toasts
+   - No console errors or unhandled promises
+
+3. General improvements:
+   - Group settings logically (appearance, notifications, privacy, account…)
+   - Add “Save” button at bottom if needed (or auto-save with debounce)
+   - Success toast on save (“Settings updated”)
+   - Revert button or “Reset to defaults” if sensible
+
+Test **every single setting** carefully.
+─────────────────────────────────────────────────────────────
+Part 9 – Global PIP Modal – CORRECTED BEHAVIOR (small & isolated fix)
+
+IMPORTANT CLARIFICATION – previous instruction was wrong:
+
+Current (wrong) behavior:
+When Global PIP Modal opens, background elements become non-interactive / disabled.
+
+Desired (correct) behavior:
+- The Global PIP Modal should be a **floating, non-modal overlay** (true picture-in-picture style)
+- **Background / other page elements must remain fully interactive** at all times while the modal is open
+- Users should be able to click, scroll, interact with anything behind the modal normally
+- The modal itself should **not** trap focus, disable pointer events on body, or add any blocking overlay
+- Do NOT add a semi-transparent backdrop that prevents clicks
+- Do NOT set pointer-events: none on body/main content
+- Do NOT trap keyboard focus inside the modal
+
+Only requirements for this part:
+- Modal should still be draggable/resizable/closable as before (if those features exist)
+- Keep it visually on top (z-index high enough)
+- No change to how it opens/closes — just remove any code that disables background interactions
+
+Likely files: GlobalPIPModal.jsx + any layout / App.jsx code that controls modal open state / overlay
+
+Do NOT:
+- Add any new overlay div that covers the screen
+- Change pointer-events on body or main content
+- Add focus trapping
+- Make backdrop-click close the modal (unless it already does)  
+Part 10 – Accurate “Last Seen / Active” Status (Frontend + Backend)
+
+Current problem:
+“Andrew Yashua Active a few seconds ago” shows even when the user last logged in 1 month ago.
+
+Fix required:
+- Show correct last-seen time everywhere (profile, chat list, chat header)
+- Use real timestamp from backend (lastLoginAt or lastSeenAt field)
+- Update logic:
+  - “Online” / green dot → when user is currently connected (WebSocket)
+  - “Active X minutes ago” / “Last seen 1 month ago” → accurate calculation
+  - Fallback: show “Last seen [date]” for very old logins
+- Backend must update lastSeenAt on every activity (socket connect, message, call, etc.)
+- Frontend should poll or listen to real-time updates via WebSocket for live “Online” status
+
+Make it exactly like WhatsApp/Instagram last-seen behavior.
+
+─────────────────────────────────────────────────────────────
+Part 11 – Full Working Call Logic in Chatbox (WhatsApp-style + Detailed Status Visibility)
+
+Current problem:
+Call feature is completely broken – nothing happens when clicking the call icon.
+
+Requirements – make it work exactly like WhatsApp calls:
+
+1. Call flow (voice + video):
+   - Click call icon → immediately shows “Ringing…” status
+   - Recipient side: incoming call screen with ringtone + Accept / Decline buttons
+   - On accept: both sides see “Connecting…” → “Call in progress”
+   - Support voice call AND video call (switch between them during call)
+   - During call: ability to record video + audio together (same as WhatsApp call recording)
+   - End call button on both sides
+
+2. Detailed status visibility (exactly like we did for Scripture Assistant voiceState):
+   - Show live status messages in the call UI and chat header:
+     - “Ringing…”
+     - “Connecting…”
+     - “Call in progress (00:45)”
+     - “Call ended”
+     - “User is offline – call failed”
+     - “No response – call ended”
+     - “Call recording started”
+     - “Microphone/camera permission needed”
+   - Also log critical steps to console for developers (e.g. “WebRTC offer created”, “ICE candidate received”, “Peer connection failed”)
+
+3. Deep frontend + backend integration:
+   - Use WebRTC (or existing call library) for peer-to-peer
+   - Backend must handle signaling (offer/answer/ICE), call state, and recording storage
+   - Safe reconnection logic if connection drops
+   - Test thoroughly: ring → pick → speak → record video → end
+
+If any part of the call logic (WebRTC, signaling, recording, or backend endpoints) is unclear or missing files, **pause and ask me specific questions** before implementing.
+
+─────────────────────────────────────────────────────────────
+Part 12 – Chatbox Dropdown Near Call Icon (All Options Must Work)
+
+Current problem:
+The dropdown next to the call icon does nothing when any option is clicked.
+
+Fix required:
+- Every menu item must work immediately (no loading, no silent failure)
+- Examples of options that should work (whatever exists in code):
+  - Search in chat
+  - Mute notifications
+  - Block user
+  - Clear chat
+  - View contact info
+  - etc.
+- Add proper loading state + success/error toast for each action
+- Close dropdown after successful action
+- Think deep: add keyboard navigation (arrow keys + Enter), click-outside close, and smooth animation
+
+If any dropdown option’s backend endpoint or frontend handler is missing or confusing, **pause and ask me specific questions** before coding.
+
+─────────────────────────────────────────────────────────────
+Files in scope (cumulative):
+
+Part 1–2–4 → processCommand.js, MicButton.jsx, VoiceInput.jsx, ScriptureAssistant.jsx
+Part 3      → BibleReader.jsx (bottom bar + dropdowns only)
+Part 5      → Profile page files + profile-specific CSS
+Part 6      → Chat input + voice recorder component
+Part 7      → Comment list / comment item components + comment backend endpoints
+Part 8      → Settings pages/components + settings backend endpoints
+Part 9      → GlobalPIPModal.jsx + modal layout files
+Part 10–12  → Chat-related files (chat header, chat list, call components, dropdown component) + any WebSocket / call / user-status backend endpoints
+
+For Parts 10–12: Please list exactly which files you touched when you reply.
+
+Please reply after each major part is done (e.g. “Parts 1–9 complete, starting Part 10”).
+
+I will test in this exact sequence:
+1–9. [as before]
+10. Last seen shows correct time (1 month ago = “Last seen 1 month ago”, online = green dot)
+11. Full WhatsApp-style call works (ring, pick, speak, video record) + clear status messages
+12. Every dropdown option near call icon works instantly
+
+Thank you — this will make the chat experience feel complete, reliable and modern!  please dont touch anyhting that i didint send you or that isnt related to this 

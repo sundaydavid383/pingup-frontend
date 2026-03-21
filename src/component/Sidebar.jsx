@@ -86,10 +86,10 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
         }}
       >
         {/* Close button for mobile */}
-        {window.innerWidth > paradigmShift && <X
+        {/* {window.innerWidth > paradigmShift && <X
           className="absolute top-3 'right-3' w-8 h-8 p-1.5 rounded-md text-gray-700 bg-white shadow-md md:hidden cursor-pointer hover:bg-gray-100 transition"
           onClick={() => setSidebarOpen(false)}
-        />}
+        />} */}
 
         <div className={`w-full pt-0 pb-2 flex-1 flex flex-col overflow-y-auto ${onlyIconPage ? 'items-center px-2' : 'px-4'}`}>
           <img

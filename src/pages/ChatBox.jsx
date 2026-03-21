@@ -691,6 +691,105 @@ const ChatBox = ({ userId: propUserId }) => {
     }
   };
 
+  // ======================== SEARCH IN CHAT ======================
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  
+  const handleSearchChat = async () => {
+    if (!searchQuery.trim()) return;
+    
+    const query = searchQuery.toLowerCase();
+    const results = messages.filter(msg => 
+      msg.text && msg.text.toLowerCase().includes(query)
+    );
+    setSearchResults(results);
+  };
+
+  const handleSearchResultClick = (msg) => {
+    // Scroll to message - would need a ref to message element
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // ======================== CLEAR CHAT ======================
+  const [clearing, setClearing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
+  const handleClearChat = async () => {
+    setClearing(true);
+    try {
+      await axiosBase.delete(`/api/chat/${chatId}/messages`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setMessages([]);
+      localStorage.removeItem(`chat_history_${userId}`);
+      setShowMenu(false);
+      setShowClearConfirm(false);
+      alert("Chat history cleared successfully.");
+    } catch (err) {
+      console.error("Error clearing chat:", err);
+      // Still clear locally even if API fails
+      setMessages([]);
+      localStorage.removeItem(`chat_history_${userId}`);
+      setShowMenu(false);
+      setShowClearConfirm(false);
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  // ======================== MUTE NOTIFICATIONS ======================
+  const [muting, setMuting] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  
+  const handleMuteNotifications = async () => {
+    setMuting(true);
+    try {
+      await axiosBase.post(`/api/chat/${chatId}/mute`, 
+        { muted: !isMuted },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      setIsMuted(!isMuted);
+      setShowMenu(false);
+      alert(isMuted ? "Notifications unmuted." : "Notifications muted for this chat.");
+    } catch (err) {
+      console.error("Error muting notifications:", err);
+      alert("Failed to update notification settings.");
+    } finally {
+      setMuting(false);
+    }
+  };
+
+  // ======================== REPORT USER ======================
+  const [showReportConfirm, setShowReportConfirm] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  
+  const handleReportUser = async () => {
+    if (!reportReason.trim()) {
+      alert("Please select a reason for reporting.");
+      return;
+    }
+    setReporting(true);
+    try {
+      await axiosBase.post(`/api/users/report/${receiver._id}`, 
+        { reason: reportReason },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      setShowMenu(false);
+      setShowReportConfirm(false);
+      setReportReason('');
+      alert("User reported successfully. We'll review your report.");
+    } catch (err) {
+      console.error("Error reporting user:", err);
+      alert("Failed to report user. Please try again.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   // ======================== BLOCK USER ======================
   const handleBlockUser = async () => {
     if (!receiver?._id) return;
@@ -1004,7 +1103,6 @@ const ChatBox = ({ userId: propUserId }) => {
               e.stopPropagation();
               console.log("📹 Video Call Button Clicked!");
               console.log("📋 Receiver Info:", receiver);
-              console.log("📋 CallContext:", { initiateCall });
               if (receiver?._id) {
                 console.log("✅ Calling video to:", receiver._id, receiver.name);
                 initiateVideoCall(receiver._id, receiver.name, receiver.profile_picture);
@@ -1104,7 +1202,7 @@ const ChatBox = ({ userId: propUserId }) => {
                   {/* Search Chat */}
                   <button
                     onClick={() => {
-                      // TODO: open search modal
+                      setShowSearchModal(true);
                       setShowMenu(false);
                     }}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
@@ -1116,13 +1214,14 @@ const ChatBox = ({ userId: propUserId }) => {
                   {/* Clear Chat */}
                   <button
                     onClick={() => {
-                      // TODO: clear messages logic
+                      setShowClearConfirm(true);
                       setShowMenu(false);
                     }}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                    disabled={clearing}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition disabled:opacity-50"
                   >
                     <span className="w-2 h-2 rounded-full bg-blue-400" />
-                    Clear Chat
+                    {clearing ? 'Clearing...' : 'Clear Chat'}
                   </button>
 
                   <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
@@ -1134,14 +1233,12 @@ const ChatBox = ({ userId: propUserId }) => {
 
                   {/* Mute Notifications */}
                   <button
-                    onClick={() => {
-                      // TODO: mute logic
-                      setShowMenu(false);
-                    }}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition"
+                    onClick={handleMuteNotifications}
+                    disabled={muting}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white/40 rounded-xl transition disabled:opacity-50"
                   >
                     <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                    Mute Notifications
+                    {muting ? 'Updating...' : isMuted ? 'Unmute Notifications' : 'Mute Notifications'}
                   </button>
 
                   {/* Block User */}
@@ -1159,7 +1256,7 @@ const ChatBox = ({ userId: propUserId }) => {
                   {/* Report User */}
                   <button
                     onClick={() => {
-                      // TODO: report logic
+                      setShowReportConfirm(true);
                       setShowMenu(false);
                     }}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50/50 rounded-xl transition"
@@ -1207,6 +1304,156 @@ const ChatBox = ({ userId: propUserId }) => {
                       {blocking ? 'Blocking...' : 'Block User'}
                     </button>
                   </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Clear Chat Confirmation Dialog */}
+          {showClearConfirm && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-[90]"
+                onClick={() => setShowClearConfirm(false)}
+              />
+              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Clear Chat History?
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This will permanently delete all messages in this conversation. This action cannot be undone.
+                  </p>
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setShowClearConfirm(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleClearChat}
+                      disabled={clearing}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition disabled:opacity-50"
+                    >
+                      {clearing ? 'Clearing...' : 'Clear Chat'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Report User Dialog */}
+          {showReportConfirm && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-[90]"
+                onClick={() => { setShowReportConfirm(false); setReportReason(''); }}
+              />
+              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Report {receiver?.username || 'User'}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Why are you reporting this user?
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    {[
+                      { id: 'spam', label: 'Spam or misleading' },
+                      { id: 'harassment', label: 'Harassment or bullying' },
+                      { id: 'inappropriate', label: 'Inappropriate content' },
+                      { id: 'fake', label: 'Fake account' },
+                      { id: 'other', label: 'Other' }
+                    ].map((reason) => (
+                      <label key={reason.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                        <input
+                          type="radio"
+                          name="reportReason"
+                          value={reason.id}
+                          checked={reportReason === reason.id}
+                          onChange={(e) => setReportReason(e.target.value)}
+                          className="w-4 h-4 text-red-500"
+                        />
+                        <span className="text-sm text-gray-700">{reason.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => { setShowReportConfirm(false); setReportReason(''); }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleReportUser}
+                      disabled={reporting || !reportReason}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition disabled:opacity-50"
+                    >
+                      {reporting ? 'Reporting...' : 'Submit Report'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Search Chat Modal */}
+          {showSearchModal && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-[90]"
+                onClick={() => { setShowSearchModal(false); setSearchQuery(''); setSearchResults([]); }}
+              />
+              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-md">
+                <div className="bg-white rounded-2xl shadow-2xl p-4 mx-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    Search in Chat
+                  </h3>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearchChat()}
+                      placeholder="Search messages..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSearchChat}
+                      className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:opacity-90"
+                    >
+                      Search
+                    </button>
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {searchResults.map((msg, idx) => (
+                        <div
+                          key={msg._id || idx}
+                          onClick={() => handleSearchResultClick(msg)}
+                          className="p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                        >
+                          <p className="text-sm text-gray-700 truncate">{msg.text}</p>
+                          <p className="text-xs text-gray-400">
+                            {msg.from_user_id === user?._id ? 'You' : receiver?.username} • {moment(msg.createdAt).format('MMM D, h:mm A')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchQuery && searchResults.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">No messages found</p>
+                  )}
+                  <button
+                    onClick={() => { setShowSearchModal(false); setSearchQuery(''); setSearchResults([]); }}
+                    className="mt-3 w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </>
@@ -1719,35 +1966,62 @@ const ChatBox = ({ userId: propUserId }) => {
               />
             ) : null}
 
-            {/* Recording / audio preview */}
+            {/* Recording / audio preview - Part 6 Enhanced UI */}
             {(audioURL || recording) && (
               <div className="w-full">
                 {audioURL ? (
-                  <div className="relative inline-block w-full">
-                    <AudioMessage msg={{ media_url: audioURL }} />
+                  /* Audio Preview with Send/Delete buttons */
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex-1">
+                      <AudioMessage msg={{ media_url: audioURL }} />
+                    </div>
+                    {/* Delete button */}
                     <button
                       onClick={() => setAudioURL(null)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition"
-                      title="Cancel audio"
+                      className="flex items-center justify-center w-10 h-10 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
+                      title="Delete recording"
                     >
-                      ×
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                    {/* Send button */}
+                    <button
+                      onClick={() => { scrollToBottom(); sendMessage() }}
+                      className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
+                      title="Send voice note"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                      </svg>
                     </button>
                   </div>
                 ) : (
+                  /* Active Recording UI - Part 6 Enhanced with big Stop button */
                   <div className="recording-container">
-                    {/* Left side - Lock button */}
+                    {/* Left side - Big Red Stop Button */}
                     <button
-                      className="recording-lock"
-                      title="Lock recording"
+                      onClick={stopRecording}
+                      className="recording-stop"
+                      title="Stop recording"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                        <rect x="6" y="6" width="12" height="12" rx="2" />
                       </svg>
                     </button>
 
                     {/* Center - Timer and Waveform */}
                     <div className="recording-center">
+                      {/* Recording indicator */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <span className="text-xs text-red-500 font-medium">
+                          {isPaused ? 'PAUSED' : 'RECORDING'}
+                        </span>
+                      </div>
+                      
                       {/* Timer */}
                       <span className="recording-timer">
                         {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
@@ -1755,17 +2029,17 @@ const ChatBox = ({ userId: propUserId }) => {
 
                       {/* Waveform */}
                       <div className="recording-waveform">
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
-                        <div className="wave-bar" />
+                        {[...Array(7)].map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`wave-bar ${isPaused ? 'paused' : 'active'}`}
+                            style={{ animationDelay: `${i * 0.1}s` }}
+                          />
+                        ))}
                       </div>
                     </div>
 
-                    {/* Right side - Delete, Pause, Send */}
+                    {/* Right side - Pause, Delete */}
                     <div className="recording-actions">
                       {/* Delete button */}
                       <button
@@ -1777,40 +2051,28 @@ const ChatBox = ({ userId: propUserId }) => {
                         className="recording-delete"
                         title="Cancel recording"
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
                       </button>
 
-                      {/* Pause button */}
+                      {/* Pause/Resume button */}
                       <button
                         onClick={togglePause}
                         className="recording-pause"
                         title={isPaused ? "Resume recording" : "Pause recording"}
                       >
                         {isPaused ? (
-                          <svg viewBox="0 0 24 24" fill="currentColor">
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                             <polygon points="5 3 19 12 5 21 5 3" />
                           </svg>
                         ) : (
-                          <svg viewBox="0 0 24 24" fill="currentColor">
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                             <rect x="6" y="4" width="4" height="16" rx="1" />
                             <rect x="14" y="4" width="4" height="16" rx="1" />
                           </svg>
                         )}
-                      </button>
-
-                      {/* Send button */}
-                      <button
-                        onClick={stopRecording}
-                        className="recording-send"
-                        title="Send voice message"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="22" y1="2" x2="11" y2="13" />
-                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                        </svg>
                       </button>
                     </div>
                   </div>

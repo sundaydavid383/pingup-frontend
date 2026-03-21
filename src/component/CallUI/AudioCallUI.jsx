@@ -36,6 +36,7 @@ const AudioCallUI = ({
   const timerIntervalRef = useRef(null);
 
   const call = callContext && callContext.currentCall ? callContext.currentCall : null;
+  const callStatusMessage = callContext?.callStatusMessage;
 
   // Debug: Log audio call state
   useEffect(() => {
@@ -126,7 +127,13 @@ const AudioCallUI = ({
           <div className="text-center">
             <h1 className="text-3xl font-bold text-white">{call.receiverName}</h1>
             <p className="text-gray-400 text-sm mt-1">
-              {remoteStream ? "Connected" : "Connecting..."}
+              {callStatusMessage || (call?.status === (callContext?.CALL_STATES?.CONNECTED) 
+                ? '✅ Connected' 
+                : call?.status === (callContext?.CALL_STATES?.RINGING)
+                  ? '🔔 Ringing...'
+                  : call?.error 
+                    ? `❌ Call failed — ${call.error}`
+                    : remoteStream ? '✅ Connected' : '⏳ Connecting...')}
             </p>
           </div>
         </div>

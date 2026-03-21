@@ -105,7 +105,7 @@ const IncomingCallModal = ({ onAccept, onReject }) => {
               {call.initiatorName}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              {call.type === "video" ? "Video Call" : "Audio Call"}
+              {call.type === "video" ? "📹 Incoming Video Call" : "📞 Incoming Audio Call"}
             </p>
           </div>
 

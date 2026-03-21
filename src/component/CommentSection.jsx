@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axiosBase from "../utils/axiosBase";
-import { Trash2, Pencil, SendHorizonal, Loader2, CornerDownRight, MessageSquare, ThumbsUp, MoreVertical } from "lucide-react";
+import { Trash2, Pencil, SendHorizonal, Loader2, CornerDownRight, MessageSquare, ThumbsUp, MoreVertical, Heart } from "lucide-react";
 import CommentText from "./shared/CommentText";
 import CommentSkeleton from "./skeleton/CommentSkeleton";
 import ProfileAvatar from "./shared/ProfileAvatar";
@@ -29,8 +29,69 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
   const [editError, setEditError] = useState("");
   const [replyTo, setReplyTo] = useState(null);
   const [expandedReplies, setExpandedReplies] = useState({});
+  const [likingId, setLikingId] = useState(null);
+  const [showLikersTooltip, setShowLikersTooltip] = useState(null);
   const rootComments = comments.filter(c => !c.parent);
   const replies = comments.filter(c => c.parent);
+
+  // Check if current user has liked a comment
+  const isLiked = useCallback((comment) => {
+    if (!currentUser?._id || !comment.likes) return false;
+    return comment.likes.some(id => id === currentUser._id || id === currentUser?._id);
+  }, [currentUser]);
+
+  // Handle like/unlike with optimistic UI and debounce
+  const handleLike = async (commentId) => {
+    if (!currentUser) return navigate("/signin");
+    if (likingId) return; // Prevent spam
+
+    const comment = comments.find(c => c._id === commentId);
+    if (!comment) return;
+
+    const wasLiked = isLiked(comment);
+    const newLikesCount = wasLiked ? (comment.likesCount || 1) - 1 : (comment.likesCount || 0) + 1;
+
+    // Optimistic update
+    setLikingId(commentId);
+    setComments(prev => prev.map(c => {
+      if (c._id === commentId) {
+        const newLikes = wasLiked 
+          ? (c.likes || []).filter(id => id !== currentUser._id && id !== currentUser?._id)
+          : [...(c.likes || []), currentUser._id || currentUser?._id];
+        return { ...c, likes: newLikes, likesCount: newLikesCount };
+      }
+      return c;
+    }));
+
+    try {
+      if (wasLiked) {
+        await axiosBase.delete(
+          `/api/posts/${postId}/comments/${commentId}/like`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axiosBase.post(
+          `/api/posts/${postId}/comments/${commentId}/like`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+    } catch (err) {
+      // Revert on error
+      setComments(prev => prev.map(c => {
+        if (c._id === commentId) {
+          const revertedLikes = wasLiked
+            ? [...(c.likes || []), currentUser._id || currentUser?._id]
+            : (c.likes || []).filter(id => id !== currentUser._id && id !== currentUser?._id);
+          return { ...c, likes: revertedLikes, likesCount: wasLiked ? (c.likesCount || 1) : ((c.likesCount || 0) - 1 < 0 ? 0 : c.likesCount - 1) };
+        }
+        return c;
+      }));
+      console.error("Like error:", err);
+    } finally {
+      setLikingId(null);
+    }
+  };
 
   const toggleReplies = (commentId) => {
     setExpandedReplies(prev => ({
@@ -121,6 +182,11 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
           c._id === tempId ? { ...c, pending: false, failed: true } : c
         )
       );
+      setAlert({
+        open: true,
+        message: "Failed to post – try again",
+        type: "error"
+      });
       console.error(err);
     } finally {
       setPosting(false);
@@ -212,9 +278,11 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
         <div className="flex gap-1 sm:gap-2 group">
           {/* Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-200 ring-2 ring-transparent group-hover:ring-[var(--primary)] transition-all duration-200">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden ring-2 ring-transparent 
+      
+             transition-all duration-200">
               {comment.user?.profilePicUrl ? (
-                <ProfileAvatar user={comment.user} size={isReply ? 36 : 40} />
+                <ProfileAvatar user={comment.user} size={40} />
               ) : (
                 <div className="text-sm font-semibold text-gray-600 flex items-center justify-center h-full bg-gradient-to-br from-gray-200 to-gray-300">
                   {(comment.user?.full_name || comment.user?.username || "U")[0].toUpperCase()}
@@ -227,10 +295,10 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <span className="text-sm sm:text-base font-semibold text-gray-900 hover:underline cursor-pointer transition-colors">
+              <span className="text-[0.8rem] sm:text-[0.88rem] font-semibold text-gray-900 hover:underline cursor-pointer transition-colors">
                 {comment.user?.full_name || comment.user?.username}
               </span>
-              <span className="text-xs sm:text-sm text-gray-500">
+              <span className="text-[0.7rem] sm:text-[0.77rem] text-gray-500">
                 {moment(comment.createdAt).fromNow()}
               </span>
               {comment.isEdited && (
@@ -262,7 +330,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                   rows={1}
                   maxLength={300}
                   ref={editInputRef}
-                  className="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none transition-all"
+                  className="w-full border border-gray-300 px-3 py-2 text-[.86rem] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--primary)] resize-none transition-all"
                 />
                 <div className="flex gap-2 mt-2 sm:mt-3">
                   <button onClick={() => handleEditSubmit(comment._id)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[var(--primary)] text-white rounded-full text-sm hover:opacity-90 transition flex items-center gap-1.5">
@@ -275,27 +343,73 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                 {editError && <div className="text-red-500 text-xs mt-2">{editError}</div>}
               </div>
             ) : (
-              <div className="text-[0.87rem] sm:text-[0.9rem] text-gray-800 leading-relaxed mt-2 sm:mt-2.5">
+              <div className="text-[0.87rem] sm:text-[0.9rem] text-gray-800 leading-relaxed mt-.3 sm:mt-.5">
                 <CommentText text={DOMPurify.sanitize(comment.text)} isEdited={comment.isEdited} maxChars={500} />
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-1 sm:gap-2 mt-2 sm:mt-3">
-              <button className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-[var(--primary)] transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
-                <ThumbsUp size={14} sm:size={16} />
-                <span className="hidden sm:inline">Like</span>
-              </button>
+            <div className="flex items-center gap-1 sm:gap-2 mt-0">
+              <div className="relative">
+                <button
+                  onClick={() => handleLike(comment._id)}
+                  onDoubleClick={() => handleLike(comment._id)}
+                  disabled={likingId === comment._id}
+                  className={`flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100 ${
+                    isLiked(comment) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                  }`}
+                  title={isLiked(comment) ? 'Unlike' : 'Like'}
+                >
+                  {likingId === comment._id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : isLiked(comment) ? (
+                    <Heart size={14} fill="currentColor" className="animate-pulse" />
+                  ) : (
+                    <Heart size={14} />
+                  )}
+                  <span className="hidden sm:inline">{comment.likesCount || 0}</span>
+                </button>
+                {/* Recent likers tooltip */}
+                {comment.recentLikes && comment.recentLikes.length > 0 && (
+                  <div
+                    className="absolute left-0 bottom-full mb-2 z-50"
+                    onMouseEnter={() => setShowLikersTooltip(comment._id)}
+                    onMouseLeave={() => setShowLikersTooltip(null)}
+                  >
+                    <div className={`bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap transition-opacity ${
+                      showLikersTooltip === comment._id ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}>
+                      {comment.recentLikes.slice(0, 3).map((like, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-gray-600 overflow-hidden">
+                            {like.user?.profilePicUrl ? (
+                              <img src={like.user.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[8px] bg-gray-500">
+                                {(like.user?.full_name || like.user?.username || 'U')[0].toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <span>{like.user?.full_name || like.user?.username}</span>
+                        </div>
+                      ))}
+                      {comment.likesCount > 3 && (
+                        <div className="text-gray-400 mt-1 text-[10px]">+{comment.likesCount - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => {
                   setEditingId(null);
                   setReplyTo(comment);
                   inputRef.current?.focus();
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-[var(--accent)] transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100"
+                className="flex items-center gap-1.5 sm:gap-2  font-medium text-gray-500 hover:text-[var(--accent)] transition p-1.5 sm:p-2 rounded-full hover:bg-gray-100"
               >
                 <MessageSquare size={14} sm:size={16} />
-                <span className="hidden sm:inline">Reply</span>
+                <span className="hidden sm:inline text-[0.75rem] sm:text-[0.8rem]">Reply</span>
               </button>
               {comment.user?._id === currentUser?._id && (
                 <div className="relative" ref={el => menuRefs.current[comment._id] = el}>
@@ -337,7 +451,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
             </div>
 
             {/* Pending/Failed status */}
-            {comment.pending && <div className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Posting...</div>}
+            {comment.pending && <div className="text-xs text-blue-500 mt-2 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Sending...</div>}
             {comment.failed && (
               <div onClick={handlePost} className="text-xs text-red-500 cursor-pointer mt-2 hover:underline">
                 Failed to post. Click to retry
@@ -351,7 +465,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
           <div className="mt-3 sm:mt-4">
             <button
               onClick={() => toggleReplies(comment._id)}
-              className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base font-semibold text-[var(--primary)] hover:text-[var(--accent)] transition mb-3 sm:mb-4 ml-10 sm:ml-11"
+              className="flex items-center gap-2 sm:gap-3 text-[0.87rem] sm:text-[0.9rem] font-semibold text-[var(--primary)] hover:text-[var(--accent)] transition mb-3 sm:mb-4 ml-10 sm:ml-11"
             >
               <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[var(--primary)] text-white flex items-center justify-center">
                 <CornerDownRight size={12} sm:size={14} />
@@ -438,7 +552,10 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
             rows={1}
             maxLength={500}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                handlePost();
+              } else if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handlePost();
               }
@@ -451,23 +568,16 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
                 Cancel
               </button>
             )}
-            <button
-              onClick={handlePost}
-              disabled={!currentUser || posting || !text.trim()}
-              className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--primary)] text-white rounded-full text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--btn-hover)] transition flex items-center gap-2"
-            >
-              {posting ? <Loader2 size={16} className="animate-spin" /> : <SendHorizonal size={16} />}
-              <span className="hidden sm:inline">Comment</span>
-            </button>
+          
           </div>
         </div>
       </div>
 
       {/* Comments list */}
-      <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-6" aria-live="polite" aria-label="Comments section">
         {loading ? (
           <>
-            {Array.from({ length: commentsCount || 3 }).map((_, i) => (
+            {Array.from({ length: commentsCount <= 3 ? commentsCount : 3 }).map((_, i) => (
               <CommentSkeleton key={i} />
             ))}
           </>

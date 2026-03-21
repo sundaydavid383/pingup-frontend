@@ -8,7 +8,7 @@ const SILENCE_DURATION = 2000;         // ← 2 seconds pause (exactly what you 
 const TARGET_SAMPLE_RATE = 16000;
 const MIN_AUDIO_LENGTH_MS = 300;
 
-const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mode = "vosk" }, ref) => {
+const BackendAudioCapture = forwardRef(({ userId, onResult, onStatus, toggleListening, mode = "vosk" }, ref) => {
   const { shouldBlockVoice, startProcessing, stopProcessing } = useTTS();
   const apiKey = import.meta.env.VITE_LEMONFOX_API;
   
@@ -50,6 +50,7 @@ const BackendAudioCapture = forwardRef(({ userId, onResult, toggleListening, mod
   // ====================== LEMONFOX SPECIFIC ======================
 const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
   console.log("🚀 [LEMONFOX] Step 1: Sending audio to Lemonfox API...");
+  onStatus?.('SENDING_TO_LEMONFOX');
 
   // Check for offline
   if (!navigator.onLine) {
@@ -215,6 +216,7 @@ const processLemonfoxAudio = async (blob, onResult, apiKey, stopProcessing) => {
         if (volume < SILENCE_THRESHOLD) {
           if (!silenceTimerRef.current) {
             console.log("⏳ Silence started... waiting 2 seconds");
+            onStatus?.('SILENCE_DETECTED');
             silenceTimerRef.current = setTimeout(() => {
               stopRecording(true);   // ← This is where everything happens
             }, SILENCE_DURATION);

@@ -110,7 +110,7 @@ const PostCard = ({ post,
     text?.replace(/(#\w+)/g, `<span style="color:var(--primary)">$1</span>`) || "";
 
   const maxLength = 200;
-  const maxNewlines = 3; // Maximum allowed newlines before triggering "Read More"
+  const maxNewlines = 1; // Maximum allowed newlines before triggering "Read More"
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Check if content should be truncated based on BOTH character count AND newline count

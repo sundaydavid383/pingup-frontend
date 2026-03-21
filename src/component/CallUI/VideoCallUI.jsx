@@ -43,6 +43,7 @@ const VideoCallUI = ({
   const timerIntervalRef = useRef(null);
 
   const call = callContext && callContext.currentCall ? callContext.currentCall : null;
+  const callStatusMessage = callContext?.callStatusMessage;
 
   // Debug: Log video call state
   useEffect(() => {
@@ -148,7 +149,15 @@ const VideoCallUI = ({
                 />
               </div>
               <p className="text-white text-lg font-semibold">{call.receiverName}</p>
-              <p className="text-gray-400 text-sm mt-2">Connecting...</p>
+              <p className="text-gray-400 text-sm mt-2">
+                {callStatusMessage || (call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.CONNECTED) 
+                  ? '✅ Connected' 
+                  : call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.RINGING)
+                    ? '🔔 Ringing...'
+                    : call.error 
+                      ? `❌ Call failed — ${call.error}`
+                      : '⏳ Connecting...')}
+              </p>
             </div>
           </div>
         )}

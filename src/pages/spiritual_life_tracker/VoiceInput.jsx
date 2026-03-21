@@ -26,11 +26,20 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", stat
   const { shouldBlockVoice } = useTTS();
 
 
+  // Expanded VOICE_STATE for detailed status visibility
   const VOICE_STATE = {
     IDLE: "idle",
     READY: "ready",
     LISTENING: "listening",
+    RECORDING_FINISHED: "recording_finished",
+    SENDING_TO_LEMONFOX: "sending_to_lemonfox",
+    PAUSE_DETECTED: "pause_detected",
     TRANSCRIBING: "transcribing",
+    SPEECH_RECEIVED: "speech_received",
+    SEARCHING: "searching",
+    SPEECH_TIMEOUT: "speech_timeout",
+    LEMMONFOX_ERROR: "lemonfox_error",
+    PROCESSING_COMPLETE: "processing_complete",
     PROCESSING: "processing",
     TTS: "tts",
     ERROR: "error",
@@ -58,25 +67,57 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", stat
 
     const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
 
-// Use external statusMessage from parent if provided, otherwise use internal
-const displayStatus = statusMessage || (() => {
+// Use external statusMessage from parent ONLY when idle/ready, otherwise use internal detailed states
+// This ensures the user sees every step of the voice process
+const getInternalStatus = () => {
   switch (voiceState) {
     case VOICE_STATE.READY:
       return "Speak now, I am listening";
+    case VOICE_STATE.LISTENING:
+      return "Listening… (speak now)";
+    case VOICE_STATE.RECORDING_FINISHED:
+      return "Recording finished — sending audio to Lemonfox...";
+    case VOICE_STATE.SENDING_TO_LEMONFOX:
+      return "Sending speech to Lemonfox API... (please wait)";
+    case VOICE_STATE.PAUSE_DETECTED:
+      return "2-second pause detected — processing what you said...";
     case VOICE_STATE.TRANSCRIBING:
-      return "Loading text...";
+      return "Transcribing speech... (Lemonfox is working)";
+    case VOICE_STATE.SPEECH_RECEIVED:
+      return "Speech received successfully — now searching scriptures...";
+    case VOICE_STATE.SEARCHING:
+      return "Searching the Bible for your request...";
+    case VOICE_STATE.SPEECH_TIMEOUT:
+      return "No speech received from Lemonfox (timeout) — please try speaking again";
+    case VOICE_STATE.LEMONFOX_ERROR:
+      return "Lemonfox API error — please check your internet or try again";
+    case VOICE_STATE.PROCESSING_COMPLETE:
+      return "Done — you can speak again";
     case VOICE_STATE.PROCESSING:
       return "Searching scripture...";
     case VOICE_STATE.TTS:
       return "Speaking...";
     case VOICE_STATE.ERROR:
       return error || "Voice error";
-    case VOICE_STATE.LISTENING:
-      return "Listening… (speak now)";
+    case VOICE_STATE.IDLE:
+      return "Ready – speak or type";
     default:
       return "Ready – speak or type";
   }
-})();
+};
+
+// Only use external statusMessage when truly idle, otherwise always show internal detailed status
+const displayStatus = (voiceState === VOICE_STATE.IDLE || voiceState === VOICE_STATE.READY) && statusMessage 
+  ? statusMessage 
+  : getInternalStatus();
+
+// Determine if mic should be disabled (during sending/transcribing)
+const isMicDisabled = [
+  VOICE_STATE.SENDING_TO_LEMONFOX,
+  VOICE_STATE.TRANSCRIBING,
+  VOICE_STATE.SEARCHING,
+  VOICE_STATE.SPEECH_RECEIVED,
+].includes(voiceState);
   // Bible books array with common abbreviations
 
 
@@ -191,12 +232,67 @@ const checkAvailability = async () => {
 
 // 🎯 Optimized backend chunk handler with useCallback
 // Deep fix: Ensure Bible references are parsed and navigation is triggered immediately
+
+// Helper: Clean up transcribed text (Part 4 - Lemonfox boost)
+const cleanupTranscript = (text) => {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // Remove filler words
+  const fillers = /\b(um|uh|er|ah|like|you know|I mean|basically|actually|literally)\b/gi;
+  cleaned = cleaned.replace(fillers, '');
+  
+  // Remove repeated words (e.g., "and and" -> "and")
+  cleaned = cleaned.replace(/\b(\w+)\s+\1\b/gi, '$1');
+  
+  // Convert written numbers to digits for verse references
+  const numberWords = {
+    'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+    'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
+    'eleven': '11', 'twelve': '12', 'thirteen': '13', 'fourteen': '14',
+    'fifteen': '15', 'sixteen': '16', 'seventeen': '17', 'eighteen': '18',
+    'nineteen': '19', 'twenty': '20', 'thirty': '30', 'forty': '40',
+    'fifty': '50', 'sixty': '60', 'seventy': '70', 'eighty': '80', 'ninety': '90'
+  };
+  
+  // Convert "john three sixteen" -> "john 3:16" pattern
+  cleaned = cleaned.replace(/\b(\w+)\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b/gi, 
+    (match, book, chap, vers) => {
+      const ch = numberWords[chap.toLowerCase()] || chap;
+      const vs = numberWords[vers.toLowerCase()] || vers;
+      return `${book} ${ch}:${vs}`;
+    });
+  
+  // Convert "first john" -> "1 john", "second corinthians" -> "2 corinthians"
+  cleaned = cleaned.replace(/\b(first|second|third|fourth|fifth)\s+(john|corinthians|thessalonians|timothy|peter|john|johns)\b/gi,
+    (match, ord, book) => {
+      const numMap = { 'first': '1', 'second': '2', 'third': '3', 'fourth': '4', 'fifth': '5' };
+      return `${numMap[ord.toLowerCase()]} ${book}`;
+    });
+  
+  // Convert standalone chapter numbers
+  Object.keys(numberWords).forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b(?=\\s*[:\\.]\\s*\\d+)`, 'gi');
+    cleaned = cleaned.replace(regex, numberWords[word]);
+  });
+  
+  // Clean up extra spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+};
+
 const handleBackendChunk = useCallback((text) => {
   if (!text?.trim()) {
     console.log("📝 Empty transcript received, resetting state");
-    setVoiceState(VOICE_STATE.READY);
+    setVoiceState(VOICE_STATE.PROCESSING_COMPLETE);
     setIsThinking(false);
     isThinkingRef.current = false;
+    // Reset to ready after a brief delay
+    setTimeout(() => {
+      setVoiceState(VOICE_STATE.READY);
+    }, 1500);
     return;
   }
 
@@ -205,20 +301,29 @@ const handleBackendChunk = useCallback((text) => {
   // 🚫 Backend engines are ONE-SHOT (full transcription) → NEVER cap or use leftover
   leftoverRef.current = "";
 
-  // IMMEDIATELY clear loading state (<50ms requirement)
-  setVoiceState(VOICE_STATE.TRANSCRIBING);
+  // IMMEDIATELY update state to show speech received
+  setVoiceState(VOICE_STATE.SPEECH_RECEIVED);
   setIsThinking(true);
   isThinkingRef.current = true;
+  
+  // Show "Speech received" for 1 second, then move to searching
+  setTimeout(() => {
+    setVoiceState(VOICE_STATE.SEARCHING);
+  }, 1000);
+  
+  // 1️⃣ Apply transcription cleanup (Part 4)
+  const cleanedText = cleanupTranscript(text);
+  console.log("📝 Cleaned transcript:", cleanedText);
 
-  // 1️⃣ Live textarea update (replace full text)
-  onTranscribe(null, text, {
+  // 2️⃣ Live textarea update (replace full text)
+  onTranscribe(null, cleanedText, {
     live: true,
     source: speechEngineRef.current,
     replace: true,
   });
 
-  // 2️⃣ Parse Bible references immediately
-  const fullTranscript = text.trim();
+  // 3️⃣ Parse Bible references immediately
+  const fullTranscript = cleanedText.trim();
   
   // Check for Bible references in the transcript
   const bibleReference = detectBibleReference(fullTranscript);
@@ -232,9 +337,13 @@ const handleBackendChunk = useCallback((text) => {
       isVerseReference: true,
       onComplete: () => {
         console.log("🔹 Bible reference search complete, resetting to READY");
-        setVoiceState(VOICE_STATE.READY);
+        setVoiceState(VOICE_STATE.PROCESSING_COMPLETE);
         setIsThinking(false);
         isThinkingRef.current = false;
+        // Reset to ready after brief delay
+        setTimeout(() => {
+          setVoiceState(VOICE_STATE.READY);
+        }, 1500);
       },
       onError: (err) => {
         console.error("🔹 Bible reference error:", err);
@@ -256,9 +365,13 @@ const handleBackendChunk = useCallback((text) => {
       source: speechEngineRef.current,
       onComplete: () => {
         console.log("🔹 Search complete (Lemonfox/Vosk), resetting to READY");
-        setVoiceState(VOICE_STATE.READY);
+        setVoiceState(VOICE_STATE.PROCESSING_COMPLETE);
         setIsThinking(false);
         isThinkingRef.current = false;
+        // Reset to ready after brief delay
+        setTimeout(() => {
+          setVoiceState(VOICE_STATE.READY);
+        }, 1500);
       },
       onError: (err) => {
         console.error("🔹 Search error:", err);
@@ -459,6 +572,7 @@ const startListening = useCallback(async () => {
   setError(null);
   leftoverRef.current = "";
   isPausedRef.current = false;
+  setVoiceState(VOICE_STATE.LISTENING); // Show listening state immediately
 
   // WebSpeech
   if (speechEngineRef.current === "web") {
@@ -506,8 +620,15 @@ const stopListening = useCallback(() => {
   // Immediately update UI (instant feedback)
   setListening(false);
   listeningRef.current = false;
-  setIsTranscribing(false);
-  setVoiceState(VOICE_STATE.IDLE);
+  setIsTranscribing(true); // We're now processing the audio
+  
+  // Set state to show recording finished first
+  setVoiceState(VOICE_STATE.RECORDING_FINISHED);
+  
+  // After brief delay, show we're sending to Lemonfox
+  setTimeout(() => {
+    setVoiceState(VOICE_STATE.SENDING_TO_LEMONFOX);
+  }, 500);
 
   // WebSpeech - defer heavy work
   if (speechEngineRef.current === "web" && recognitionRef.current) {
@@ -610,34 +731,42 @@ return (
       listening={listening}                    // remains for recording logic
       isThinking={isThinking}                  // ← new prop
       toggleListening={toggleListening}
-      disabled={false}
+      disabled={isMicDisabled || disabled}      // ← disable during sending/transcribing
       statusMessage={displayStatus}
+      isSending={voiceState === VOICE_STATE.SENDING_TO_LEMONFOX || voiceState === VOICE_STATE.TRANSCRIBING}
     />
 
-    <div className="mode-buttons">
-      <button
-        onClick={() => switchMode("web")}
-        disabled={currentMode === "web"}
-        className={currentMode === "web" ? "active" : ""}
-      >
-        {currentMode === "web" ? "Web" : "W"}
-      </button>
+    {/* Input Mode Selector - Enhanced UX */}
+    <div className="mode-selector-container">
+      <label className="mode-selector-label">Input Mode</label>
+      <div className="mode-buttons">
+        <button
+          onClick={() => switchMode("web")}
+          disabled={currentMode === "web"}
+          className={currentMode === "web" ? "active" : ""}
+          title="Web Speech API - Works in most browsers"
+        >
+          {currentMode === "web" ? "🌐 Web" : "🌐"}
+        </button>
 
-      <button
-        onClick={() => switchMode("vosk")}
-        disabled={currentMode === "vosk"}
-        className={currentMode === "vosk" ? "active" : ""}
-      >
-        {currentMode === "vosk" ? "Vosk" : "V"}
-      </button>
+        <button
+          onClick={() => switchMode("vosk")}
+          disabled={currentMode === "vosk"}
+          className={currentMode === "vosk" ? "active" : ""}
+          title="Vosk - Offline capable"
+        >
+          {currentMode === "vosk" ? "🎯 Vosk" : "🎯"}
+        </button>
 
-      <button
-        onClick={() => switchMode("lemonfox")}
-        disabled={currentMode === "lemonfox"}
-        className={currentMode === "lemonfox" ? "active" : ""}
-      >
-        {currentMode === "lemonfox" ? "Lemonfox" : "L"}
-      </button>
+        <button
+          onClick={() => switchMode("lemonfox")}
+          disabled={currentMode === "lemonfox"}
+          className={currentMode === "lemonfox" ? "active" : ""}
+          title="Lemonfox - Best accuracy"
+        >
+          {currentMode === "lemonfox" ? "🦊 Lemonfox" : "🦊"}
+        </button>
+      </div>
     </div>
 
 
@@ -650,20 +779,36 @@ return (
         ref={backendRef}
         userId={user._id}
         mode={currentMode}
+        onStatus={(status) => {
+          if (status === 'SILENCE_DETECTED') {
+            setVoiceState(VOICE_STATE.PAUSE_DETECTED);
+            setTimeout(() => {
+              if (voiceState === VOICE_STATE.PAUSE_DETECTED) {
+                setVoiceState(VOICE_STATE.SENDING_TO_LEMONFOX);
+              }
+            }, 2000);
+          }
+        }}
         onResult={(data)=>{
           // Handle error cases
           if (data?.error) {
             console.error("📝 Lemonfox error:", data.error);
             if (data.error === "offline") {
               setError("No internet connection. Please try again when online.");
+              setVoiceState(VOICE_STATE.LEMONFOX_ERROR);
             } else if (data.error === "timeout") {
               setError("Request timed out. Please try again.");
+              setVoiceState(VOICE_STATE.SPEECH_TIMEOUT);
             } else {
               setError("Voice recognition failed. Please try again.");
+              setVoiceState(VOICE_STATE.LEMONFOX_ERROR);
             }
-            setVoiceState(VOICE_STATE.ERROR);
             setIsThinking(false);
             isThinkingRef.current = false;
+            // Reset to ready after delay for error states too
+            setTimeout(() => {
+              setVoiceState(VOICE_STATE.READY);
+            }, 3000);
             return;
           }
           

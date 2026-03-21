@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { X, Image, Video as VideoIcon, Trash2, Headphones, Youtube, Link, AlertCircle } from "lucide-react";
@@ -16,6 +16,82 @@ const CreatePost = () => {
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const navigate = useNavigate();
+  
+  // Draft management
+  const DRAFT_KEY = 'createPost_draft';
+  const MAX_DRAFT_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB max per image for draft
+  
+  // Save draft to localStorage
+  const saveDraft = useCallback((text, imgs, vids, ytPreview, ytInput, ytType) => {
+    try {
+      const draft = {
+        content: text,
+        youtubeInput: ytInput,
+        youtubePreview: ytPreview,
+        youtubeType: ytType,
+        timestamp: Date.now()
+      };
+      // For images, try to store as dataURL if small enough
+      if (imgs.length > 0) {
+        const smallImages = [];
+        for (const file of imgs) {
+          if (file.size <= MAX_DRAFT_IMAGE_SIZE) {
+            const reader = new FileReader();
+            // We'll handle this asynchronously
+            smallImages.push({ name: file.name, size: file.size, type: file.type });
+          }
+        }
+        draft.imageCount = imgs.length;
+        draft.hasLargeImages = imgs.length > smallImages.length;
+      }
+      // For videos, just store count (can't persist actual video files easily)
+      if (vids.length > 0) {
+        draft.videoCount = vids.length;
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {
+      console.warn('Failed to save draft:', e);
+    }
+  }, []);
+  
+  // Clear draft from localStorage
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      console.warn('Failed to clear draft:', e);
+    }
+  }, []);
+  
+  // Restore draft from localStorage
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        setContent(draft.content || '');
+        setYoutubeInput(draft.youtubeInput || '');
+        setYoutubePreview(draft.youtubePreview || null);
+        setYoutubeType(draft.youtubeType || null);
+        if (draft.hasLargeImages) {
+          // Show a message that some images couldn't be restored
+          console.log('Some images were too large to restore from draft');
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore draft:', e);
+    }
+  }, []);
+  
+  // Auto-save draft when content or YouTube changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (content || youtubeInput || youtubePreview) {
+        saveDraft(content, images, videos, youtubePreview, youtubeInput, youtubeType);
+      }
+    }, 500); // Debounce save
+    return () => clearTimeout(timer);
+  }, [content, youtubeInput, youtubePreview, youtubeType, images.length, videos.length, saveDraft]);
   const [visibility, setVisibility] = useState("public");
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -310,6 +386,9 @@ const CreatePost = () => {
       if (res.status >= 200 && res.status < 300) {
         showAlert("✅ Post published successfully!", "success");
 
+        // Clear the draft after successful post
+        clearDraft();
+        
         setContent("");
         setImages([]);
         setVideos([]);

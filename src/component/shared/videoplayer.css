@@ -148,15 +148,19 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  position: relative;
 }
 
 .vp-volume-slider-container {
   width: 0;
+  height: 6rem;
   overflow: hidden;
   transition: width 200ms ease, opacity 200ms ease;
   opacity: 0;
   display: flex;
   align-items: center;
+  position: absolute;
+  bottom: 1rem;
 }
 
 .vp-volume-slider-container.visible {

@@ -1,5 +1,5 @@
 // BibleControls.jsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { FaVolumeUp, FaMusic, FaClock } from "react-icons/fa";
 import MoodSelector from "./MoodSelector";
 import { useMoodStore } from "../../store/MoodStore";
@@ -18,9 +18,35 @@ export default function BibleControls({
   // Use global mood store
   const { volume, setVolume } = useMoodStore();
   
-  // Popover states
+  // Popover states - Part 3: controlled open state
   const [openPopover, setOpenPopover] = useState(null);
   const popoverRef = useRef(null);
+  
+  // Part 3: Track if any dropdown is open to keep controls visible
+  const isAnyPopoverOpen = openPopover !== null;
+  
+  // Part 3: Delay timer for hover - keeps bar visible when moving between controls
+  const hideDelayRef = useRef(null);
+  
+  // Part 3: Controlled visibility - bar stays visible when any popover is open
+  const effectiveVisibility = isVisible || isAnyPopoverOpen;
+  
+  // Part 3: Clear hide timer when popover opens
+  useEffect(() => {
+    if (isAnyPopoverOpen && hideDelayRef.current) {
+      clearTimeout(hideDelayRef.current);
+      hideDelayRef.current = null;
+    }
+  }, [isAnyPopoverOpen]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideDelayRef.current) {
+        clearTimeout(hideDelayRef.current);
+      }
+    };
+  }, []);
 
   // Prevent progress conflicts while dragging
   const isSeekingRef = useRef(false);
@@ -96,8 +122,39 @@ export default function BibleControls({
     setOpenPopover(openPopover === popoverName ? null : popoverName);
   };
 
+  // Part 3: Handle mouse enter/leave to keep controls visible
+  const handleMouseEnter = useCallback(() => {
+    // Clear any pending hide timer
+    if (hideDelayRef.current) {
+      clearTimeout(hideDelayRef.current);
+      hideDelayRef.current = null;
+    }
+  }, []);
+  
+  const handleMouseLeave = useCallback(() => {
+    // Only set hide timer if no popover is open
+    if (!isAnyPopoverOpen) {
+      hideDelayRef.current = setTimeout(() => {
+        // Trigger parent to hide - handled via isVisible prop
+      }, 200);
+    }
+  }, [isAnyPopoverOpen]);
+  
+  // Part 3: Handle popover mouse enter to keep controls visible
+  const handlePopoverMouseEnter = useCallback(() => {
+    if (hideDelayRef.current) {
+      clearTimeout(hideDelayRef.current);
+      hideDelayRef.current = null;
+    }
+  }, []);
+  
   return (
-    <div className={`bible-controls-bar ${isVisible ? 'visible' : 'hidden'}`} ref={popoverRef}>
+    <div 
+      className={`bible-controls-bar ${effectiveVisibility ? 'visible' : 'hidden'}`} 
+      ref={popoverRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="bible-controls-inner">
         {/* Chapter Progress - Main Focus */}
         <div className="progress-section">
@@ -125,13 +182,14 @@ export default function BibleControls({
             <button 
               className={`control-icon-btn ${openPopover === 'speed' ? 'active' : ''}`}
               onClick={() => togglePopover('speed')}
+              onMouseEnter={handlePopoverMouseEnter}
               title="Reading Speed"
             >
               <FaClock />
               <span className="icon-label">{ttsSpeed}×</span>
             </button>
             {openPopover === 'speed' && (
-              <div className="popover-slider speed-popover">
+              <div className="popover-slider speed-popover" onMouseEnter={handlePopoverMouseEnter}>
                 <label className="popover-label">Reading Speed</label>
                 <div className="popover-slider-inner">
                   <input
@@ -156,13 +214,14 @@ export default function BibleControls({
             <button 
               className={`control-icon-btn ${openPopover === 'volume' ? 'active' : ''}`}
               onClick={() => togglePopover('volume')}
+              onMouseEnter={handlePopoverMouseEnter}
               title="Mood Volume"
             >
               <FaVolumeUp />
               <span className="icon-label">{Math.round(volume * 100)}%</span>
             </button>
             {openPopover === 'volume' && (
-              <div className="popover-slider volume-popover">
+              <div className="popover-slider volume-popover" onMouseEnter={handlePopoverMouseEnter}>
                 <label className="popover-label">Mood Volume</label>
                 <div className="popover-slider-inner">
                   <input
@@ -185,13 +244,14 @@ export default function BibleControls({
             <button 
               className={`control-icon-btn ${openPopover === 'mood' ? 'active' : ''}`}
               onClick={() => togglePopover('mood')}
+              onMouseEnter={handlePopoverMouseEnter}
               title="Background Mood"
             >
               <FaMusic />
               <span className="icon-label">Mood</span>
             </button>
             {openPopover === 'mood' && (
-              <div className="popover-slider mood-popover">
+              <div className="popover-slider mood-popover" onMouseEnter={handlePopoverMouseEnter}>
                 <MoodSelector moodVolume={volume} setMoodVolume={setVolume} />
               </div>
             )}
