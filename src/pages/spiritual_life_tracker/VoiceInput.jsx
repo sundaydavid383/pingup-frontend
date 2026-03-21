@@ -8,7 +8,12 @@ import { useAuth } from "../../context/AuthContext";
 import { useTTS } from "../../context/TTSContext";
 
 
-const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref) => {
+const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", statusMessage = "" }, ref) => {
+  // Use refs for immediate state access without re-renders
+  const listeningRef = useRef(false);
+  const isThinkingRef = useRef(false);
+  
+  // State for UI updates only - these trigger re-renders
   const [listening, setListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [micAvailable, setMicAvailable] = useState(true);
@@ -22,14 +27,14 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref
 
 
   const VOICE_STATE = {
-  IDLE: "idle",
-  READY: "ready",
-  LISTENING: "listening",
-  TRANSCRIBING: "transcribing",
-  PROCESSING: "processing",
-  TTS: "tts",
-  ERROR: "error",
-};
+    IDLE: "idle",
+    READY: "ready",
+    LISTENING: "listening",
+    TRANSCRIBING: "transcribing",
+    PROCESSING: "processing",
+    TTS: "tts",
+    ERROR: "error",
+  };
 
 
 
@@ -38,10 +43,10 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref
   const leftoverRef = useRef(""); // unsent words
   const pauseTimer = useRef(null);
   const isPausedRef = useRef(false);
-  const listeningRef = useRef(false);
   const backendRef = useRef(null);
   const speechEngineRef = useRef("lemonfox"); // "web" | "vosk" | "lemonfox"
   const errorRef = useRef(null);
+  const isStartingRef = useRef(false); // Prevent double-start
 
 
   // chunking config
@@ -52,7 +57,9 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox"}, ref
 
 
     const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
-const statusMessage = (() => {
+
+// Use external statusMessage from parent if provided, otherwise use internal
+const displayStatus = statusMessage || (() => {
   switch (voiceState) {
     case VOICE_STATE.READY:
       return "Speak now, I am listening";
@@ -64,8 +71,10 @@ const statusMessage = (() => {
       return "Speaking...";
     case VOICE_STATE.ERROR:
       return error || "Voice error";
+    case VOICE_STATE.LISTENING:
+      return "Listening… (speak now)";
     default:
-      return "";
+      return "Ready – speak or type";
   }
 })();
   // Bible books array with common abbreviations
@@ -187,6 +196,7 @@ const handleBackendChunk = useCallback((text) => {
     console.log("📝 Empty transcript received, resetting state");
     setVoiceState(VOICE_STATE.READY);
     setIsThinking(false);
+    isThinkingRef.current = false;
     return;
   }
 
@@ -198,6 +208,7 @@ const handleBackendChunk = useCallback((text) => {
   // IMMEDIATELY clear loading state (<50ms requirement)
   setVoiceState(VOICE_STATE.TRANSCRIBING);
   setIsThinking(true);
+  isThinkingRef.current = true;
 
   // 1️⃣ Live textarea update (replace full text)
   onTranscribe(null, text, {
@@ -223,18 +234,21 @@ const handleBackendChunk = useCallback((text) => {
         console.log("🔹 Bible reference search complete, resetting to READY");
         setVoiceState(VOICE_STATE.READY);
         setIsThinking(false);
+        isThinkingRef.current = false;
       },
       onError: (err) => {
         console.error("🔹 Bible reference error:", err);
         setVoiceState(VOICE_STATE.ERROR);
         setIsThinking(false);
+        isThinkingRef.current = false;
       }
     });
     return;
   }
 
   // 3️⃣ No verse reference - proceed with full search
-  setTimeout(() => {
+  // Use requestIdleCallback to not block UI
+  requestIdleCallback(() => {
     setVoiceState(VOICE_STATE.PROCESSING);
 
     onTranscribe(fullTranscript, "", {  // ← send FULL text, empty leftover
@@ -244,15 +258,17 @@ const handleBackendChunk = useCallback((text) => {
         console.log("🔹 Search complete (Lemonfox/Vosk), resetting to READY");
         setVoiceState(VOICE_STATE.READY);
         setIsThinking(false);
+        isThinkingRef.current = false;
       },
       onError: (err) => {
         console.error("🔹 Search error:", err);
         setVoiceState(VOICE_STATE.ERROR);
         setIsThinking(false);
+        isThinkingRef.current = false;
         setError("Search failed. Please try again.");
       }
     });
-  }, 100); // 100ms delay to show loading state
+  });
 }, [onTranscribe]);
 
 // Helper to detect Bible references with NLP-lite
@@ -288,10 +304,9 @@ const detectBibleReference = (text) => {
 
 
 
-
   useEffect(() => {
   const handleOffline = () => {
-    if (listening) {
+    if (listeningRef.current) {
       setError("No internet connection");
       stopListening();
     }
@@ -309,7 +324,7 @@ const detectBibleReference = (text) => {
     window.removeEventListener("offline", handleOffline);
     window.removeEventListener("online", handleOnline);
   };
-}, [listening]);
+}, []);
 
 
   useEffect(() => {
@@ -416,7 +431,7 @@ recognition.onerror = (event) => {
       recognitionRef.current = null;
       if (pauseTimer.current) clearTimeout(pauseTimer.current);
     };
-  }, [onTranscribe]);
+  }, [onTranscribe, currentMode]);
 
   
 useEffect(() => {
@@ -427,7 +442,7 @@ useEffect(() => {
   errorRef.current = error;
 }, [error]);
 
-// 🎯 Optimized start/stop functions with useCallback
+// 🎯 Optimized start/stop functions - UI updates first, heavy work deferred
 const startListening = useCallback(async () => {
   // Block if TTS or processing is active
   if (shouldBlockVoice) {
@@ -435,76 +450,96 @@ const startListening = useCallback(async () => {
     return;
   }
   
-  if (disabled || listening) return;
-
-  setError(null); // clear old error
+  if (disabled || listeningRef.current || isStartingRef.current) return;
+  
+  // Immediately update UI state (instant feedback)
+  isStartingRef.current = true;
+  setListening(true);
+  listeningRef.current = true;
+  setError(null);
   leftoverRef.current = "";
   isPausedRef.current = false;
 
   // WebSpeech
   if (speechEngineRef.current === "web") {
-    const ok = await checkAvailability();
-    if (!ok) {
-      setVoiceState(VOICE_STATE.ERROR);
-      return;
-    }
+    // Defer the heavy work
+    requestIdleCallback(async () => {
+      const ok = await checkAvailability();
+      if (!ok) {
+        setVoiceState(VOICE_STATE.ERROR);
+        setListening(false);
+        listeningRef.current = false;
+        isStartingRef.current = false;
+        return;
+      }
 
-    if (navigator.vibrate) navigator.vibrate(45); // light tap feedback
+      if (navigator.vibrate) navigator.vibrate(45); // light tap feedback
 
-    try {
-      recognitionRef.current.start();
-      setVoiceState(VOICE_STATE.READY);
-    } catch (e) {
-      console.error(e);
-      setError("Error starting WebSpeech");
-      setVoiceState(VOICE_STATE.ERROR);
-    }
+      try {
+        recognitionRef.current.start();
+        setVoiceState(VOICE_STATE.READY);
+      } catch (e) {
+        console.error(e);
+        setError("Error starting WebSpeech");
+        setVoiceState(VOICE_STATE.ERROR);
+        setListening(false);
+        listeningRef.current = false;
+      }
+      isStartingRef.current = false;
+    });
   }
 
   // Backend capture (vosk/hybrid/lemonfox)
   else if (backendRef.current) {
-    leftoverRef.current = "";
-    backendRef.current.start();
-    setVoiceState(VOICE_STATE.READY);
+    requestIdleCallback(() => {
+      leftoverRef.current = "";
+      backendRef.current.start();
+      setVoiceState(VOICE_STATE.READY);
+      isStartingRef.current = false;
+    });
   }
-
-  setListening(true);
-}, [shouldBlockVoice, disabled, listening]);
+}, [shouldBlockVoice, disabled]);
 
 const stopListening = useCallback(() => {
-  if (!listening) return;
+  if (!listeningRef.current) return;
 
-  // WebSpeech
+  // Immediately update UI (instant feedback)
+  setListening(false);
+  listeningRef.current = false;
+  setIsTranscribing(false);
+  setVoiceState(VOICE_STATE.IDLE);
+
+  // WebSpeech - defer heavy work
   if (speechEngineRef.current === "web" && recognitionRef.current) {
-    leftoverRef.current = "";
-    isPausedRef.current = true;
-    recognitionRef.current.stop();
+    requestIdleCallback(() => {
+      leftoverRef.current = "";
+      isPausedRef.current = true;
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore errors when stopping
+      }
+    });
   }
 
   // Backend capture
   else if (backendRef.current) {
-    leftoverRef.current = "";
-    backendRef.current.stop();
+    requestIdleCallback(() => {
+      leftoverRef.current = "";
+      backendRef.current.stop();
+    });
   }
-
-  setIsTranscribing(false);
-  setVoiceState(VOICE_STATE.IDLE);
-  listeningRef.current = false;
-  setListening(false);
-}, [listening]);
-
-
-
+}, []);
 
 
 // Toggle mic (memoized for performance)
 const toggleListening = useCallback(() => {
-  if (listening) {
+  if (listeningRef.current) {
     stopListening();
   } else {
     startListening();
   }
-}, [listening, stopListening, startListening]);
+}, [stopListening, startListening]);
 
   const randomHeight = (idx) => {
     const base = 6 + (idx % 3) * 3;
@@ -512,12 +547,12 @@ const toggleListening = useCallback(() => {
   };
 
   useImperativeHandle(ref, () => ({
-  start: startListening,
-  stop: stopListening,
-  toggle: toggleListening,
-  isListening: () => listening,
-  setMode: (m) => { speechEngineRef.current = m; }
-}));
+    start: startListening,
+    stop: stopListening,
+    toggle: toggleListening,
+    isListening: () => listeningRef.current,
+    setMode: (m) => { speechEngineRef.current = m; }
+  }));
 
 // 🎯 Optimized mode switching with useCallback to prevent unnecessary re-renders
 const switchMode = useCallback((newMode) => {
@@ -557,6 +592,7 @@ const switchMode = useCallback((newMode) => {
   
   // Batch state updates to minimize re-renders
   setListening(false);
+  listeningRef.current = false;
   setIsTranscribing(false);
   setVoiceState(VOICE_STATE.IDLE);
   setError(null);
@@ -571,40 +607,38 @@ return (
   <>
     {/* Mic Wrapper (Centered) */}
     <MicButton
-  listening={listening}                    // remains for recording logic
-  isThinking={isThinking}                  // ← new prop
-  toggleListening={toggleListening}
-  disabled={false}
-  statusMessage={statusMessage}
-/>
+      listening={listening}                    // remains for recording logic
+      isThinking={isThinking}                  // ← new prop
+      toggleListening={toggleListening}
+      disabled={false}
+      statusMessage={displayStatus}
+    />
 
-<div className="mode-buttons">
-  <button
-    onClick={() => switchMode("web")}
-    disabled={currentMode === "web"}
-    className={currentMode === "web" ? "active" : ""}
-  >
-    {currentMode === "web" ? "Web" : "W"}
-  </button>
+    <div className="mode-buttons">
+      <button
+        onClick={() => switchMode("web")}
+        disabled={currentMode === "web"}
+        className={currentMode === "web" ? "active" : ""}
+      >
+        {currentMode === "web" ? "Web" : "W"}
+      </button>
 
-  <button
-    onClick={() => switchMode("vosk")}
-    disabled={currentMode === "vosk"}
-    className={currentMode === "vosk" ? "active" : ""}
-  >
-    {currentMode === "vosk" ? "Vosk" : "V"}
-  </button>
+      <button
+        onClick={() => switchMode("vosk")}
+        disabled={currentMode === "vosk"}
+        className={currentMode === "vosk" ? "active" : ""}
+      >
+        {currentMode === "vosk" ? "Vosk" : "V"}
+      </button>
 
-  <button
-    onClick={() => switchMode("lemonfox")}
-    disabled={currentMode === "lemonfox"}
-    className={currentMode === "lemonfox" ? "active" : ""}
-  >
-    {currentMode === "lemonfox" ? "Lemonfox" : "L"}
-  </button>
-</div>
-
-
+      <button
+        onClick={() => switchMode("lemonfox")}
+        disabled={currentMode === "lemonfox"}
+        className={currentMode === "lemonfox" ? "active" : ""}
+      >
+        {currentMode === "lemonfox" ? "Lemonfox" : "L"}
+      </button>
+    </div>
 
 
 
@@ -629,6 +663,7 @@ return (
             }
             setVoiceState(VOICE_STATE.ERROR);
             setIsThinking(false);
+            isThinkingRef.current = false;
             return;
           }
           
@@ -650,7 +685,6 @@ return (
     )}
   </>
 );
-
 
 });
 export default VoiceInput;

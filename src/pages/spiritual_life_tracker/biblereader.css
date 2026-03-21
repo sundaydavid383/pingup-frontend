@@ -926,3 +926,11 @@ background: linear-gradient(90deg,
 .verse-accent {
   animation: accent-glow 500ms ease-out forwards;
 }
+
+/* ===== Navigation Feedback Flash ===== */
+@keyframes navFeedbackFade {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
