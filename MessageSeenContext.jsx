@@ -23,6 +23,8 @@ export const MessageSeenProvider = ({ children }) => {
     // Total unread count for the main sidebar badge
     const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
+    const [failedToFetch, setFailedToFetch] = useState(false);
+
     // 1. Fetch conversations for the logged-in user
     useEffect(() => {
         const fetchConversations = async () => {
@@ -31,14 +33,21 @@ export const MessageSeenProvider = ({ children }) => {
                 const { data } = await axiosBase.get('/api/chat/user/conversations');
                 if (data.success) {
                     setConversations(data.conversations || []);
+                    setFailedToFetch(false)
                 }
             } catch (error) {
+                setFailedToFetch(true)
                 console.error("Failed to fetch conversations:", error);
+                
             }
         };
 
         fetchConversations();
     }, [user?._id]);
+
+    useEffect(()=>{
+      console.log("this is what failed to fetch is:", failedToFetch)
+    },[failedToFetch])
 
     // 2. Initial fetch for all last seen messages for the logged-in user
     useEffect(() => {
@@ -156,6 +165,7 @@ export const MessageSeenProvider = ({ children }) => {
         setLastSeenMessageForChat,
         unreadCountsMap,
         totalUnreadCount,
+        failedToFetch,
         conversations, // expose conversations to consumers
     }), [
         lastSeenMessagesMap, 
@@ -163,6 +173,7 @@ export const MessageSeenProvider = ({ children }) => {
         unreadCountsMap, 
         totalUnreadCount,
         conversations,
+        failedToFetch,
     ]);
 
     return (

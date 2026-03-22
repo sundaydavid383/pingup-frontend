@@ -12,6 +12,7 @@ import "../styles/message.css"
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import { connect } from "socket.io-client";
+import { MdNetworkLocked, MdOutlineNetworkWifi1Bar } from "react-icons/md";
 
 const Messages = () => {
 
@@ -22,7 +23,7 @@ const Messages = () => {
   const navigate = useNavigate();
 
   // Get data from the new MessageSeenContext
-  const { conversations, unreadCountsMap, totalUnreadCount } = useMessageSeen();
+  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch } = useMessageSeen();
 
   const [loading, setLoading] = useState(true);
 
@@ -220,17 +221,19 @@ useEffect(() => {
             })
           ) : (
             <p className="text-center text-slate-500">
-              {searchTerm ? "No users found." : "No accepted connections yet."}
+              {searchTerm ? "No users found." : failedToFetch ?"Failed to load conversations check your internet connection and try again":"No accepted connections yet." }
             </p>
           )}
-            {!searchTerm && conversations.length === 0 && (
+            {!searchTerm && conversations.length === 0 && !failedToFetch ? (
     <button
       onClick={() => navigate("/discover")} // redirect to your discover page
       className="btn "
     >
       Find People
     </button>
-  )}
+  ):failedToFetch ?(
+    <span className="no_connection_icon"><MdNetworkLocked/> </span>
+  ):null}
         </div>
       </div>
 

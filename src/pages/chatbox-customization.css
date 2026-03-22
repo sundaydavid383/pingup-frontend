@@ -24,13 +24,13 @@
 /* ===== DARK MODE THEME ===== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #818cf8;
+    --primary: var(--primary);
     --primary-hover: #6366f1;
     --input-bg-color: #2c2c2c;
     --input-text-color: #ffffff;
     --input-placeholder: #666666;
     --input-bg-focus: #333333;
-    --input-accent: #818cf8;
+    --input-accent: var(--primary);
     --btn-hover: #6366f1;
     --secondary: #e0e0e0;
     --opaque-primary: rgba(129, 140, 248, 0.2);

@@ -70,7 +70,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
 
       {/* Sidebar container */}
       <div
-        className={`fixed top-0 left-0 z-[50] flex flex-col
+        className={`fixed top-0 left-0 z-[500] flex flex-col
           transition-all duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           ${onlyIconPage ? 'w-20' : 'w-52 md:w-56 lg:w-60'} 

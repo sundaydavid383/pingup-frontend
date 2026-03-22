@@ -63,3 +63,11 @@
   background: var(--really-bright-glass);
 }
 
+.no_connection_icon{
+  text-align: center;
+  font-size: .9rem;
+  margin-top: .3rem;
+  margin: auto;
+  font-size: 5rem;
+  color: var(--primary);
+}

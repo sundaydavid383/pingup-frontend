@@ -31,21 +31,21 @@ export const THEMES = {
   Dark: {
     name: "Dark",
     vars: {
-      "--primary": "#818cf8",
+      "--primary": "#3055d1",
       "--primary-hover": "#6366f1",
       "--input-primary": "#000000ff",
-      "--input-accent": "#818cf8",
+      "--input-accent": "#3055d1",
       "--input-bg-color": "#020617",
       "--input-text-color": "#e5e7eb",
       "--input-shadow": "0 10px 30px rgba(0,0,0,0.6)",
       "--input-chatbox-bg-gradient": "linear-gradient(180deg, #020617 0%, #020617 60%, #030a1a 100%)",
       "--input-bubble-sender": "#020617",
-      "--input-bubble-receiver": "#818cf8",
+      "--input-bubble-receiver": "#3055d1",
       "--input-ui-overlay": "rgba(2,6,23,0.85)",
       "--input-error": "#f87171",
       "--input-sending": "#facc15",
       "--input-sent-check": "#94a3b8",
-      "--input-delivered-check": "#818cf8",
+      "--input-delivered-check": "#3055d1",
       "--input-seen-check": "#34d399"
     }
   },

@@ -39,7 +39,7 @@ input, textarea, select {
 /* Root Colors */
 :root {
   /* Primary Theme Colors */
-  --primary-color: #3055d1; /* Unified Primary Color */
+  --primary-color: #3b5ccb; /* Unified Primary Color */
   --primary: #3055d1; /* Indigo-800 */
   --secondary: #1a294a; /* Slate-900 */
   --accent: var(--primary-color);

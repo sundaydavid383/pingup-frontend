@@ -215,13 +215,7 @@ export default function Discover() {
       <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-5 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
         <div className="max-w-6xl mx-auto px-5">
           {/* Refresh Button */}
-          <div className="flex justify-end mb-2">
-            <RefreshButton 
-              onRefresh={handleRefresh} 
-              isRefreshing={isRefreshing}
-              label="Refresh"
-            />
-          </div>
+
           <div className="discover_search_bar w-full rounded-2xl px-4 py-3">
             <div className="flex flex-col gap-4">
               {/* SEARCH INPUT WITH ICON INSIDE */}
@@ -232,7 +226,7 @@ export default function Discover() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Search name, location, or occupation..."
-                    className="discoveries_iput w-full pl-5 pr-12 py-3.5"
+                    className="discoveries_iput w-full pl-5 pr-12 py-1.5"
                     onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   />
                   <button
@@ -336,6 +330,13 @@ export default function Discover() {
                 )}
               </div>
             </div>
+          </div>
+          <div className="flex justify-end mb-2">
+            <RefreshButton 
+              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              label="Refresh"
+            />
           </div>
         </div>
       </div>

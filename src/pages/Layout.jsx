@@ -35,7 +35,7 @@ const Layout = () => {
               ? 'ml-20' // Matches Sidebar reduced width
               : 'ml-52 md:ml-56 lg:ml-60' // Matches Sidebar full width
             : 'ml-0'
-          } mobilenav_intervention`}
+          } ${!hideMobileNavbar ? 'mobilenav_intervention'  : 'pt-0'}`}
       >
         <Outlet />
       </div>
