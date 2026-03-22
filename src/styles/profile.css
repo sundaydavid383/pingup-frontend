@@ -377,3 +377,184 @@ display: none;
 .mt-6 {
   margin-top: 1.5rem;
 }
+
+/* ================================
+   PART 5: PREMIUM PROFILE UPGRADE
+   Better than Instagram - cleaner, more premium
+================================ */
+
+/* Center content when sidebar is hidden */
+.profile-main-content {
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+/* Premium card styling */
+.profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 6px 16px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto;
+  transition: box-shadow 0.3s ease;
+}
+
+.profile-card:hover {
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Better stats row - more elegant */
+.profile-card .grid.grid-cols-3 {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 1rem;
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.profile-card .grid.grid-cols-3 > div {
+  text-align: center;
+  padding: 0.5rem 1.5rem;
+  border-right: none;
+  position: relative;
+}
+
+.profile-card .grid.grid-cols-3 > div:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 40%;
+  width: 1px;
+  background: #e5e7eb;
+}
+
+.profile-card .grid.grid-cols-3 > div span:first-child {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.profile-card .grid.grid-cols-3 > div span:last-child {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Improved avatar overlap */
+.avatar-overlap-container {
+  margin-top: -60px;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+/* Premium tab styling */
+.tabs-container {
+  display: flex;
+  justify-content: center;
+  border-bottom: 2px solid #f3f4f6;
+  padding: 0 1rem;
+}
+
+.tab-btn {
+  flex: none;
+  padding: 1rem 2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  letter-spacing: 0.02em;
+}
+
+.tab-btn:hover {
+  color: #4b5563;
+  background: transparent;
+}
+
+.tab-active {
+  color: #111827;
+  border-bottom-color: #111827;
+}
+
+.tab-inactive {
+  color: #9ca3af;
+}
+
+/* Mobile responsive - stack better */
+@media (max-width: 640px) {
+  .profile-card .grid.grid-cols-3 {
+    gap: 0.5rem;
+    padding: 1rem 0.5rem;
+  }
+  
+  .profile-card .grid.grid-cols-3 > div {
+    padding: 0.5rem;
+  }
+  
+  .profile-card .grid.grid-cols-3 > div span:first-child {
+    font-size: 1.5rem;
+  }
+  
+  .tabs-container {
+    padding: 0 0.5rem;
+  }
+  
+  .tab-btn {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Center content on mobile when no sidebar */
+  .profile-main-content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* Premium cover with subtle gradient */
+.cover-wrapper {
+  position: relative;
+  height: 10rem;
+  overflow: hidden;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B8DD6 100%);
+}
+
+/* Better posts grid */
+.posts-wrapper {
+  margin-top: 0;
+  padding: 0.5rem;
+}
+
+/* Premium buttons */
+.profile-card button {
+  transition: all 0.2s ease;
+}
+
+.profile-card button:hover {
+  transform: translateY(-1px);
+}
+
+.profile-card button:active {
+  transform: translateY(0);
+}

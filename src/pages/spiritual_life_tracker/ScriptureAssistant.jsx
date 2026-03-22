@@ -642,36 +642,66 @@ export default function ScriptureAssistant({ currentUser }) {
           )}
         </div>
         
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={currentUser ? "Speak, type or, paste your scripture..." : "Sign in to use"}
-          disabled={!currentUser}
-          rows={1}
-          className={`
-            w-full
-            max-w-[650px]
-            rounded-xl
-            border
-            p-4
-            text-sm
-            transition-all duration-150
-            ${isManualTypingMode 
-              ? 'border-amber-300 bg-amber-50 focus:ring-2 focus:ring-amber-200 focus:border-amber-400' 
-              : 'border-slate-300 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+        {/* Part 2: Textarea with proper disabled state for voice mode */}
+        <div className="w-full max-w-[650px]">
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              !currentUser 
+                ? "Sign in to use" 
+                : isManualTypingMode 
+                  ? "Type your scripture question here..." 
+                  : "Speak now — typing is disabled in voice mode"
             }
-            focus:outline-none
-            resize-none
-            overflow-hidden
-            text-slate-900
-            placeholder:text-slate-400
-            disabled:bg-slate-100
-            disabled:text-slate-400
-            disabled:cursor-not-allowed
-          `}
-        />
+            disabled={!currentUser || !isManualTypingMode}
+            rows={1}
+            className={`
+              w-full
+              rounded-xl
+              border
+              p-4
+              text-sm
+              transition-all duration-150
+              ${!isManualTypingMode 
+                ? 'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60' 
+                : isManualTypingMode 
+                  ? 'border-amber-300 bg-amber-50 focus:ring-2 focus:ring-amber-200 focus:border-amber-400' 
+                  : 'border-slate-300 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+              }
+              focus:outline-none
+              resize-none
+              overflow-hidden
+              text-slate-900
+              placeholder:text-slate-400
+              disabled:bg-slate-50
+              disabled:text-slate-400
+              disabled:cursor-not-allowed
+            `}
+          />
+          
+          {/* Part 2: Search button for typing mode */}
+          {isManualTypingMode && currentUser && (
+            <button
+              onClick={handleManualSearch}
+              disabled={!text.trim() || loading}
+              className={`
+                mt-3 w-full flex items-center justify-center gap-2
+                px-6 py-3 rounded-xl font-medium text-white
+                transition-all duration-200
+                ${text.trim() && !loading
+                  ? 'bg-[var(--primary)] hover:opacity-90 active:scale-[0.98]'
+                  : 'bg-slate-300 cursor-not-allowed'
+                }
+              `}
+            >
+              <Search className="w-5 h-5" />
+              Search Scriptures
+            </button>
+          )}
+        </div>
 
         <div className="space-y-4 w-full flex flex-col items-center">
           {loading ? <div>Loading...</div> : matchedVerses.map((v, idx) => (

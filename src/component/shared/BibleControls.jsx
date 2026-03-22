@@ -21,6 +21,10 @@ export default function BibleControls({
   // Popover states
   const [openPopover, setOpenPopover] = useState(null);
   const popoverRef = useRef(null);
+  
+  // Part 3: Force visible when any dropdown is open
+  const isDropdownOpen = openPopover !== null;
+  const controlsVisible = isVisible || isDropdownOpen;
 
   // Prevent progress conflicts while dragging
   const isSeekingRef = useRef(false);
@@ -97,7 +101,7 @@ export default function BibleControls({
   };
 
   return (
-    <div className={`bible-controls-bar ${isVisible ? 'visible' : 'hidden'}`} ref={popoverRef}>
+    <div className={`bible-controls-bar ${controlsVisible ? 'visible' : 'hidden'}`} ref={popoverRef}>
       <div className="bible-controls-inner">
         {/* Chapter Progress - Main Focus */}
         <div className="progress-section">

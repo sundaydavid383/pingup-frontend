@@ -189,6 +189,50 @@ const checkAvailability = async () => {
   });
 };
 
+// Part 4: Lemonfox transcription quality boost - rule-based cleanup
+const cleanupTranscript = (text) => {
+  if (!text) return "";
+  
+  let cleaned = text.toLowerCase().trim();
+  
+  // Remove filler words
+  cleaned = cleaned.replace(/\s+(um|uh|like|you know|basically|actually|right|so)\b/gi, " ");
+  
+  // Remove repeated words (like "and and")
+  cleaned = cleaned.replace(/\b(\w+)\s+\1\b/gi, "$1");
+  
+  // Convert number words to digits for verse references
+  const numberWords = [
+    ["one", "1"], ["two", "2"], ["three", "3"], ["four", "4"],
+    ["five", "5"], ["six", "6"], ["seven", "7"], ["eight", "8"],
+    ["nine", "9"], ["ten", "10"], ["eleven", "11"], ["twelve", "12"],
+    ["thirteen", "13"], ["fourteen", "14"], ["fifteen", "15"],
+    ["sixteen", "16"], ["seventeen", "17"], ["eighteen", "18"],
+    ["nineteen", "19"], ["twenty", "20"]
+  ];
+  
+  // Convert "john three sixteen" -> "john 3:16"
+  for (const [word, digit] of numberWords) {
+    cleaned = cleaned.replace(new RegExp(`\\s+${word}\\s+(\\d+)?`, 'gi'), ` ${digit} $1`);
+  }
+  
+  // Convert "first john" -> "1 john", "second corinthians" -> "2 corinthians"
+  const ordinalMap = [
+    ["first", "1"], ["second", "2"], ["third", "3"], ["fourth", "4"],
+    ["fifth", "5"], ["sixth", "6"], ["seventh", "7"], ["eighth", "8"],
+    ["ninth", "9"], ["tenth", "10"]
+  ];
+  
+  for (const [ordinal, digit] of ordinalMap) {
+    cleaned = cleaned.replace(new RegExp(`\\b${ordinal}\\s+(\\w+)`, 'gi'), `${digit} $1`);
+  }
+  
+  // Clean up extra spaces
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  
+  return cleaned;
+};
+
 // 🎯 Optimized backend chunk handler with useCallback
 // Deep fix: Ensure Bible references are parsed and navigation is triggered immediately
 const handleBackendChunk = useCallback((text) => {
@@ -200,10 +244,14 @@ const handleBackendChunk = useCallback((text) => {
     return;
   }
 
-  console.log("📝 Backend transcript (full):", text);
+  console.log("📝 Backend transcript (raw):", text);
 
   // 🚫 Backend engines are ONE-SHOT (full transcription) → NEVER cap or use leftover
   leftoverRef.current = "";
+
+  // Part 4: Apply cleanup to improve Bible reference detection
+  const cleanedText = cleanupTranscript(text);
+  console.log("📝 Backend transcript (cleaned):", cleanedText);
 
   // IMMEDIATELY clear loading state (<50ms requirement)
   setVoiceState(VOICE_STATE.TRANSCRIBING);
@@ -211,14 +259,14 @@ const handleBackendChunk = useCallback((text) => {
   isThinkingRef.current = true;
 
   // 1️⃣ Live textarea update (replace full text)
-  onTranscribe(null, text, {
+  onTranscribe(null, cleanedText, {
     live: true,
     source: speechEngineRef.current,
     replace: true,
   });
 
   // 2️⃣ Parse Bible references immediately
-  const fullTranscript = text.trim();
+  const fullTranscript = cleanedText.trim();
   
   // Check for Bible references in the transcript
   const bibleReference = detectBibleReference(fullTranscript);
@@ -614,29 +662,33 @@ return (
       statusMessage={displayStatus}
     />
 
-    <div className="mode-buttons">
+    {/* Part 2: Improved mode buttons with better UX */}
+    <div className="mode-buttons" title="Switch voice input engine">
       <button
         onClick={() => switchMode("web")}
         disabled={currentMode === "web"}
         className={currentMode === "web" ? "active" : ""}
+        title="WebSpeech API"
       >
-        {currentMode === "web" ? "Web" : "W"}
+        {currentMode === "web" ? "🌐 Web" : "🌐"}
       </button>
 
       <button
         onClick={() => switchMode("vosk")}
         disabled={currentMode === "vosk"}
         className={currentMode === "vosk" ? "active" : ""}
+        title="Vosk Engine"
       >
-        {currentMode === "vosk" ? "Vosk" : "V"}
+        {currentMode === "vosk" ? "🎯 Vosk" : "🎯"}
       </button>
 
       <button
         onClick={() => switchMode("lemonfox")}
         disabled={currentMode === "lemonfox"}
         className={currentMode === "lemonfox" ? "active" : ""}
+        title="Lemonfox AI (Recommended)"
       >
-        {currentMode === "lemonfox" ? "Lemonfox" : "L"}
+        {currentMode === "lemonfox" ? "🦊 Lemonfox" : "🦊"}
       </button>
     </div>
 
