@@ -23,9 +23,17 @@ const debounce = (func, delay) => {
 const STATUS_MESSAGES = {
   IDLE: "Ready – speak or type",
   LISTENING: "Listening… (speak now)",
+  RECORDING_FINISHED: "Recording finished — sending audio to Lemonfox...",
+  SENDING_TO_LEMONFOX: "Sending speech to Lemonfox API... (please wait)",
+  PAUSE_DETECTED: "2-second pause detected — processing what you said...",
+  TRANSCRIBING: "Transcribing speech... (Lemonfox is working)",
+  SPEECH_RECEIVED: "Speech received successfully — now searching scriptures...",
+  SEARCHING: "Searching the Bible for your request...",
+  SPEECH_TIMEOUT: "No speech received from Lemonfox (timeout) — please try speaking again",
+  LEMMONFOX_ERROR: "Lemonfox API error — please check your internet or try again",
+  PROCESSING_COMPLETE: "Done — you can speak again",
   PROCESSING_VOICE: "Processing voice…",
   ANALYZING_SCRIPTURE: "Analyzing scripture…",
-  SEARCHING: "Searching Bible…",
   NAVIGATING: "Navigating to verse…",
   ERROR_MIC: "Error: Microphone blocked – check permissions",
   ERROR_NETWORK: "Error: No internet – voice may not work",
@@ -322,7 +330,12 @@ export default function ScriptureAssistant({ currentUser }) {
     // 2️⃣ If not a navigation command, treat as search
     // Set loading state immediately (non-blocking)
     setLoading(true);
-    setStatusMessage(STATUS_MESSAGES.SEARCHING);
+    // Use external status from VoiceInput if it's more detailed, otherwise use local SEARCHING
+    setStatusMessage(prevStatus => 
+      prevStatus.includes("Lemonfox") || prevStatus.includes("Transcribing") || prevStatus.includes("Recording")
+        ? prevStatus 
+        : STATUS_MESSAGES.SEARCHING
+    );
     voiceInputRef.current?.stop();
 
     // Use worker for search (non-blocking)
@@ -573,8 +586,8 @@ export default function ScriptureAssistant({ currentUser }) {
           if (meta.isVerseReference) {
             console.log("📖 Processing verse reference from LemonFox:", sentChunk);
             setText(sentChunk);
-            // Update status
-            setStatusMessage(STATUS_MESSAGES.ANALYZING_SCRIPTURE);
+            // Update status - use detailed message if available
+            setStatusMessage(STATUS_MESSAGES.SPEECH_RECEIVED);
             // Force a new search for verse reference
             processChunks(sentChunk, meta.onComplete, true);
             return;
@@ -587,8 +600,8 @@ export default function ScriptureAssistant({ currentUser }) {
           */
           setText(sentChunk);
           
-          // Update status for processing
-          setStatusMessage(STATUS_MESSAGES.PROCESSING_VOICE);
+          // Update status for processing - use detailed message
+          setStatusMessage(STATUS_MESSAGES.SPEECH_RECEIVED);
 
           // 🔥 NEW: Backend (Lemonfox/Vosk) must ALWAYS search (bypass deduplication)
           const isBackend = meta.source && meta.source !== "web";
@@ -642,66 +655,63 @@ export default function ScriptureAssistant({ currentUser }) {
           )}
         </div>
         
-        {/* Part 2: Textarea with proper disabled state for voice mode */}
-        <div className="w-full max-w-[650px]">
-          <textarea
-            ref={inputRef}
-            value={text}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              !currentUser 
-                ? "Sign in to use" 
-                : isManualTypingMode 
-                  ? "Type your scripture question here..." 
-                  : "Speak now — typing is disabled in voice mode"
+
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={!isManualTypingMode 
+            ? "🎤 Speak now — voice mode is active" 
+            : "Type your scripture search..."
+          }
+          disabled={!currentUser || !isManualTypingMode}
+          rows={1}
+          className={`
+            w-full
+            max-w-[650px]
+            rounded-xl
+            border
+            p-4
+            text-sm
+            transition-all duration-150
+            ${!isManualTypingMode 
+              ? 'border-slate-200 bg-slate-50 cursor-not-allowed' 
+              : isManualTypingMode 
+                ? 'border-amber-300 bg-amber-50 focus:ring-2 focus:ring-amber-200 focus:border-amber-400' 
+                : 'border-slate-300 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
             }
-            disabled={!currentUser || !isManualTypingMode}
-            rows={1}
+            focus:outline-none
+            resize-none
+            overflow-hidden
+            text-slate-900
+            placeholder:text-slate-400
+            disabled:opacity-60
+            disabled:cursor-not-allowed
+          `}
+        />
+        
+        {/* Search Button - Only show in typing/manual mode */}
+        {isManualTypingMode && (
+          <button
+            onClick={handleManualSearch}
+            disabled={!text.trim() || loading}
             className={`
-              w-full
-              rounded-xl
-              border
-              p-4
-              text-sm
-              transition-all duration-150
-              ${!isManualTypingMode 
-                ? 'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60' 
-                : isManualTypingMode 
-                  ? 'border-amber-300 bg-amber-50 focus:ring-2 focus:ring-amber-200 focus:border-amber-400' 
-                  : 'border-slate-300 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+              flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm
+              transition-all duration-200
+              ${text.trim() && !loading
+                ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-md'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }
-              focus:outline-none
-              resize-none
-              overflow-hidden
-              text-slate-900
-              placeholder:text-slate-400
-              disabled:bg-slate-50
-              disabled:text-slate-400
-              disabled:cursor-not-allowed
             `}
-          />
-          
-          {/* Part 2: Search button for typing mode */}
-          {isManualTypingMode && currentUser && (
-            <button
-              onClick={handleManualSearch}
-              disabled={!text.trim() || loading}
-              className={`
-                mt-3 w-full flex items-center justify-center gap-2
-                px-6 py-3 rounded-xl font-medium text-white
-                transition-all duration-200
-                ${text.trim() && !loading
-                  ? 'bg-[var(--primary)] hover:opacity-90 active:scale-[0.98]'
-                  : 'bg-slate-300 cursor-not-allowed'
-                }
-              `}
-            >
-              <Search className="w-5 h-5" />
-              Search Scriptures
-            </button>
-          )}
-        </div>
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+            Search Scriptures
+          </button>
+        )}
 
         <div className="space-y-4 w-full flex flex-col items-center">
           {loading ? <div>Loading...</div> : matchedVerses.map((v, idx) => (

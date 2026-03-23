@@ -20,6 +20,7 @@ import RightSidebar from "../component/RightSidebar";
 import { runOncePerSession } from "../utils/runOncePerSession";
 import assets from "../assets/assets";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
+import RefreshButton from "../component/shared/RefreshButton";
 import CustomAlert from "../component/shared/CustomAlert";
 import { EmptyFeed } from "../component/staterep/EmptyFeed";
 import CreatePostTrigger from "../component/shared/CreatePostTrigger";
@@ -34,6 +35,7 @@ const Feed = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
@@ -114,6 +116,23 @@ const Feed = () => {
     );
   };
 
+  // Scroll position persistence keys
+  const FEED_SCROLL_KEY = 'feed_scroll_position';
+  const FEED_DATA_KEY = 'feed_cached_data';
+
+  // Manual refresh handler
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchFeeds(true);
+  };
+
+  // Reset refreshing state after loading completes
+  useEffect(() => {
+    if (!loadingInitial && isRefreshing) {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  }, [loadingInitial, isRefreshing]);
+
 
 
 useEffect(() => {
@@ -127,6 +146,50 @@ useEffect(() => {
   //   debug: false // set to true for logging
   // });
 }, []);
+
+// Restore scroll position and cached data on mount (no auto-refresh)
+useEffect(() => {
+  // Restore scroll position
+  const savedScroll = localStorage.getItem(FEED_SCROLL_KEY);
+  if (savedScroll) {
+    setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
+  }
+  
+  // Load cached data if available (don't fetch fresh)
+  const cachedData = localStorage.getItem(FEED_DATA_KEY);
+  if (cachedData) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      setFeeds(parsed);
+      setLoadingInitial(false);
+    } catch (e) {
+      console.warn('Failed to load cached feed:', e);
+      fetchFeeds(true);
+    }
+  } else {
+    // First visit - fetch fresh
+    fetchFeeds(true);
+  }
+  
+  getLocation(user._id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+// Save scroll position on scroll
+useEffect(() => {
+  const handleScroll = () => {
+    localStorage.setItem(FEED_SCROLL_KEY, window.scrollY.toString());
+  };
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
+
+// Save feed data to cache when it changes
+useEffect(() => {
+  if (feeds.length > 0) {
+    localStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
+  }
+}, [feeds]);
 
   useEffect(() => {
     console.log("FEED IDS:", feeds.map((f) => f._id));
@@ -142,6 +205,15 @@ useEffect(() => {
           className="page-container flex-1 min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden
           [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
         >
+          {/* Refresh Button */}
+          <div className="flex justify-end mb-2 px-4">
+            <RefreshButton 
+              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              label="Refresh"
+            />
+          </div>
+          
           <StoriesBar />
 
           {error && (

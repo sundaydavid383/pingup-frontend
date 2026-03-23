@@ -8,6 +8,7 @@ import "./discoveries.css";
 import { useAuth } from "../context/AuthContext";
 import ErrorAlert from "../component/ErrorAlert";
 import SkeletonUserCard from "../component/skeleton/SkeletonUserCard";
+import RefreshButton from "../component/shared/RefreshButton";
 
 export default function Discover() {
   const BASE = (import.meta.env.VITE_SERVER || "").replace(/\/$/, "");
@@ -25,6 +26,7 @@ export default function Discover() {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [filters, setFilters] = useState({ city: "", country: "", occupation: "" });
   const hasFetched = useRef(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [isSticky, setIsSticky] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -141,7 +143,61 @@ export default function Discover() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => { fetchSuggestions(); }, []);
+  // Scroll and data persistence keys
+  const DISCOVER_SCROLL_KEY = 'discover_scroll_position';
+  const DISCOVER_DATA_KEY = 'discover_cached_data';
+
+  // Restore on mount
+  useEffect(() => {
+    // Restore scroll
+    const savedScroll = localStorage.getItem(DISCOVER_SCROLL_KEY);
+    if (savedScroll) {
+      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
+    }
+    
+    // Load cached data
+    const cached = localStorage.getItem(DISCOVER_DATA_KEY);
+    if (cached) {
+      try {
+        setUsers(JSON.parse(cached));
+        setLoadingInitial(false);
+      } catch (e) {
+        fetchSuggestions();
+      }
+    } else {
+      fetchSuggestions();
+    }
+  }, []);
+
+  // Save scroll on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      localStorage.setItem(DISCOVER_SCROLL_KEY, window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Cache data when it changes
+  useEffect(() => {
+    if (users.length > 0) {
+      localStorage.setItem(DISCOVER_DATA_KEY, JSON.stringify(users));
+    }
+  }, [users]);
+
+  // Manual refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    hasFetched.current = false;
+    fetchSuggestions();
+  };
+
+  // Reset refreshing state after loading completes
+  React.useEffect(() => {
+    if (!loadingInitial && isRefreshing) {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  }, [loadingInitial, isRefreshing]);
   useEffect(() => {
     if (filters.city || filters.country || filters.occupation) {
       searchUsers(true);
@@ -158,6 +214,14 @@ export default function Discover() {
       {/* STICKY SEARCH HEADER */}
       <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-5 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
         <div className="max-w-6xl mx-auto px-5">
+          {/* Refresh Button */}
+          <div className="flex justify-end mb-2">
+            <RefreshButton 
+              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              label="Refresh"
+            />
+          </div>
           <div className="discover_search_bar w-full rounded-2xl px-4 py-3">
             <div className="flex flex-col gap-4">
               {/* SEARCH INPUT WITH ICON INSIDE */}

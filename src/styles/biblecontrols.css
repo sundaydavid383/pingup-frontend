@@ -163,6 +163,35 @@
   animation: popoverSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Part 3: Mobile dropdown overflow fix */
+@media (max-width: 640px) {
+  .popover-slider {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100vw - 32px);
+    max-width: 320px;
+    min-width: unset;
+    border-radius: 16px;
+  }
+  
+  /* Ensure popover doesn't overflow right edge */
+  .popover-slider.speed-popover,
+  .popover-slider.volume-popover,
+  .popover-slider.mood-popover {
+    left: 50%;
+    right: auto;
+  }
+  
+  /* Center align on very small screens */
+  @media (max-width: 400px) {
+    .popover-slider {
+      width: calc(100vw - 24px);
+      max-width: 280px;
+    }
+  }
+}
+
 @keyframes popoverSlideIn {
   from {
     opacity: 0;

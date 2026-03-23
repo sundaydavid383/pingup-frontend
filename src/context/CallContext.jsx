@@ -42,6 +42,9 @@ export const CallProvider = ({ children }) => {
   // Error state
   const [callError, setCallError] = useState(null);
 
+  // Human-readable call status message for UI
+  const [callStatusMessage, setCallStatusMessage] = useState(null);
+
   // Get user and socket from context
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -53,6 +56,9 @@ export const CallProvider = ({ children }) => {
     // Handle incoming call from another user
     const handleIncomingCall = (callData) => {
       console.log("📞 Incoming call received:", callData);
+      
+      // Set status message for UI
+      setCallStatusMessage(`📞 Incoming ${callData.callType || 'audio'} call from ${callData.initiatorName || 'unknown user'}`);
       
       if (currentCall && currentCall.status !== CALL_STATES.ENDED && currentCall.status !== CALL_STATES.IDLE) {
         // Already in a call, reject the incoming one
@@ -82,6 +88,7 @@ export const CallProvider = ({ children }) => {
     // Handle call accepted by remote user
     const handleCallAcceptedAck = (data) => {
       console.log("📞 Call accepted by remote user:", data);
+      setCallStatusMessage('🔗 Connecting...');
       setCurrentCall(prev => {
         if (!prev) return prev;
         return { ...prev, status: CALL_STATES.CONNECTING };
@@ -91,6 +98,15 @@ export const CallProvider = ({ children }) => {
     // Handle call rejected by remote user
     const handleCallRejectedAck = (data) => {
       console.log("📞 Call rejected by remote user:", data);
+      
+      // Set status message for UI
+      const reason = data.reason || 'unknown';
+      let message = 'Call rejected';
+      if (reason === 'offline') message = '❌ User is offline — call could not connect';
+      else if (reason === 'busy') message = '❌ User is busy';
+      else if (reason === 'declined') message = '❌ Call declined by user';
+      else message = `❌ Call rejected (reason: ${reason})`;
+      setCallStatusMessage(message);
       setCurrentCall(prev => {
         if (!prev) return prev;
         return { ...prev, status: CALL_STATES.REJECTED, rejectReason: data.reason };
@@ -411,6 +427,8 @@ export const CallProvider = ({ children }) => {
     currentCall,
     callHistory,
     callError,
+    callStatusMessage,
+    setCallStatusMessage,
     mediaConstraints,
     CALL_STATES,
     CALL_TYPES,

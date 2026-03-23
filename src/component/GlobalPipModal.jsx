@@ -328,11 +328,11 @@ useEffect(() => {
  <>
     <div
       style={{
-        position: "fixed", // fixed to viewport
-        right: 0,
+        position: "fixed", // PIP is non-blocking - background stays interactive
+        right: 20,
         top: 0,
-        width: "100%",
-        height: "100%",
+        width: 360,
+        height: 500,
         zIndex: 99950, // ensures it’s on top
       }}
     >

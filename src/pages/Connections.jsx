@@ -17,6 +17,7 @@ import ProfileAvatar from "../component/shared/ProfileAvatar";
 import CustomAlert from "../component/shared/CustomAlert"; // ✅ import your alert
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
+import RefreshButton from "../component/shared/RefreshButton";
 import { IconButton } from "../component/shared/IconButton"; // ✅ import IconButton
 import { User } from "lucide-react"; // ✅ import User icon
 import { div } from "three/src/nodes/math/OperatorNode.js";
@@ -30,6 +31,7 @@ const Connections = () => {
     pendingConnections: [],
   });
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState(null);
   const [alertData, setAlertData] = useState(null); // ✅ for showing custom alerts
 
@@ -89,10 +91,61 @@ const fetchConnections = async () => {
 
 
 
+  // Scroll and data persistence keys
+  const CONN_SCROLL_KEY = 'connections_scroll_position';
+  const CONN_DATA_KEY = 'connections_cached_data';
+
+  // Restore on mount
   useEffect(() => {
-    fetchConnections();
+    // Restore scroll
+    const savedScroll = localStorage.getItem(CONN_SCROLL_KEY);
+    if (savedScroll) {
+      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
+    }
+    
+    // Load cached data
+    const cached = localStorage.getItem(CONN_DATA_KEY);
+    if (cached) {
+      try {
+        setData(JSON.parse(cached));
+        setLoading(false);
+      } catch (e) {
+        fetchConnections();
+      }
+    } else {
+      fetchConnections();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Save scroll on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      localStorage.setItem(CONN_SCROLL_KEY, window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Cache data when it changes
+  useEffect(() => {
+    if (data.followers.length > 0 || data.following.length > 0) {
+      localStorage.setItem(CONN_DATA_KEY, JSON.stringify(data));
+    }
+  }, [data]);
+
+  // Manual refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchConnections();
+  };
+
+  // Reset refreshing state after loading completes
+  React.useEffect(() => {
+    if (!loading && isRefreshing) {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  }, [loading, isRefreshing]);
 
 // ------------------------- Step 3 -------------------------
 const handleAccept = async (senderId) => {
@@ -147,9 +200,16 @@ const handleAccept = async (senderId) => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2 title">
-            Connections
-          </h1>
+          <div className="flex justify-between items-start mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 title">
+              Connections
+            </h1>
+            <RefreshButton 
+              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              label="Refresh"
+            />
+          </div>
           <p className="text-slate-600">
             Manage your followers, friends, and pending requests.
           </p>

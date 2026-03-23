@@ -37,6 +37,18 @@ export const SocketProvider = ({ children }) => {
     s.on("connect", () => {
       console.log("🟢 Global socket connected:", s.id);
       setConnected(true);
+      
+      // Send activity heartbeat every 30 seconds to keep lastActiveAt fresh
+      const activityInterval = setInterval(() => {
+        if (s.connected) {
+          s.emit("userActivity");
+        }
+      }, 30000);
+      
+      // Cleanup on disconnect
+      s.on("disconnect", () => {
+        clearInterval(activityInterval);
+      });
     });
 
     s.on("disconnect", (reason) => {
