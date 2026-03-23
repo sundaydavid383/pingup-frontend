@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/useSocket';
 import axiosBase from "../utils/axiosBase";
 import moment from "moment";
+import toast from 'react-hot-toast';
 
 
 const ChatBox = ({ userId: propUserId }) => {
@@ -718,23 +719,27 @@ const ChatBox = ({ userId: propUserId }) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   const handleClearChat = async () => {
+    console.log("📌 Clear Chat: starting...");
     setClearing(true);
+    toast.loading("Clearing chat...", { id: "clearChat" });
     try {
       await axiosBase.delete(`/api/chat/${chatId}/messages`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      console.log("📌 Clear Chat: success");
       setMessages([]);
       localStorage.removeItem(`chat_history_${userId}`);
       setShowMenu(false);
       setShowClearConfirm(false);
-      alert("Chat history cleared successfully.");
+      toast.success("Chat cleared successfully", { id: "clearChat" });
     } catch (err) {
-      console.error("Error clearing chat:", err);
+      console.error("📌 Clear Chat: failed -", err.response?.data?.message || err.message);
       // Still clear locally even if API fails
       setMessages([]);
       localStorage.removeItem(`chat_history_${userId}`);
       setShowMenu(false);
       setShowClearConfirm(false);
+      toast.error(err.response?.data?.message || "Failed to clear chat – please try again", { id: "clearChat" });
     } finally {
       setClearing(false);
     }
@@ -769,22 +774,28 @@ const ChatBox = ({ userId: propUserId }) => {
   
   const handleReportUser = async () => {
     if (!reportReason.trim()) {
-      alert("Please select a reason for reporting.");
+      toast.error("Please select a reason for reporting");
       return;
     }
+    console.log("📌 Report User: starting...");
     setReporting(true);
+    toast.loading("Sending report...", { id: "reportUser" });
     try {
       await axiosBase.post(`/api/users/report/${receiver._id}`, 
         { reason: reportReason },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
+      console.log("📌 Report User: success");
       setShowMenu(false);
       setShowReportConfirm(false);
       setReportReason('');
-      alert("User reported successfully. We'll review your report.");
+      toast.success("Report sent. Thank you! We will review it.", { id: "reportUser" });
     } catch (err) {
-      console.error("Error reporting user:", err);
-      alert("Failed to report user. Please try again.");
+      console.error("📌 Report User: failed -", err.response?.data?.message || err.message);
+      setShowMenu(false);
+      setShowReportConfirm(false);
+      setReportReason('');
+      toast.error(err.response?.data?.message || "Report failed – please check your connection", { id: "reportUser" });
     } finally {
       setReporting(false);
     }
@@ -794,13 +805,15 @@ const ChatBox = ({ userId: propUserId }) => {
   const handleBlockUser = async () => {
     if (!receiver?._id) return;
 
+    console.log("📌 Block User: starting...");
     setBlocking(true);
+    toast.loading("Blocking user...", { id: "blockUser" });
     try {
-      // Call the block user API - user will implement the backend
       await axiosBase.post(`/api/users/block/${receiver._id}`, {}, {
         withCredentials: true
       });
 
+      console.log("📌 Block User: success");
       // Clear chat history locally
       setMessages([]);
       localStorage.removeItem(`chat_history_${userId}`);
@@ -808,13 +821,15 @@ const ChatBox = ({ userId: propUserId }) => {
       // Close menu and show success
       setShowMenu(false);
       setShowBlockConfirm(false);
-      alert(`You have blocked ${receiver.username || 'this user'}. Chat history has been cleared.`);
+      toast.success(`User blocked successfully`, { id: "blockUser" });
 
       // Navigate back or close chat
-      navigate(-1);
+      setTimeout(() => navigate(-1), 1500);
     } catch (err) {
-      console.error("Error blocking user:", err);
-      alert("Failed to block user. Please try again.");
+      console.error("📌 Block User: failed -", err.response?.data?.message || err.message);
+      setShowMenu(false);
+      setShowBlockConfirm(false);
+      toast.error(err.response?.data?.message || "Could not block user – please check your connection", { id: "blockUser" });
     } finally {
       setBlocking(false);
     }
@@ -1073,7 +1088,7 @@ const ChatBox = ({ userId: propUserId }) => {
           </div>
           <div className="flex flex-col">
             <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
-            <span className="text-xs text-gray-500">{onlineUsers.has(receiver._id) ? "Online" : `Active ${moment(lastActive).fromNow()}`}</span>
+            <span className="text-xs text-gray-500">{formatLastSeen(lastActive)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 relative">

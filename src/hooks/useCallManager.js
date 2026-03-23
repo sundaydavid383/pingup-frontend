@@ -30,44 +30,62 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     (receiverId, receiverName, callType = "video", receiverImage = null) => {
       try {
           if (!socket || !user || !callContext) {
-      console.warn("Call system not ready yet");
-      return;
-    }
-        // Create call in context
-        const callId = callContext.initiateCall(
-          receiverId,
-          receiverName,
-          callType,
-          receiverImage
-        );
+        console.warn("📞 useCallManager: Call system not ready yet - socket/user/context missing");
+        return;
+      }
+      
+      console.log("📞 useCallManager: initiateCall() called");
+      console.log("  -> receiverId:", receiverId);
+      console.log("  -> receiverName:", receiverName);
+      console.log("  -> callType:", callType);
+      console.log("  -> receiverImage:", receiverImage);
+        
+      // Create call in context
+      const callId = callContext.initiateCall(
+        receiverId,
+        receiverName,
+        callType,
+        receiverImage
+      );
 
-        if (!callId) {
-          console.error("Cannot initiate call - another call is active");
-          return;
-        }
+      if (!callId) {
+        console.error("📞 useCallManager: Cannot initiate call - another call is active");
+        return;
+      }
+      
+      console.log("📞 useCallManager: Call created with ID:", callId);
 
-        // Emit to backend
-        socket.emit("callInitiated", {
-          callId,
-          initiatorId: user._id,
-          receiverId,
-          callType,
-          timestamp: new Date().toISOString()
-        });
+      // Emit to backend
+      console.log("📞 useCallManager: Emitting callInitiated event to server...");
+      socket.emit("callInitiated", {
+        callId,
+        initiatorId: user._id,
+        receiverId,
+        callType,
+        timestamp: new Date().toISOString()
+      });
+      console.log("📞 useCallManager: callInitiated event sent");
 
-        // Set timeout for ringing (30 seconds)
-        callRejectionTimeoutRef.current = setTimeout(() => {
-          console.log("Call not answered - timeout");
-          callContext.setError("Call not answered");
-        }, 30000);
+      // Set timeout for ringing (30 seconds)
+      console.log("📞 useCallManager: Setting 30s timeout for call rejection/timeout...");
+      callRejectionTimeoutRef.current = setTimeout(() => {
+        console.log("📞 useCallManager: Call timeout - no response from user");
+        callContext.setError("Call not answered - please try again");
+        callContext.setCallStatusMessage("⏱️ No response — call timed out");
+      }, 30000);
 
-        console.log("Call initiated to", receiverName);
+      console.log("📞 useCallManager: Call initiation complete - waiting for response");
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('initiating');
+      }
       } catch (error) {
-        console.error("Error initiating call:", error);
+        console.error("📞 useCallManager: Error initiating call:", error);
         callContext.setError(error.message);
       }
     },
-    [socket, user, callContext]
+    [socket, user, callContext, onCallStateChange]
   );
 
   /**
@@ -77,43 +95,61 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     try {
   
           if (!socket || !user || !callContext) {
-      console.warn("Call system not ready yet");
+      console.warn("📞 useCallManager: Call system not ready yet");
       return;
     }
       if (!callContext.currentCall) {
-        console.error("No incoming call to accept");
+        console.error("📞 useCallManager: No incoming call to accept");
         return;
       }
+      
+      console.log("📞 useCallManager: acceptCall() called");
+      console.log("  -> callId:", callContext.currentCall.callId);
+      console.log("  -> callType:", callContext.currentCall.type);
+      console.log("  -> initiatorName:", callContext.currentCall.initiatorName);
 
       // Stop ringtone
+      console.log("📞 useCallManager: Stopping ringtone...");
       ringtoneSoundRef.current.pause();
 
       // Update context
+      console.log("📞 useCallManager: Accepting call in context...");
       callContext.acceptCall();
 
       // Emit acceptance to backend
+      console.log("📞 useCallManager: Emitting callAccepted event to server...");
       socket.emit("callAccepted", {
         callId: callContext.currentCall.callId,
         acceptorId: user._id,
         timestamp: new Date().toISOString()
       });
+      console.log("📞 useCallManager: callAccepted event sent");
 
       // Initialize WebRTC if available
       if (webrtcManager) {
+        console.log("📞 useCallManager: Initializing WebRTC...");
         try {
           await webrtcManager.initialize();
+          console.log("📞 useCallManager: WebRTC initialized successfully");
         } catch (error) {
-          console.error("WebRTC initialization failed:", error);
-          callContext.setError("Failed to initialize media");
+          console.error("📞 useCallManager: WebRTC initialization failed:", error);
+          callContext.setError("Failed to initialize media - please check camera/microphone permissions");
         }
+      } else {
+        console.warn("📞 useCallManager: webrtcManager not available");
       }
 
-      console.log("Call accepted");
+      console.log("📞 useCallManager: Call accepted successfully");
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('accepted');
+      }
     } catch (error) {
-      console.error("Error accepting call:", error);
+      console.error("📞 useCallManager: Error accepting call:", error);
       callContext.setError(error.message);
     }
-  }, [callContext, socket, user, webrtcManager]);
+  }, [callContext, socket, user, webrtcManager, onCallStateChange]);
 
   /**
    * Reject incoming call
@@ -121,19 +157,25 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
   const rejectCall = useCallback(
     (reason = "declined") => {
         if (!socket || !user || !callContext) {
-      console.warn("Call system not ready yet");
+      console.warn("📞 useCallManager: Call system not ready yet");
       return;
     }
       try {
         if (!callContext.currentCall) {
-          console.error("No incoming call to reject");
+          console.error("📞 useCallManager: No incoming call to reject");
           return;
         }
+        
+        console.log("📞 useCallManager: rejectCall() called");
+        console.log("  -> reason:", reason);
+        console.log("  -> callId:", callContext.currentCall.callId);
 
         // Stop ringtone
+        console.log("📞 useCallManager: Stopping ringtone...");
         ringtoneSoundRef.current.pause();
 
         // Emit rejection to backend
+        console.log("📞 useCallManager: Emitting callRejected event to server...");
         socket.emit("callRejected", {
           callId: callContext.currentCall.callId,
           rejecterId: user._id,
@@ -142,19 +184,26 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
         });
 
         // Update context
+        console.log("📞 useCallManager: Rejecting call in context...");
         callContext.rejectCall(reason);
 
         // Clear after 2 seconds
+        console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
         setTimeout(() => {
           callContext.clearCall();
         }, 2000);
 
-        console.log("Call rejected -", reason);
+        console.log("📞 useCallManager: Call rejected -", reason);
+        
+        // Notify state change
+        if (onCallStateChange) {
+          onCallStateChange('rejected');
+        }
       } catch (error) {
-        console.error("Error rejecting call:", error);
+        console.error("📞 useCallManager: Error rejecting call:", error);
       }
     },
-    [callContext, socket, user]
+    [callContext, socket, user, onCallStateChange]
   );
 
   /**
@@ -163,23 +212,31 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
   const endCall = useCallback(() => {
     try {
         if (!socket || !user || !callContext) {
-      console.warn("Call system not ready yet");
+      console.warn("📞 useCallManager: Call system not ready yet");
       return;
     }
       if (!callContext.currentCall) {
-        console.error("No active call to end");
+        console.error("📞 useCallManager: No active call to end");
         return;
       }
+      
+      console.log("📞 useCallManager: endCall() called");
+      console.log("  -> callId:", callContext.currentCall.callId);
+      console.log("  -> direction:", callContext.currentCall.direction);
+      console.log("  -> duration:", callContext.currentCall.duration);
 
       // Cleanup WebRTC
       if (webrtcManager) {
+        console.log("📞 useCallManager: Cleaning up WebRTC...");
         webrtcManager.cleanup();
       }
 
       // Calculate duration
       const duration = callContext.currentCall.duration || 0;
+      console.log("📞 useCallManager: Call duration:", duration, "seconds");
 
       // Emit end call to backend
+      console.log("📞 useCallManager: Emitting callEnded event to server...");
       socket.emit("callEnded", {
         callId: callContext.currentCall.callId,
         endedBy: user._id,
@@ -188,9 +245,11 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       });
 
       // Update context
+      console.log("📞 useCallManager: Ending call in context...");
       callContext.endCall();
 
       // Clear after 2 seconds
+      console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
       setTimeout(() => {
         callContext.clearCall();
       }, 2000);
@@ -199,11 +258,16 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       clearTimeout(callRejectionTimeoutRef.current);
       clearTimeout(connectionTimeoutRef.current);
 
-      console.log("Call ended");
+      console.log("📞 useCallManager: Call ended successfully");
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('ended');
+      }
     } catch (error) {
-      console.error("Error ending call:", error);
+      console.error("📞 useCallManager: Error ending call:", error);
     }
-  }, [callContext, socket, user, webrtcManager]);
+  }, [callContext, socket, user, webrtcManager, onCallStateChange]);
 
   // Emit join event with user info when socket becomes available
   useEffect(() => {
@@ -223,15 +287,25 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
    * Setup socket listeners for incoming calls
    */
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log("📞 useCallManager: Socket not available - skipping socket listener setup");
+      return;
+    }
+    
+    console.log("📞 useCallManager: Setting up socket listeners for call events...");
+    console.log("  -> socket.id:", socket.id);
 
     // Incoming call from another user
     const handleIncomingCall = (callData) => {
-      console.log("Incoming call:", callData);
+      console.log("📞 useCallManager: handleIncomingCall() - Received incoming call");
+      console.log("  -> callId:", callData.callId);
+      console.log("  -> callType:", callData.callType);
+      console.log("  -> initiatorId:", callData.initiatorId);
+      console.log("  -> initiatorName:", callData.initiatorName);
 
       // Check if can accept (no active call)
       if (callContext.hasActiveCall()) {
-        console.warn("Cannot accept call - another call is active");
+        console.warn("📞 useCallManager: Cannot accept call - another call is active, rejecting as busy");
         socket.emit("callRejected", {
           callId: callData.callId,
           rejecterId: user._id,
@@ -247,19 +321,23 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       };
 
       // Show incoming call
+      console.log("📞 useCallManager: Handling incoming call in context...");
       callContext.handleIncomingCall(fullCallData);
+      callContext.setCallStatusMessage(`📞 Incoming ${callData.callType || 'audio'} call from ${callData.initiatorName || 'unknown'}`);
 
       // Play ringtone
+      console.log("📞 useCallManager: Playing ringtone...");
       try {
         ringtoneSoundRef.current.loop = true;
-        ringtoneSoundRef.current.play().catch(err => console.log("Ringtone play failed:", err));
+        ringtoneSoundRef.current.play().catch(err => console.log("📞 useCallManager: Ringtone play failed:", err));
       } catch (error) {
-        console.log("Could not play ringtone:", error);
+        console.log("📞 useCallManager: Could not play ringtone:", error);
       }
 
       // Auto-reject after 30 seconds
+      console.log("📞 useCallManager: Setting 30s auto-reject timeout...");
       const timeout = setTimeout(() => {
-        console.log("Auto-rejecting call - no answer");
+        console.log("📞 useCallManager: Auto-rejecting call - no answer");
         rejectCall("missed");
       }, 30000);
 
@@ -267,82 +345,143 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     };
 
     // Call was accepted by other user
-    const handleCallAcceptedAck = () => {
-      console.log("Call accepted by other user");
+    const handleCallAcceptedAck = (data) => {
+      console.log("📞 useCallManager: handleCallAcceptedAck() - Call was accepted by remote user");
+      console.log("  -> data:", data);
       clearTimeout(callRejectionTimeoutRef.current);
+      console.log("📞 useCallManager: Clearing rejection timeout");
 
       // Update context
+      console.log("📞 useCallManager: Accepting call in context (setting to CONNECTING)...");
       callContext.acceptCall();
+      callContext.setCallStatusMessage('🔗 Connecting...');
 
       // Initialize WebRTC
       if (webrtcManager) {
+        console.log("📞 useCallManager: Initializing WebRTC after call accepted...");
         webrtcManager.initialize().catch(error => {
-          console.error("WebRTC init failed:", error);
+          console.error("📞 useCallManager: WebRTC init failed:", error);
+          callContext.setError("Failed to establish connection");
           endCall();
         });
+      } else {
+        console.warn("📞 useCallManager: webrtcManager not available for WebRTC initialization");
+      }
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('accepted');
       }
     };
 
     // Call was rejected
     const handleCallRejectedAck = (data) => {
-      console.log("Call rejected -", data.reason);
+      console.log("📞 useCallManager: handleCallRejectedAck() - Call was rejected by remote user");
+      console.log("  -> reason:", data.reason);
       clearTimeout(callRejectionTimeoutRef.current);
+      console.log("📞 useCallManager: Clearing rejection timeout");
 
+      let userMessage = "Call rejected";
+      if (data.reason === 'offline') {
+        userMessage = "📴 User is offline";
+      } else if (data.reason === 'busy') {
+        userMessage = "⏳ User is busy";
+      } else if (data.reason === 'declined') {
+        userMessage = "❌ Call declined";
+      } else if (data.reason === 'timeout') {
+        userMessage = "⏱️ Call timed out";
+      }
+      
+      console.log("📞 useCallManager: Setting call status message:", userMessage);
+      callContext.setCallStatusMessage(userMessage);
       callContext.rejectCall(data.reason);
 
+      console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
       setTimeout(() => {
         callContext.clearCall();
       }, 2000);
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('rejected');
+      }
     };
 
     // Call ended by other user
     const handleCallEndedAck = (data) => {
-      console.log("Call ended by other user");
+      console.log("📞 useCallManager: handleCallEndedAck() - Call ended by remote user");
+      console.log("  -> data:", data);
+      
       if (webrtcManager) {
+        console.log("📞 useCallManager: Cleaning up WebRTC...");
         webrtcManager.cleanup();
       }
 
+      console.log("📞 useCallManager: Ending call in context...");
       callContext.endCall();
+      callContext.setCallStatusMessage('Call ended');
 
+      console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
       setTimeout(() => {
         callContext.clearCall();
       }, 2000);
+      
+      // Notify state change
+      if (onCallStateChange) {
+        onCallStateChange('ended');
+      }
     };
 
     // WebRTC: Incoming offer from peer
     const handleWebrtcOffer = async (data) => {
-      console.log("Received WebRTC offer");
+      console.log("📞 useCallManager: handleWebrtcOffer() - Received WebRTC offer");
+      console.log("  -> callId:", data.callId);
       if (webrtcManager && webrtcManager.handleOffer) {
         try {
+          console.log("📞 useCallManager: Handling WebRTC offer...");
           await webrtcManager.handleOffer(data.sdp);
+          console.log("📞 useCallManager: WebRTC offer handled successfully");
         } catch (error) {
-          console.error("Error handling offer:", error);
+          console.error("📞 useCallManager: Error handling offer:", error);
+          callContext.setError("Connection error - please try again");
           endCall();
         }
+      } else {
+        console.warn("📞 useCallManager: webrtcManager.handleOffer not available");
       }
     };
 
     // WebRTC: Incoming answer from peer
     const handleWebrtcAnswer = async (data) => {
-      console.log("Received WebRTC answer");
+      console.log("📞 useCallManager: handleWebrtcAnswer() - Received WebRTC answer");
+      console.log("  -> callId:", data.callId);
       if (webrtcManager && webrtcManager.handleAnswer) {
         try {
+          console.log("📞 useCallManager: Handling WebRTC answer...");
           await webrtcManager.handleAnswer(data.sdp);
+          console.log("📞 useCallManager: WebRTC answer handled successfully");
         } catch (error) {
-          console.error("Error handling answer:", error);
+          console.error("📞 useCallManager: Error handling answer:", error);
+          callContext.setError("Connection error - please try again");
           endCall();
         }
+      } else {
+        console.warn("📞 useCallManager: webrtcManager.handleAnswer not available");
       }
     };
 
     // WebRTC: Incoming ICE candidate
     const handleWebrtcIceCandidate = (data) => {
+      console.log("📞 useCallManager: handleWebrtcIceCandidate() - Received ICE candidate");
       if (webrtcManager && webrtcManager.handleIceCandidate) {
         webrtcManager.handleIceCandidate(data.candidate);
+      } else {
+        console.warn("📞 useCallManager: webrtcManager.handleIceCandidate not available");
       }
     };
 
     // Register listeners
+    console.log("📞 useCallManager: Registering socket event listeners...");
     socket.on("incomingCall", handleIncomingCall);
     socket.on("callAcceptedAck", handleCallAcceptedAck);
     socket.on("callRejectedAck", handleCallRejectedAck);
@@ -350,9 +489,11 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     socket.on("webrtcOffer", handleWebrtcOffer);
     socket.on("webrtcAnswer", handleWebrtcAnswer);
     socket.on("webrtcIceCandidate", handleWebrtcIceCandidate);
+    console.log("📞 useCallManager: Socket event listeners registered successfully");
 
     // Cleanup
     return () => {
+      console.log("📞 useCallManager: Cleaning up socket event listeners...");
       socket.off("incomingCall", handleIncomingCall);
       socket.off("callAcceptedAck", handleCallAcceptedAck);
       socket.off("callRejectedAck", handleCallRejectedAck);
@@ -360,6 +501,7 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       socket.off("webrtcOffer", handleWebrtcOffer);
       socket.off("webrtcAnswer", handleWebrtcAnswer);
       socket.off("webrtcIceCandidate", handleWebrtcIceCandidate);
+      console.log("📞 useCallManager: Socket event listeners cleaned up");
     };
   }, [socket, user, callContext, webrtcManager, endCall, rejectCall]);
 

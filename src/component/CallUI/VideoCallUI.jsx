@@ -74,10 +74,16 @@ const VideoCallUI = ({
     }
   }, [remoteStream]);
 
-  // Update call timer
+  // Update call timer and status
   useEffect(() => {
     if (call && call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.CONNECTED)) {
       console.log("📞 VideoCallUI: Call connected, starting timer");
+      
+      // Update status message to show connected
+      if (callContext && !callStatusMessage) {
+        callContext.setCallStatusMessage('✅ Connected');
+      }
+      
       timerIntervalRef.current = setInterval(() => {
         callContext.updateDuration();
         const duration = call.duration || 0;
@@ -97,6 +103,11 @@ const VideoCallUI = ({
           );
         }
       }, 1000);
+    } else if (call && call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.CONNECTING)) {
+      console.log("📞 VideoCallUI: Call is connecting, showing connecting status");
+      if (callContext && !callStatusMessage) {
+        callContext.setCallStatusMessage('🔗 Connecting to ' + call.receiverName + '...');
+      }
     }
 
     return () => {
