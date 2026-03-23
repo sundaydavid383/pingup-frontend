@@ -655,6 +655,7 @@ export default function ScriptureAssistant({ currentUser }) {
           )}
         </div>
         
+
         <textarea
           ref={inputRef}
           value={text}

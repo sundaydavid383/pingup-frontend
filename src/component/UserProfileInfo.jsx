@@ -164,7 +164,7 @@ useEffect(() => {
   if (!user) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-8 font-[Inter] overflow-visible">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-6 font-[Inter] overflow-visible">
       
       {/* 🔝 HEADER SECTION: Overlapping Avatar & Info */}
       <div className="relative flex flex-col items-center md:items-start">
@@ -224,34 +224,34 @@ useEffect(() => {
         {user.createdAt && <span className="flex items-center gap-2"><CalendarHeart className="w-4 h-4 text-blue-500" /> Joined {moment(user.createdAt).format("MMM YYYY")}</span>}
       </div>
 
-      {/* 📊 STATS (Posts, Followers, Following) */}
-<div className="grid grid-cols-3 gap-2 sm:gap-4 border-y border-gray-100 py-6">
+      {/* 📊 STATS (Posts, Followers, Following) - Premium styling */}
+<div className="grid grid-cols-3 gap-2 sm:gap-4 border-y border-gray-100 py-6 px-4">
   {/* Posts Column */}
-  <div className="text-center border-r border-gray-100 px-1">
-    <span className="block text-lg sm:text-2xl font-bold text-gray-900">
+  <div className="text-center px-2">
+    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
       {posts?.length || 0}
     </span>
-    <span className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest font-medium">
+    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
       Posts
     </span>
   </div>
 
   {/* Followers Column */}
-  <div className="text-center border-r border-gray-100 px-1 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
-    <span className="block text-lg sm:text-2xl font-bold text-gray-900">
+  <div className="text-center px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
+    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
       {user.followers?.length || 0}
     </span>
-    <span className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest font-medium">
+    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
       Followers
     </span>
   </div>
 
   {/* Following Column */}
-  <div className="text-center px-1 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
-    <span className="block text-lg sm:text-2xl font-bold text-gray-900">
+  <div className="text-center px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
+    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
       {user.following?.length || 0}
     </span>
-    <span className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest font-medium">
+    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
       Following
     </span>
   </div>

@@ -171,7 +171,7 @@ const Profile = () => {
             <ProfileSkeleton />
           ) : (
 <main
-  className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen profile_max_width overflow-y-auto py-4 md:py-8 mx-auto box-border overflow-x-hidden`}
+  className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen profile_max_width overflow-y-auto py-4 md:py-8 mx-auto box-border overflow-x-hidden profile-main-content`}
             >
               {alert.show && (
                 <CustomAlert

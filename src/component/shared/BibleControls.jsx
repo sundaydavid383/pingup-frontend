@@ -22,6 +22,7 @@ export default function BibleControls({
   const [openPopover, setOpenPopover] = useState(null);
   const popoverRef = useRef(null);
   
+
   // Part 3: Track if any dropdown is open to keep controls visible
   const isAnyPopoverOpen = openPopover !== null;
   
@@ -149,6 +150,7 @@ export default function BibleControls({
   }, []);
   
   return (
+
     <div 
       className={`bible-controls-bar ${effectiveVisibility ? 'visible' : 'hidden'}`} 
       ref={popoverRef}

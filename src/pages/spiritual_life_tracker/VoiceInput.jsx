@@ -296,10 +296,11 @@ const handleBackendChunk = useCallback((text) => {
     return;
   }
 
-  console.log("📝 Backend transcript (full):", text);
+  console.log("📝 Backend transcript (raw):", text);
 
   // 🚫 Backend engines are ONE-SHOT (full transcription) → NEVER cap or use leftover
   leftoverRef.current = "";
+
 
   // IMMEDIATELY update state to show speech received
   setVoiceState(VOICE_STATE.SPEECH_RECEIVED);
@@ -315,6 +316,7 @@ const handleBackendChunk = useCallback((text) => {
   const cleanedText = cleanupTranscript(text);
   console.log("📝 Cleaned transcript:", cleanedText);
 
+
   // 2️⃣ Live textarea update (replace full text)
   onTranscribe(null, cleanedText, {
     live: true,
@@ -323,6 +325,7 @@ const handleBackendChunk = useCallback((text) => {
   });
 
   // 3️⃣ Parse Bible references immediately
+
   const fullTranscript = cleanedText.trim();
   
   // Check for Bible references in the transcript
@@ -735,6 +738,7 @@ return (
       statusMessage={displayStatus}
       isSending={voiceState === VOICE_STATE.SENDING_TO_LEMONFOX || voiceState === VOICE_STATE.TRANSCRIBING}
     />
+
 
     {/* Input Mode Selector - Enhanced UX */}
     <div className="mode-selector-container">
