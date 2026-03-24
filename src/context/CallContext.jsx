@@ -88,9 +88,11 @@ export const CallProvider = ({ children }) => {
     // Handle call accepted by remote user
     const handleCallAcceptedAck = (data) => {
       console.log("📞 Call accepted by remote user:", data);
+      console.log("📞 Setting UI status: Call accepted, connecting...");
       setCallStatusMessage('🔗 Connecting...');
       setCurrentCall(prev => {
         if (!prev) return prev;
+        console.log("📞 Updating call status from INITIATING/RINGING to CONNECTING");
         return { ...prev, status: CALL_STATES.CONNECTING };
       });
     };
@@ -102,20 +104,41 @@ export const CallProvider = ({ children }) => {
       // Set status message for UI
       const reason = data.reason || 'unknown';
       let message = 'Call rejected';
-      if (reason === 'offline') message = '❌ User is offline — call could not connect';
-      else if (reason === 'busy') message = '❌ User is busy';
-      else if (reason === 'declined') message = '❌ Call declined by user';
-      else message = `❌ Call rejected (reason: ${reason})`;
+      let consoleMsg = '❌ Call rejected by remote user';
+      if (reason === 'offline') {
+        message = '📴 User is offline — call could not connect';
+        consoleMsg = '❌ User is offline - call could not connect';
+      }
+      else if (reason === 'busy') {
+        message = '⏳ User is busy';
+        consoleMsg = '❌ User is busy on another call';
+      }
+      else if (reason === 'declined') {
+        message = '❌ Call declined by user';
+        consoleMsg = '❌ User declined the call';
+      }
+      else if (reason === 'timeout') {
+        message = '⏱️ No response — call timed out';
+        consoleMsg = '❌ Call timed out - no response from user';
+      }
+      else {
+        message = `❌ Call rejected (reason: ${reason})`;
+        consoleMsg = `❌ Call rejected - reason: ${reason}`;
+      }
+      console.log(`📞 ${consoleMsg}`);
       setCallStatusMessage(message);
       setCurrentCall(prev => {
         if (!prev) return prev;
         return { ...prev, status: CALL_STATES.REJECTED, rejectReason: data.reason };
       });
+      // Don't auto-clear - keep the status message visible until user manually dismisses
     };
 
     // Handle call ended by remote user
     const handleCallEndedAck = (data) => {
       console.log("📞 Call ended by remote user:", data);
+      console.log("📞 Setting UI status: Call ended");
+      setCallStatusMessage('Call ended');
       setCurrentCall(prev => {
         if (!prev) return prev;
         const endTime = new Date();
@@ -188,6 +211,11 @@ export const CallProvider = ({ children }) => {
     const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log("  Generated callId:", callId);
 
+    // Set immediate feedback for user - show calling status
+    const callTypeLabel = callType === CALL_TYPES.AUDIO ? 'Audio' : 'Video';
+    setCallStatusMessage(`📱 Calling ${receiverName}...`);
+    console.log(`📞 Setting UI status: Calling ${receiverName}...`);
+
     setCurrentCall({
       callId,
       type: callType,
@@ -211,6 +239,7 @@ export const CallProvider = ({ children }) => {
 
     // Emit call initiated event to backend via socket
     if (socket && user) {
+      console.log("📤 Emitting callInitiated to socket...");
       socket.emit("callInitiated", {
         callId,
         initiatorId: user._id,
@@ -219,9 +248,17 @@ export const CallProvider = ({ children }) => {
         callType,
         timestamp: new Date().toISOString()
       });
-      console.log("📤 Emitted callInitiated to socket");
+      console.log("✅ Emitted callInitiated to socket");
+      
+      // Update status to show request sent
+      setTimeout(() => {
+        setCallStatusMessage(`📡 Sending call request to ${receiverName}...`);
+        console.log("📞 Setting UI status: Sending call request to server...");
+      }, 500);
     } else {
       console.warn("⚠️ Cannot emit callInitiated - socket or user not available");
+      setCallError("Network error - please check your connection");
+      setCallStatusMessage("❌ Network error - could not send call request");
     }
 
     return callId;
