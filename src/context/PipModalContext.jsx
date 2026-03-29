@@ -2,6 +2,16 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const PipModalContext = createContext(null);
 
+/**
+ * PipModalProvider - Manages the global PIP (Picture-in-Picture) chat modal state.
+ *
+ * The PIP is a floating chat window that appears when a user clicks on a recent
+ * message in the right sidebar. State is simple:
+ * - pipOpen: whether the PIP is visible
+ * - activeChatId: which user's chat is shown in the PIP
+ * - openPipModal(userId): opens the PIP for a user
+ * - closePipModal(): closes the PIP and resets all chat state
+ */
 export const PipModalProvider = ({ children }) => {
   const [pipOpen, setPipOpen] = useState(false);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -45,7 +55,6 @@ export const PipModalProvider = ({ children }) => {
   }, []);
 
   const value = {
-    // State
     pipOpen,
     activeChatId,
     activeChatHistory,
@@ -76,7 +85,6 @@ export const PipModalProvider = ({ children }) => {
     setMediaInitialIndex,
     chatImages,
     setChatImages,
-    // Actions
     openPipModal,
     closePipModal,
   };

@@ -32,15 +32,13 @@
 .search-input:hover {
   border-color: var(--primary);
 }
-/* Modal Container */
+/* Modal Container
+ * Note: positioning (position, left, top) is handled by inline styles
+ * in GlobalPipModal.jsx to support dragging. Only visual styles here.
+ */
 .modal-glass {
-  position: fixed;
-  bottom: 1.5rem; /* bottom-6 */
-  right: 1.5rem;  /* right-6 */
-  z-index: 10000;
-  width: 400px;
-  max-width: 100%;
-  height: 500px;
+  width: 100%;
+  height: 100%;
   border-radius: 1rem; /* rounded-2xl */
   box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -49,6 +47,29 @@
   overflow: hidden;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  /* Enable clicks on the modal itself (parent has pointer-events: none) */
+  pointer-events: auto;
+}
+
+/* ============================================
+ * Global PIP Wrapper
+ * Non-blocking overlay - background stays interactive
+ * ============================================ */
+
+/*
+ * PIP wrapper - pointer-events: none lets all clicks pass through
+ * to the page behind. Only the inner .modal-glass element has
+ * pointer-events: auto, so the PIP chat window is interactive
+ * while everything else (sidebar, buttons, links) remains clickable.
+ */
+.pip-wrapper {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99950;
 }
 
 /* Modal Header */

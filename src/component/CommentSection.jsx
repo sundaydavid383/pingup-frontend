@@ -574,7 +574,7 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
       </div>
 
       {/* Comments list */}
-      <div className="space-y-5 sm:space-y-6" aria-live="polite" aria-label="Comments section">
+      <div className="space-y-5 sm:space-y-5" aria-live="polite" aria-label="Comments section">
         {loading ? (
           <>
             {Array.from({ length: commentsCount <= 3 ? commentsCount : 3 }).map((_, i) => (
@@ -582,9 +582,9 @@ export default function CommentSection({ postId, commentsCount, initial = [], on
             ))}
           </>
         ) : displayedComments.length === 0 ? (
-          <div className="text-gray-500 text-sm sm:text-base text-center py-6 sm:py-8 px-4">
+          <div className="text-gray-500 text-[0.85rem] sm:text-[0.9rem] text-center py-3 sm:py-3 px-2">
             <div className="mb-2">
-              <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto opacity-30" />
+              <MessageSquare className="w-9 h-9 sm:w-11 sm:h-11 mx-auto opacity-30" />
             </div>
             No comments yet. Be the first to comment!
           </div>

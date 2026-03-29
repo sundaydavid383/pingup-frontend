@@ -1,46 +1,49 @@
 import React, { useEffect, useRef, useState } from "react";
 import assets from "../../assets/assets";
-import AudioMessage from "../../component/shared/AudioMessage";
 import "../../styles/lefthero.css";
 
 const LeftHero = () => {
-  const chatRef = useRef(null);
   const containerRef = useRef(null);
 
   const messages = [
-    { id: 1, type: "text", text: "Did you complete today’s reflection? 📖", from: "left" },
-    { id: 2, type: "text", text: "Yes! Checked off all tasks ✅ How about you?", from: "right" },
-    { id: 3, type: "image", media_url: assets.sampleImage, from: "left" },
-    { id: 4, type: "audio", media_url: assets.sampleAudio, from: "right" },
-    { id: 5, type: "text", text: "Absolutely! We got this 👏", from: "right" },
+    { id: 1, type: "text", text: "Hey, I just finished the new module!", from: "left", time: "09:12" },
+    { id: 2, type: "text", text: "Amazing! I’m on the last activity now.", from: "right", time: "09:13" },
+    { id: 3, type: "text", text: "We can review it together tonight?", from: "left", time: "09:13" },
+    { id: 4, type: "text", text: "Absolutely. I’ll send a summary first.", from: "right", time: "09:14" },
+    { id: 5, type: "text", text: "Perfect, thanks!", from: "left", time: "09:15" },
   ];
 
   const [visibleMessages, setVisibleMessages] = useState([]);
   const [typing, setTyping] = useState(false);
 
-  /* ------------------ SHOW MESSAGES ------------------ */
   useEffect(() => {
     let i = 0;
+    let activeTypingTimeout;
+    let nextMessageTimeout;
 
     const showNextMessage = () => {
       if (i >= messages.length) return;
 
       setTyping(true);
-
-      const typingTimeout = setTimeout(() => {
+      activeTypingTimeout = setTimeout(() => {
         setTyping(false);
         setVisibleMessages((prev) => [...prev, messages[i]]);
-        i++;
-        setTimeout(showNextMessage, 800);
-      }, 3000);
+        i += 1;
 
-      return () => clearTimeout(typingTimeout);
+        if (i < messages.length) {
+          nextMessageTimeout = setTimeout(showNextMessage, 900);
+        }
+      }, 1600 + Math.min(messages[i].text.length * 35, 1500));
     };
 
     showNextMessage();
+
+    return () => {
+      clearTimeout(activeTypingTimeout);
+      clearTimeout(nextMessageTimeout);
+    };
   }, []);
 
-  /* ------------------ AUTO SCROLL ------------------ */
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTo({
@@ -51,53 +54,44 @@ const LeftHero = () => {
   }, [visibleMessages, typing]);
 
   return (
-    <div className="left-hero-container">
-      
-      <div className="hero-inner">
-        
-        {/* Chat Column */}
-        <div ref={containerRef} className="chat-column">
-          {visibleMessages.map((msg) => {
-            if (!msg) return null;
-            const fromSide = msg.from || "left";
-
-            return (
-              <div
-                key={msg.id ?? Math.random()}
-                className={`chat-message ${fromSide === "left" ? "left-msg" : "right-msg"}`}
-              >
-                {msg.type === "text" && <p>{msg.text}</p>}
-                {msg.type === "image" && (
-                  <img src={msg.media_url} alt="chat-media" className="chat-image" />
-                )}
-                {msg.type === "audio" && (
-                  <AudioMessage
-                    msg={msg}
-                    barColor={fromSide === "left" ? "#111827" : "#ffffff"}
-                  />
-                )}
-              </div>
-            );
-          })}
-
-          {typing && (
-            <div className="typing-bubble">
-              <div className="dot"></div>
-              <div className="dot delay-150"></div>
-              <div className="dot delay-300"></div>
+    <div className="cine-phone-hero">
+      <div className="movie-phone-frame" aria-label="Cinematic phone chat interface">
+        <div className="phone-notice" />
+        <div className="phone-display">
+          <div className="phone-chat-header">
+            <img src={assets.heroHuman} alt="Woman avatar" className={`phone-avatar ${typing ? "typing" : ""}`} />
+            <div className="chat-title">
+              <strong>Jessica</strong>
+              <span>Online</span>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Hero Image */}
-        <div className="hero-image-container">
-          <img src={assets.heroHuman} alt="Happy user" className="hero-image" />
-        </div>
+          <div className="phone-chat-body" ref={containerRef}>
+            {visibleMessages.map((msg) => (
+              <article key={msg.id} className={`bubble ${msg.from === "left" ? "bubble-left" : "bubble-right"}`}>
+                <p>{msg.text}</p>
+                <time>{msg.time}</time>
+              </article>
+            ))}
 
+            {typing && (
+              <div className="bubble typing-bubble">
+                <div className="typing-dot" />
+                <div className="typing-dot delay1" />
+                <div className="typing-dot delay2" />
+              </div>
+            )}
+          </div>
+
+          <div className="phone-chat-input">
+            <span>Type a message...</span>
+          </div>
+        </div>
       </div>
 
-      {/* ------------------ CSS ------------------ */}
-
+      <div className="hero-woman-panel" aria-hidden="true">
+        <img src={assets.heroHuman} alt="Woman using phone" className={`hero-woman-image ${typing ? "woman-typing" : ""}`} />
+      </div>
     </div>
   );
 };

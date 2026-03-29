@@ -254,7 +254,7 @@ useEffect(() => {
           </button>
 
 
-          <div className="space-y-6 py-5 no-scrollbar pb-25 relative max-w-[550px] mx-auto">
+          <div className="space-y-6 py-5 no-scrollbar pb-25 relative max-w-[500px] mx-auto">
             {loadingInitial ? (
       <PostCardSkeleton />
     ) :    feeds.length === 0 ? (

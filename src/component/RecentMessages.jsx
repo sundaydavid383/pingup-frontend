@@ -16,7 +16,6 @@ const RecentMessages = () => {
 
   // Use PipModal context - state is managed by context now
   const {
-    setPipOpen,
     openPipModal,
     setActiveChatHistory,
     setChatId,

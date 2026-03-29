@@ -43,6 +43,17 @@ const saveToStorage = (key, value) => {
   }
 };
 
+/**
+ * MoodProvider - Global mood/audio state manager for background music.
+ *
+ * Key design decisions to prevent multiple moods playing simultaneously:
+ * - Uses a generation counter (playGenerationRef) that increments on each playMood call.
+ *   When an audio's oncanplaythrough fires, it checks its generation against the current one.
+ *   If they don't match, the audio is stale and won't play.
+ * - Stops current audio synchronously BEFORE creating a new Audio instance.
+ * - Calls audio.play() immediately after setup; oncanplaythrough is a fallback.
+ * - Single audioRef ensures only one Audio instance exists at any time.
+ */
 export function MoodProvider({ children }) {
   // Persisted state - load from localStorage on mount
   const [volume, setVolumeState] = useState(() => loadFromStorage(STORAGE_KEYS.volume, DEFAULT_VOLUME));
@@ -54,12 +65,16 @@ export function MoodProvider({ children }) {
   // Audio ref - single global audio instance
   const audioRef = useRef(null);
 
+  // Generation counter to prevent stale audio callbacks from playing
+  // Each call to playMood increments this; callbacks check their generation
+  const playGenerationRef = useRef(0);
+
   // Sync volume to localStorage and apply to audio
   const setVolume = useCallback((newVolume) => {
     const val = typeof newVolume === 'number' ? newVolume : Number(newVolume);
     setVolumeState(val);
     saveToStorage(STORAGE_KEYS.volume, val);
-    
+
     // Apply to playing audio immediately
     if (audioRef.current) {
       audioRef.current.volume = val;
@@ -72,46 +87,100 @@ export function MoodProvider({ children }) {
     saveToStorage(STORAGE_KEYS.selectedMood, moodName);
   }, []);
 
-  // Play a mood - stops any currently playing audio first
+  /**
+   * Internal helper: fully stop and clean up the current audio instance.
+   * Called before creating a new audio to guarantee only one mood plays.
+   */
+  const stopCurrentAudio = useCallback(() => {
+    if (audioRef.current) {
+      // Remove event listeners to prevent stale callbacks
+      audioRef.current.oncanplaythrough = null;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      // Stop playback
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      // Release the audio resource
+      audioRef.current.src = '';
+      audioRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Play a mood - stops any currently playing audio first.
+   *
+   * Race-condition prevention:
+   * 1. Increment generation counter - any previous callbacks become stale.
+   * 2. Stop current audio synchronously (pause + cleanup).
+   * 3. Create new audio and assign to audioRef.
+   * 4. Play immediately; oncanplaythrough is a fallback for slow loads.
+   * 5. Each callback checks audioRef.current === audio AND generation match.
+   */
   const playMood = useCallback((moodId) => {
     const mood = MOODS.find(m => m.id === moodId);
     if (!mood?.file) return;
 
-    // Stop current audio if playing
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
+    // Increment generation - invalidates any pending callbacks from previous play
+    playGenerationRef.current += 1;
+    const thisGeneration = playGenerationRef.current;
+
+    // Stop current audio synchronously - ensures no overlap
+    stopCurrentAudio();
 
     // Create new audio instance
     const audio = new Audio(mood.file);
     audio.loop = true;
     audio.volume = mood.defaultVolume ?? volume;
-    
+
     setIsLoading(true);
     setCurrentMoodId(moodId);
     setSelectedMood(mood.name);
 
-    audio.oncanplaythrough = () => {
+    // Assign to ref immediately so other code sees the new audio
+    audioRef.current = audio;
+
+    // Guard: only play if this audio instance is still the active one
+    // AND this play call hasn't been superseded by a newer one.
+    const tryPlay = () => {
+      if (audioRef.current !== audio) return; // Stale instance
+      if (playGenerationRef.current !== thisGeneration) return; // Superseded by newer play call
       setIsLoading(false);
       setIsPlaying(true);
       audio.play().catch(err => {
         console.error('Audio play failed:', err);
-        setIsPlaying(false);
+        if (audioRef.current === audio) setIsPlaying(false);
       });
     };
 
-    audio.onended = () => setIsPlaying(false);
+    // Primary: play as soon as audio can play through
+    audio.oncanplaythrough = tryPlay;
+
+    // Fallback: if oncanplaythrough doesn't fire (e.g., cached audio),
+    // try playing after a short delay
+    const fallbackTimer = setTimeout(() => {
+      if (audioRef.current === audio && audio.paused && playGenerationRef.current === thisGeneration) {
+        tryPlay();
+      }
+    }, 100);
+
+    audio.onended = () => {
+      if (audioRef.current === audio) setIsPlaying(false);
+    };
     audio.onerror = () => {
-      setIsLoading(false);
-      setIsPlaying(false);
+      if (audioRef.current === audio) {
+        setIsLoading(false);
+        setIsPlaying(false);
+      }
       console.error('Audio load error');
     };
 
-    audioRef.current = audio;
     saveToStorage(STORAGE_KEYS.selectedMood, mood.name);
-  }, [volume]);
+
+    // Cleanup fallback timer when audio loads or component changes
+    audio.addEventListener('canplaythrough', () => clearTimeout(fallbackTimer), { once: true });
+
+    return () => clearTimeout(fallbackTimer);
+  }, [volume, stopCurrentAudio, setSelectedMood]);
 
   // Toggle play/pause
   const togglePlayPause = useCallback(() => {
@@ -145,24 +214,21 @@ export function MoodProvider({ children }) {
     }
   }, [selectedMood, playMood]);
 
-  // Stop audio completely
+  // Stop audio completely and reset state
   const stopAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
+    playGenerationRef.current += 1; // Invalidate any pending play callbacks
+    stopCurrentAudio();
     setIsPlaying(false);
+    setIsLoading(false);
     setCurrentMoodId(null);
-  }, []);
+  }, [stopCurrentAudio]);
 
-  // Restore previous mood on mount (after a short delay to ensure audio is ready)
+  // Restore previous mood on mount (don't auto-play, just set selection)
   useEffect(() => {
     const savedMood = loadFromStorage(STORAGE_KEYS.selectedMood, '');
     if (savedMood) {
       const mood = MOODS.find(m => m.name === savedMood);
       if (mood) {
-        // Don't auto-play, just set the selection
         setSelectedMood(savedMood);
         setCurrentMoodId(mood.id);
       }
@@ -176,6 +242,13 @@ export function MoodProvider({ children }) {
     }
   }, [volume]);
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      stopCurrentAudio();
+    };
+  }, [stopCurrentAudio]);
+
   const value = {
     // State
     volume,
@@ -183,14 +256,14 @@ export function MoodProvider({ children }) {
     currentMoodId,
     isPlaying,
     isLoading,
-    
+
     // Actions
     setVolume,
     setSelectedMood,
     playMood,
     togglePlayPause,
     stopAudio,
-    
+
     // Constants
     moods: MOODS,
   };

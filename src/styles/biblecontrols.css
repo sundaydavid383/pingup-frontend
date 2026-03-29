@@ -147,7 +147,7 @@
 .popover-slider {
   position: absolute;
   bottom: calc(100% + 14px);
-  left: 50%;
+  right: 10%;
   transform: translateX(-50%);
   background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.95));
   backdrop-filter: blur(20px);
@@ -166,7 +166,7 @@
 /* Part 3: Mobile dropdown overflow fix */
 @media (max-width: 640px) {
   .popover-slider {
-    left: 50%;
+    right: 20%;
     right: auto;
     transform: translateX(-50%);
     width: calc(100vw - 32px);
@@ -179,8 +179,7 @@
   .popover-slider.speed-popover,
   .popover-slider.volume-popover,
   .popover-slider.mood-popover {
-    left: 50%;
-    right: auto;
+    right: 0%;
   }
   
   /* Center align on very small screens */
@@ -248,7 +247,7 @@
   min-width: 280px;
   padding: 0.75rem;
   /* Dynamic positioning to prevent overflow */
-  left: 50%;
+  right: 10%;
   transform: translateX(-50%);
 }
 
@@ -256,8 +255,7 @@
 @media (max-width: 640px) {
   .mood-popover {
     min-width: 260px;
-    left: auto;
-    right: 0;
+    right: 10%;
     transform: none;
   }
 }
@@ -283,8 +281,8 @@
 /* On mobile, align dropdown to right edge */
 @media (max-width: 640px) {
   .mood-dropdown {
-    left: auto;
-    right: 0;
+  
+    right: 10%;
     transform: none;
     width: 100%;
     max-height: 180px;
@@ -338,8 +336,8 @@
 
   .mood-popover {
     min-width: 260px;
-    left: auto;
-    right: 0;
+    
+    right: 10%;
     transform: none;
   }
 

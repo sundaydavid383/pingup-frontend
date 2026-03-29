@@ -101,10 +101,10 @@ const SocialLoginSection = () => {
 
       {/* -------- LEFT SIDE (Hidden in Modal) -------- */}
     {!isModal && (
-      <div className="w-[55%] bg-[bue]">
-  <LeftHero />
-  </div>
-)}
+      <div className="w-full lg:w-[55%] min-h-screen overflow-hidden">
+        <LeftHero />
+      </div>
+    )}
 
 
       

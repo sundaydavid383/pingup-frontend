@@ -13,9 +13,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, unreadCount } = useAuth();
-  const prevPath = useRef(location.pathname);
   const { showTooltip, hideTooltip } = useSidebarTooltip();
-  const activeWidth = 658;
 
   // Determine if the sidebar should be in "icon-only" mode
   const isMessageTab = location.pathname.startsWith('/messages');
@@ -24,7 +22,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
   const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
   
   const onlyIconPage = isMessageTab || isSettingsTab || isDiscoveriesTab || isProfileTab;
-  const paradigmShift = 650;
+  const paradigmShift = 635;
 
   // Effect 1: Handle Screen Resizing
   React.useEffect(() => {
