@@ -56,63 +56,114 @@ const RecentMessages = () => {
 
   // Fetch chat history when clicking on a user
   const fetchChatHistory = async (userId) => {
+    console.group("📡 [RecentMessages] fetchChatHistory()");
+    console.log("→ Entering fetchChatHistory()", { userId, currentUserId: user._id });
     try {
+      console.log("⏳ Setting chatLoading = true");
       setChatLoading(true);
-      const res = await axios.get(
-        `/api/chat/room?user1=${user._id}&user2=${userId}`
-      );
 
-      if (res.data?.room) setChatId(res.data.room._id);
-      setActiveChatHistory(res.data?.messages || []);
+      const url = `/api/chat/room?user1=${user._id}&user2=${userId}`;
+      console.log("🌐 Fetching:", url);
+      const res = await axios.get(url);
+      console.log("✅ API Response received:", { status: res.status, data: res.data });
+
+      if (res.data?.room) {
+        console.log("📋 Setting chatId to:", res.data.room._id);
+        setChatId(res.data.room._id);
+      } else {
+        console.warn("⚠️ No room found in response!");
+      }
+
+      const messages = res.data?.messages || [];
+      console.log("📋 Setting activeChatHistory with", messages.length, "messages");
+      setActiveChatHistory(messages);
     } catch (err) {
-      console.error("Error fetching history:", err);
+      console.error("❌ Error fetching history:", err);
+      console.error("  Error message:", err.message);
+      console.error("  Error response:", err.response?.data);
     } finally {
+      console.log("⏳ Setting chatLoading = false");
       setChatLoading(false);
+      console.log("✅ fetchChatHistory() complete");
+      console.groupEnd();
     }
   };
 
   // Initial Load
   useEffect(() => {
     const fetchData = async () => {
+      console.group("📦 [RecentMessages] Initial data fetch");
+      console.log("→ Starting initial load...");
       setLoading(true);
       try {
+        console.log("🌐 Fetching connections and last messages in parallel...");
         const [connRes, msgRes] = await Promise.all([
           axios.get("api/user/connections"),
           axios.get("api/messages/last")
         ]);
+        console.log("✅ Connections response:", { count: connRes.data.data?.connections?.length || connRes.data.data?.followers?.length });
+        console.log("✅ Last messages response:", { success: msgRes.data.success, count: Object.keys(msgRes.data.data || {}).length });
         setConnections(connRes.data.data?.connections || connRes.data.data?.followers || []);
         if (msgRes.data.success) setLastMessages(msgRes.data.data);
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error("❌ Initial load error:", err);
+      }
+      finally {
+        setLoading(false);
+        console.log("✅ Initial load complete");
+        console.groupEnd();
+      }
     };
     fetchData();
   }, []);
 
   // Central Socket Listener (Updates both List and PiP)
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.warn("⚠️ [RecentMessages] Socket is null — skipping listener setup");
+      return;
+    }
+    console.log("🔌 [RecentMessages] Setting up newMessageNotification listener");
 
     const handleIncoming = (data) => {
+      console.group("📨 [RecentMessages] newMessageNotification received");
+      console.log("→ Incoming data:", data);
       const { from_user_id, to_user_id, message } = data;
       const otherId = from_user_id === user._id ? to_user_id : from_user_id;
+      console.log("  from:", from_user_id, "to:", to_user_id, "otherId:", otherId);
 
       // Update the recent list preview
       setLastMessages(prev => ({
         ...prev,
         [otherId]: { ...message, senderId: from_user_id }
       }));
+      console.log("  ✓ Updated lastMessages for", otherId);
+      console.groupEnd();
     };
 
     socket.on("newMessageNotification", handleIncoming);
     return () => {
+      console.log("🔌 [RecentMessages] Cleaning up newMessageNotification listener");
       socket.off("newMessageNotification", handleIncoming);
     };
   }, [socket, user._id]);
 
   const handleUserClick = (usr) => {
+    console.group("🖱️ [RecentMessages] handleUserClick()");
+    console.log("→ Entering handleUserClick()", { userId: usr._id, username: usr.username });
+    console.log("📋 User object:", usr);
+
+    console.log("📞 Step 1/3: Calling openPipModal(", usr._id, ")");
     openPipModal(usr._id);
+
+    console.log("📞 Step 2/3: Calling fetchChatHistory(", usr._id, ")");
     fetchChatHistory(usr._id);
+
+    console.log("📞 Step 3/3: Calling clearUnread(", usr._id, ")");
     clearUnread(usr._id);
+
+    console.log("✅ handleUserClick() complete — all 3 calls dispatched");
+    console.groupEnd();
   };
 
   return (
@@ -131,7 +182,21 @@ const RecentMessages = () => {
               return (
                 <div
                   key={usr._id}
-                  onClick={() => handleUserClick(usr)}
+                  onClick={(e) => {
+                    console.group("🖱️ [RecentMessages] Click Event Fired");
+                    console.log("→ Click event triggered on recent message item");
+                    console.log("📋 Clicked element:", e.currentTarget);
+                    console.log("  id:", e.currentTarget.id || "(none)");
+                    console.log("  classes:", e.currentTarget.className);
+                    console.log("  data attributes:", Object.fromEntries(
+                      [...e.currentTarget.attributes]
+                        .filter(a => a.name.startsWith("data-"))
+                        .map(a => [a.name, a.value])
+                    ));
+                    console.log("📋 Target user:", { _id: usr._id, username: usr.username });
+                    handleUserClick(usr);
+                    console.groupEnd();
+                  }}
                   className={`flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 ${
                     isFirstUnread 
                       ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 

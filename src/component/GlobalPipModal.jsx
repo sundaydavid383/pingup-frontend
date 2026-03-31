@@ -21,6 +21,9 @@ import "../styles/message.css";
  * Inner .modal-glass has pointer-events:auto so the PIP itself is clickable.
  */
 const GlobalPipModal = () => {
+    console.group("🏗️ [GlobalPipModal] Component Render");
+    console.log("→ GlobalPipModal rendering at", new Date().toISOString());
+
     const navigate = useNavigate();
     const { user } = useAuth();
     const { socket } = useSocket();
@@ -57,6 +60,19 @@ const GlobalPipModal = () => {
         closePipModal,
     } = usePipModal();
 
+    console.log("📋 Context state:", {
+        pipOpen,
+        activeChatId,
+        activeChatHistoryLength: activeChatHistory?.length,
+        chatId,
+        chatLoading,
+        draftLength: draft?.length,
+        hasImage: !!image,
+        hasAudioURL: !!audioURL,
+        recording,
+        isAtBottom,
+    });
+
     // Draggable state
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -76,17 +92,76 @@ const GlobalPipModal = () => {
     // Active user info fetched from API
     const [activeUser, setActiveUser] = useState(null);
 
+    // ─── MutationObserver: Log when PiP/modal elements are added to DOM ───
+    useEffect(() => {
+        console.log("🔬 [GlobalPipModal] Setting up MutationObserver for PiP/modal DOM changes");
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        const el = node;
+                        const classList = el.className || "";
+                        const id = el.id || "";
+                        const tag = el.tagName?.toLowerCase() || "";
+                        const text = (typeof classList === "string" ? classList : "") + " " + id;
+
+                        if (/pip|modal|picture.in.picture/i.test(text)) {
+                            console.group("🔬 [MutationObserver] PiP/Modal element added");
+                            console.log("  Tag:", tag);
+                            console.log("  ID:", id);
+                            console.log("  Classes:", classList);
+                            console.log("  Element:", el);
+                            console.log("  Parent:", el.parentElement);
+                            console.groupEnd();
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+        console.log("✅ MutationObserver active — watching for pip/modal/picture-in-picture elements");
+
+        return () => {
+            console.log("🔬 [MutationObserver] Disconnecting observer");
+            observer.disconnect();
+        };
+    }, []);
+
+    // Component mount/unmount logging
+    useEffect(() => {
+        console.log("🟢 [GlobalPipModal] Component MOUNTED");
+        return () => {
+            console.log("🔴 [GlobalPipModal] Component UNMOUNTED");
+        };
+    }, []);
+
+    // Log conditional render check
+    console.log("🔍 Conditional render check:", { pipOpen, activeChatId, willRender: !!(pipOpen && activeChatId) });
+
     // Fetch active user info when chat changes
     useEffect(() => {
+        console.group("👤 [GlobalPipModal] Active user fetch effect");
+        console.log("→ activeChatId changed:", activeChatId);
         if (activeChatId) {
+            console.log("🌐 Fetching user info for:", activeChatId);
             axios.get(`/api/user/${activeChatId}`)
-                .then(res => setActiveUser(res.data.user))
-                .catch(err => console.error("Error fetching user:", err));
+                .then(res => {
+                    console.log("✅ Active user fetched:", res.data.user);
+                    setActiveUser(res.data.user);
+                })
+                .catch(err => {
+                    console.error("❌ Error fetching user:", err);
+                });
+        } else {
+            console.log("⏭️ Skipping fetch — activeChatId is falsy");
         }
+        console.groupEnd();
     }, [activeChatId]);
 
     // Toggle message expansion
     const toggleChatMessageExpansion = (messageId) => {
+        console.log("📖 [GlobalPipModal] toggleChatMessageExpansion()", { messageId });
         setExpandedChatMessages((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(messageId)) {
@@ -112,25 +187,36 @@ const GlobalPipModal = () => {
 
     // Drag handlers
     const handleMouseDown = useCallback((e) => {
-        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        console.group("🖱️ [GlobalPipModal] handleMouseDown()");
+        const targetTag = e.target.tagName;
+        const targetClass = e.target.className;
+        console.log("  Target tag:", targetTag, "class:", targetClass);
+        if (targetTag === 'BUTTON' || targetTag === 'INPUT' || targetTag === 'TEXTAREA') {
+            console.log("  ⏭️ Skipping drag — target is interactive element");
+            console.groupEnd();
             return;
         }
+        console.log("  🟢 Starting drag");
         setIsDragging(true);
         dragStartPos.current = {
             x: e.clientX - position.x,
             y: e.clientY - position.y
         };
+        console.log("  Drag start offset:", dragStartPos.current);
+        console.groupEnd();
     }, [position]);
 
     const handleMouseMove = useCallback((e) => {
         if (!isDragging) return;
-        setPosition({
+        const newPos = {
             x: e.clientX - dragStartPos.current.x,
             y: e.clientY - dragStartPos.current.y
-        });
+        };
+        setPosition(newPos);
     }, [isDragging]);
 
     const handleMouseUp = useCallback(() => {
+        console.log("🖱️ [GlobalPipModal] handleMouseUp() — drag ended");
         setIsDragging(false);
     }, []);
 
@@ -147,10 +233,13 @@ const GlobalPipModal = () => {
 
     const scrollToBottom = (smooth = true) => {
         if (scrollRef.current) {
+            console.log("📜 [GlobalPipModal] scrollToBottom()", { smooth, scrollHeight: scrollRef.current.scrollHeight });
             scrollRef.current.scrollTo({
                 top: scrollRef.current.scrollHeight,
                 behavior: smooth ? "smooth" : "auto",
             });
+        } else {
+            console.warn("⚠️ [GlobalPipModal] scrollToBottom() — scrollRef.current is null");
         }
     };
 
@@ -163,19 +252,44 @@ const GlobalPipModal = () => {
 
     // Auto-scroll when new messages arrive (only if user was at bottom)
     useEffect(() => {
-        if (!pipOpen || !activeChatId || activeChatHistory.length === 0) return;
-        if (isAtBottom) {
-            requestAnimationFrame(() => scrollToBottom());
+        console.group("📜 [GlobalPipModal] Auto-scroll effect");
+        console.log("  pipOpen:", pipOpen, "activeChatId:", activeChatId, "historyLength:", activeChatHistory.length, "isAtBottom:", isAtBottom);
+        if (!pipOpen || !activeChatId || activeChatHistory.length === 0) {
+            console.log("  ⏭️ Skipping scroll — conditions not met");
+            console.groupEnd();
+            return;
         }
+        if (isAtBottom) {
+            console.log("  📜 User at bottom — scrolling to bottom");
+            requestAnimationFrame(() => scrollToBottom());
+        } else {
+            console.log("  ⏭️ User not at bottom — not auto-scrolling");
+        }
+        console.groupEnd();
     }, [activeChatHistory, pipOpen, activeChatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Send message
     const handleSend = async () => {
-        if (!draft.trim() && !image && !audioURL) return;
-        if (!activeChatId) return;
+        console.group("📤 [GlobalPipModal] handleSend()");
+        console.log("→ Entering handleSend()");
+        console.log("  draft:", draft?.substring(0, 50), "hasImage:", !!image, "hasAudioURL:", !!audioURL);
+        console.log("  activeChatId:", activeChatId, "chatId:", chatId);
+
+        if (!draft.trim() && !image && !audioURL) {
+            console.log("  ⏭️ Early return — no content to send");
+            console.groupEnd();
+            return;
+        }
+        if (!activeChatId) {
+            console.log("  ⏭️ Early return — no activeChatId");
+            console.groupEnd();
+            return;
+        }
 
         const message_type = audioURL ? "audio" : image ? "image" : "text";
         const tempId = "temp_" + Date.now();
+        console.log("  message_type:", message_type, "tempId:", tempId);
+
         const tempMsg = {
             _id: tempId,
             chatId,
@@ -188,8 +302,10 @@ const GlobalPipModal = () => {
             sending: true,
             status: "sending"
         };
+        console.log("  📋 Temp message created:", { _id: tempId, type: message_type });
 
         setActiveChatHistory(prev => [...prev, tempMsg]);
+        console.log("  ✓ Added temp message to history");
 
         try {
             const formData = new FormData();
@@ -206,39 +322,58 @@ const GlobalPipModal = () => {
                 formData.append("media", blob, `audio_${Date.now()}.${ext}`);
             }
 
+            console.log("  🌐 Posting to /api/chat/message...");
             const res = await axios.post("/api/chat/message", formData, {
                 headers: { Accept: "application/json" },
                 withCredentials: true,
             });
+            console.log("  ✅ Message sent! Server response:", res.data);
 
             const serverMsg = res.data.message;
             setActiveChatHistory(prev => prev.map(m => m._id === tempId ? { ...serverMsg, status: "sent" } : m));
+            console.log("  ✓ Replaced temp message with server message");
 
             requestAnimationFrame(() => scrollToBottom());
             setImage(null);
             setAudioURL(null);
             setDraft("");
+            console.log("  ✓ Cleared draft/image/audio");
 
             sendSound.current.currentTime = 0;
             sendSound.current.play().catch(() => { });
 
-            if (socket) socket.emit("sendMessage", serverMsg);
+            if (socket) {
+                socket.emit("sendMessage", serverMsg);
+                console.log("  ✓ Emitted sendMessage via socket");
+            } else {
+                console.warn("  ⚠️ Socket is null — cannot emit sendMessage");
+            }
         } catch (err) {
-            console.error("Error sending message:", err);
+            console.error("  ❌ Error sending message:", err);
+            console.error("  Error message:", err.message);
+            console.error("  Error response:", err.response?.data);
             setActiveChatHistory(prev => prev.map(m => m._id === tempId ? { ...m, failed: true, status: "failed" } : m));
+            console.log("  ✓ Marked message as failed");
         }
+        console.log("✅ handleSend() complete");
+        console.groupEnd();
     };
 
     // Audio recording
     const startRecording = async () => {
+        console.group("🎙️ [GlobalPipModal] startRecording()");
+        console.log("→ Entering startRecording()");
         try {
+            console.log("  🌐 Requesting microphone access...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("  ✅ Microphone access granted");
             setAudioStream(stream);
             setRecording(true);
             setRecordTime(0);
             setAudioLevel(0);
 
             const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/wav";
+            console.log("  📋 Using mimeType:", mimeType);
             mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
             audioChunksRef.current = [];
 
@@ -247,15 +382,19 @@ const GlobalPipModal = () => {
             };
 
             mediaRecorderRef.current.onstop = () => {
+                console.log("🎙️ [GlobalPipModal] MediaRecorder.onstop");
                 const blob = new Blob(audioChunksRef.current, { type: mimeType });
+                console.log("  📋 Audio blob size:", blob.size, "type:", blob.type);
                 if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
                 setRecording(false);
                 setAudioLevel(0);
                 stream.getTracks().forEach(track => track.stop());
                 setAudioStream(null);
+                console.log("  ✅ Recording stopped, audioURL set");
             };
 
             mediaRecorderRef.current.start();
+            console.log("  🟢 MediaRecorder started");
 
             const audioContext = new AudioContext();
             const analyser = audioContext.createAnalyser();
@@ -277,15 +416,20 @@ const GlobalPipModal = () => {
             recordTimerRef.current = setInterval(() => {
                 const sec = Math.floor((Date.now() - start) / 1000);
                 setRecordTime(sec);
-                if (sec >= MAX_RECORD_TIME) mediaRecorderRef.current.stop();
+                if (sec >= MAX_RECORD_TIME) {
+                    console.log("  ⏰ Max record time reached — stopping");
+                    mediaRecorderRef.current.stop();
+                }
             }, 500);
         } catch (err) {
-            console.error("Mic error:", err);
+            console.error("  ❌ Mic error:", err);
             setRecording(false);
         }
+        console.groupEnd();
     };
 
     const stopRecording = () => {
+        console.log("🎙️ [GlobalPipModal] stopRecording()");
         mediaRecorderRef.current?.stop();
         clearInterval(recordTimerRef.current);
         setRecording(false);
@@ -298,16 +442,74 @@ const GlobalPipModal = () => {
 
     // Reset position near top-right when PIP opens
     useEffect(() => {
+        console.group("📐 [GlobalPipModal] Position reset effect");
+        console.log("  pipOpen:", pipOpen);
         if (pipOpen) {
-            setPosition({
+            const newPos = {
                 x: window.innerWidth - 360 - 39,
                 y: 20,
-            });
+            };
+            console.log("  📐 Resetting position to:", newPos, "(window width:", window.innerWidth, ")");
+            setPosition(newPos);
         }
+        console.groupEnd();
     }, [pipOpen]);
 
+    // Log final DOM state after render
+    useEffect(() => {
+        if (!pipOpen || !activeChatId) return;
+        // Use a small delay to let the DOM update
+        const timer = setTimeout(() => {
+            console.group("🔍 [GlobalPipModal] Final DOM State Check");
+            const pipWrapper = document.querySelector('.pip-wrapper');
+            const modalGlass = document.querySelector('.modal-glass');
+            console.log("  .pip-wrapper in DOM:", !!pipWrapper);
+            console.log("  .modal-glass in DOM:", !!modalGlass);
+
+            if (modalGlass) {
+                const styles = window.getComputedStyle(modalGlass);
+                console.log("  .modal-glass computed styles:");
+                console.log("    display:", styles.display);
+                console.log("    visibility:", styles.visibility);
+                console.log("    opacity:", styles.opacity);
+                console.log("    pointer-events:", styles.pointerEvents);
+                console.log("    position:", styles.position);
+                console.log("    zIndex:", styles.zIndex);
+                console.log("    width:", styles.width);
+                console.log("    height:", styles.height);
+                console.log("    transform:", styles.transform);
+            }
+
+            if (pipWrapper) {
+                const wrapperStyles = window.getComputedStyle(pipWrapper);
+                console.log("  .pip-wrapper computed styles:");
+                console.log("    display:", wrapperStyles.display);
+                console.log("    visibility:", wrapperStyles.visibility);
+                console.log("    pointer-events:", wrapperStyles.pointerEvents);
+                console.log("    position:", wrapperStyles.position);
+            }
+
+            console.log("  modalRef.current:", modalRef.current);
+            console.log("  scrollRef.current:", scrollRef.current);
+            console.groupEnd();
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [pipOpen, activeChatId]);
+
     // Simple conditional rendering - if not open, render nothing
-    if (!pipOpen || !activeChatId) return null;
+    if (!pipOpen || !activeChatId) {
+        console.log("🚫 [GlobalPipModal] NOT RENDERING — pipOpen:", pipOpen, "activeChatId:", activeChatId);
+        console.groupEnd(); // Component Render group
+        return null;
+    }
+
+    console.log("🟢 [GlobalPipModal] RENDERING modal — pipOpen:", pipOpen, "activeChatId:", activeChatId);
+    console.log("  Position:", position);
+    console.log("  Active user:", activeUser);
+    console.log("  Messages count:", activeChatHistory.length);
+    console.log("  Modal ref exists:", !!modalRef.current);
+    console.groupEnd(); // Component Render group
 
     return (
         /*
@@ -316,6 +518,7 @@ const GlobalPipModal = () => {
          * Only the inner .modal-glass has pointer-events:auto.
          */
         <div className="pip-wrapper">
+            {console.log("🎨 [GlobalPipModal] Rendering JSX — .pip-wrapper")}
             <div
                 style={{
                     position: "fixed",
@@ -324,6 +527,9 @@ const GlobalPipModal = () => {
                     width: 360,
                     height: 500,
                     zIndex: 99950,
+                }}
+                ref={(el) => {
+                    if (el) console.log("📦 [GlobalPipModal] Outer container mounted:", { width: 360, height: 500, zIndex: 99950 });
                 }}
             >
                 <div
@@ -343,14 +549,24 @@ const GlobalPipModal = () => {
                         </div>
                         <p className="text-sm font-bold truncate">{activeUser?.username}</p>
                         <button
-                            onClick={() => { navigate(`/chatbox/${activeChatId}`); closePipModal(); }}
+                            onClick={() => {
+                                console.group("🔗 [GlobalPipModal] Maximize button clicked");
+                                console.log("  Navigating to:", `/chatbox/${activeChatId}`);
+                                console.log("  Calling closePipModal()...");
+                                navigate(`/chatbox/${activeChatId}`);
+                                closePipModal();
+                                console.groupEnd();
+                            }}
                             className="p-1 rounded-full hover:bg-gray-200 transition absolute right-13"
                             title="Maximize"
                         >
                             <Maximize2 size={22} />
                         </button>
                         <button
-                            onClick={closePipModal}
+                            onClick={() => {
+                                console.log("🛑 [GlobalPipModal] Close button clicked — calling closePipModal()");
+                                closePipModal();
+                            }}
                             className="p-1 rounded-full hover:bg-red-100 transition absolute right-0"
                             title="Close"
                         >

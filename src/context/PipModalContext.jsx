@@ -31,27 +31,54 @@ export const PipModalProvider = ({ children }) => {
   const [chatImages, setChatImages] = useState([]);
 
   const openPipModal = useCallback((userId) => {
+    console.group("🚀 [PipModalContext] openPipModal()");
+    console.log("→ Entering openPipModal()", { userId });
+    console.log("📋 Setting activeChatId to:", userId);
     setActiveChatId(userId);
+    console.log("📋 Setting pipOpen to: true");
     setPipOpen(true);
+    console.log("✅ openPipModal() complete — pipOpen=true, activeChatId=", userId);
+    console.groupEnd();
   }, []);
 
   const closePipModal = useCallback(() => {
+    console.group("🛑 [PipModalContext] closePipModal()");
+    console.log("→ Entering closePipModal()");
+    console.log("📋 Resetting all PiP state to defaults...");
     setPipOpen(false);
+    console.log("  ✓ pipOpen = false");
     setActiveChatId(null);
+    console.log("  ✓ activeChatId = null");
     setActiveChatHistory([]);
+    console.log("  ✓ activeChatHistory = []");
     setChatId(null);
+    console.log("  ✓ chatId = null");
     setDraft("");
+    console.log("  ✓ draft = ''");
     setImage(null);
+    console.log("  ✓ image = null");
     setAudioURL(null);
+    console.log("  ✓ audioURL = null");
     setRecording(false);
+    console.log("  ✓ recording = false");
     setRecordTime(0);
+    console.log("  ✓ recordTime = 0");
     setAudioLevel(0);
+    console.log("  ✓ audioLevel = 0");
     setAudioStream(null);
+    console.log("  ✓ audioStream = null");
     setIsAtBottom(true);
+    console.log("  ✓ isAtBottom = true");
     setChatLoading(false);
+    console.log("  ✓ chatLoading = false");
     setMediaViewerOpen(false);
+    console.log("  ✓ mediaViewerOpen = false");
     setMediaInitialIndex(0);
+    console.log("  ✓ mediaInitialIndex = 0");
     setChatImages([]);
+    console.log("  ✓ chatImages = []");
+    console.log("✅ closePipModal() complete — all state reset");
+    console.groupEnd();
   }, []);
 
   const value = {
