@@ -16,6 +16,11 @@ const CreatePost = () => {
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const navigate = useNavigate();
+    // YouTube embed state
+  const [youtubeInput, setYoutubeInput] = useState("");
+  const [youtubeError, setYoutubeError] = useState("");
+  const [youtubePreview, setYoutubePreview] = useState(null);
+  const [youtubeType, setYoutubeType] = useState(null); // 'iframe' or 'url'
   
   // Draft management
   const DRAFT_KEY = 'createPost_draft';
@@ -117,11 +122,7 @@ const CreatePost = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // YouTube embed state
-  const [youtubeInput, setYoutubeInput] = useState("");
-  const [youtubeError, setYoutubeError] = useState("");
-  const [youtubePreview, setYoutubePreview] = useState(null);
-  const [youtubeType, setYoutubeType] = useState(null); // 'iframe' or 'url'
+
 
   const textareaRef = useRef(null);
 
@@ -397,9 +398,9 @@ const CreatePost = () => {
         setYoutubePreview(null);
         setYoutubeError("");
         setYoutubeType(null);
-        // setTimeout(() => {
-        //   navigate("/");
-        // }, 3000);
+         setTimeout(() => {
+           navigate("/");
+         }, 3000);
 
 
 
