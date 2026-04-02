@@ -15,12 +15,12 @@ const ProfileAvatar = ({ user, size = 50 }) => {
   })();
 
   // Generate DiceBear avatar URL as fallback
-  const dicebearSeed = user.email?.split("@")[0] || user.name?.replace(/\s+/g, "").toLowerCase() || "user";
-  const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${dicebearSeed}`;
+  // const dicebearSeed = user.email?.split("@")[0] || user.name?.replace(/\s+/g, "").toLowerCase() || "user";
+  // const dicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${dicebearSeed}`;
 
-  const hasProfilePic = user.profilePicUrl?.trim() && !imgError;
-  const avatarUrl = hasProfilePic ? user.profilePicUrl : dicebearUrl;
-  const bgColor = user.profilePicBackground || "#e6e2e2";
+  const hasProfilePic = user?.profilePicUrl?.trim() && !imgError;
+  const avatarUrl = hasProfilePic && user.profilePicUrl
+  const bgColor = user?.profilePicBackground || "#e6e2e2";
 
   const containerStyle = {
     width: size,

@@ -109,14 +109,45 @@ const PostCard = ({ post,
   const highlightHashtags = (text) =>
     text?.replace(/(#\w+)/g, `<span style="color:var(--primary)">$1</span>`) || "";
 
-  const maxLength = 200;
-  const maxNewlines = 1; // Maximum allowed newlines before triggering "Read More"
-  const [isExpanded, setIsExpanded] = useState(false);
+const maxLength = 280;           // fallback
+const maxParagraphs = 2;         // LinkedIn usually shows ~2 paragraphs
+
+const [isExpanded, setIsExpanded] = useState(false);
+
+// Helper functions
+const truncateByParagraphs = (text) => {
+  if (!text) return "";
   
-  // Check if content should be truncated based on BOTH character count AND newline count
-  const newlineCount = (post.content || '').split('\n').length - 1;
-  const shouldTruncate = post.content && (post.content.length > maxLength || newlineCount > maxNewlines);
-  const contentToShow = isExpanded || !shouldTruncate ? post.content : post.content.slice(0, maxLength) + "...";
+  // Split into paragraphs (handles both \n\n and single \n)
+  const paragraphs = text.split(/\n\s*\n/);
+  
+  if (paragraphs.length <= maxParagraphs) return text;
+  
+  return paragraphs.slice(0, maxParagraphs).join('\n\n');
+};
+
+const getTruncatedContent = (content) => {
+  if (!content) return "";
+
+  let truncated = truncateByParagraphs(content);
+
+  // Fallback: hard character limit
+  if (truncated.length > maxLength) {
+    truncated = truncated.slice(0, maxLength).trim() + "...";
+  }
+
+  return truncated;
+};
+
+// Should we show "Read More"?
+const shouldTruncate = post.content && (
+  post.content.split(/\n\s*\n/).length > maxParagraphs ||
+  post.content.length > maxLength + 80
+);
+
+const contentToShow = isExpanded || !shouldTruncate 
+  ? post.content 
+  : getTruncatedContent(post.content);
   const displayContent = DOMPurify.sanitize(highlightHashtags(contentToShow));
   function linkify(text) {
     if (!text) return "";
