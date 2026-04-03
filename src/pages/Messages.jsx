@@ -177,7 +177,7 @@ useEffect(() => {
                   <ProfileAvatar
                     user={{
                       name: otherUser.name || "User",
-                      profilePicUrl: otherUser.profile_picture,
+                      profilePicUrl: otherUser.profile_picture || otherUser.profilePicUrl,
                       profilePicBackground: otherUser.profilePicBackground,
                     }}
                     size={48}
@@ -221,7 +221,7 @@ useEffect(() => {
             })
           ) : (
             <p className="text-center text-slate-500">
-              {searchTerm ? "No users found." : failedToFetch ?"Failed to load conversations check your internet connection and try again":"No accepted connections yet." }
+              {searchTerm ? "No users found." : failedToFetch ?"Failed to load conversations check your internet connection and try again": !loading?"No accepted connections yet.":"" }
             </p>
           )}
             {!searchTerm && conversations.length === 0 && !failedToFetch ? (

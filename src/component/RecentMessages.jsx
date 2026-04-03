@@ -171,7 +171,7 @@ const RecentMessages = () => {
       {connections.length > 0 && (
         <div className="w-full bg-white rounded-xl shadow-md p-0 m-0">
           <h3 className="font-semibold text-sm px-2 pt-2 mb-2">Recent Messages</h3>
-          <div className="flex flex-col max-h-[60vh] overflow-y-auto no-scrollbar">
+          <div className="flex flex-col max-h-[60vh] overflow-y-auto ">
             {loading ? <RecentMessagesSkeleton /> : connections.map((usr, index) => {
               const last = lastMessages[usr._id];
               const unread = unreadMessages[usr._id]?.length || 0;

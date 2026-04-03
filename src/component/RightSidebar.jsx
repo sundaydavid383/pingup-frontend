@@ -11,7 +11,7 @@ const RightSidebar = ({ sponsors, loading }) => {
   pt-2 p-4 ml-6 mr-1 
 ">
   <div className="fixed top-0 right-0 flex-col
-  w-[330px] shrink-0 gap-2
+  w-[330px] shrink-0 gap-0
   max-h-[98vh] overflow-y-auto
   pt-2 p-4 ml-6 mr-1 no-scrollbar">
 
@@ -24,7 +24,7 @@ const RightSidebar = ({ sponsors, loading }) => {
           href={sponsors.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="sponsor block mb-6 hover:scale-105 hover:shadow-lg transition-transform duration-300"
+          className="sponsor block mb-2 hover:scale-105 hover:shadow-lg transition-transform duration-300"
         >
           <h3 className="text-slate-900 font-semibold mb-2">{sponsors.title}</h3>
 

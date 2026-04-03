@@ -84,7 +84,6 @@ const ChatBox = ({ userId: propUserId }) => {
   const { currentTheme, setCurrentTheme } = useTheme();
 
 
-  const [lastActive, setLastActive] = useState(receiver?.lastActiveAt || null);
   const sendSound = useRef(new Audio("/sounds/send.mp3"));
   const receiveSound = useRef(new Audio("/sounds/receive.mp3"));
 
@@ -486,6 +485,40 @@ const ChatBox = ({ userId: propUserId }) => {
     };
   },
     [socket]);
+
+  // FIXED: Stable Online / Last Seen Status
+  const getStatusText = useMemo(() => {
+    if (!receiver) return "Loading...";
+
+    // Priority 1: Real-time socket online status
+    if (onlineUsers.has(receiver._id)) {
+      return "Online";
+    }
+
+    // Priority 2: Last active timestamp
+    if (!receiver.lastActiveAt) return "Offline";
+
+    const lastSeen = new Date(receiver.lastActiveAt);
+    const now = new Date();
+    const diffMs = now - lastSeen;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+
+    // Grace period to prevent flickering
+    if (diffSecs < 90) {
+      return "Online";
+    }
+    if (diffMins < 60) {
+      return `Last seen ${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    }
+    if (diffMins < 1440) {
+      const hours = Math.floor(diffMins / 60);
+      return `Last seen ${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+
+    return "Offline";
+  }, [receiver, onlineUsers]);
+
   // eslint-disable-line //====================FAILED MESSAGE ====================/ // 
   // LocalStorage helpers 
   const getFailedMessages = () => {
@@ -982,20 +1015,6 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // ========================= LAST SEEN & ONLINE STATUS =========================
-  // Proper last seen logic - only show online when truly online
-  useEffect(() => {
-    if (!receiver) return;
-
-    // If user is in onlineUsers set, they're truly online
-    if (onlineUsers.has(receiver._id)) {
-      setLastActive(null); // Clear lastActive to show "Online"
-    } else {
-      // User is offline - use their lastActiveAt timestamp
-      const lastSeenTime = receiver.lastActiveAt ? new Date(receiver.lastActiveAt) : new Date();
-      setLastActive(lastSeenTime.toISOString());
-    }
-  }, [onlineUsers, receiver]);
-
   // Format last seen properly - fix "Active a few seconds ago" bug
   const formatLastSeen = (lastActiveIso) => {
     if (!lastActiveIso) return "Online";
@@ -1088,7 +1107,7 @@ const ChatBox = ({ userId: propUserId }) => {
           </div>
           <div className="flex flex-col">
             <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
-            <span className="text-xs text-gray-500">{formatLastSeen(lastActive)}</span>
+            <span className="text-xs text-gray-500">{getStatusText}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 relative">
