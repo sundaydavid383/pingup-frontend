@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import AudioMessage from "./shared/AudioMessage";
-import { Check, CheckCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
 import MediaViewer from "./shared/MediaViewer"; // Make sure this import exists
 import axiosBase from "../utils/axiosBase";
@@ -36,17 +36,25 @@ const ChatMessagesFull = ({
 }) => {
   const { socket, connected, onlineUsers } = useSocket();
 
-  // Initialize seen manager hook
-  const seenManager = useSeenManager({
-    messages,
-    setMessages,
-    chatId,
-    userId: user?._id,
-    socket,
-    containerRef,
-    scrollStopped,
-    scrollStopDebounce: 1200,
-  });
+
+const [observerReady, setObserverReady] = useState(false);
+
+useEffect(() => {
+  const timer = setTimeout(() => setObserverReady(true), 1000);
+  return () => clearTimeout(timer);
+}, []);
+
+const seenManager = useSeenManager({
+  messages,
+  setMessages,
+  chatId,
+  userId: user?._id,
+  socket,
+  containerRef,
+  scrollStopped,
+  scrollStopDebounce: 1200,
+  enabled: observerReady, // ✅ NEW PROP — gate the observer
+});
 
   // State for message options dropdown
   const [dropdownState, setDropdownState] = useState({
@@ -75,7 +83,6 @@ const ChatMessagesFull = ({
     });
   }, []);
 
-  console.log("user_id in chatmessagefull.jsx ", user?._id);
 
   const getDisplayText = (text, messageId) => {
     if (!text || text.length <= CHARACTER_THRESHOLD) return text;
@@ -95,7 +102,7 @@ const ChatMessagesFull = ({
   const isLongPress = useRef(false);
   const messageElementRefs = useRef({});
   const hasScrolledToLastSeen = useRef(false);
-
+const prevChatIdRef = useRef(null);
   // Handle right-click, long-press, or double-click to show dropdown
   const handleMessageInteraction = useCallback((msg, event, messageEl) => {
     event.preventDefault();
@@ -209,18 +216,41 @@ const scrollToMessageAndHighlight = useCallback((messageId) => {
 
 
 useEffect(() => {
-  if (!chatId || !seenManager.lastSeenMessage || messages.length === 0) return;
+    // Reset scroll flag when chat changes so we always scroll on new chat open
+    if (chatId !== prevChatIdRef.current) {
+        hasScrolledToLastSeen.current = false;
+        prevChatIdRef.current = chatId;
+    }
 
-  if (!hasScrolledToLastSeen.current) {
+    if (!chatId || !seenManager.lastSeenMessage || messages.length === 0) return;
+    if (hasScrolledToLastSeen.current) return;
+
+    // Only scroll to lastSeen if there are unread messages below it
+    const lastMsg = messages[messages.length - 1];
+    const lastSeenIsLatest = lastMsg?._id === seenManager.lastSeenMessage._id ||
+        new Date(lastMsg?.createdAt) <= new Date(seenManager.lastSeenMessage.createdAt);
+
+    if (lastSeenIsLatest) {
+        // Already at the latest — scroll to bottom instead
+        hasScrolledToLastSeen.current = true;
+        setTimeout(() => {
+            if (containerRef?.current) {
+                containerRef.current.scrollTo({
+                    top: containerRef.current.scrollHeight,
+                    behavior: 'auto'
+                });
+            }
+        }, 150);
+        return;
+    }
+
     const timer = setTimeout(() => {
-      seenManager.scrollToLastSeen();
-      hasScrolledToLastSeen.current = true;
-    }, 200); // slight delay to allow DOM render
+        seenManager.scrollToLastSeen();
+        hasScrolledToLastSeen.current = true;
+    }, 300);
 
     return () => clearTimeout(timer);
-  }
 }, [chatId, seenManager.lastSeenMessage, messages]);
-
 useEffect(() => {
   if (!containerRef?.current) return;
 
@@ -364,15 +394,16 @@ useEffect(() => {
             <div className="flex justify-center my-3 sticky top-4 z-10 pointer-events-none">
               <span
                 className="px-3 py-1 text-[11px] font-medium shadow-sm text-gray-600"
-                style={{
-                  borderRadius: "12px",
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: "24px",
-                }}
+               style={{
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.7)", 
+                backdropFilter: "blur(12px) saturate(180%)",
+                WebkitBackdropFilter: "blur(12px) saturate(180%)",
+                display: "inline-flex",
+                alignItems: "center",
+                height: "24px",
+                border: "1px solid rgba(255, 255, 255, 0.3)", 
+              }}
               >
                 {date}
               </span>
@@ -383,45 +414,50 @@ useEffect(() => {
               const sentByUser = msg.from_user_id === user._id;
 
               return (
-                <div
-                  key={msg._id}
-                  data-message-id={msg._id}
-                  id={`msg_${msg._id}`}
-                  ref={(el) => {
-                    if (el) seenManager.setMessageRef(msg._id, el);
-                  }}
-                  onContextMenu={(e) => handleContextMenu(msg, e)}
-                  onDoubleClick={(e) => handleDoubleClick(msg, e)}
-                  onTouchStart={(e) => handleTouchStart(msg, e)}
-                  onTouchEnd={handleTouchEnd}
-                  className={`flex flex-col group relative mb-4 ${sentByUser ? "items-end" : "items-start"
-                    }`}
-                >
-                  {/* Message bubble */}
-              <div
-  data-id={msg._id}
+               <div
+  key={msg._id}
   id={`msg_${msg._id}`}
+  data-message-id={msg._id?.toString().startsWith('temp_') ? undefined : msg._id}
+  data-from-user-id={msg.from_user_id}
+  ref={(el) => {
+    if (el) seenManager.setMessageRef(msg._id, el);
+  }}
+  onContextMenu={(e) => handleContextMenu(msg, e)}
+  onDoubleClick={(e) => handleDoubleClick(msg, e)}
+  onTouchStart={(e) => handleTouchStart(msg, e)}
+  onTouchEnd={handleTouchEnd}
+  className={`flex flex-col group relative mb-4 ${
+    sentByUser ? "items-end" : "items-start"
+  }`}
+>
+  {/* Message bubble */}
+<div
+  data-id={msg._id}
   className={`
-    p-3 text-sm max-w-[85%] sm:max-w-[70%] md:max-w-[400px] min-w-[120px]
+   ${msg.message_type === "image" ? 'px-[7px] py-[7px]' : 'px-3 py-3'} relative overflow-hidden  text-sm
+    max-w-[75%] sm:max-w-[60%] md:max-w-[400px]
+    min-w-[120px]
     rounded-2xl shadow-sm break-words relative transition-all duration-200
-    ${sentByUser
-      ? msg.failed
-        ? "bg-red-100 text-red-800 border border-red-300 rounded-br-none"
-        : "bg-[var(--primary)] text-white rounded-bl-3xl"
-      : "bg-[var(--white)] text-gray-900 rounded-br-3xl"
+    ${
+      sentByUser
+        ? msg.failed
+          ? "bg-red-100 text-red-800 border border-red-300 rounded-br-none"
+          : "bg-[var(--primary)] text-white rounded-bl-3xl"
+        : "bg-[var(--white)] text-gray-900 rounded-br-3xl"
     }
   `}
 >
-  {/* ─── Replied / Quoted Message Preview ─── */}
+  {/* ─── Reply Preview ─── */}
   {msg.replyTo && (
     <div
       className={`
-        mb-2.5 -mx-2 px-3 py-2 rounded-xl cursor-pointer
+        mb-3 px-3 py-2.5 rounded-xl cursor-pointer
         transition-all duration-150 hover:brightness-[1.04] active:brightness-95
         border-l-4
-        ${sentByUser
-          ? "bg-white/10 border-[var(--white)]/60"
-          : "bg-gray-200/40 border-[var(--primary)]/35"
+        ${
+          sentByUser
+            ? "bg-white/10 border-white/60"
+            : "bg-gray-200/40 border-[var(--primary)]/35"
         }
       `}
       onClick={() => {
@@ -429,45 +465,29 @@ useEffect(() => {
           scrollToReplyMessage(msg.replyTo);
         }
       }}
-      title="Click to scroll to original message"
     >
-      <div className="flex items-start gap-2.5 text-xs leading-tight">
-        {/* Thin colored line indicator */}
+      <div className="flex items-start gap-2 text-xs leading-tight">
         <div
-          className={`
-            w-0.5 h-5 mt-0.5 rounded-full flex-shrink-0
-            ${sentByUser
-              ? "bg-[var(--primary)]/55"
-              : "bg-[var(--primary)]/50"
-            }
-          `}
+          className={`w-0.5 h-5 mt-0.5 rounded-full ${
+            sentByUser ? "bg-white/60" : "bg-[var(--primary)]/60"
+          }`}
         />
 
         <div className="flex-1 min-w-0 space-y-0.5">
-          {/* Sender name – different intensity per bubble type */}
           <div
-            className={`
-              font-semibold truncate
-              ${sentByUser
-                ? "text-white/90"
-                : "text-[var(--primary)]/85"
-              }
-            `}
+            className={`font-semibold truncate ${
+              sentByUser ? "text-white/90" : "text-[var(--primary)]"
+            }`}
           >
             {msg.replyTo.from_user_id === user._id
               ? "You"
-              : (msg.replyTo.senderName || receiver?.name || "User")}
+              : msg.replyTo.senderName || receiver?.name || "User"}
           </div>
 
-          {/* Content preview */}
           <p
-            className={`
-              truncate leading-snug
-              ${sentByUser
-                ? "text-white/70"
-                : "text-gray-700/90"
-              }
-            `}
+            className={`truncate ${
+              sentByUser ? "text-white/70" : "text-gray-700"
+            }`}
           >
             {msg.replyTo.text
               ? msg.replyTo.text
@@ -484,10 +504,10 @@ useEffect(() => {
     </div>
   )}
 
-  {/* ─── Main Message Content ─── */}
+  {/* ─── TEXT ─── */}
   {msg.message_type === "text" && (
-    <div className="flex flex-col gap-1">
-      <p className="whitespace-pre-wrap leading-relaxed">
+    <div className="flex flex-col gap-1.5">
+      <p className="whitespace-pre-wrap leading-relaxed text-[14px]">
         {getDisplayText(msg.text, msg._id)}
       </p>
 
@@ -496,9 +516,10 @@ useEffect(() => {
           onClick={() => toggleMessageExpansion(msg._id)}
           className={`
             text-xs font-medium mt-1 self-start transition-opacity
-            ${sentByUser
-              ? "text-white/80 hover:text-white"
-              : "text-[var(--primary)] hover:text-[var(--primary)]/80"
+            ${
+              sentByUser
+                ? "text-white/80 hover:text-white"
+                : "text-[var(--primary)] hover:opacity-80"
             }
           `}
         >
@@ -508,117 +529,83 @@ useEffect(() => {
     </div>
   )}
 
-  {msg.message_type === "image" && msg.media_url && (
-    <img
-      src={msg.media_url}
-      alt="Shared image"
-      className={`
-        w-full max-w-[240px] rounded-lg border-0 mt-1
-        object-cover cursor-pointer transition-transform
-        hover:scale-[1.015] active:scale-100
-      `}
-      onClick={() => {
-        const index = imageMessages.findIndex(
-          (img) => img.media_url === msg.media_url
-        );
-        if (index !== -1) {
-          setCurrentImageIndex(index);
-          setShowMediaViewer(true);
-        }
-      }}
-    />
-  )}
+  {/* ─── MEDIA (IMAGE + AUDIO SAME SYSTEM) ─── */}
+  {(msg.message_type === "image" || msg.message_type === "audio") &&
+    msg.media_url && (
+      <div className="mt-0">
+        {msg.message_type === "image" ? (
+          <img
+            src={msg.media_url}
+            alt="Shared"
+              className="
+    max-w-[240px]
+    max-h-[420px]
+    w-auto h-auto
+    rounded-lg
+    object-cover
+    cursor-pointer
+  "
+            onClick={() => {
+  console.log("CLICKED IMAGE");
+  console.log("imageMessages:", imageMessages);
+  
+  const index = imageMessages.findIndex(
+    (img) => img.media_url === msg.media_url
+  );
 
-  {msg.message_type === "audio" && msg.media_url && (
-    <div className="mt-1">
-      <AudioMessage msg={msg} />
-    </div>
-  )}
+  console.log("INDEX:", index);
 
-  {/* Optional: timestamp / status – if you want to add it inside bubble */}
-  {/* 
-  <div className="text-[10px] opacity-70 mt-1 text-right">
-    {formatTime(msg.createdAt)}
-    {sentByUser && !msg.failed && <span className="ml-1">✓✓</span>}
-  </div> 
-  */}
+  if (index !== -1) {
+    setCurrentImageIndex(index);
+    setShowMediaViewer(true);
+  }
+}}
+          />
+        ) : (
+          <div className="w-[200px] max-w-[200px]">
+            <AudioMessage msg={msg} />
+          </div>
+        )}
+      </div>
+    )}
 </div>
 
-                  {/* Message status - only show for sent messages, not received */}
-                  <div
-                    className="flex items-center justify-end gap-1 mt-1 text-[10px]"
-                    style={{ color: 'var(--primary)' }}
-                  >
-                    <span>{formatTime(msg.createdAt)}</span>
-                    {sentByUser && (
-                      <span className="ml-1 flex items-center gap-1 text-xs">
-                        {msg.status === "sending" && (
-                          <span className="text-gray-500 animate-pulse">
-                            Sending...
-                          </span>
-                        )}
-                        {msg.failed && (
-                          <>
-                            <button onClick={() => resendMessage(msg)}>
-                              ↻ Retry
-                            </button>
-                            <button onClick={() => { }}>✖ Cancel</button>
-                          </>
-                        )}
-                        {msg.status !== "sending" && !msg.failed && (
-                          <span className="flex items-center">
-                            {/* For sent messages, check if RECEIVER has seen them (seenManager.receiverLastSeen) */}
-                            {/* For sent messages, NEVER use isMessageSeen as that checks if WE have seen, not the receiver */}
-                            {sentByUser ? (
-                              seenManager.receiverLastSeen && new Date(msg.createdAt) <= new Date(seenManager.receiverLastSeen.createdAt || seenManager.receiverLastSeen) ? (
-                                // Blue double check - seen by receiver
-                                <CheckCheck
-                                  size={14}
-                                  className="text-blue-500"
-                                  title={`Seen at ${seenManager.receiverLastSeen?.createdAt ? formatTime(seenManager.receiverLastSeen.createdAt) : ''}`}
-                                />
-                              ) : msg.status === "delivered" || seenManager.receiverLastSeen ? (
-                                // Gray double check - delivered
-                                <CheckCheck
-                                  size={14}
-                                  className="text-[var(--input-delivered-check)]"
-                                />
-                              ) : (
-                                // Single check - sent
-                                <Check
-                                  size={14}
-                                  className="text-[var(--input-sent-check)]"
-                                />
-                              )
-                            ) : (
-                              /* For received messages, use seenManager.isMessageSeen to show if WE have seen them */
-                              seenManager.isMessageSeen(msg) ? (
-                                // Blue double check - we have seen this message
-                                <CheckCheck
-                                  size={14}
-                                  className="text-blue-500"
-                                  title={`Seen at ${msg.seenAt ? formatTime(msg.seenAt) : ''}`}
-                                />
-                              ) : msg.status === "delivered" || seenManager.receiverLastSeen ? (
-                                // Gray double check - delivered
-                                <CheckCheck
-                                  size={14}
-                                  className="text-[var(--input-delivered-check)]"
-                                />
-                              ) : (
-                                // Single check - sent
-                                <Check
-                                  size={14}
-                                  className="text-[var(--input-sent-check)]"
-                                />
-                              )
-                            )}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
+  {/* ─── STATUS ─── */}
+  <div
+    className="flex items-center justify-end gap-1 mt-1 text-[10px]"
+    style={{ color: "var(--primary)" }}
+  >
+    <span>{formatTime(msg.createdAt)}</span>
+
+    {sentByUser && (
+      <span className="ml-1 flex items-center gap-1 text-xs">
+        {msg.status === "sending" && (
+          <span className="text-gray-500 animate-pulse">Sending...</span>
+        )}
+
+        {msg.failed && (
+          <>
+            <button onClick={() => resendMessage(msg)}>↻ Retry</button>
+            <button>✖ Cancel</button>
+          </>
+        )}
+
+        {msg.status !== "sending" && !msg.failed && (
+          <span className="flex items-center">
+            
+{msg.status === "seen" ? (
+  <Eye size={14} className="text-blue-500" />
+) : msg.status === "delivered" ? (
+  <CheckCheck size={14} className="text-[var(--input-delivered-check)]" />
+) : (
+  <Check size={14} className="text-[var(--input-sent-check)]" />
+)}
+          </span>
+        )}
+      </span>
+    )}
+  </div>
+</div>
               );
             })}
           </div>
@@ -683,18 +670,18 @@ useEffect(() => {
     className="text-[var(--secondary)] drop-shadow-md" 
   />
 
-  {seenManager.unseenBelowCount > 0 && (
-    <span
-      className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold text-white animate-pulse"
-      style={{ 
-        backgroundColor: '#ef4444',
-        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
-      }}
-    >
-      {seenManager.unseenBelowCount > 99 ? '99+' : seenManager.unseenBelowCount}
-    </span>
-  )}
-</button>}
+      {observerReady && seenManager.lastSeenMessage && seenManager.unseenBelowCount > 0 && (
+          <span
+            className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold text-white animate-pulse"
+            style={{ 
+              backgroundColor: '#ef4444',
+              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+            }}
+          >
+            {seenManager.unseenBelowCount > 99 ? '99+' : seenManager.unseenBelowCount}
+          </span>
+      )}
+      </button>}
 
       {/* Message Options Dropdown - WhatsApp Style */}
       {dropdownState.isOpen && dropdownState.message && (

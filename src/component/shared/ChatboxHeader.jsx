@@ -5,7 +5,7 @@ const ChatboxHeader = ({ sidebarOpen, sidebarWidth = 240, children }) => {
     // Fixed positioning within flex container
     position: "relative",
     top: 0,
-    zIndex: 100,
+    zIndex: 10,
     background: "var(--color-6)",
     boxSizing: "border-box",
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",

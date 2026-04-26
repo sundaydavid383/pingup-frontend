@@ -11,13 +11,6 @@ const RightSidebarSkeleton = () => {
 
       <div className="mt-6">
         <div className="h-4 bg-slate-200 rounded w-1/3 mb-3"></div>
-
-        {/* 3 message previews */}
-        <div className="space-y-2">
-          <div className="h-10 bg-slate-200 rounded"></div>
-          <div className="h-10 bg-slate-200 rounded"></div>
-          <div className="h-10 bg-slate-200 rounded"></div>
-        </div>
       </div>
     </div>
   );

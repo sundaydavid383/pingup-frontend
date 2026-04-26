@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,6 +10,8 @@ const Appearance = ({ isEmbedded = false }) => {
   const [fontSize, setFontSize] = useState('medium');
   const [language, setLanguage] = useState('english');
   const [saved, setSaved] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const isMounted = useRef(false);
 
   // Load settings from backend on mount
   useEffect(() => {
@@ -32,6 +34,8 @@ const Appearance = ({ isEmbedded = false }) => {
         }
       } catch (err) {
         console.error('Failed to fetch theme settings:', err);
+      } finally {
+        setInitialized(true);
       }
     };
     fetchSettings();
@@ -56,11 +60,19 @@ const Appearance = ({ isEmbedded = false }) => {
 
   // Auto-save when settings change
   useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+
     const timer = setTimeout(() => {
       saveSettings();
     }, 500);
     return () => clearTimeout(timer);
-  }, [currentTheme, fontSize, language, saveSettings]);
+  }, [currentTheme, fontSize, language, saveSettings, initialized]);
 
   const handleThemeChange = (newTheme) => {
     setCurrentTheme(newTheme);

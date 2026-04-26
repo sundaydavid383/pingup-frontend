@@ -40,6 +40,7 @@ input, textarea, select {
 :root {
   /* Primary Theme Colors */
   --primary-color: #3b5ccb; /* Unified Primary Color */
+  --primary-rgb: 59, 92, 203;
   --primary: #3055d1; /* Indigo-800 */
   --secondary: #1a294a; /* Slate-900 */
   --accent: var(--primary-color);

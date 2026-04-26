@@ -5,7 +5,6 @@ import Loading from "../component/shared/Loading";
 import StoriesBar from "../component/StoriesBar";
 import { useNavigate } from "react-router-dom";
 import PostCard from "../component/PostCard";
-import RecentMessages from "../component/RecentMessages";
 import location from "../utils/location";
 import { useAuth } from "../context/AuthContext";
 import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
@@ -24,6 +23,7 @@ import RefreshButton from "../component/shared/RefreshButton";
 import CustomAlert from "../component/shared/CustomAlert";
 import { EmptyFeed } from "../component/staterep/EmptyFeed";
 import CreatePostTrigger from "../component/shared/CreatePostTrigger";
+import DailyGuidance from "../component/accountability/DailyGuidance";
 
 
 const Feed = () => {
@@ -221,6 +221,14 @@ useEffect(() => {
               {error}
             </div>
           )}
+
+          {/* Daily Accountability Guidance */}
+          {user && (
+            <div className="max-w-[500px] mx-auto px-4">
+              <DailyGuidance user={user} />
+            </div>
+          )}
+
  {/* <p
   className="
     inline-block

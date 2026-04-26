@@ -10,10 +10,10 @@ const PrivacySafety = ({ isEmbedded = false }) => {
   const [selectedSetting, setSelectedSetting] = useState(null);
   const [saved, setSaved] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({
-    viewPosts: 'everyone', // everyone, followers, only-me
-    viewStories: 'everyone',
-    messageMe: 'everyone',
-    commentPosts: 'everyone'
+    viewPosts: 'public',
+    viewStories: 'public',
+    messageMe: 'public',
+    commentPosts: 'public'
   });
 
   // Load settings from backend on mount
@@ -43,11 +43,11 @@ const PrivacySafety = ({ isEmbedded = false }) => {
     fetchSettings();
   }, []);
 
-  const saveSettings = useCallback(async () => {
+  const saveSettings = useCallback(async (settings = privacySettings) => {
     try {
       const token = localStorage.getItem('token');
       await axiosBase.put('/api/settings/privacy', {
-        profileVisibility: privacySettings.viewPosts
+        profileVisibility: settings.viewPosts
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -59,10 +59,16 @@ const PrivacySafety = ({ isEmbedded = false }) => {
   }, [privacySettings]);
 
   const privacyOptions = [
-    { label: 'Everyone', value: 'everyone' },
-    { label: 'Followers', value: 'followers' },
-    { label: 'Only Me', value: 'only-me' }
+    { label: 'Everyone', value: 'public' },
+    { label: 'Followers', value: 'friends' },
+    { label: 'Only Me', value: 'private' }
   ];
+
+  const privacyLabelMap = {
+    public: 'Everyone',
+    friends: 'Followers',
+    private: 'Only Me'
+  };
 
   const settingsList = [
     {
@@ -92,10 +98,10 @@ const PrivacySafety = ({ isEmbedded = false }) => {
   ];
 
   const handleSettingChange = (settingId, value) => {
-    setPrivacySettings({ ...privacySettings, [settingId]: value });
+    const newSettings = { ...privacySettings, [settingId]: value };
+    setPrivacySettings(newSettings);
     setSelectedSetting(null);
-    // Save after change
-    setTimeout(saveSettings, 100);
+    saveSettings(newSettings);
   };
 
   const renderSubScreen = () => {
@@ -197,7 +203,7 @@ const PrivacySafety = ({ isEmbedded = false }) => {
                     {setting.label}
                   </p>
                   <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                    Current: {privacySettings[setting.id]}
+                    Current: {privacyLabelMap[privacySettings[setting.id]] || privacySettings[setting.id]}
                   </p>
                 </div>
                 <ChevronRight className="w-5 h-5" style={{ color: 'white' }} />

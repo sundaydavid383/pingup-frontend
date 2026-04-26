@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Image as ImageIcon, Mic, FileText } from "lucide-react";
 import moment from "moment";
 import axios from "../utils/axiosBase";
@@ -55,39 +55,29 @@ const RecentMessages = () => {
   };
 
   // Fetch chat history when clicking on a user
-  const fetchChatHistory = async (userId) => {
-    console.group("📡 [RecentMessages] fetchChatHistory()");
-    console.log("→ Entering fetchChatHistory()", { userId, currentUserId: user._id });
-    try {
-      console.log("⏳ Setting chatLoading = true");
-      setChatLoading(true);
+  const fetchChatHistory = useCallback(async (userId) => {
+    if (!user?._id) {
+      return;
+    }
 
+    setChatLoading(true);
+
+    try {
       const url = `/api/chat/room?user1=${user._id}&user2=${userId}`;
-      console.log("🌐 Fetching:", url);
       const res = await axios.get(url);
-      console.log("✅ API Response received:", { status: res.status, data: res.data });
 
       if (res.data?.room) {
-        console.log("📋 Setting chatId to:", res.data.room._id);
         setChatId(res.data.room._id);
-      } else {
-        console.warn("⚠️ No room found in response!");
       }
 
       const messages = res.data?.messages || [];
-      console.log("📋 Setting activeChatHistory with", messages.length, "messages");
       setActiveChatHistory(messages);
     } catch (err) {
-      console.error("❌ Error fetching history:", err);
-      console.error("  Error message:", err.message);
-      console.error("  Error response:", err.response?.data);
+      console.error("[RecentMessages] fetchChatHistory error", err);
     } finally {
-      console.log("⏳ Setting chatLoading = false");
       setChatLoading(false);
-      console.log("✅ fetchChatHistory() complete");
-      console.groupEnd();
     }
-  };
+  }, [user?._id, setChatLoading, setChatId, setActiveChatHistory]);
 
   // Initial Load
   useEffect(() => {
@@ -148,31 +138,23 @@ const RecentMessages = () => {
     };
   }, [socket, user._id]);
 
-  const handleUserClick = (usr) => {
-    console.group("🖱️ [RecentMessages] handleUserClick()");
-    console.log("→ Entering handleUserClick()", { userId: usr._id, username: usr.username });
-    console.log("📋 User object:", usr);
-
-    console.log("📞 Step 1/3: Calling openPipModal(", usr._id, ")");
+  const handleUserClick = useCallback((usr) => {
     openPipModal(usr._id);
-
-    console.log("📞 Step 2/3: Calling fetchChatHistory(", usr._id, ")");
     fetchChatHistory(usr._id);
-
-    console.log("📞 Step 3/3: Calling clearUnread(", usr._id, ")");
     clearUnread(usr._id);
-
-    console.log("✅ handleUserClick() complete — all 3 calls dispatched");
-    console.groupEnd();
-  };
+  }, [openPipModal, fetchChatHistory, clearUnread]);
 
   return (
     <>
-      {connections.length > 0 && (
+      {(
         <div className="w-full bg-white rounded-xl shadow-md p-0 m-0">
           <h3 className="font-semibold text-sm px-2 pt-2 mb-2">Recent Messages</h3>
           <div className="flex flex-col max-h-[60vh] overflow-y-auto ">
-            {loading ? <RecentMessagesSkeleton /> : connections.map((usr, index) => {
+            {loading ? <RecentMessagesSkeleton /> : connections.length === 0 ? (
+        <p className="text-xs text-gray-500 px-3 py-4">
+          No messages yet
+        </p>
+      ) : connections.map((usr, index) => {
               const last = lastMessages[usr._id];
               const unread = unreadMessages[usr._id]?.length || 0;
               

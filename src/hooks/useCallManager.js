@@ -383,13 +383,13 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
 
       let userMessage = "Call rejected";
       if (data.reason === 'offline') {
-        userMessage = "📴 User is offline";
+        userMessage = "📴 User is offline — call could not connect";
       } else if (data.reason === 'busy') {
         userMessage = "⏳ User is busy";
       } else if (data.reason === 'declined') {
         userMessage = "❌ Call declined";
       } else if (data.reason === 'timeout') {
-        userMessage = "⏱️ Call timed out";
+        userMessage = "⏱️ No response — call timed out";
       }
       
       console.log("📞 useCallManager: Setting call status message:", userMessage);
@@ -489,6 +489,11 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     socket.on("webrtcOffer", handleWebrtcOffer);
     socket.on("webrtcAnswer", handleWebrtcAnswer);
     socket.on("webrtcIceCandidate", handleWebrtcIceCandidate);
+    socket.on('joinCallRoom', ({ callId, room }) => {
+    console.log("📞 useCallManager: Joining call room:", room);
+    // The socket needs to join the call room for WebRTC signaling to work
+    socket.emit('joinRoom', callId); // reuse existing joinRoom which does socket.join
+});
     console.log("📞 useCallManager: Socket event listeners registered successfully");
 
     // Cleanup

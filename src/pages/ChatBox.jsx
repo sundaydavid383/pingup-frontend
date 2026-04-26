@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useMessageSeen } from '../../MessageSeenContext'; // Corrected import path
 import ProfileAvatar from "../component/shared/ProfileAvatar";
-import ThemeDropdown from "../component/ThemeDropdown";
+import ThemeDropdown, { applyThemeVars, THEMES } from "../component/ThemeDropdown";
 import "../component/themeDropdown.css";
 import './chatbox.css'
 import '../styles/chat-highlight.css'
@@ -37,7 +37,7 @@ const ChatBox = ({ userId: propUserId }) => {
   const { socket, connected, onlineUsers } = useSocket();
 
   // Use the new MessageSeenContext
-  const { setLastSeenMessageForChat } = useMessageSeen();
+  const { setLastSeenMessageForChat, updateConversationLastMessage } = useMessageSeen();
 
   // 1. INITIALIZE FROM LOCAL STORAGE
   // Use a state initializer that depends on userId
@@ -68,6 +68,7 @@ const ChatBox = ({ userId: propUserId }) => {
   const [showScrollButton, setShowScrollButton] = useState(true);
   /* const [text, setText] = useState("");  */
   const [image, setImage] = useState(null);
+  const [lastActive, setLastActive] = useState(null)
   const [audioURL, setAudioURL] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
@@ -81,8 +82,20 @@ const ChatBox = ({ userId: propUserId }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [showMediaDropdown, setShowMediaDropdown] = useState(false);
-  const { currentTheme, setCurrentTheme } = useTheme();
+  const { currentTheme, setCurrentTheme, THEME_KEY } = useTheme();
+  const chatIdRef = useRef(null);
 
+// ✅ ADD THIS — keep ref in sync whenever chatId changes
+useEffect(() => {
+    chatIdRef.current = chatId;
+}, [chatId]);
+  // Apply saved theme on mount to restore on page refresh
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const savedTheme = localStorage.getItem(THEME_KEY) || "Default";
+      applyThemeVars(THEMES[savedTheme]?.vars || THEMES.Default.vars, chatContainerRef.current);
+    }
+  }, [THEME_KEY]);
 
   const sendSound = useRef(new Audio("/sounds/send.mp3"));
   const receiveSound = useRef(new Audio("/sounds/receive.mp3"));
@@ -366,6 +379,10 @@ const ChatBox = ({ userId: propUserId }) => {
     if (!user || !userId) return;
 
     const fetchData = async () => {
+       if (localStorage.getItem(`blocked_${userId}`) === 'true') {
+        setLoading(false);
+        return;
+      }
       try {
         // Try to get cached chatId first as fallback
         const cachedChatId = localStorage.getItem(`chatId_${userId}`);
@@ -387,16 +404,12 @@ const ChatBox = ({ userId: propUserId }) => {
           localStorage.setItem(`chatId_${userId}`, chatRes.data.room._id);
         }
 
-        if (Array.isArray(chatRes.data?.messages)) {
-          // Replace messages entirely for this chat - don't merge with previous
+      if (Array.isArray(chatRes.data?.messages)) {
           const newMessages = [...chatRes.data.messages];
           newMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-          // Save to localStorage
           localStorage.setItem(`chat_history_${userId}`, JSON.stringify(newMessages));
-
           setMessages(newMessages);
-        }
+      }
 
         // This is now handled by the intersection observer
         // clearUnread(userId);
@@ -406,6 +419,7 @@ const ChatBox = ({ userId: propUserId }) => {
     };
 
     fetchData();
+    
   }, [user, userId]);
 
 
@@ -413,78 +427,67 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
   // eslint-disable-line // =========================== SOCKET CONNECTION =========================== 
-  useEffect(() => {
-    if (!socket || !user) {
-      console.log("⚠️ useEffect skipped — no socket or user")
-        ; return;
-    }
-    console.log("🧩 ChatBox socket ready:", socket.id, "for user:", user?._id);
+useEffect(() => {
+    if (!socket || !user) return;
 
     const handleMessageRead = ({ messageId, reader }) => {
-      setMessages((prev) =>
-        prev.map((m) => (m._id === messageId ?
-          { ...m, status: "seen" } :
-          m)));
+        setMessages((prev) =>
+            prev.map((m) => (m._id === messageId ? { ...m, status: "seen" } : m))
+        );
     };
 
     const handleReceiveMessage = (newMsg) => {
-      setMessages(prev => {
-        const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
-        if (tempIndex !== -1) {
-          const updated = [...prev];
-          updated[tempIndex] = { ...newMsg, status: "delivered" };
-          return updated;
-        }
-
-        if (prev.some(m => m._id === newMsg._id)) return prev; // normal duplicate prevention
-
-        return [...prev, newMsg];
-      });
-
-      if (isUserNearBottomRef.current) {
-        requestAnimationFrame(() => {
-          scrollToBottom();
+        setMessages(prev => {
+            // Replace temp message with real one
+            const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
+            if (tempIndex !== -1) {
+                const updated = [...prev];
+                updated[tempIndex] = { ...newMsg, status: "delivered" };
+                return updated;
+            }
+            // Prevent exact duplicates
+            if (prev.some(m => m._id === newMsg._id)) return prev;
+            return [...prev, newMsg];
         });
-      }
 
-      receiveSound.current.currentTime = 0;
-      receiveSound.current.play().catch(() => { });
+        if (isUserNearBottomRef.current) {
+            requestAnimationFrame(() => scrollToBottom());
+        }
+        receiveSound.current.currentTime = 0;
+        receiveSound.current.play().catch(() => {});
     };
-
-
-
-
-
 
     const handleTypingFrom = ({ from_user_id }) => {
-      setTypingUser(true);
-      setTypingUserFromId(from_user_id);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      // Only hide typing after 2s of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        setTypingUser(false);
-        setTypingUserFromId(null);
-      }, 2000);
+        setTypingUser(true);
+        setTypingUserFromId(from_user_id);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            setTypingUser(false);
+            setTypingUserFromId(null);
+        }, 2000);
     };
 
+    // ✅ Listen via window event (SocketContext dispatches this)
+const handleNewMessageAlert = (e) => {
+    const msg = e.detail?.message;
+    if (!msg?._id) return;
+    // Use ref so we always have the current chatId, not a stale closure value
+    if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
+    handleReceiveMessage(msg);
+};
 
-
-    // socket.on("userOnline", handleUserOnline);
-    //socket.on("userOffline", handleUserOffline);
-    socket.on("receiveMessage", handleReceiveMessage);
     socket.on("typing", handleTypingFrom);
     socket.on("messageRead", handleMessageRead);
-    return () => {
-      console.log("🧹 Cleaning up socket listeners...");
+    // ✅ Use window event instead of socket.on("receiveMessage") to avoid double-handling
+    window.addEventListener("newMessageAlert", handleNewMessageAlert);
 
-      // socket.off("userOnline", handleUserOnline);
-      //socket.off("userOffline", handleUserOffline);
-      socket.off("receiveMessage", handleReceiveMessage);
-      socket.off("typing", handleTypingFrom);
-      socket.off("messageRead", handleMessageRead);
+    return () => {
+        socket.off("typing", handleTypingFrom);
+        socket.off("messageRead", handleMessageRead);
+        // ✅ Cleanup is HERE in the return — not in the body
+        window.removeEventListener("newMessageAlert", handleNewMessageAlert);
     };
-  },
-    [socket]);
+}, [socket, user]); // ✅ chatId added to deps so handler always has current chatId
 
   // FIXED: Stable Online / Last Seen Status
   const getStatusText = useMemo(() => {
@@ -543,44 +546,6 @@ const ChatBox = ({ userId: propUserId }) => {
       socket.emit("joinRoom", chatId);
     }
   }, [chatId, connected, socket]);
-  // ============================== Intersection Observer (mark read) ==========================
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const messageId = entry.target.getAttribute('data-message-id');
-            if (messageId) {
-              const msg = messages.find(m => m._id === messageId);
-              if (!msg) return;
-              if (msg._id.startsWith('temp_')) return;
-              
-              // Only mark received messages as seen
-              if (msg.from_user_id !== user?._id) {
-                setLastSeenMessageForChat(chatId, msg);
-              }
-            }
-          }
-        });
-      },
-      {
-        root: container,
-        threshold: 0.5
-      }
-    );
-    
-    // Observe all message elements
-    const messageElements = container.querySelectorAll('[data-message-id]');
-    messageElements.forEach((el) => observer.observe(el));
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, [messages, chatId, user?._id, setLastSeenMessageForChat]);
-
 
 
   // ======================== SEND MESSAGE ====================== 
@@ -657,6 +622,10 @@ const ChatBox = ({ userId: propUserId }) => {
 
       // optionally emit socket event if your backend expects it // 
       socket?.emit('sendMessage', serverMsg);
+      
+      // 🔴 CRITICAL: Update the conversation's lastMessage to trigger re-sort in Messages.jsx
+      // This ensures the chat jumps to top immediately and the list re-sorts
+      updateConversationLastMessage(chatId, serverMsg);
     }
     catch (err) {
       console.error("❌ sendMessage error:", err);
@@ -730,21 +699,16 @@ const ChatBox = ({ userId: propUserId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   
-  const handleSearchChat = async () => {
-    if (!searchQuery.trim()) return;
-    
-    const query = searchQuery.toLowerCase();
-    const results = messages.filter(msg => 
-      msg.text && msg.text.toLowerCase().includes(query)
-    );
-    setSearchResults(results);
-  };
-
   const handleSearchResultClick = (msg) => {
-    // Scroll to message - would need a ref to message element
+    // Close modal and clear search state
     setShowSearchModal(false);
     setSearchQuery('');
     setSearchResults([]);
+    
+    // Scroll to the selected message with a small delay to ensure DOM is ready
+    setTimeout(() => {
+      scrollToMessage(msg._id);
+    }, 100);
   };
 
   // ======================== CLEAR CHAT ======================
@@ -814,7 +778,7 @@ const ChatBox = ({ userId: propUserId }) => {
     setReporting(true);
     toast.loading("Sending report...", { id: "reportUser" });
     try {
-      await axiosBase.post(`/api/users/report/${receiver._id}`, 
+      await axiosBase.post(`/api/user/report/${receiver._id}`, 
         { reason: reportReason },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -828,45 +792,73 @@ const ChatBox = ({ userId: propUserId }) => {
       setShowMenu(false);
       setShowReportConfirm(false);
       setReportReason('');
-      toast.error(err.response?.data?.message || "Report failed – please check your connection", { id: "reportUser" });
+      toast.error(err.response?.data?.message || err.message || "Report failed", { id: "reportUser" });
     } finally {
       setReporting(false);
     }
   };
 
-  // ======================== BLOCK USER ======================
-  const handleBlockUser = async () => {
-    if (!receiver?._id) return;
+// ======================== BLOCK USER ======================
+// Check if this user is already blocked on mount
+const [isBlocked, setIsBlocked] = useState(() => {
+  return localStorage.getItem(`blocked_${userId}`) === 'true';
+});
+useEffect(() => {
+  if (!isBlocked || !userId || receiver) return;
+  axiosBase.get(`/api/user/${userId}`)
+    .then(res => setReceiver(res.data.user || null))
+    .catch(() => {}); // silent fail — username display is optional
+}, [isBlocked, userId, receiver]);
 
-    console.log("📌 Block User: starting...");
-    setBlocking(true);
-    toast.loading("Blocking user...", { id: "blockUser" });
-    try {
-      await axiosBase.post(`/api/users/block/${receiver._id}`, {}, {
-        withCredentials: true
-      });
+const handleBlockUser = async () => {
+  const targetId = receiver?._id || userId;
+  if (!targetId) return;
 
-      console.log("📌 Block User: success");
-      // Clear chat history locally
+
+  const alreadyBlocked = isBlocked;
+  const actionLabel = alreadyBlocked ? "Unblocking" : "Blocking";
+
+  setBlocking(true);
+  toast.loading(`${actionLabel} user...`, { id: "blockUser" });
+  try {
+    const res = await axiosBase.post(`/api/user/block/${targetId}`, {});
+    const wasBlocked = res.data?.blocked; // true = now blocked, false = now unblocked
+
+    if (wasBlocked) {
+      // Just blocked — clear chat, set flag
       setMessages([]);
       localStorage.removeItem(`chat_history_${userId}`);
-
-      // Close menu and show success
+      localStorage.removeItem(`chatId_${userId}`);
+      localStorage.setItem(`blocked_${userId}`, 'true');
+      setIsBlocked(true);
+      toast.success(`${receiver?.username || 'User'} has been blocked`, { id: "blockUser" });
       setShowMenu(false);
       setShowBlockConfirm(false);
-      toast.success(`User blocked successfully`, { id: "blockUser" });
-
-      // Navigate back or close chat
       setTimeout(() => navigate(-1), 1500);
-    } catch (err) {
-      console.error("📌 Block User: failed -", err.response?.data?.message || err.message);
+    } else {
+      // Just unblocked — remove flag, allow chat to reload
+      localStorage.removeItem(`blocked_${userId}`);
+      setIsBlocked(false);
+      toast.success(`${receiver?.username || 'User'} has been unblocked`, { id: "blockUser" });
       setShowMenu(false);
       setShowBlockConfirm(false);
-      toast.error(err.response?.data?.message || "Could not block user – please check your connection", { id: "blockUser" });
-    } finally {
-      setBlocking(false);
+      // Reload chat data now that user is unblocked
+      window.location.reload();
     }
-  };
+  } catch (err) {
+    const isNetworkErr = !err?.response || err.code === 'ERR_NETWORK';
+    setShowMenu(false);
+    setShowBlockConfirm(false);
+    toast.error(
+      isNetworkErr
+        ? "Could not connect to server. Please check your internet and try again."
+        : err?.response?.data?.message || "Action failed. Please try again.",
+      { id: "blockUser" }
+    );
+  } finally {
+    setBlocking(false);
+  }
+};
 
   // ========================= AUDIO RECORD ==========================
   const startRecording = async () => {
@@ -1182,7 +1174,6 @@ const ChatBox = ({ userId: propUserId }) => {
             <>
               {/* click-outside overlay */}
               <div
-                ref={showMenuRef}
                 className="fixed inset-0 z-40"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1192,12 +1183,15 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
               <div
-                className="fixed right-4 top-16 w-56 z-[100] overflow-hidden animate-in fade-in zoom-in duration-150 origin-top-right"
+                ref={showMenuRef}
+                className="fixed right-4 top-16 w-56 z-[100] animate-in fade-in zoom-in duration-150 origin-top-right"
+
                 style={{
                   background: "rgba(255, 255, 255, 0.95)",
                   backdropFilter: "blur(16px)",
                   WebkitBackdropFilter: "blur(16px)",
                   borderRadius: "18px",
+                  overflow: "visible",
                   border: "1px solid rgba(255, 255, 255, 0.5)",
                   boxShadow:
                     "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
@@ -1210,8 +1204,13 @@ const ChatBox = ({ userId: propUserId }) => {
                     Appearance
                   </div>
 
-                  <div className="rounded-xl hover:bg-white/40 transition-colors" onClick={(e) => e.stopPropagation()}>
-                    <ThemeDropdown containerRef={chatContainerRef} />
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ overflow: 'visible', position: 'static', pointerEvents: 'auto' }}
+                  >
+                    <div className="rounded-xl hover:bg-white/40 transition-colors inline-block">
+                      <ThemeDropdown containerRef={chatContainerRef} />
+                    </div>
                   </div>
 
                   <div className="h-[1px] bg-gray-200/50 my-1 mx-2" />
@@ -1283,8 +1282,8 @@ const ChatBox = ({ userId: propUserId }) => {
                     }}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50/50 rounded-xl transition"
                   >
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                    Block User
+                      <span className={`w-2 h-2 rounded-full ${isBlocked ? 'bg-orange-400' : 'bg-red-500'}`} />
+                      {isBlocked ? 'Unblock User' : 'Block User'}
                   </button>
 
                   {/* Report User */}
@@ -1306,42 +1305,50 @@ const ChatBox = ({ userId: propUserId }) => {
             </>
           )}
 
-          {/* Block User Confirmation Dialog */}
-          {showBlockConfirm && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 bg-black/50 z-[90]"
-                onClick={() => setShowBlockConfirm(false)}
-              />
-              {/* Confirmation Dialog */}
-              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Block {receiver?.username || 'User'}?
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    This will clear your chat history and prevent this user from contacting you. You can unblock them later in settings.
-                  </p>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => setShowBlockConfirm(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleBlockUser}
-                      disabled={blocking}
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition disabled:opacity-50"
-                    >
-                      {blocking ? 'Blocking...' : 'Block User'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+{/* Block / Unblock User Confirmation Dialog */}
+{showBlockConfirm && (
+  <>
+    <div
+      className="fixed inset-0 bg-black/50 z-[90]"
+      onClick={() => setShowBlockConfirm(false)}
+    />
+    <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          {isBlocked
+            ? `Unblock ${receiver?.username || 'User'}?`
+            : `Block ${receiver?.username || 'User'}?`}
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          {isBlocked
+            ? `Unblocking ${receiver?.username || 'this user'} will allow them to contact you again and restore your connection.`
+            : `Blocking ${receiver?.username || 'this user'} will prevent them from contacting you. You can unblock them at any time.`}
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => setShowBlockConfirm(false)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleBlockUser}
+            disabled={blocking}
+            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition disabled:opacity-50 ${
+              isBlocked
+                ? 'bg-orange-500 hover:bg-orange-600'
+                : 'bg-red-500 hover:bg-red-600'
+            }`}
+          >
+            {blocking
+              ? isBlocked ? 'Unblocking...' : 'Blocking...'
+              : isBlocked ? 'Unblock User' : 'Block User'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </>
+)}
 
           {/* Clear Chat Confirmation Dialog */}
           {showClearConfirm && (
@@ -1450,18 +1457,23 @@ const ChatBox = ({ userId: propUserId }) => {
                     <input
                       type="text"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearchChat()}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchQuery(value);
+                        if (value.trim()) {
+                          const query = value.toLowerCase();
+                          const results = messages.filter(msg =>
+                            (msg.text || msg.message || '') && (msg.text || msg.message || '').toLowerCase().includes(query)
+                          );
+                          setSearchResults(results);
+                        } else {
+                          setSearchResults([]);
+                        }
+                      }}
                       placeholder="Search messages..."
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                       autoFocus
                     />
-                    <button
-                      onClick={handleSearchChat}
-                      className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:opacity-90"
-                    >
-                      Search
-                    </button>
                   </div>
                   {searchResults.length > 0 && (
                     <div className="max-h-60 overflow-y-auto space-y-2">
@@ -1471,7 +1483,7 @@ const ChatBox = ({ userId: propUserId }) => {
                           onClick={() => handleSearchResultClick(msg)}
                           className="p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
                         >
-                          <p className="text-sm text-gray-700 truncate">{msg.text}</p>
+                          <p className="text-sm text-gray-700 truncate">{msg.text || msg.message || ''}</p>
                           <p className="text-xs text-gray-400">
                             {msg.from_user_id === user?._id ? 'You' : receiver?.username} • {moment(msg.createdAt).format('MMM D, h:mm A')}
                           </p>
@@ -1621,7 +1633,7 @@ const ChatBox = ({ userId: propUserId }) => {
     };
   }, []);
 
-    console.log("user in chatbox.jsx ", user?._id);
+  
 
   return (
     <div
@@ -1629,16 +1641,44 @@ const ChatBox = ({ userId: propUserId }) => {
       className="chatbox-container"
     >
       {/* Header - sticky at top within flex container */}
-      <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
-        {renderHeader()}
-      </ChatboxHeader>
+      {!showMediaViewer &&
+         (
+          <ChatboxHeader sidebarOpen={sidebarOpen} sidebarWidth={208}>
+            {renderHeader()}
+          </ChatboxHeader>
+        )
+      }
 
       {/* Messages Container - scrollable area between header and input */}
       <div
         ref={containerRef}
         className="chatbox-messages"
       >
-        {loading ?
+        {
+              isBlocked ?
+              (  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+    <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
+      <div className="flex justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+      </div>
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">User Blocked</h2>
+      <p className="text-sm text-gray-600 mb-6">
+        You have blocked {receiver?.username || 'this user'}. Unblock them to resume chatting.
+      </p>
+      <button
+        onClick={handleBlockUser}
+        disabled={blocking}
+        className="bg-orange-500 text-white px-6 py-2 rounded-full font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
+      >
+        {blocking ? 'Unblocking...' : 'Unblock User'}
+      </button>
+    </div>
+  </div>
+) 
+              :
+                loading ?
           (
             <div className="flex flex-col min-h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
               {/* Top bar shimmer */}
@@ -1774,7 +1814,9 @@ const ChatBox = ({ userId: propUserId }) => {
                 resendMessage={resendMessage}
                 imageMessages={imageMessages}
                 setCurrentImageIndex={setCurrentImageIndex}
+                currentImageIndex={currentImageIndex}
                 setShowMediaViewer={setShowMediaViewer}
+                showMediaViewer={showMediaViewer} 
                 formatTime={formatTime}
                 typingUser={typingUser}
                 typingUserFromId={typingUserFromId}
@@ -1787,8 +1829,8 @@ const ChatBox = ({ userId: propUserId }) => {
                 inputRef={inputRef}
               />
             )
-              :
-              (
+             :
+                (
                 // ❌ FETCH ERROR
                 <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
               from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
@@ -1813,6 +1855,7 @@ const ChatBox = ({ userId: propUserId }) => {
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
+      {!showMediaViewer && 
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
           <div className="reply-bar">
@@ -2162,6 +2205,7 @@ const ChatBox = ({ userId: propUserId }) => {
           </div>
         </div>
       </ChatboxInput>
+     }
 
     </div>
   );

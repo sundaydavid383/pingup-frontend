@@ -1,0 +1,425 @@
+/* Daily Guidance Component Styles */
+
+.daily-guidance-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.daily-guidance-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
+}
+
+.guidance-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.icon-sparkle {
+  animation: spin-slow 3s linear infinite;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.guidance-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.guidance-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.guidance-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Quote Section */
+.quote-section {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(249, 250, 251, 0.6) 100%);
+  padding: 16px;
+  border-radius: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.daily-quote {
+  font-size: 15px;
+  font-style: italic;
+  color: #374151;
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+}
+
+.quote-author {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+  text-align: right;
+}
+
+/* Habit Section */
+.habit-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.habit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.habit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.habit-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.habit-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.habit-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.habit-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #065f46;
+  margin: 0;
+}
+
+/* Stats Overview */
+.stats-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: white;
+}
+
+.stat-icon.spiritual {
+  background: linear-gradient(135deg, #ec4899, #f43f5e);
+}
+
+.stat-icon.progress {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+}
+
+.stat-text {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 2px 0 0 0;
+}
+
+/* Encouragement Box */
+.encouragement-box {
+  display: flex;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  padding: 14px;
+  border-radius: 10px;
+  align-items: flex-start;
+}
+
+.encouragement-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.encouragement-text {
+  flex: 1;
+}
+
+.encouragement-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d97706;
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.encouragement-message {
+  font-size: 13px;
+  color: #92400e;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.btn-secondary:hover {
+  background: white;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* AI Chat Placeholder */
+.ai-chat-placeholder {
+  background: white;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 12px 16px;
+}
+
+.chat-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chat-body {
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.chat-message {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.chat-message.assistant {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05));
+  color: #1f2937;
+}
+
+.chat-note {
+  font-size: 12px;
+  color: #9ca3af;
+  background: rgba(0, 0, 0, 0.02);
+  padding: 10px;
+  border-radius: 6px;
+  margin: 12px 0 0 0;
+  border-left: 3px solid #f59e0b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .daily-guidance-card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .guidance-title {
+    font-size: 16px;
+  }
+
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .daily-guidance-card {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.1) 0%, rgba(55, 48, 163, 0.05) 100%);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .guidance-title {
+    color: #f3f4f6;
+  }
+
+  .guidance-subtitle {
+    color: #d1d5db;
+  }
+
+  .quote-section {
+    background: rgba(30, 41, 59, 0.5);
+    color: #e5e7eb;
+  }
+
+  .daily-quote {
+    color: #e5e7eb;
+  }
+
+  .habit-text {
+    color: #86efac;
+  }
+
+  .stat-label {
+    color: #9ca3af;
+  }
+
+  .stat-value {
+    color: #f3f4f6;
+  }
+
+  .encouragement-message {
+    color: #fcd34d;
+  }
+
+  .btn-secondary {
+    background: rgba(30, 41, 59, 0.8);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+}

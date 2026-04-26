@@ -1,88 +1,133 @@
 import React, { useEffect, useState } from "react";
-import { X, Check, InfoIcon, AlertCircle, MailWarning } from "lucide-react";
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 
-const CustomAlert = ({ message, type = "info", onClose }) => {
-  const [visible, setVisible] = useState(true);
+const CustomAlert = ({
+  message,
+  type = "info",
+  onClose,
+  position = "top-right",
+  duration = null,
+  showClose = true,
+}) => {
+  const [visible, setVisible] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  // Auto-dismiss duration
+  const autoDuration =
+    duration !== null
+      ? duration
+      : type === "success" ? 4800
+      : type === "error" ? 6500
+      : 5500;
 
   useEffect(() => {
-    const duration = type === "success" ? 9000 : 6000;
-    const timer = setTimeout(() => setVisible(false), duration);
-    const closeTimer = setTimeout(() => onClose(), duration + 400);
+    // Trigger entrance animation
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    const dismissTimer = setTimeout(() => {
+      handleClose();
+    }, autoDuration);
+
     return () => {
-      clearTimeout(timer);
-      clearTimeout(closeTimer);
+      clearTimeout(enterTimer);
+      clearTimeout(dismissTimer);
     };
-  }, [type, onClose]);
+  }, [autoDuration]);
 
-  const background = {
-    success: "var(--success)",
-    error: "var(--error)",
-    info: "var(--info)",
-    warning: "var(--warning)",
+  const handleClose = () => {
+    setExiting(true);
+    setTimeout(() => {
+      setVisible(false);
+      onClose?.();
+    }, 400); // Match exit animation duration
   };
 
-  const icon = {
-    success: Check,
+  // Sophisticated position classes with better spacing
+  const positionClasses = {
+    "top-right": "top-8 right-8",
+    "top-left": "top-8 left-8",
+    "bottom-right": "bottom-8 right-8",
+    "bottom-left": "bottom-8 left-8",
+    "top-center": "top-8 left-1/2 -translate-x-1/2",
+    "bottom-center": "bottom-8 left-1/2 -translate-x-1/2",
+  };
+
+  const bgColors = {
+    success: "bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-400/50",
+    error: "bg-gradient-to-br from-red-600 to-red-700 border-red-400/50",
+    warning: "bg-gradient-to-br from-amber-600 to-amber-700 border-amber-400/50",
+    info: "bg-gradient-to-br from-blue-600 to-blue-700 border-blue-400/50",
+  };
+
+  const iconColors = {
+    success: "text-emerald-200",
+    error: "text-red-200",
+    warning: "text-amber-200",
+    info: "text-blue-200",
+  };
+
+  const IconComponent = {
+    success: CheckCircle,
     error: AlertCircle,
-    info: InfoIcon,
-    warning: MailWarning,
-  };
+    warning: AlertTriangle,
+    info: Info,
+  }[type];
 
-  const Icon = icon[type];
+  if (!visible && !exiting) return null;
 
   return (
-    <>
-{/* Alert Box */}
-{visible && (
-  <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-    {/* Overlay */}
     <div
-      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-      onClick={() => {
-        setVisible(false);
-        onClose();
-      }}
-    />
-
-    {/* Alert Box */}
-    <div
-      className={`relative transform transition-all duration-300 ${
-        visible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-      }`}
+      className={`fixed z-[9999] ${positionClasses[position]} pointer-events-auto`}
     >
       <div
-        className="flex items-start gap-3 p-4 rounded-lg shadow-lg border bg-[var(--bg-main)] text-white max-w-md w-full relative z-10"
-        style={{ borderColor: background[type] || "var(--info)" }}
+        className={`
+          flex items-start gap-4 px-6 py-5 rounded-3xl border shadow-2xl
+          backdrop-blur-2xl min-w-[340px] max-w-[440px] text-white
+          ${bgColors[type] || bgColors.info}
+          transition-all duration-500 ease-out
+          ${visible && !exiting 
+            ? "opacity-100 translate-y-0 scale-100" 
+            : "opacity-0 translate-y-4 scale-95"
+          }
+          ${exiting 
+            ? "opacity-0 -translate-y-2 scale-95" 
+            : ""
+          }
+        `}
+        style={{
+          boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.4)",
+        }}
       >
-        {/* Icon */}
-        <Icon
-          className="text-2xl pt-0.5 flex-shrink-0"
-          style={{ color: background[type] || "var(--info)" }}
-        />
-
-        {/* Message + Button */}
-        <div className="flex-1">
-          <p className="text-sm sm:text-base font-medium">{message}</p>
-
-          <button
-            onClick={() => {
-              setVisible(false);
-              onClose();
-            }}
-            className="mt-3 px-4 py-1.5 rounded-md text-sm font-semibold shadow-sm transition 
-              bg-[var(--primary)] text-white hover:bg-[var(--btn-hover)] 
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)] btn"
-          >
-            OK
-          </button>
+        {/* Icon with subtle pulse on entrance */}
+        <div className={`mt-0.5 flex-shrink-0 transition-transform duration-700 ${visible ? 'scale-100' : 'scale-75'}`}>
+          <IconComponent
+            className={`w-7 h-7 ${iconColors[type]} drop-shadow-sm`}
+            strokeWidth={2.5}
+          />
         </div>
+
+        {/* Content */}
+        <div className="flex-1 pt-0.5">
+          <p className="text-[15.2px] leading-tight font-medium tracking-[-0.005em] pr-6">
+            {message}
+          </p>
+        </div>
+
+        {/* Close Button - Elegant */}
+        {showClose && (
+          <button
+            onClick={handleClose}
+            className="flex-shrink-0 -mt-1 -mr-2 p-2 rounded-2xl hover:bg-white/10 active:bg-white/20 transition-all duration-200 focus:outline-none group"
+            aria-label="Close notification"
+          >
+            <X 
+              className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" 
+              strokeWidth={3.5}
+            />
+          </button>
+        )}
       </div>
     </div>
-  </div>
-)}
-
-
-    </>
   );
 };
 

@@ -26,6 +26,8 @@ import ScriptureAssistant from './pages/spiritual_life_tracker/ScriptureAssistan
 import BibleReader from './pages/spiritual_life_tracker/BibleReader';
 import AppInstallPrompt from './pages/AppInstallPrompt';
 import AuthSuccess from "./pages/AuthSuccess";
+import PasswordSetupModal from './component/PasswordSetupModal';
+import AccountabilityOnboarding from './component/onboarding/AccountabilityOnboarding';
 import "./styles/ui.css"
 import GlobalAudioModal from './component/shared/GlobalAudioModal';
 import GlobalVideoModal from './component/shared/GlobalVideoModal';
@@ -49,7 +51,7 @@ import { MoodProvider } from './store/MoodStore';
 import { ScriptureProvider } from './context/ScriptureContext';
 import GlobalScriptureModal from './component/shared/GlobalScriptureModal';
 const App = () => {
-  const { user, modalOpen, setModalOpen } = useAuth();
+  const { user, setUser, token, modalOpen, setModalOpen, showPasswordModal, setShowPasswordModal, showOnboarding, setShowOnboarding } = useAuth();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const oauthError = searchParams.get('error');
@@ -223,6 +225,20 @@ const subscribeUserToPush = async () => {
     document.body.style.overflow = modalOpen ? 'hidden' : 'auto';
     return () => (document.body.style.overflow = 'auto');
   }, [modalOpen, user]);
+
+  // Auto-show onboarding after password modal closes if user hasn't completed onboarding
+  useEffect(() => {
+    if (!showPasswordModal && user && user.onboardingCompleted === false && !showOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [showPasswordModal, user, showOnboarding, setShowOnboarding]);
+
+
+   useEffect(() => {
+    console.log("Show onboarding:", showOnboarding);   
+    console.log("User onboardingCompleted:", user?.onboardingCompleted);
+   }, [showOnboarding]);  
+
   return (
     <MoodProvider>
       <ScriptureProvider>
@@ -247,6 +263,42 @@ const subscribeUserToPush = async () => {
           <GlobalScriptureModal />
 
           <SidebarTooltipPortal />
+
+          <PasswordSetupModal
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+            token={token}
+            onSuccess={() => setShowPasswordModal(false)}
+          />
+
+          <AccountabilityOnboarding
+            isOpen={showOnboarding}
+            onClose={() => setShowOnboarding(false)}
+            token={token}
+            onSuccess={(data) => {
+              console.log("🎉 [App.jsx] Onboarding API response received:", data);
+              
+              // Update user state with new onboarding data
+              if (data?.user) {
+                console.log("📝 [App.jsx] Updating user state with:", data.user);
+                const updatedUser = data.user;
+                
+                // Update AuthContext user state
+                setUser(updatedUser);
+                
+                // Sync to localStorage for persistence
+                localStorage.setItem("springsConnectUser", JSON.stringify(updatedUser));
+                console.log("💾 [App.jsx] User synced to localStorage");
+                
+                // Close modal
+                setShowOnboarding(false);
+                console.log("✅ [App.jsx] Modal closed, onboarding complete!");
+              } else {
+                console.error("❌ [App.jsx] No user data in response:", data);
+                setShowOnboarding(false);
+              }
+            }}
+          />
 
         <Routes>
 

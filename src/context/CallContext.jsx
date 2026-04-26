@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, useRef, useContext } from "react";
+import React, { createContext, useState, useCallback, useContext } from "react";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 
@@ -48,131 +48,6 @@ export const CallProvider = ({ children }) => {
   // Get user and socket from context
   const { user } = useAuth();
   const { socket } = useSocket();
-
-  // Listen for socket events related to calls
-  useEffect(() => {
-    if (!socket || !user) return;
-
-    // Handle incoming call from another user
-    const handleIncomingCall = (callData) => {
-      console.log("📞 Incoming call received:", callData);
-      
-      // Set status message for UI
-      setCallStatusMessage(`📞 Incoming ${callData.callType || 'audio'} call from ${callData.initiatorName || 'unknown user'}`);
-      
-      if (currentCall && currentCall.status !== CALL_STATES.ENDED && currentCall.status !== CALL_STATES.IDLE) {
-        // Already in a call, reject the incoming one
-        socket.emit("callRejected", {
-          callId: callData.callId,
-          rejecterId: user._id,
-          reason: "busy"
-        });
-        return;
-      }
-
-      setCurrentCall({
-        ...callData,
-        status: CALL_STATES.RINGING,
-        direction: "incoming",
-        startTime: null,
-        endTime: null,
-        duration: 0,
-        muted: false,
-        videoDisabled: false,
-        speakerOn: true,
-        remoteStream: null,
-        localStream: null
-      });
-    };
-
-    // Handle call accepted by remote user
-    const handleCallAcceptedAck = (data) => {
-      console.log("📞 Call accepted by remote user:", data);
-      console.log("📞 Setting UI status: Call accepted, connecting...");
-      setCallStatusMessage('🔗 Connecting...');
-      setCurrentCall(prev => {
-        if (!prev) return prev;
-        console.log("📞 Updating call status from INITIATING/RINGING to CONNECTING");
-        return { ...prev, status: CALL_STATES.CONNECTING };
-      });
-    };
-
-    // Handle call rejected by remote user
-    const handleCallRejectedAck = (data) => {
-      console.log("📞 Call rejected by remote user:", data);
-      
-      // Set status message for UI
-      const reason = data.reason || 'unknown';
-      let message = 'Call rejected';
-      let consoleMsg = '❌ Call rejected by remote user';
-      if (reason === 'offline') {
-        message = '📴 User is offline — call could not connect';
-        consoleMsg = '❌ User is offline - call could not connect';
-      }
-      else if (reason === 'busy') {
-        message = '⏳ User is busy';
-        consoleMsg = '❌ User is busy on another call';
-      }
-      else if (reason === 'declined') {
-        message = '❌ Call declined by user';
-        consoleMsg = '❌ User declined the call';
-      }
-      else if (reason === 'timeout') {
-        message = '⏱️ No response — call timed out';
-        consoleMsg = '❌ Call timed out - no response from user';
-      }
-      else {
-        message = `❌ Call rejected (reason: ${reason})`;
-        consoleMsg = `❌ Call rejected - reason: ${reason}`;
-      }
-      console.log(`📞 ${consoleMsg}`);
-      setCallStatusMessage(message);
-      setCurrentCall(prev => {
-        if (!prev) return prev;
-        return { ...prev, status: CALL_STATES.REJECTED, rejectReason: data.reason };
-      });
-      // Don't auto-clear - keep the status message visible until user manually dismisses
-    };
-
-    // Handle call ended by remote user
-    const handleCallEndedAck = (data) => {
-      console.log("📞 Call ended by remote user:", data);
-      console.log("📞 Setting UI status: Call ended");
-      setCallStatusMessage('Call ended');
-      setCurrentCall(prev => {
-        if (!prev) return prev;
-        const endTime = new Date();
-        const duration = Math.floor((endTime - (prev.startTime || endTime)) / 1000);
-        
-        // Add to history
-        setCallHistory(prevHistory => [
-          {
-            ...prev,
-            status: CALL_STATES.ENDED,
-            endTime,
-            duration
-          },
-          ...prevHistory.slice(0, 49)
-        ]);
-        
-        return null;
-      });
-    };
-
-    // Register listeners
-    socket.on("incomingCall", handleIncomingCall);
-    socket.on("callAcceptedAck", handleCallAcceptedAck);
-    socket.on("callRejectedAck", handleCallRejectedAck);
-    socket.on("callEndedAck", handleCallEndedAck);
-
-    // Cleanup
-    return () => {
-      socket.off("incomingCall", handleIncomingCall);
-      socket.off("callAcceptedAck", handleCallAcceptedAck);
-      socket.off("callRejectedAck", handleCallRejectedAck);
-      socket.off("callEndedAck", handleCallEndedAck);
-    };
-  }, [socket, user, currentCall]);
 
   // Media constraints (can be adjusted for mobile vs desktop)
   const [mediaConstraints, setMediaConstraints] = useState({
@@ -237,29 +112,8 @@ export const CallProvider = ({ children }) => {
       localStream: null
     });
 
-    // Emit call initiated event to backend via socket
-    if (socket && user) {
-      console.log("📤 Emitting callInitiated to socket...");
-      socket.emit("callInitiated", {
-        callId,
-        initiatorId: user._id,
-        initiatorName: user.name,
-        receiverId,
-        callType,
-        timestamp: new Date().toISOString()
-      });
-      console.log("✅ Emitted callInitiated to socket");
-      
-      // Update status to show request sent
-      setTimeout(() => {
-        setCallStatusMessage(`📡 Sending call request to ${receiverName}...`);
-        console.log("📞 Setting UI status: Sending call request to server...");
-      }, 500);
-    } else {
-      console.warn("⚠️ Cannot emit callInitiated - socket or user not available");
-      setCallError("Network error - please check your connection");
-      setCallStatusMessage("❌ Network error - could not send call request");
-    }
+    // do not Emit call initiated event to backend via socket— useCallManager does it
+ 
 
     return callId;
   }, [currentCall, user, socket]);

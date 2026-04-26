@@ -3,7 +3,17 @@ import axiosBase from './src/utils/axiosBase'; // Adjusted path
 import { useAuth } from './src/context/AuthContext'; // Adjusted path
 import { useSocket } from './src/context/SocketContext'; // Adjusted path
 
-const MessageSeenContext = createContext();
+const MessageSeenContext = createContext({
+    lastSeenMessagesMap: {},
+    setLastSeenMessageForChat: () => {},
+    updateConversationLastMessage: () => {},
+    unreadCountsMap: {},
+    totalUnreadCount: 0,
+    failedToFetch: false,
+    conversations: [],
+    loading: true,
+    setLoading: () => {},
+});
 
 export const useMessageSeen = () => useContext(MessageSeenContext);
 
@@ -13,22 +23,20 @@ export const MessageSeenProvider = ({ children }) => {
 
     // State for conversations
     const [conversations, setConversations] = useState([]);
-    
-    // Map of { [chatId]: lastSeenMessageObject }
+    const [loading, setLoading] = useState(true);
     const [lastSeenMessagesMap, setLastSeenMessagesMap] = useState({});
-    
-    // Map of { [chatId]: unreadCount }
     const [unreadCountsMap, setUnreadCountsMap] = useState({});
-    
-    // Total unread count for the main sidebar badge
     const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-
     const [failedToFetch, setFailedToFetch] = useState(false);
+    
+    // Track active chat to handle unread increments correctly
+    const [activeChatId, setActiveChatId] = useState(null);
 
     // 1. Fetch conversations for the logged-in user
     useEffect(() => {
         const fetchConversations = async () => {
             if (!user?._id) return;
+            setLoading(true);
             try {
                 const { data } = await axiosBase.get('/api/chat/user/conversations');
                 if (data.success) {
@@ -40,6 +48,9 @@ export const MessageSeenProvider = ({ children }) => {
                 console.error("Failed to fetch conversations:", error);
                 
             }
+            finally {
+                setLoading(false);
+            }   
         };
 
         fetchConversations();
@@ -126,17 +137,46 @@ export const MessageSeenProvider = ({ children }) => {
             }
         };
 
+        /**
+         * CRITICAL: When a new message is received, update the conversation's lastMessage
+         * AND increment unread count if the message is NOT from the current active chat
+         * This ensures the sidebar updates live with unread badges
+         */
+        const handleReceiveMessage = ({ chatId, message }) => {
+            setConversations(prevConversations => 
+                prevConversations.map(convo => 
+                    convo._id === chatId 
+                        ? { ...convo, lastMessage: message }
+                        : convo
+                )
+            );
+            
+            // If this message is NOT in the active chat, increment unread count
+            // This makes the sidebar update live with red badges
+            if (chatId !== activeChatId) {
+                setUnreadCountsMap(prevMap => ({
+                    ...prevMap,
+                    [chatId]: (prevMap[chatId] || 0) + 1,
+                }));
+                
+                // Also update total unread count
+                setTotalUnreadCount(prevCount => prevCount + 1);
+            }
+        };
+
         socket.on('unreadCountUpdated', handleUnreadCountUpdated);
         socket.on('globalUnreadCountUpdated', handleGlobalUnreadCountUpdated);
         socket.on('userSeenMessage', handleUserSeenMessage);
+        socket.on('receiveMessage', handleReceiveMessage);
 
         return () => {
             socket.off('unreadCountUpdated', handleUnreadCountUpdated);
             socket.off('globalUnreadCountUpdated', handleGlobalUnreadCountUpdated);
             socket.off('userSeenMessage', handleUserSeenMessage);
+            socket.off('receiveMessage', handleReceiveMessage);
         };
 
-    }, [socket, user?._id]);
+    }, [socket, user?._id, activeChatId]);
 
 
     // 5. Function for useSeenManager to call to update the global state
@@ -159,21 +199,42 @@ export const MessageSeenProvider = ({ children }) => {
         });
     }, [socket]);
 
+    /**
+     * Update a conversation's lastMessage immediately
+     * Used by ChatBox when sending a message to trigger instant re-sort
+     */
+    const updateConversationLastMessage = useCallback((chatId, message) => {
+        setConversations(prevConversations => 
+            prevConversations.map(convo => 
+                convo._id === chatId 
+                    ? { ...convo, lastMessage: message }
+                    : convo
+            )
+        );
+    }, []);
+
     // 6. Memoize the context value to prevent unnecessary re-renders of consumers
     const value = useMemo(() => ({
         lastSeenMessagesMap,
         setLastSeenMessageForChat,
+        updateConversationLastMessage,
         unreadCountsMap,
         totalUnreadCount,
         failedToFetch,
-        conversations, // expose conversations to consumers
+        conversations, 
+        loading,
+        setLoading,
+        activeChatId,
+        setActiveChatId,
     }), [
         lastSeenMessagesMap, 
-        setLastSeenMessageForChat, 
+        setLastSeenMessageForChat,
+        updateConversationLastMessage,
         unreadCountsMap, 
         totalUnreadCount,
         conversations,
         failedToFetch,
+        activeChatId,
     ]);
 
     return (

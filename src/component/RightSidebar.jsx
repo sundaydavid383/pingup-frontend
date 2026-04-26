@@ -16,10 +16,10 @@ const RightSidebar = ({ sponsors, loading }) => {
   pt-2 p-4 ml-6 mr-1 no-scrollbar">
 
       {/* Loading State */}
-      {loading && <RightSidebarSkeleton />}
+      
 
       {/* Sponsor Ad */}
-      {!loading && sponsors && (
+      { loading ? <RightSidebarSkeleton /> : sponsors && (
         <a
           href={sponsors.link}
           target="_blank"
@@ -40,7 +40,7 @@ const RightSidebar = ({ sponsors, loading }) => {
       )}
 
       {/* Recent Messages */}
-      {!loading && <RecentMessages />}
+    <RecentMessages />
       </div>
     </aside>
   );

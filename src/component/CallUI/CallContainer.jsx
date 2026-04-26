@@ -110,68 +110,7 @@ import AudioCallUI from "./AudioCallUI";
     }
   }, [callContext, connected, socket]);
 
-  // 📞 Set up socket event listeners for incoming calls
-  useEffect(() => {
-    if (!socket || !connected || !callContext) {
-      console.log("📞 CallContainer: Waiting for socket and call context...");
-      return;
-    }
-
-    console.log("📞 CallContainer: Setting up call event listeners");
-
-    // Listen for incoming calls
-    const handleIncomingCall = (callData) => {
-      console.log("📞 Incoming call received:", callData);
-      if (callContext?.handleIncomingCall) {
-        callContext.handleIncomingCall({
-          callId: callData.callId,
-          type: callData.callType,
-          direction: "incoming",
-          initiatorId: callData.initiatorId,
-          initiatorName: callData.initiatorName,
-          initiatorImage: callData.initiatorImage,
-          status: "ringing"
-        });
-      }
-    };
-
-    // Listen for call accepted
-    const handleCallAccepted = (data) => {
-      console.log("📞 Call accepted:", data);
-    };
-
-    // Listen for call rejected
-    const handleCallRejected = (data) => {
-      console.log("📞 Call rejected:", data);
-      if (callContext?.rejectCall) {
-        callContext.rejectCall(data.reason || "declined");
-      }
-    };
-
-    // Listen for call ended
-    const handleCallEnded = (data) => {
-      console.log("📞 Call ended:", data);
-      if (callContext?.endCall) {
-        callContext.endCall();
-      }
-    };
-
-    // Register listeners
-    socket.on("incomingCall", handleIncomingCall);
-    socket.on("callAcceptedAck", handleCallAccepted);
-    socket.on("callRejectedAck", handleCallRejected);
-    socket.on("callEnded", handleCallEnded);
-
-    // Cleanup
-    return () => {
-      console.log("📞 CallContainer: Cleaning up call event listeners");
-      socket.off("incomingCall", handleIncomingCall);
-      socket.off("callAcceptedAck", handleCallAccepted);
-      socket.off("callRejectedAck", handleCallRejected);
-      socket.off("callEnded", handleCallEnded);
-    };
-  }, [socket, connected, callContext]);
-  
+  // CallContainer renders the UI, while useCallManager owns the socket event lifecycle.
   // Use ref to store WebRTC instance for stable reference in callbacks
   const webrtcInstanceRef = useRef(null);
 

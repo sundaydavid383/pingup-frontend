@@ -20,13 +20,7 @@ const GlobalPipModal = () => {
 
     const {
         pipOpen, activeChatId, activeChatHistory, setActiveChatHistory,
-        chatId, draft, setDraft, image, setImage, audioURL, setAudioURL,
-        recording, setRecording, recordTime, setRecordTime,
-        audioLevel, setAudioLevel, audioStream, setAudioStream,
-        isAtBottom, setIsAtBottom, chatLoading,
-        mediaViewerOpen, setMediaViewerOpen,
-        mediaInitialIndex, setMediaInitialIndex,
-        chatImages, setChatImages, closePipModal,
+        chatId, chatLoading, closePipModal,
     } = usePipModal();
 
     const hasOpenedRef = useRef(false);
@@ -39,6 +33,34 @@ const GlobalPipModal = () => {
 
     const [activeUser, setActiveUser] = useState(null);
     const [expandedChatMessages, setExpandedChatMessages] = useState(new Set());
+
+    const [draft, setDraft] = useState("");
+    const [image, setImage] = useState(null);
+    const [audioURL, setAudioURL] = useState(null);
+    const [recording, setRecording] = useState(false);
+    const [recordTime, setRecordTime] = useState(0);
+    const [audioLevel, setAudioLevel] = useState(0);
+    const [audioStream, setAudioStream] = useState(null);
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+    const [mediaInitialIndex, setMediaInitialIndex] = useState(0);
+    const [chatImages, setChatImages] = useState([]);
+
+    useEffect(() => {
+        if (!activeChatId) return;
+        setDraft("");
+        setImage(null);
+        setAudioURL(null);
+        setRecording(false);
+        setRecordTime(0);
+        setAudioLevel(0);
+        setAudioStream(null);
+        setIsAtBottom(true);
+        setMediaViewerOpen(false);
+        setMediaInitialIndex(0);
+        setChatImages([]);
+        setExpandedChatMessages(new Set());
+    }, [activeChatId]);
 
     // Stable render condition - prevents flicker
     const shouldRender = useMemo(() => pipOpen && !!activeChatId, [pipOpen, activeChatId]);
@@ -344,7 +366,7 @@ const GlobalPipModal = () => {
                         onScroll={handleScroll}
                         className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]"
                     >
-                        {chatLoading ? <ChatMessagesSkeleton /> : activeChatHistory.map((msg, i) => (
+                        {chatLoading ? <ChatMessagesSkeleton /> : activeChatHistory?.map((msg, i) => (
                             <div key={msg._id || i} className={`flex flex-col ${msg.from_user_id === user?._id ? "items-end" : "items-start"}`}>
                                 <div className={` ${msg.message_type === "image" || msg.message_type === "audio" ? "px-1 py-1" : "px-3 py-2"} rounded-2xl text-sm max-w-[85%] ${msg.from_user_id === user?._id ? "bg-black text-white rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
                                     {msg.message_type === "text" && (

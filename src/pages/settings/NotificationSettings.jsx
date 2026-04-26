@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import axiosBase from '../../utils/axiosBase';
@@ -14,6 +14,8 @@ const NotificationSettings = ({ isEmbedded = false }) => {
   });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const isMounted = useRef(false);
 
   // Load settings from backend on mount
   useEffect(() => {
@@ -25,16 +27,24 @@ const NotificationSettings = ({ isEmbedded = false }) => {
         });
         if (res.data.success && res.data.settings) {
           const { notificationSettings } = res.data.settings;
+          const push = notificationSettings?.push ?? true;
+          const mentions = notificationSettings?.mentions ?? true;
+          const phone = notificationSettings?.phone ?? true;
+          const email = notificationSettings?.email ?? false;
+          const allMuted = !push && !mentions && !phone && !email;
+
           setNotifications({
-            pushNotifications: notificationSettings?.push ?? true,
-            messageAlerts: notificationSettings?.mentions ?? true,
-            commentAlerts: notificationSettings?.phone ?? true,
-            emailNotifications: notificationSettings?.email ?? false,
-            muteAll: false
+            pushNotifications: push,
+            messageAlerts: mentions,
+            commentAlerts: phone,
+            emailNotifications: email,
+            muteAll: allMuted
           });
         }
       } catch (err) {
         console.error('Failed to fetch notification settings:', err);
+      } finally {
+        setInitialized(true);
       }
     };
     fetchSettings();
@@ -64,17 +74,45 @@ const NotificationSettings = ({ isEmbedded = false }) => {
 
   // Auto-save when settings change
   useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+
     const timer = setTimeout(() => {
       saveSettings();
     }, 500);
+
     return () => clearTimeout(timer);
-  }, [notifications, saveSettings]);
+  }, [notifications, saveSettings, initialized]);
 
   const toggleNotification = (id) => {
-    setNotifications({
+    if (id === 'muteAll') {
+      const nextMuteAll = !notifications.muteAll;
+      setNotifications({
+        pushNotifications: !nextMuteAll,
+        messageAlerts: !nextMuteAll,
+        commentAlerts: !nextMuteAll,
+        emailNotifications: !nextMuteAll,
+        muteAll: nextMuteAll
+      });
+      return;
+    }
+
+    const nextState = {
       ...notifications,
-      [id]: !notifications[id]
-    });
+      [id]: !notifications[id],
+      muteAll: false
+    };
+
+    if (!nextState.pushNotifications && !nextState.messageAlerts && !nextState.commentAlerts && !nextState.emailNotifications) {
+      nextState.muteAll = true;
+    }
+
+    setNotifications(nextState);
   };
 
   return (

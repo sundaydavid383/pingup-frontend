@@ -379,7 +379,6 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
     <div className="bg-[var(--white-glass)] rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
 
       {/* Header */}
-      {/* Header */}
       <div className="flex justify-between items-center w-full ">
         {/* LEFT: user details */}
         <div

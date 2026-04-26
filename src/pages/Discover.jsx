@@ -210,9 +210,9 @@ export default function Discover() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-10">
+    <div className="discover-page bg-slate-50 min-h-screen pb-10">
       {/* STICKY SEARCH HEADER */}
-      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-10 md:sticky md:top-0 z-5 transition-all duration-300 ${isSticky ? 'py-2' : 'py-6'}`}>
+      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-4 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? 'py-2' : 'py-4'}`}>
         <div className="max-w-6xl mx-auto px-5">
           {/* Refresh Button */}
 
@@ -258,11 +258,7 @@ export default function Discover() {
               {/* FILTER TOGGLE BUTTON (Mobile Only) */}
               <button
                 onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                className="md:hidden flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  color: 'var(--primary)'
-                }}
+                className="discover_filter_toggle md:hidden flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 <span className="flex items-center gap-2">
                   <span>Filters</span>
@@ -318,11 +314,7 @@ export default function Discover() {
                       fetchSuggestions();
                       setIsFilterExpanded(false);
                     }}
-                    className="md:hidden w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-                    style={{
-                      backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                      color: '#dc2626'
-                    }}
+                    className="discover_clear_all_btn md:hidden w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
                   >
                     <X size={16} />
                     <span>Clear All Filters</span>
@@ -342,7 +334,7 @@ export default function Discover() {
       </div>
 
       {/* USERS GRID - Scrollable container */}
-      <div className="max-w-6xl mx-auto px-5 mt-4 md:mt-4 pt-24 md:pt-4">
+      <div className="max-w-6xl mx-auto px-5 mt-2 md:mt-2 pt-20 md:pt-16 discover_content_container">
         <div className="discoveries_grid pb-20">
           {users.map((userItem) => (
             <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />

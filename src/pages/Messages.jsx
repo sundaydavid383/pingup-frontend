@@ -23,9 +23,9 @@ const Messages = () => {
   const navigate = useNavigate();
 
   // Get data from the new MessageSeenContext
-  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch } = useMessageSeen();
+  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch, loading, setLoading, setActiveChatId: setContextActiveChatId } = useMessageSeen();
 
-  const [loading, setLoading] = useState(true);
+ 
 
 useEffect(() => {
   // simulate fetching or use your real fetching logic
@@ -34,16 +34,66 @@ useEffect(() => {
   }
 }, [conversations]);
 
+// Sync active chat ID with context so unread updates work correctly
+useEffect(() => {
+  setContextActiveChatId(activeChatId);
+}, [activeChatId, setContextActiveChatId]);
 
-  /*** Sorting connections by last message ***/
+
   const sortedConversations = useMemo(() => {
-    if (!conversations) return [];
-    return [...conversations].sort((a, b) => {
-        const timeA = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
-        const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
-        return timeB - timeA;
+    if (!conversations || conversations.length === 0) return [];
+    
+    /**
+     * WhatsApp-like Sorting Logic:
+     * 1. Active Chat (currently open) - ALWAYS first
+     * 2. Unread Messages (sorted by latest activity within this group)
+     * 3. Read Messages (sorted by latest activity)
+     */
+    
+    // Helper function to calculate priority and timestamp for each conversation
+    const getConversationData = (convo) => {
+      const unreadCount = unreadCountsMap[convo._id] || 0;
+      const isActive = activeChatId === convo.otherUser?._id;
+      
+      // Determine priority level (lower number = higher priority)
+      let priorityLevel;
+      if (isActive) {
+        priorityLevel = 0; // Active chat always first
+      } else if (unreadCount > 0) {
+        priorityLevel = 1; // Unread chats second
+      } else {
+        priorityLevel = 2; // Read chats last
+      }
+      
+      // Pre-compute timestamp to avoid creating Date objects during sort
+      const timestamp = convo.lastMessage?.createdAt 
+        ? new Date(convo.lastMessage.createdAt).getTime() 
+        : 0;
+      
+      return { priorityLevel, timestamp, unreadCount };
+    };
+    
+    // Create array with pre-computed data for efficient sorting
+    const conversationsWithData = conversations.map((convo) => ({
+      convo,
+      ...getConversationData(convo)
+    }));
+    
+    // Sort using pre-computed data
+    conversationsWithData.sort((a, b) => {
+      // First, compare by priority level
+      if (a.priorityLevel !== b.priorityLevel) {
+        return a.priorityLevel - b.priorityLevel;
+      }
+      
+      // Within same priority level, sort by latest activity (newest first)
+      // This ensures chats jump up when they receive new messages
+      return b.timestamp - a.timestamp;
     });
-  }, [conversations]);
+    
+    // Return only the conversations (without the metadata)
+    return conversationsWithData.map(item => item.convo);
+  }, [conversations, unreadCountsMap, activeChatId]);
 
 
   const filteredConnections = useMemo(() => sortedConversations.filter((convo) => {
@@ -160,14 +210,14 @@ useEffect(() => {
               const isActive = activeChatId === otherUser._id;
               
               // Check if this is the first unread message in the list
-              const isFirstUnread = unreadCount > 0 && index === filteredConnections.findIndex(c => (unreadCountsMap[c._id] || 0) > 0);
+              const hasUnread = unreadCount > 0;
 
               return (
                 <div
                   key={otherUser._id}
                   onClick={() => handleOpenChat(otherUser._id)}
                   className={`flex gap-5 px-3 py-2 rounded-md items-center  cursor-pointer transition ${
-                    isFirstUnread 
+                    hasUnread 
                       ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
                       : isActive
                         ? "bg-violet-100"
@@ -184,7 +234,7 @@ useEffect(() => {
                   />
 
                   <div className="flex-1 min-w-0">
-                    <p className={`truncate ${isFirstUnread ? "text-red-600 font-semibold" : "text-[var(--primary)]"}`}>
+                    <p className={`truncate ${hasUnread ? "text-red-600 font-semibold" : "text-[var(--primary)]"}`}>
                        @{highlightMatch(otherUser.username, searchTerm)}
                     </p>
                     

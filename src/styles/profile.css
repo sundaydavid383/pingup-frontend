@@ -476,6 +476,16 @@ display: none;
   background: #9ca3af;
   cursor: not-allowed;
 }
+.block-btn-unblock {
+  background-color: #f97316; /* orange-500 */
+  color: white;
+  border: none;
+  cursor: pointer;
+  opacity: 1;
+}
+.block-btn-unblock:hover {
+  background-color: #ea580c; /* orange-600 */
+}
 
 .block-btn-active {
   background: #dc2626;

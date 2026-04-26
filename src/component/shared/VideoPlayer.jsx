@@ -480,7 +480,7 @@ export default function VideoPlayer({
       style={{
         maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight,
         height: "auto",                    // ← changed from 80vh
-        minHeight: "180px",
+        minHeight: "480px",
         width: "100%",
         maxWidth: "100%",
         "--vp-primary": "var(--primary)",

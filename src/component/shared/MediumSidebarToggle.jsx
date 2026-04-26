@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Megaphone, X } from "lucide-react";
 import RecentMessages from "../RecentMessages";
+import RightSidebarSkeleton from "../skeleton/RightSidebarSkeleton";
 
 const MediumSidebarToggle = ({ sponsors }) => {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -33,7 +34,9 @@ const MediumSidebarToggle = ({ sponsors }) => {
           showSidebar ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {sponsors && (
+        {!sponsors ? (
+  <RightSidebarSkeleton />
+) : (
           <a
             href={sponsors.link}
             target="_blank"

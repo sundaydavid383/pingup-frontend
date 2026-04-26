@@ -28,7 +28,9 @@ const Profile = () => {
   const [showEdit, setShowEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [blocking, setBlocking] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(() => {
+  return localStorage.getItem(`blocked_${profileId}`) === 'true';
+});
 
   const isUnauthenticatedVisitor = !currentUser;
 
@@ -90,12 +92,15 @@ const Profile = () => {
         userData = res.data.user || {};
         userPosts = Array.isArray(res.data.posts) ? res.data.posts : [];
 
-        // Check if already blocked
-        if (res.data.user?.blockedBy?.includes(currentUser?._id)) {
-          setIsBlocked(true);
-        }
+if (res.data.user?.viewerHasBlocked === true) {
+  setIsBlocked(true);
+  localStorage.setItem(`blocked_${profileId}`, 'true');
+} else if (res.data.user?.viewerHasBlocked === false) {
+  localStorage.removeItem(`blocked_${profileId}`);
+  setIsBlocked(false);
+}
+// If viewerHasBlocked is undefined (e.g., viewing own profile), leave as is
       }
-
       setProfileUser(userData);
       setPosts(userPosts);
     } catch (err) {
@@ -111,29 +116,42 @@ const Profile = () => {
   };
 
   // Block user (keeps exactly your server call and behavior)
-  const handleBlockUser = async () => {
-    if (!token || !profileId) return;
-    if (!window.confirm(`Are you sure you want to block ${profileUser?.name || "this user"}?`))
-      return;
+ const handleBlockUser = async () => {
+  if (!token || !profileId) return;
+  const action = isBlocked ? 'unblock' : 'block';
+  if (!window.confirm(`Are you sure you want to ${action} ${profileUser?.name || "this user"}?`))
+    return;
 
-    setBlocking(true);
-    try {
-      const res = await axiosBase.put(
-        `/api/user/block?userId=${currentUser._id}&id=${profileId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  setBlocking(true);
+  try {
+    // Use the POST toggle route which handles both block and unblock
+    const res = await axiosBase.post(
+      `/api/user/block/${profileId}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      console.log("✅ Blocked user:", res.data);
-      setIsBlocked(true);
+    const nowBlocked = res.data?.blocked;
+    setIsBlocked(nowBlocked);
+
+    // Sync with localStorage so ChatBox knows
+    if (nowBlocked) {
+      localStorage.setItem(`blocked_${profileId}`, 'true');
       showAlert(`${profileUser?.name || "User"} has been blocked successfully.`, "success");
-    } catch (err) {
-      console.error("❌ Error blocking user:", err);
-      showAlert("Failed to block user. Please try again.", "error");
-    } finally {
-      setBlocking(false);
+    } else {
+      localStorage.removeItem(`blocked_${profileId}`);
+      showAlert(`${profileUser?.name || "User"} has been unblocked.`, "success");
     }
-  };
+  } catch (err) {
+    console.error("❌ Error blocking/unblocking user:", err);
+    showAlert(
+      err?.response?.data?.message || `Failed to ${action} user. Please try again.`,
+      "error"
+    );
+  } finally {
+    setBlocking(false);
+  }
+};
 
   useEffect(() => {
     fetchProfileData();
@@ -219,20 +237,17 @@ const Profile = () => {
                     {loading ? (
                       <div className="bg-skeleton animate-skeleton" />
                     ) : (
-                      <button
-                        disabled={blocking || isBlocked}
-                        onClick={handleBlockUser}
-                        className={`block-btn ${isBlocked
-                          ? "block-btn-disabled"
-                          : "block-btn-active"
-                          }`}
-                      >
-                        {blocking
-                          ? "Blocking..."
-                          : isBlocked
-                            ? "User Blocked"
-                            : "Block User"}
-                      </button>
+                     <button
+                    disabled={blocking}
+                    onClick={handleBlockUser}
+                    className={`block-btn ${isBlocked ? "block-btn-unblock" : "block-btn-active"}`}
+                  >
+                    {blocking
+                      ? isBlocked ? "Unblocking..." : "Blocking..."
+                      : isBlocked
+                        ? "Unblock User"
+                        : "Block User"}
+                  </button>
                     )}
                   </div>
                 )}
