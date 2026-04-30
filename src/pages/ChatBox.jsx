@@ -33,11 +33,18 @@ const ChatBox = ({ userId: propUserId }) => {
   const params = useParams();
   const navigate = useNavigate();
   const { user, sidebarOpen } = useAuth();
-   const userId = propUserId || params.userId || user?._id;
+  const userId = propUserId || params.userId || user?._id;
   const { socket, connected, onlineUsers } = useSocket();
 
-  // Use the new MessageSeenContext
-  const { setLastSeenMessageForChat, updateConversationLastMessage } = useMessageSeen();
+  const { 
+    setLastSeenMessageForChat, 
+    updateConversationLastMessage, 
+    clearUnreadForChat, 
+    getConvoByOtherUser, 
+    setActiveChatId, 
+    refetchConversations   
+  } = useMessageSeen();
+
 
   // 1. INITIALIZE FROM LOCAL STORAGE
   // Use a state initializer that depends on userId
@@ -287,6 +294,14 @@ useEffect(() => {
   }, []);
 
 
+  useEffect(() => {
+  if (!userId) return;
+  setActiveChatId(userId); // tell context "this chat is open"
+  return () => {
+    setActiveChatId(null); // clear when leaving
+  };
+}, [userId, setActiveChatId]);
+
   // ===================== NEAR BOTTOM SCROLL DETECTION =====================
   // Ref to track if user is near bottom (used for scroll button visibility)
   const isUserNearBottomRef = useRef(true);
@@ -388,6 +403,7 @@ useEffect(() => {
         const cachedChatId = localStorage.getItem(`chatId_${userId}`);
         if (cachedChatId) {
           setChatId(cachedChatId);
+          clearUnreadForChat(cachedChatId);
         }
 
         const [receiverRes, chatRes] = await Promise.all([
@@ -398,11 +414,14 @@ useEffect(() => {
         setReceiver(receiverRes.data.user || null);
         setLastActive(receiverRes.data.user?.lastActiveAt || null);
 
-        if (chatRes.data?.room) {
-          setChatId(chatRes.data.room._id);
-          // Update chatId in localStorage for future reference
-          localStorage.setItem(`chatId_${userId}`, chatRes.data.room._id);
-        }
+        // REPLACE the entire doubled block with this clean version:
+if (chatRes.data?.room) {
+  const roomId = chatRes.data.room._id;
+  setChatId(roomId);
+  localStorage.setItem(`chatId_${userId}`, roomId);
+  clearUnreadForChat(roomId);
+  refetchConversations(); // ✅ re-sync sidebar counts from backend
+}
 
       if (Array.isArray(chatRes.data?.messages)) {
           const newMessages = [...chatRes.data.messages];
@@ -438,14 +457,12 @@ useEffect(() => {
 
     const handleReceiveMessage = (newMsg) => {
         setMessages(prev => {
-            // Replace temp message with real one
             const tempIndex = prev.findIndex(m => m._id === newMsg.tempId);
             if (tempIndex !== -1) {
                 const updated = [...prev];
                 updated[tempIndex] = { ...newMsg, status: "delivered" };
                 return updated;
             }
-            // Prevent exact duplicates
             if (prev.some(m => m._id === newMsg._id)) return prev;
             return [...prev, newMsg];
         });
@@ -457,38 +474,49 @@ useEffect(() => {
         receiveSound.current.play().catch(() => {});
     };
 
-    const handleTypingFrom = ({ from_user_id }) => {
-        setTypingUser(true);
-        setTypingUserFromId(from_user_id);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => {
-            setTypingUser(false);
-            setTypingUserFromId(null);
-        }, 2000);
+const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
+    if (typingChatId && chatIdRef.current && 
+        typingChatId.toString() !== chatIdRef.current.toString()) {
+      return;
+    }
+    setTypingUser(true);
+    setTypingUserFromId(from_user_id);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+        setTypingUser(false);
+        setTypingUserFromId(null);
+    }, 2000);
+};
+
+    // ✅ Window event (from SocketContext global handler — receiver NOT in room)
+    const handleNewMessageAlert = (e) => {
+        const msg = e.detail?.message;
+        if (!msg?._id) return;
+        if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
+        handleReceiveMessage(msg);
     };
 
-    // ✅ Listen via window event (SocketContext dispatches this)
-const handleNewMessageAlert = (e) => {
-    const msg = e.detail?.message;
-    if (!msg?._id) return;
-    // Use ref so we always have the current chatId, not a stale closure value
-    if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
-    handleReceiveMessage(msg);
-};
+    // ✅ Direct socket event (receiver IS in room — this was missing!)
+    const handleDirectReceiveMessage = (msg) => {
+        if (!msg?._id) return;
+        if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
+        // Don't process our own sent messages (already handled optimistically)
+        if (msg.from_user_id === user._id) return;
+        handleReceiveMessage(msg);
+    };
 
     socket.on("typing", handleTypingFrom);
     socket.on("messageRead", handleMessageRead);
-    // ✅ Use window event instead of socket.on("receiveMessage") to avoid double-handling
+    socket.on("receiveMessage", handleDirectReceiveMessage); // ✅ ADD THIS BACK
     window.addEventListener("newMessageAlert", handleNewMessageAlert);
 
     return () => {
         socket.off("typing", handleTypingFrom);
         socket.off("messageRead", handleMessageRead);
-        // ✅ Cleanup is HERE in the return — not in the body
+        socket.off("receiveMessage", handleDirectReceiveMessage); // ✅ cleanup
         window.removeEventListener("newMessageAlert", handleNewMessageAlert);
     };
-}, [socket, user]); // ✅ chatId added to deps so handler always has current chatId
-
+}, [socket, user]);
   // FIXED: Stable Online / Last Seen Status
   const getStatusText = useMemo(() => {
     if (!receiver) return "Loading...";

@@ -12,6 +12,7 @@ import axios from "../utils/axiosBase";
 import { FaArrowDown } from "react-icons/fa";
 import ChatMessagesSkeleton from "./skeleton/ChatMessagesSkeleton";
 import "../styles/message.css";
+import { useMessageSeen } from "../../MessageSeenContext";
 
 const GlobalPipModal = () => {
     const navigate = useNavigate();
@@ -26,7 +27,14 @@ const GlobalPipModal = () => {
     const hasOpenedRef = useRef(false);
     const modalRef = useRef(null);
     const scrollRef = useRef(null);
-
+    const { clearUnreadForChat, getConvoByOtherUser } = useMessageSeen();
+    useEffect(() => {
+  if (!activeChatId) return;
+  const convo = getConvoByOtherUser(activeChatId);
+  if (convo?._id) {
+    clearUnreadForChat(convo._id);
+  }
+}, [activeChatId]);
     const [position, setPosition] = useState({ x: 0, y: 20 });
     const [isDragging, setIsDragging] = useState(false);
     const dragStartPos = useRef({ x: 0, y: 0 });

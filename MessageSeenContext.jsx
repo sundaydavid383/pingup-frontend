@@ -1,245 +1,191 @@
-import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
-import axiosBase from './src/utils/axiosBase'; // Adjusted path
-import { useAuth } from './src/context/AuthContext'; // Adjusted path
-import { useSocket } from './src/context/SocketContext'; // Adjusted path
 
-const MessageSeenContext = createContext({
-    lastSeenMessagesMap: {},
-    setLastSeenMessageForChat: () => {},
-    updateConversationLastMessage: () => {},
-    unreadCountsMap: {},
-    totalUnreadCount: 0,
-    failedToFetch: false,
-    conversations: [],
-    loading: true,
-    setLoading: () => {},
-});
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import axiosBase from "./src/utils/axiosBase"; // adjust path as needed
+import { useAuth } from "./src/context/AuthContext";
+import { useSocket } from "./src/context/SocketContext";
 
-export const useMessageSeen = () => useContext(MessageSeenContext);
+const MessageSeenContext = createContext(null);
 
 export const MessageSeenProvider = ({ children }) => {
-    const { user } = useAuth();
-    const { socket } = useSocket();
+  const { user } = useAuth();
+  const { socket } = useSocket();
 
-    // State for conversations
-    const [conversations, setConversations] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [lastSeenMessagesMap, setLastSeenMessagesMap] = useState({});
-    const [unreadCountsMap, setUnreadCountsMap] = useState({});
-    const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-    const [failedToFetch, setFailedToFetch] = useState(false);
-    
-    // Track active chat to handle unread increments correctly
-    const [activeChatId, setActiveChatId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [unreadCountsMap, setUnreadCountsMap] = useState({});   // { [conversationId]: number }
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [failedToFetch, setFailedToFetch] = useState(false);
+  const [activeChatId, setActiveChatId] = useState(null); // the userId (not chatId) currently open
 
-    // 1. Fetch conversations for the logged-in user
-    useEffect(() => {
-        const fetchConversations = async () => {
-            if (!user?._id) return;
-            setLoading(true);
-            try {
-                const { data } = await axiosBase.get('/api/chat/user/conversations');
-                if (data.success) {
-                    setConversations(data.conversations || []);
-                    setFailedToFetch(false)
-                }
-            } catch (error) {
-                setFailedToFetch(true)
-                console.error("Failed to fetch conversations:", error);
-                
-            }
-            finally {
-                setLoading(false);
-            }   
-        };
+  // Keep a ref of activeChatId so socket handlers always see latest value
+  const activeChatIdRef = useRef(null);
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+  }, [activeChatId]);
 
-        fetchConversations();
-    }, [user?._id]);
+  // ─── Fetch all conversations + unread counts ───────────────────────────────
+  const fetchConversations = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      setFailedToFetch(false);
+      const res = await axiosBase.get("/api/chat/user/conversations");
+      if (res.data?.success) {
+        const convos = res.data.conversations || [];
+        setConversations(convos);
 
-    useEffect(()=>{
-      console.log("this is what failed to fetch is:", failedToFetch)
-    },[failedToFetch])
-
-    // 2. Initial fetch for all last seen messages for the logged-in user
-    useEffect(() => {
-        const fetchAllLastSeen = async () => {
-            if (!user?._id) return;
-            try {
-                const { data } = await axiosBase.get('/api/chat/user/all-last-seen');
-                if (data.success) {
-                    setLastSeenMessagesMap(data.lastSeenMap || {});
-                }
-            } catch (error) {
-                console.error("Failed to fetch all last seen messages:", error);
-            }
-        };
-
-        fetchAllLastSeen();
-    }, [user?._id]);
-
-    // 3. Recalculate unread counts whenever conversations or seen messages change
-    useEffect(() => {
-        if (!conversations || conversations.length === 0 || !user?._id) {
-            setUnreadCountsMap({});
-            setTotalUnreadCount(0);
-            return;
-        }
-
-        const newUnreadCounts = {};
-        let newTotalUnread = 0;
-
-        conversations.forEach(chat => {
-            const lastSeenMessage = lastSeenMessagesMap[chat._id];
-            
-            // The logic to count messages needs the actual messages, which are not in the conversation object.
-            // Let's rely on the unreadCount from the conversation object fetched from the server.
-            newUnreadCounts[chat._id] = chat.unreadCount || 0;
-            newTotalUnread += chat.unreadCount || 0;
+        // Build unread map from the data returned by the server
+        const map = {};
+        convos.forEach((c) => {
+          map[c._id] = c.unreadCount || 0;
         });
+        setUnreadCountsMap(map);
+        setTotalUnreadCount(Object.values(map).reduce((a, b) => a + b, 0));
+      }
+    } catch (err) {
+      console.error("Failed to fetch conversations:", err);
+      setFailedToFetch(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?._id]);
 
-        setUnreadCountsMap(newUnreadCounts);
-        setTotalUnreadCount(newTotalUnread);
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
-    }, [conversations, lastSeenMessagesMap, user?._id]);
+  // ─── Helper: find conversation by chatId ──────────────────────────────────
+  const getConvoByChatId = useCallback((chatId) => {
+    return conversations.find((c) => c._id?.toString() === chatId?.toString());
+  }, [conversations]);
 
-    // 4. Socket listeners for real-time updates
-    useEffect(() => {
-        if (!socket) return;
+  // ─── Helper: find conversation by otherUserId ─────────────────────────────
+  const getConvoByOtherUser = useCallback((otherUserId) => {
+    return conversations.find(
+      (c) => c.otherUser?._id?.toString() === otherUserId?.toString()
+    );
+  }, [conversations]);
 
-        const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
-            setUnreadCountsMap(prevMap => ({
-                ...prevMap,
-                [chatId]: unreadCount,
-            }));
-        };
+  // ─── Increment unread for a conversation (called on new incoming message) ──
+  const incrementUnread = useCallback((chatId) => {
+    setUnreadCountsMap((prev) => {
+      const current = prev[chatId] || 0;
+      const updated = { ...prev, [chatId]: current + 1 };
+      setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+      return updated;
+    });
+  }, []);
 
-        const handleGlobalUnreadCountUpdated = ({ globalUnreadCount }) => {
-            setTotalUnreadCount(globalUnreadCount);
-        };
+  // ─── Reset unread for a conversation to 0 (called when chat is opened) ────
+  const clearUnreadForChat = useCallback((chatId) => {
+    setUnreadCountsMap((prev) => {
+      if (!prev[chatId]) return prev; // already 0, no update needed
+      const updated = { ...prev, [chatId]: 0 };
+      setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+      return updated;
+    });
+  }, []);
 
-        const handleUserSeenMessage = ({ chatId, userId, messageIds, seenAt }) => {
-            // We need to get the message object to update the lastSeenMessagesMap
-            // For now, let's refetch the last seen messages for simplicity.
-            // A better implementation would be to get the message from the event or another way.
-            if (userId === user?._id) {
-                 const fetchAllLastSeen = async () => {
-                    if (!user?._id) return;
-                    try {
-                        const { data } = await axiosBase.get('/api/chat/user/all-last-seen');
-                        if (data.success) {
-                            setLastSeenMessagesMap(data.lastSeenMap || {});
-                        }
-                    } catch (error) {
-                        console.error("Failed to fetch all last seen messages:", error);
-                    }
-                };
-                fetchAllLastSeen();
-            }
-        };
+  // ─── Update last message preview for a conversation ───────────────────────
+  const updateConversationLastMessage = useCallback((chatId, message) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c._id?.toString() === chatId?.toString()
+          ? { ...c, lastMessage: message }
+          : c
+      )
+    );
+  }, []);
 
-        /**
-         * CRITICAL: When a new message is received, update the conversation's lastMessage
-         * AND increment unread count if the message is NOT from the current active chat
-         * This ensures the sidebar updates live with unread badges
-         */
-        const handleReceiveMessage = ({ chatId, message }) => {
-            setConversations(prevConversations => 
-                prevConversations.map(convo => 
-                    convo._id === chatId 
-                        ? { ...convo, lastMessage: message }
-                        : convo
-                )
-            );
-            
-            // If this message is NOT in the active chat, increment unread count
-            // This makes the sidebar update live with red badges
-            if (chatId !== activeChatId) {
-                setUnreadCountsMap(prevMap => ({
-                    ...prevMap,
-                    [chatId]: (prevMap[chatId] || 0) + 1,
-                }));
-                
-                // Also update total unread count
-                setTotalUnreadCount(prevCount => prevCount + 1);
-            }
-        };
+  // ─── Socket: listen for new incoming messages ─────────────────────────────
+  useEffect(() => {
+    if (!socket || !user?._id) return;
 
-        socket.on('unreadCountUpdated', handleUnreadCountUpdated);
-        socket.on('globalUnreadCountUpdated', handleGlobalUnreadCountUpdated);
-        socket.on('userSeenMessage', handleUserSeenMessage);
-        socket.on('receiveMessage', handleReceiveMessage);
+    const handleNewMessageAlert = (data) => {
+      const { from_user_id, chatId, message } = data;
 
-        return () => {
-            socket.off('unreadCountUpdated', handleUnreadCountUpdated);
-            socket.off('globalUnreadCountUpdated', handleGlobalUnreadCountUpdated);
-            socket.off('userSeenMessage', handleUserSeenMessage);
-            socket.off('receiveMessage', handleReceiveMessage);
-        };
+      if (from_user_id?.toString() === user._id?.toString()) return;
+      if (activeChatIdRef.current?.toString() === from_user_id?.toString()) return;
 
-    }, [socket, user?._id, activeChatId]);
+      updateConversationLastMessage(chatId, message);
+      incrementUnread(chatId);
+    };
+    socket.on("newMessageAlert", handleNewMessageAlert);
+    return () => {
+      socket.off("newMessageAlert", handleNewMessageAlert);
+  };
+  }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
 
+//   // ─── Socket: listen for unread count updates from server ──────────────────
+// // Replace the unreadCountUpdated handler:
+// useEffect(() => {
+//   if (!socket) return;
 
-    // 5. Function for useSeenManager to call to update the global state
-    const setLastSeenMessageForChat = useCallback((chatId, message) => {
-        setLastSeenMessagesMap(prevMap => {
-            const currentSeen = prevMap[chatId];
-            // Only update if the new message is actually newer to prevent race conditions
-            if (currentSeen && new Date(message.createdAt) <= new Date(currentSeen.createdAt)) {
-                return prevMap;
-            }
-            // Also emit socket event to backend
-            if (socket) {
-                socket.emit('updateLastSeen', { chatId, messageId: message._id });
-            }
+//   const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
+//     // ✅ Only trust server count if the chat is NOT the currently active one
+//     // For the active chat, we manage count locally (always 0)
+//     setUnreadCountsMap((prev) => {
+//       // If active chat, always keep at 0
+//       const convo = Object.values(prev).find((_, id) => id === chatId);
+//       const isActiveChat = activeChatIdRef.current !== null && 
+//         conversations.find(c => c._id?.toString() === chatId?.toString())
+//           ?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
+      
+//       if (isActiveChat) {
+//         const updated = { ...prev, [chatId]: 0 };
+//         setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+//         return updated;
+//       }
+      
+//       // For non-active chats, trust server count only if it's higher
+//       // (prevents resetting a count we already incremented)
+//       const currentLocal = prev[chatId] || 0;
+//       const finalCount = Math.max(currentLocal, unreadCount);
+//       const updated = { ...prev, [chatId]: finalCount };
+//       setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+//       return updated;
+//     });
+//   };
 
-            return {
-                ...prevMap,
-                [chatId]: message,
-            };
-        });
-    }, [socket]);
+//   socket.on("unreadCountUpdated", handleUnreadCountUpdated);
+//   return () => socket.off("unreadCountUpdated", handleUnreadCountUpdated);
+// }, [socket, conversations]); // add conversations to deps
 
-    /**
-     * Update a conversation's lastMessage immediately
-     * Used by ChatBox when sending a message to trigger instant re-sort
-     */
-    const updateConversationLastMessage = useCallback((chatId, message) => {
-        setConversations(prevConversations => 
-            prevConversations.map(convo => 
-                convo._id === chatId 
-                    ? { ...convo, lastMessage: message }
-                    : convo
-            )
-        );
-    }, []);
+  // ─── When activeChatId changes, clear unread for that conversation ─────────
+  useEffect(() => {
+    if (!activeChatId) return;
+    const convo = getConvoByOtherUser(activeChatId);
+    if (convo?._id) {
+      clearUnreadForChat(convo._id);
+    }
+  }, [activeChatId, getConvoByOtherUser, clearUnreadForChat]);
 
-    // 6. Memoize the context value to prevent unnecessary re-renders of consumers
-    const value = useMemo(() => ({
-        lastSeenMessagesMap,
-        setLastSeenMessageForChat,
-        updateConversationLastMessage,
+  return (
+    <MessageSeenContext.Provider
+      value={{
+        conversations,
+        setConversations,
         unreadCountsMap,
         totalUnreadCount,
-        failedToFetch,
-        conversations, 
         loading,
         setLoading,
-        activeChatId,
-        setActiveChatId,
-    }), [
-        lastSeenMessagesMap, 
-        setLastSeenMessageForChat,
-        updateConversationLastMessage,
-        unreadCountsMap, 
-        totalUnreadCount,
-        conversations,
         failedToFetch,
         activeChatId,
-    ]);
+        setActiveChatId,
+        incrementUnread,
+        clearUnreadForChat,
+        updateConversationLastMessage,
+        getConvoByChatId,
+        getConvoByOtherUser,
+        refetchConversations: fetchConversations,
+      }}
+    >
+      {children}
+    </MessageSeenContext.Provider>
+  );
+};
 
-    return (
-        <MessageSeenContext.Provider value={value}>
-            {children}
-        </MessageSeenContext.Provider>
-    );
+export const useMessageSeen = () => {
+  const ctx = useContext(MessageSeenContext);
+  if (!ctx) throw new Error("useMessageSeen must be used inside MessageSeenProvider");
+  return ctx;
 };

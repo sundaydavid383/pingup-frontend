@@ -28,12 +28,13 @@ const MediumSidebarToggle = ({ sponsors }) => {
   return (
     <>
       {/* Sidebar */}
-      <div
-        ref={sidebarRef}
-        className={`fixed top-0 right-0 z-[555] bg-white shadow-lg w-[300px] p-2 min-h-screen overflow-y-auto transform  transition-transform duration-300 ease-in-out md:block lg:hidden ${
-          showSidebar ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+     <div
+  ref={sidebarRef}
+  className={`fixed top-0 right-0 z-[555] bg-white shadow-lg w-[300px] transform transition-transform duration-300 ease-in-out md:block lg:hidden ${
+    showSidebar ? "translate-x-0" : "translate-x-full"
+  }`}
+>
+  <div className="flex flex-col w-full max-h-[98vh] overflow-y-auto p-2">
         {!sponsors ? (
   <RightSidebarSkeleton />
 ) : (
@@ -57,6 +58,7 @@ const MediumSidebarToggle = ({ sponsors }) => {
         )}
 
         <RecentMessages />
+        </div>
       </div>
 
       {/* Toggle button */}
@@ -76,6 +78,7 @@ const MediumSidebarToggle = ({ sponsors }) => {
           <X size={25} className="text-slate-700" />
         )}
       </button>
+
     </>
   );
 };

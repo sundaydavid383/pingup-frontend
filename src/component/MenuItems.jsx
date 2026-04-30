@@ -14,13 +14,11 @@ const MenuItems = ({ setSidebarOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showTooltip, hideTooltip } = useSidebarTooltip();
-  
+
   const isMessageTab = location.pathname.startsWith('/messages');
   const isSettingsTab = location.pathname.startsWith('/settings');
   const isDiscoveriesTab = location.pathname.startsWith('/discover');
   const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
-  
-  // Combined condition for collapsed sidebar
   const isCollapsed = isMessageTab || isSettingsTab || isDiscoveriesTab || isProfileTab;
 
   const menuItems = [
@@ -39,17 +37,11 @@ const MenuItems = ({ setSidebarOpen }) => {
     navigate('/auth');
   };
 
-  // Handle mouse enter for tooltip
   const handleMouseEnter = (e, label) => {
     if (isCollapsed && e.currentTarget) {
       const rect = e.currentTarget.getBoundingClientRect();
       showTooltip(label, rect.right, rect.top + rect.height / 2);
     }
-  };
-
-  // Handle mouse leave to hide tooltip
-  const handleMouseLeave = () => {
-    hideTooltip();
   };
 
   return (
@@ -60,10 +52,12 @@ const MenuItems = ({ setSidebarOpen }) => {
           to={to}
           end={to === "/"}
           className={({ isActive }) =>
-            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
-            } ${isActive
-              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
-              : `hover:text-[var(--hover-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
+            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
+              isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
+            } ${
+              isActive
+                ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
+                : `hover:text-[var(--hover-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
             }`
           }
           onClick={() => {
@@ -72,18 +66,30 @@ const MenuItems = ({ setSidebarOpen }) => {
             }
           }}
           onMouseEnter={(e) => handleMouseEnter(e, label)}
-          onMouseLeave={handleMouseLeave}
+          onMouseLeave={hideTooltip}
         >
           <div className="relative flex items-center justify-center">
             <Icon className="w-[18px] h-5" />
-            {(label === "Message" && totalUnreadCount > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
-                {totalUnreadCount}
+
+            {/* Message unread badge */}
+            {label === "Message" && totalUnreadCount > 0 && (
+              <span
+                className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${
+                  isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"
+                }`}
+              >
+                {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
               </span>
             )}
-            {(label === "Notification" && unreadNotifications > 0) && (
-              <span className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"}`}>
-                {unreadNotifications}
+
+            {/* Notification unread badge */}
+            {label === "Notification" && unreadNotifications > 0 && (
+              <span
+                className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${
+                  isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"
+                }`}
+              >
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
               </span>
             )}
           </div>
@@ -91,34 +97,29 @@ const MenuItems = ({ setSidebarOpen }) => {
         </NavLink>
       ))}
 
-      {/* Separator */}
       {!isCollapsed && <hr className="my-2 border-[var(--input-border)]" />}
 
       {/* Settings */}
       <NavLink
         to="/settings"
- className={({ isActive }) =>
-  `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
-    isCollapsed
-      ? "w-10 h-10 justify-center group"
-      : "pl-3 py-[7px] gap-3 w-full"
-  } ${
-    isActive
-      ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${
-          !isCollapsed ? "translate-x-3" : ""
-        }`
-      : isCollapsed
-      ? "hover:text-[var(--hover-dark)]"
-      : "hover:text-[var(--text-accent-dark)] hover:translate-x-3 gradient-hover"
-  }`
-}
+        className={({ isActive }) =>
+          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
+            isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
+          } ${
+            isActive
+              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed ? "translate-x-3" : ""}`
+              : isCollapsed
+              ? "hover:text-[var(--hover-dark)]"
+              : "hover:text-[var(--text-accent-dark)] hover:translate-x-3 gradient-hover"
+          }`
+        }
         onClick={() => {
           if (typeof setSidebarOpen === "function" && isSmallScreen) {
             setSidebarOpen(false);
           }
         }}
         onMouseEnter={(e) => handleMouseEnter(e, "Settings")}
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={hideTooltip}
       >
         <div className="relative flex items-center justify-center">
           <Settings className="w-[18px] h-5" />
@@ -129,10 +130,11 @@ const MenuItems = ({ setSidebarOpen }) => {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 group ${isCollapsed ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-          } ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`}
+        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 group ${
+          isCollapsed ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
+        } ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`}
         onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={hideTooltip}
       >
         <div className="relative flex items-center justify-center">
           <LogOut className="w-[18px] h-5" />

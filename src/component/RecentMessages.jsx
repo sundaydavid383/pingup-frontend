@@ -4,10 +4,10 @@ import moment from "moment";
 import axios from "../utils/axiosBase";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/useSocket";
-import { useMessageContext } from "../context/MessageContext";
 import { usePipModal } from "../context/PipModalContext";
 import ProfileAvatar from "./shared/ProfileAvatar";
 import RecentMessagesSkeleton from "./skeleton/RecentMessagesSkeleton";
+import { useMessageSeen } from "../../MessageSeenContext";
 
 const RecentMessages = () => {
   const [connections, setConnections] = useState([]);
@@ -22,9 +22,18 @@ const RecentMessages = () => {
     setChatLoading,
   } = usePipModal();
 
-  const { unreadMessages, clearUnread } = useMessageContext();
+const { conversations, unreadCountsMap, clearUnreadForChat } = useMessageSeen();
   const { user } = useAuth();
   const { socket } = useSocket();
+
+  // Helper function to get conversation ID from userId
+  const getConversationId = (userId) => {
+    const convo = conversations.find(
+      c => c.otherUser?._id?.toString() === userId?.toString()
+    );
+    return convo?._id;
+  };
+
 
   // Read-more state for recent messages
   const [expandedMessages, setExpandedMessages] = useState(new Set());
@@ -138,12 +147,44 @@ const RecentMessages = () => {
     };
   }, [socket, user._id]);
 
-  const handleUserClick = useCallback((usr) => {
-    openPipModal(usr._id);
-    fetchChatHistory(usr._id);
-    clearUnread(usr._id);
-  }, [openPipModal, fetchChatHistory, clearUnread]);
+const handleUserClick = useCallback((usr) => {
+  // Find convo inline here too, or receive convoId as a param
+  const convo = conversations.find(
+    (c) => c.otherUser?._id?.toString() === usr._id?.toString()
+  );
+  const convoId = convo?._id;
 
+  openPipModal(usr._id);
+  fetchChatHistory(usr._id);
+  if (convoId) clearUnreadForChat(convoId);
+}, [conversations, openPipModal, fetchChatHistory, clearUnreadForChat]);
+
+const sortedConnections = React.useMemo(() => {
+  if (!connections || connections.length === 0) return [];
+
+  const arr = connections.map((usr) => {
+    // Inline the lookup so it always uses the fresh `conversations` snapshot
+    const convo = conversations.find(
+      (c) => c.otherUser?._id?.toString() === usr._id?.toString()
+    );
+    const convoId = convo?._id;
+    const unread = convoId ? (unreadCountsMap[convoId] || 0) : 0;
+    const last = lastMessages[usr._id];
+    const priority = unread > 0 ? 0 : 1;
+    const timestamp = last?.createdAt
+      ? new Date(last.createdAt).getTime()
+      : 0;
+
+    return { usr, priority, timestamp, convoId, unread };
+  });
+
+  arr.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return b.timestamp - a.timestamp;
+  });
+
+  return arr; // keep metadata attached for use in render
+}, [connections, lastMessages, conversations, unreadCountsMap]);
   return (
     <>
       {(
@@ -154,37 +195,29 @@ const RecentMessages = () => {
         <p className="text-xs text-gray-500 px-3 py-4">
           No messages yet
         </p>
-      ) : connections.map((usr, index) => {
-              const last = lastMessages[usr._id];
-              const unread = unreadMessages[usr._id]?.length || 0;
-              
-              // Check if this is the first unread message in the list
-              const isFirstUnread = unread > 0 && index === connections.findIndex(u => (unreadMessages[u._id]?.length || 0) > 0);
-              
-              return (
-                <div
-                  key={usr._id}
-                  onClick={(e) => {
-                    console.group("🖱️ [RecentMessages] Click Event Fired");
-                    console.log("→ Click event triggered on recent message item");
-                    console.log("📋 Clicked element:", e.currentTarget);
-                    console.log("  id:", e.currentTarget.id || "(none)");
-                    console.log("  classes:", e.currentTarget.className);
-                    console.log("  data attributes:", Object.fromEntries(
-                      [...e.currentTarget.attributes]
-                        .filter(a => a.name.startsWith("data-"))
-                        .map(a => [a.name, a.value])
-                    ));
-                    console.log("📋 Target user:", { _id: usr._id, username: usr.username });
-                    handleUserClick(usr);
-                    console.groupEnd();
-                  }}
-                  className={`flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 ${
-                    isFirstUnread 
-                      ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
-                      : "hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
-                  }`}
-                >
+      ) : sortedConnections.map(({ usr, convoId, unread }, index) => {
+  const last = lastMessages[usr._id];
+
+  const firstUnreadIndex = sortedConnections.findIndex(
+    (item) => item.unread > 0
+  );
+  const isFirstUnread = unread > 0 && index === firstUnreadIndex;
+
+  return (
+    <div
+      key={usr._id}
+      onClick={() => {
+        openPipModal(usr._id);
+        fetchChatHistory(usr._id);
+        handleUserClick(usr)
+        if (convoId) clearUnreadForChat(convoId);
+      }}
+      className={`flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 ${
+        isFirstUnread
+          ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100"
+          : "hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
+      }`}
+    >
                   {/* Profile Avatar */}
                   <ProfileAvatar user={usr} size={44} />
 
@@ -255,19 +288,19 @@ const RecentMessages = () => {
                         )}
                       </span>
 
-                      {unread > 0 && (
-                        <span
-                          className={`flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-bold ${
-                            isFirstUnread ? "animate-pulse" : ""
-                          }`}
-                          style={{
-                            background: isFirstUnread ? "#ef4444" : "var(--primary)",
-                            color: "var(--white)",
-                          }}
-                        >
-                          {unread}
-                        </span>
-                      )}
+                       {unread > 0 && (
+        <span
+          className={`flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-bold ${
+            isFirstUnread ? "animate-pulse" : ""
+          }`}
+          style={{
+            background: isFirstUnread ? "#ef4444" : "var(--primary)",
+            color: "var(--white)",
+          }}
+        >
+          {unread}
+        </span>
+      )}
                     </div>
                   </div>
                 </div>

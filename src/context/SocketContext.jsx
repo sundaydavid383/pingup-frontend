@@ -189,20 +189,11 @@ useEffect(() => {
 
     const handleReceiveMessage = (msg) => {
       if (!msg?._id) return;
-
-      // Prevent duplicates
       if (processed.current.has(msg._id)) return;
       processed.current.add(msg._id);
 
       // Ignore messages sent by the current user
       if (msg.from_user_id === user._id) return;
-
-      console.log("📩 [Global Listener] Incoming message:", msg);
-
-      // ✅ 1. Update unread messages 
-      // we must add some checking like if it not on the viewport 
-      console.log('[Socket] Adding unread from:', msg.from_user_id, msg);
-      addUnread(msg.from_user_id, msg);
 
       // ✅ 2. Update last message summary (for chat list, preview, etc.)
       updateLastMessage(msg.from_user_id, msg);

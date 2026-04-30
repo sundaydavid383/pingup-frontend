@@ -12,7 +12,7 @@ import { useSidebarTooltip } from "./shared/SidebarTooltipPortal";
 const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, unreadCount } = useAuth();
+  const { user } = useAuth();
   const { showTooltip, hideTooltip } = useSidebarTooltip();
 
   // Determine if the sidebar should be in "icon-only" mode
@@ -98,7 +98,7 @@ const Sidebar = React.forwardRef(({ sidebarOpen, setSidebarOpen }, ref) => {
           />
           <hr className="border-[var(--input-border)] mb-3 w-full" />
 
-          <MenuItems unreadCount={unreadCount} setSidebarOpen={setSidebarOpen} />
+          <MenuItems  setSidebarOpen={setSidebarOpen} />
 
           <Link
             to="/create-post"

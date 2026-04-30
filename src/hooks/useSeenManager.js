@@ -67,7 +67,7 @@ export const useSeenManager = ({
     const lastScrollTop = useRef(0);
     const scrollStopTimer = useRef(null);
     const scrollDirectionRef = useRef("down"); // ✅ "down" not null — critical
-
+    const isScrollingUpRef = useRef(false);
     // ==========================================
     // UTILITIES
     // ==========================================
@@ -132,21 +132,23 @@ export const useSeenManager = ({
      * Calculate how many unseen messages exist below the viewport
      * ✅ FIX: only counts messages from OTHER users, not your own sent messages
      */
-    const calculateUnseenBelowCount = useCallback(() => {
-        if (!lastSeenMessage || messages.length === 0) {
-            setUnseenBelowCount(0);
-            return 0;
-        }
+  const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
+    const baseline = overrideLastSeen || lastSeenMessage;
+    if (!baseline || messages.length === 0) {
+        setUnseenBelowCount(0);
+        return 0;
+    }
 
-        const count = messages.filter(
-            (msg) =>
-                msg.from_user_id !== userId && // ✅ exclude own messages from badge count
-                new Date(msg.createdAt) > new Date(lastSeenMessage.createdAt)
-        ).length;
+    const count = messages.filter(
+        (msg) =>
+            msg.from_user_id !== userId &&
+            !String(msg._id).startsWith('temp_') &&
+            new Date(msg.createdAt) > new Date(baseline.createdAt)
+    ).length;
 
-        setUnseenBelowCount(count);
-        return count;
-    }, [lastSeenMessage, messages, userId]);
+    setUnseenBelowCount(count);
+    return count;
+}, [lastSeenMessage, messages, userId]);
 
     /**
      * Update last seen on backend and emit socket event
@@ -264,10 +266,8 @@ export const useSeenManager = ({
     const handleScrollStop = useCallback(() => {
         if (!containerRef.current) return;
         if (messages.length === 0) return;
-
-        // ✅ FIX: default is "down" so this doesn't block on first load
         if (scrollDirectionRef.current === "up") return;
-
+        if (isScrollingUpRef.current) return;
         const lastVisible = getLastVisibleMessage();
         if (!lastVisible) return;
 
@@ -312,30 +312,33 @@ export const useSeenManager = ({
         calculateUnseenBelowCount,
     ]);
 
-    const onContainerScroll = useCallback(() => {
-        if (!containerRef.current) return;
+ 
 
-        const scrollTop = containerRef.current.scrollTop;
-        const direction = scrollTop > lastScrollTop.current ? "down" : "up";
 
-        scrollDirectionRef.current = direction;
-        lastScrollTop.current = scrollTop;
+// In onContainerScroll, update it:
+const onContainerScroll = useCallback(() => {
+    if (!containerRef.current) return;
 
-        // If scrolling UP → cancel any pending seen update
-        if (direction === "up") {
-            if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
-            return;
-        }
+    const scrollTop = containerRef.current.scrollTop;
+    const direction = scrollTop > lastScrollTop.current ? "down" : "up";
 
-        // Scrolling DOWN → debounce the seen update
+    scrollDirectionRef.current = direction;
+    isScrollingUpRef.current = direction === "up"; // ✅ track scroll up
+    lastScrollTop.current = scrollTop;
+
+    if (direction === "up") {
         if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+        return;
+    }
 
-        scrollStopTimer.current = setTimeout(() => {
-            if (scrollDirectionRef.current === "down") {
-                handleScrollStop();
-            }
-        }, 1500);
-    }, [handleScrollStop, containerRef]);
+    if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
+
+    scrollStopTimer.current = setTimeout(() => {
+        if (scrollDirectionRef.current === "down") {
+            handleScrollStop();
+        }
+    }, 1500);
+}, [handleScrollStop, containerRef]);
 
     /**
      * Scroll to bottom and mark as seen
@@ -442,17 +445,16 @@ const scrollToLastSeen = useCallback(() => {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 if (!entry.isIntersecting) return;
+ 
+                if (isScrollingUpRef.current) return;
 
                 const el = entry.target;
                 const messageId = el.dataset.messageId;
                 const fromUserId = el.dataset.fromUserId;
 
                 if (!messageId) return;
-                // ✅ Never process temp IDs
                 if (messageId.startsWith('temp_')) return;
-                // ✅ Only the receiver marks messages as seen — not the sender
                 if (fromUserId === userId) return;
-                // ✅ Session-level dedup
                 if (seenCache.has(messageId)) return;
 
                 seenCache.add(messageId);
@@ -487,11 +489,14 @@ const scrollToLastSeen = useCallback(() => {
                             const latest = justSeenMsgs.reduce((a, b) =>
                                 new Date(a.createdAt) > new Date(b.createdAt) ? a : b
                             );
-                            setLastSeenMessage(prev =>
-                                !prev || new Date(latest.createdAt) > new Date(prev.createdAt)
+                            setLastSeenMessage(prev => {
+                                const updated = (!prev || new Date(latest.createdAt) > new Date(prev.createdAt))
                                     ? latest
-                                    : prev
-                            );
+                                    : prev;
+                                // ✅ Pass the updated value directly so count uses correct baseline
+                                calculateUnseenBelowCount(updated);
+                                return updated;
+                            });
                             updateLastSeenOnBackend(latest._id);
                         }
 

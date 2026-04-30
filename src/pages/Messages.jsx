@@ -23,16 +23,7 @@ const Messages = () => {
   const navigate = useNavigate();
 
   // Get data from the new MessageSeenContext
-  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch, loading, setLoading, setActiveChatId: setContextActiveChatId } = useMessageSeen();
-
- 
-
-useEffect(() => {
-  // simulate fetching or use your real fetching logic
-  if (conversations) {
-    setLoading(false);
-  }
-}, [conversations]);
+  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch, loading, setLoading, setActiveChatId: setContextActiveChatId, clearUnreadForChat, getConvoByChatId } = useMessageSeen();
 
 // Sync active chat ID with context so unread updates work correctly
 useEffect(() => {
@@ -109,9 +100,11 @@ useEffect(() => {
 
   /*** Open chat ***/
   const handleOpenChat = (userId) => {
-    // The seen logic will be handled in the ChatBox component when messages are viewed.
-    // No need to clear unread here anymore.
     setActiveChatId(userId);
+      const convo = conversations.find(c => c.otherUser?._id?.toString() === userId?.toString());
+  if (convo?._id) {
+    clearUnreadForChat(convo._id);
+  }
     if (window.innerWidth < 768) navigate(`/chatbox/${userId}`);
   };
 
