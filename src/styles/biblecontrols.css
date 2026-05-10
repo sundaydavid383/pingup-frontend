@@ -260,23 +260,7 @@
   }
 }
 
-/* Dropdown list styling */
-.mood-dropdown {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 1rem);
-  max-height: 220px;
-  overflow-y: auto;
-  background: var(--secondary);
-  border: 1px solid var(--hover-dark);
-  border-radius: 0.6rem;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-  z-index: 1000;
-  padding: 0.35rem;
-  list-style: none;
-}
+
 
 /* On mobile, align dropdown to right edge */
 @media (max-width: 640px) {
@@ -634,7 +618,7 @@
 
 .mood-dropdown {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(10% + 0rem);
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 1rem);
@@ -650,6 +634,7 @@
   padding: 0.4rem;
   list-style: none;
 }
+
 
 .mood-play-btn {
   background: none;

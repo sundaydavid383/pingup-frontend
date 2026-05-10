@@ -77,16 +77,17 @@ const App = () => {
     // Check if service worker is supported
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js') // sw.js in public folder
+        .register('/sw.js', { scope: '/' })
         .then(registration => {
-          log('Service Worker registered:', registration);
+          log('✅ Service Worker registered:', registration.scope);
         })
         .catch(err => {
-          console.error('Service Worker registration failed:', err);
+          console.error('❌ Service Worker registration failed:', err);
         });
 
       // Listen for messages from service worker (notification deep linking)
-      navigator.serviceWorker.addEventListener('message', (event) => {
+      // Create a named function to allow cleanup
+      const messageHandler = (event) => {
         log('📬 App received message from SW:', event.data);
         
         if (event.data && event.data.type) {
@@ -96,11 +97,17 @@ const App = () => {
               log('📬 Need to scroll to message:', event.data.messageId);
               // Store the message ID to scroll to after chat loads
               sessionStorage.setItem('scrollToMessage', event.data.messageId);
+              if (event.data.chatId) {
+                sessionStorage.setItem('scrollToChatId', event.data.chatId);
+              }
               break;
             case 'REPLY_TO_MESSAGE':
               // Handle reply intent
               log('📬 Need to reply to message:', event.data.messageId);
               sessionStorage.setItem('replyToMessage', event.data.messageId);
+              if (event.data.chatId) {
+                sessionStorage.setItem('replyToChatId', event.data.chatId);
+              }
               break;
             case 'MARK_READ':
               // Handle mark read
@@ -110,84 +117,118 @@ const App = () => {
               log('📬 Unknown message type:', event.data.type);
           }
         }
-      });
+      };
+
+      navigator.serviceWorker.addEventListener('message', messageHandler);
+
+      // Cleanup function to prevent multiple listeners
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', messageHandler);
+      };
     }
 
     if (loading === "true") {
       setOauthLoading(true);
       setOauthText(text || "Loading…");
     }
-  }, []);
+  }, []); // Empty dependency array - runs once on mount
 
   // open app if launched from notification and not already open
   useEffect(() => {
-  const isStandalone =
-    window.matchMedia("(display-mode: standalone)").matches;
-
-  if (!isStandalone) {
     openInstalledApp();
-  }
-}, []);
+  }, []);
 
 
 
   const PUBLIC_VAPID_KEY = import.meta.env.VITE_PUBLIC_VAPID_KEY
 
-const requestNotificationPermission = async () => {
-  if (window.Notification.permission === 'granted') {
-    subscribeUserToPush();
-    return;
-  }
+  const requestNotificationPermission = async () => {
+    try {
+      if (window.Notification.permission === 'granted') {
+        await subscribeUserToPush();
+        return;
+      }
 
-  if (window.Notification.permission === 'denied') {
-    console.log('User has blocked window.notifications ❌');
-    return;
-  }
+      if (window.Notification.permission === 'denied') {
+        console.log('⚠️ User has blocked notifications');
+        return;
+      }
 
-  const permission = await window.Notification.requestPermission();
+      const permission = await window.Notification.requestPermission();
 
-  if (permission === 'granted') {
-    subscribeUserToPush();
-  }
-};
+      if (permission === 'granted') {
+        await subscribeUserToPush();
+      }
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error);
+    }
+  };
 
-useEffect(() => {
-  if (!user) return;
-  if (!PUBLIC_VAPID_KEY) {
-    console.error("Missing VAPID key");
-    return;
-  }
-
-  requestNotificationPermission();
-}, [user]);
-
-
-const subscribeUserToPush = async () => {
-  try {
-    const registration = await navigator.serviceWorker.ready;
-
-    // Check if already subscribed
-    let subscription = await registration.pushManager.getSubscription();
-
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-      });
+  useEffect(() => {
+    if (!user) return;
+    if (!PUBLIC_VAPID_KEY) {
+      console.error("❌ Missing VAPID key - push notifications disabled");
+      return;
     }
 
-    await fetch('/api/subscribe', {
-      method: 'POST',
-      body: JSON.stringify(subscription.toJSON()),
-      headers: { 'Content-Type': 'application/json' }
+    // Add timeout to prevent infinite waiting
+    const timeoutId = setTimeout(() => {
+      console.warn("⚠️ Notification permission request timeout");
+    }, 15000);
+
+    requestNotificationPermission().finally(() => {
+      clearTimeout(timeoutId);
     });
 
-    console.log('User subscribed to push notifications ✅');
+    return () => clearTimeout(timeoutId);
+  }, [user, PUBLIC_VAPID_KEY]);
 
-  } catch (err) {
-    console.error('Failed to subscribe the user: ', err);
-  }
-};
+  const subscribeUserToPush = async () => {
+    try {
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('SW ready timeout')), 10000)
+        )
+      ]);
+
+      // Check if already subscribed
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        // Add timeout for subscription process
+        subscription = await Promise.race([
+          registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Push subscription timeout')), 15000)
+          )
+        ]);
+      }
+
+      // Send subscription to server with timeout
+      const response = await Promise.race([
+        fetch('/api/subscribe', {
+          method: 'POST',
+          body: JSON.stringify(subscription.toJSON()),
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Subscribe API timeout')), 10000)
+        )
+      ]);
+
+      if (response.ok) {
+        console.log('✅ User subscribed to push notifications');
+      } else {
+        console.warn('⚠️ Subscribe API returned:', response.status);
+      }
+    } catch (err) {
+      console.error('❌ Failed to subscribe the user:', err.message);
+    }
+  };
 
   const toTitleCase = (str) => {
     return str

@@ -71,30 +71,37 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
       newGoals[niche] = {};
     });
     setNicheGoals(newGoals);
+    setNicheIndex(0);
+    setCurrentQuestionIndex(0);
     setCurrentStep('quick-interview');
   };
 
-  const handleQuestionAnswer = (answer) => {
+  const saveAnswer = (answer) => {
     const newGoals = { ...nicheGoals };
     if (!newGoals[currentNiche]) newGoals[currentNiche] = {};
-    
     const questionId = currentQuestion.id;
     newGoals[currentNiche][`q${questionId}`] = answer;
-    
     setNicheGoals(newGoals);
+  };
 
-    // Move to next question
+  const advanceQuestion = () => {
     if (currentQuestionIndex < currentNicheQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      // Move to next niche or summary
-      if (nicheIndex < selectedNiches.length - 1) {
-        setNicheIndex(prev => prev + 1);
-        setCurrentQuestionIndex(0);
-      } else {
-        setCurrentStep('summary');
-      }
+      return;
     }
+
+    if (nicheIndex < selectedNiches.length - 1) {
+      setNicheIndex(prev => prev + 1);
+      setCurrentQuestionIndex(0);
+      return;
+    }
+
+    setCurrentStep('summary');
+  };
+
+  const handleQuestionAnswer = (answer, autoAdvance = false) => {
+    saveAnswer(answer);
+    if (autoAdvance) advanceQuestion();
   };
 
   const handleSaveOnboarding = async () => {
@@ -161,17 +168,26 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-scroll max-h-[90vh]"
+        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh]"
       >
         {/* Header Progress */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xl font-bold">Build Your Accountability Plan</h2>
-            <span className="text-sm opacity-90">
-              {currentStep === 'niche-selection' && 'Step 1/3'}
-              {currentStep === 'quick-interview' && `Step 2/3 (${nicheIndex + 1}/${selectedNiches.length})`}
-              {currentStep === 'summary' && 'Step 3/3'}
-            </span>
+          <div className="flex items-center justify-between mb-2 gap-4">
+            <div>
+              <h2 className="text-xl font-bold">Build Your Accountability Plan</h2>
+              <span className="text-sm opacity-90 block mt-1">
+                {currentStep === 'niche-selection' && 'Step 1/3'}
+                {currentStep === 'quick-interview' && `Step 2/3 (${nicheIndex + 1}/${selectedNiches.length})`}
+                {currentStep === 'summary' && 'Step 3/3'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              className="rounded-full bg-white/15 px-3 py-1 text-sm text-white hover:bg-white/25 transition"
+            >
+              Close
+            </button>
           </div>
           <div className="w-full bg-white/20 rounded-full h-2">
             <motion.div
@@ -190,7 +206,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
         </div>
 
         {/* Content Area */}
-        <div className="p-6 md:p-8 min-h-[500px] flex flex-col justify-between">
+        <div className="p-6 md:p-8 min-h-[450px] flex flex-col justify-between overflow-hidden">
           <AnimatePresence mode="wait">
             {currentStep === 'niche-selection' && (
               <motion.div
@@ -251,7 +267,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-6 "
+                className="space-y-6 overflow-y-auto max-h-[calc(85vh-260px)]"
               >
                 <div>
                   <p className="text-sm text-gray-500 mb-2">
@@ -266,8 +282,8 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                   <textarea
                     autoFocus
                     placeholder={currentQuestion.placeholder}
-                    defaultValue={nicheGoals[currentNiche]?.[`q${currentQuestion.id}`] || ''}
-                    onBlur={(e) => handleQuestionAnswer(e.target.value)}
+                    value={nicheGoals[currentNiche]?.[`q${currentQuestion.id}`] || ''}
+                    onChange={(e) => saveAnswer(e.target.value)}
                     className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                     rows={4}
                   />
@@ -352,6 +368,35 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                       })}
                     </div>
                   )}
+
+                  {selectedNiches.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-gray-700">Your answers</p>
+                      {selectedNiches.map((niche) => {
+                        const nicheData = NICHES.find((item) => item.id === niche);
+                        const answers = nicheGoals[niche] || {};
+                        const entries = Object.entries(answers);
+                        return (
+                          <div key={niche} className="p-4 rounded-lg bg-white border border-gray-200">
+                            <p className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                              <span>{nicheData?.icon}</span> {nicheData?.label}
+                            </p>
+                            {entries.length > 0 ? (
+                              <div className="space-y-2">
+                                {entries.map(([questionKey, answer]) => (
+                                  <div key={questionKey} className="text-sm text-gray-700">
+                                    <span className="font-medium text-gray-900">{questionKey.replace('q', 'Question ')}</span>: {answer}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">No responses entered for this area yet.</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {error && (
@@ -407,18 +452,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
 
             {currentStep === 'quick-interview' && (
               <button
-                onClick={() => {
-                  if (currentQuestionIndex < currentNicheQuestions.length - 1) {
-                    setCurrentQuestionIndex(prev => prev + 1);
-                  } else {
-                    if (nicheIndex < selectedNiches.length - 1) {
-                      setNicheIndex(prev => prev + 1);
-                      setCurrentQuestionIndex(0);
-                    } else {
-                      setCurrentStep('summary');
-                    }
-                  }
-                }}
+                onClick={advanceQuestion}
                 className="flex-1 ml-auto flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium disabled:opacity-50"
                 disabled={!nicheGoals[currentNiche]?.[`q${currentQuestion?.id}`]}
               >

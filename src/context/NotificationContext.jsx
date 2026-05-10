@@ -1,12 +1,32 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import axiosBase from "../utils/axiosBase";
 
 const NotificationContext = createContext();
+
+// Category configuration
+const NOTIFICATION_CATEGORIES = {
+  INBOX: 'inbox',
+  COMMENTS: 'comments',
+  FOLLOWING: 'following',
+  CALLS: 'calls',
+  PROFILE: 'profile',
+  MESSAGES: 'messages'
+};
+
+const CATEGORY_LABELS = {
+  inbox: 'Inbox',
+  comments: 'Comments',
+  following: 'Following',
+  calls: 'Calls',
+  profile: 'Profile',
+  messages: 'Messages'
+};
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [lastFetched, setLastFetched] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(NOTIFICATION_CATEGORIES.INBOX);
   const pollingIntervalRef = useRef(null);
 
   // Load deleted notifications from localStorage on mount
@@ -101,6 +121,30 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
+  // Mark all in category as read
+  const markCategoryAsRead = useCallback(async (category) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Optimistic update
+      setNotifications(prev =>
+        prev.map((n) => (n.category === category || (!n.category && category === NOTIFICATION_CATEGORIES.INBOX) ? { ...n, isRead: true } : n))
+      );
+
+      // Backend sync for all notifications in the category
+      const categoryNotifications = notifications.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
+      await Promise.all(
+        categoryNotifications.map(n =>
+          axiosBase.put(`/api/notifications/${n._id}/read`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        )
+      );
+    } catch (err) {
+      console.error(`Failed to mark ${category} notifications as read:`, err);
+    }
+  }, [notifications]);
+
   // Mark one as read - syncs with backend
   const markAsRead = useCallback(async (id) => {
     // First update local state immediately for responsive UI
@@ -131,18 +175,79 @@ export const NotificationProvider = ({ children }) => {
     localStorage.setItem('deletedNotifications', JSON.stringify([...newDeleted]));
   }, [deletedNotificationIds]);
 
-  // Compute unread count
+  // Delete all in category
+  const deleteCategoryNotifications = useCallback((category) => {
+    setNotifications(prev => {
+      const toDelete = prev.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
+      const remaining = prev.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) !== category);
+      
+      // Add all deleted IDs to localStorage
+      const newDeleted = new Set(deletedNotificationIds);
+      toDelete.forEach(n => newDeleted.add(n._id));
+      setDeletedNotificationIds(newDeleted);
+      localStorage.setItem('deletedNotifications', JSON.stringify([...newDeleted]));
+      
+      return remaining;
+    });
+  }, [deletedNotificationIds]);
+
+  // Get notifications filtered by category
+  const getNotificationsByCategory = useCallback((category) => {
+    return notifications.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
+  }, [notifications]);
+
+  // Get notifications grouped by category
+  const notificationsByCategory = useMemo(() => {
+    const grouped = {};
+    Object.values(NOTIFICATION_CATEGORIES).forEach(cat => {
+      grouped[cat] = getNotificationsByCategory(cat);
+    });
+    return grouped;
+  }, [notifications, getNotificationsByCategory]);
+
+  // Get active category notifications
+  const activeNotifications = useMemo(() => {
+    return getNotificationsByCategory(activeCategory);
+  }, [activeCategory, getNotificationsByCategory]);
+
+  // Compute unread count (total)
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // Compute unread count by category
+  const unreadCountByCategory = useMemo(() => {
+    const counts = {};
+    Object.values(NOTIFICATION_CATEGORIES).forEach(cat => {
+      counts[cat] = notificationsByCategory[cat].filter(n => !n.isRead).length;
+    });
+    return counts;
+  }, [notificationsByCategory]);
 
   return (
     <NotificationContext.Provider
       value={{
+        // All notifications
         notifications,
         addNotification,
         markAllRead,
         markAsRead,
         deleteNotification,
         unreadCount,
+        
+        // Category management
+        NOTIFICATION_CATEGORIES,
+        CATEGORY_LABELS,
+        activeCategory,
+        setActiveCategory,
+        
+        // Category-specific operations
+        activeNotifications,
+        notificationsByCategory,
+        getNotificationsByCategory,
+        markCategoryAsRead,
+        deleteCategoryNotifications,
+        unreadCountByCategory,
+        
+        // Loading and fetch state
         loadingNotifications,
         setLoadingNotifications,
         lastFetched,
