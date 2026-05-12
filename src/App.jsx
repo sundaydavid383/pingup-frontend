@@ -43,6 +43,7 @@ import Spinning3DSphere from './component/Spinning3DSphere';
 import LandingPage from './pages/LandingPage';
 import CommunityPage from './pages/CommunityPage';
 import AboutPage from './pages/AboutPage';
+import { requestNotificationPermission } from './utils/pushNotifications';
 import { openInstalledApp } from './utils/openInstalledApp';
 import CallContainer from './component/CallUI/CallContainer';
 import GlobalPipModal from './component/GlobalPipModal';
@@ -141,94 +142,10 @@ const App = () => {
 
 
   const PUBLIC_VAPID_KEY = import.meta.env.VITE_PUBLIC_VAPID_KEY
-
-  const requestNotificationPermission = async () => {
-    try {
-      if (window.Notification.permission === 'granted') {
-        await subscribeUserToPush();
-        return;
-      }
-
-      if (window.Notification.permission === 'denied') {
-        console.log('⚠️ User has blocked notifications');
-        return;
-      }
-
-      const permission = await window.Notification.requestPermission();
-
-      if (permission === 'granted') {
-        await subscribeUserToPush();
-      }
-    } catch (error) {
-      console.error('❌ Error requesting notification permission:', error);
-    }
-  };
-
   useEffect(() => {
-    if (!user) return;
-    if (!PUBLIC_VAPID_KEY) {
-      console.error("❌ Missing VAPID key - push notifications disabled");
-      return;
-    }
-
-    // Add timeout to prevent infinite waiting
-    const timeoutId = setTimeout(() => {
-      console.warn("⚠️ Notification permission request timeout");
-    }, 15000);
-
-    requestNotificationPermission().finally(() => {
-      clearTimeout(timeoutId);
-    });
-
-    return () => clearTimeout(timeoutId);
-  }, [user, PUBLIC_VAPID_KEY]);
-
-  const subscribeUserToPush = async () => {
-    try {
-      const registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('SW ready timeout')), 10000)
-        )
-      ]);
-
-      // Check if already subscribed
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        // Add timeout for subscription process
-        subscription = await Promise.race([
-          registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Push subscription timeout')), 15000)
-          )
-        ]);
-      }
-
-      // Send subscription to server with timeout
-      const response = await Promise.race([
-        fetch('/api/subscribe', {
-          method: 'POST',
-          body: JSON.stringify(subscription.toJSON()),
-          headers: { 'Content-Type': 'application/json' }
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Subscribe API timeout')), 10000)
-        )
-      ]);
-
-      if (response.ok) {
-        console.log('✅ User subscribed to push notifications');
-      } else {
-        console.warn('⚠️ Subscribe API returned:', response.status);
-      }
-    } catch (err) {
-      console.error('❌ Failed to subscribe the user:', err.message);
-    }
-  };
+  if (!user || !token) return;
+  requestNotificationPermission(token);
+}, [user, token]);
 
   const toTitleCase = (str) => {
     return str

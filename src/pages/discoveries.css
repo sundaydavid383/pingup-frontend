@@ -70,14 +70,15 @@
 }
 
 .discover_content_container {
-  padding-top: 4.5rem;
+  padding-top: 10.5rem;
 }
 
 @media (min-width: 768px) {
   .discover_content_container {
-    padding-top: 4rem;
+    padding-top: 0rem;
   }
 }
+
 
 /* Ensure dropdown container isn't clipped */
 .discover_search_wrapper { overflow: visible; }

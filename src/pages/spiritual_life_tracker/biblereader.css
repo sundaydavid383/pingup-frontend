@@ -531,7 +531,10 @@ text-align: center;
   display: block;
   color: var(--text-main);
   padding-top: 1rem;
-  padding-bottom: 120px;
+  padding-bottom: 100px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  height: calc(100vh - 120px); /* header height buffer */
 }
 
 .verse-text-paragraph {
@@ -718,11 +721,7 @@ background: linear-gradient(90deg,
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-/* ===== Smooth Scrollbar for Reading ===== */
-.verses-container {
-  overflow-y: auto;
-  padding-right: 0.5rem;
-}
+
 
 .verses-container::-webkit-scrollbar {
   width: 8px;
@@ -756,10 +755,7 @@ background: linear-gradient(90deg,
   filter: blur(0px) !important;
   transition: background-color 0.3s ease;
 }
-.verses-container {
-  height: calc(100vh - 120px); /* header height buffer */
-  overflow-y: auto;
-}
+
 
 /* Random verses should always be fully visible and white */
 .random-verse {
@@ -829,6 +825,11 @@ background: linear-gradient(90deg,
     overflow-x: hidden;
   }
 
+  .verses-container {
+  display: block;
+  color: var(--text-main);
+  padding-top: 6rem;
+}
   .verse-text-paragraph {
     font-size: 1rem;
     line-height: 1.7rem;

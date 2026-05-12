@@ -212,7 +212,7 @@ export default function Discover() {
   return (
     <div className="discover-page bg-slate-50 min-h-screen pb-10">
       {/* STICKY SEARCH HEADER */}
-      <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-4 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? 'py-2' : 'py-4'}`}>
+     <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-4 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? 'py-1' : 'py-2'}`}>
         <div className="max-w-6xl mx-auto px-5">
           {/* Refresh Button */}
 
@@ -334,7 +334,7 @@ export default function Discover() {
       </div>
 
       {/* USERS GRID - Scrollable container */}
-      <div className="max-w-6xl mx-auto px-5 mt-2 md:mt-2 pt-20 md:pt-16 discover_content_container">
+      <div className="max-w-6xl mx-auto px-5 discover_content_container">
         <div className="discoveries_grid pb-20">
           {users.map((userItem) => (
             <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
