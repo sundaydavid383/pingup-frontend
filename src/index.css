@@ -45,6 +45,7 @@ input, textarea, select {
   --secondary: #1a294a; /* Slate-900 */
   --accent: var(--primary-color);
   --gold: rgb(223, 190, 61);
+  --red: #ef4444;
   --opaque-secondary: rgba(5, 13, 58, 0.6);
   --deeper-opaque-secondary: rgba(5, 13, 58, 0.8);
   --opaque-primary: rgba(18, 73, 253, 0.6);

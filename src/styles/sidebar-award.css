@@ -219,7 +219,7 @@
 
 /* Active — full state */
 .nav-item.active {
-  color: var(--hover-light);
+  color: var(--white);
   font-weight: 500;
 }
 
@@ -227,7 +227,7 @@
   opacity: 1;
   background: linear-gradient(135deg,
     rgba(var(--primary-rgb),0.22) 0%,
-    rgba(48,85,209,0.14) 100%
+    var(--primary) 100%
   );
 }
 
@@ -300,7 +300,7 @@
 .sb-badge {
   display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #c0392b, #e74c3c);
-  color: white;
+  color: var(--white);
   font-size: 10px; font-weight: 700;
   min-width: 18px; height: 18px;
   border-radius: 9px; padding: 0 5px;

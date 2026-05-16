@@ -406,7 +406,10 @@ button.text-xs.font-medium.mt-1:hover {
 .overflow-y-scroll:hover::-webkit-scrollbar-thumb {
   background: rgba(var(--primary-rgb), 0.32);
 }
-
+.chatbox-messages {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
 /* ── Reduced motion (accessibility) ────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

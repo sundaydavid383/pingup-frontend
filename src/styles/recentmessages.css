@@ -67,7 +67,7 @@
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: rgba(30, 42, 58, 0.55);
+  color: var(--secondary);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -125,7 +125,7 @@
   align-items: center;
   gap: 8px;
   padding: 32px 16px;
-  color: #94a3b8;
+  color: var(--white-glass);
   text-align: center;
 }
 
@@ -137,7 +137,7 @@
 .rm-empty-text {
   font-size: 12px;
   font-weight: 500;
-  color: #b0bec5;
+  color: var(--white-glass);
 }
 
 /* ── UNREAD DIVIDER LABEL ── */
@@ -150,7 +150,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #ef4444;
+  color: var(--red);
   opacity: 0.7;
 }
 
@@ -213,7 +213,7 @@
   left: 0; top: 20%; bottom: 20%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, #fca5a5, #ef4444, #fca5a5);
+  background: linear-gradient(180deg, #fca5a5, var(--red), #fca5a5);
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
   animation: rm-rail-pulse 2s ease-in-out infinite;
 }
@@ -235,7 +235,7 @@
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  background: conic-gradient(#ef4444, #fca5a5, #ef4444);
+  background: conic-gradient(var(--red), #fca5a5, var(--red));
   z-index: -1;
   animation: rm-ring-spin 3s linear infinite;
 }
@@ -278,7 +278,7 @@
 .rm-time {
   font-size: 10px;
   font-weight: 500;
-  color: #b0bec5;
+  color: var(--white-glass);
   flex-shrink: 0;
   letter-spacing: 0.01em;
 }
@@ -354,7 +354,7 @@
 }
 
 .rm-badge--unread {
-  background: linear-gradient(135deg, #ef4444, #f87171);
+  background: linear-gradient(135deg, var(--red), #f87171);
   color: white;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45);
   animation: rm-badge-pulse 1.8s ease-in-out infinite;

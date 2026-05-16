@@ -99,19 +99,22 @@ const seenManager = useSeenManager({
   };
 
   // Long press timer for mobile
-  const longPressTimer = useRef(null);
-  const isLongPress = useRef(false);
-  const messageElementRefs = useRef({});
-  const hasScrolledToLastSeen = useRef({});
+const longPressTimer = useRef(null);
+const isLongPress = useRef(false);
+const messageElementRefs = useRef({});
+const hasScrolledToLastSeen = useRef({});
 const prevChatIdRef = useRef(null);
-  // Handle right-click, long-press, or double-click to show dropdown
+const swipeStartX = useRef(null);
+const swipeStartY = useRef(null);
+const swipeMsg = useRef(null);
+const SWIPE_THRESHOLD = 60;
+const LONG_PRESS_DELAY = 500;
+
   const handleMessageInteraction = useCallback((msg, event, messageEl) => {
     event.preventDefault();
-
     const rect = messageEl.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top - 10;
-
     setDropdownState({
       isOpen: true,
       message: msg,
@@ -119,7 +122,6 @@ const prevChatIdRef = useRef(null);
     });
   }, []);
 
-  // Handle double click
   const handleDoubleClick = useCallback((msg, event) => {
     const messageEl = event.currentTarget.closest('[data-id]');
     if (messageEl) {
@@ -127,41 +129,28 @@ const prevChatIdRef = useRef(null);
     }
   }, [handleMessageInteraction]);
 
-  // Handle right-click
-  const handleContextMenu = useCallback((msg, event) => {
-    const messageEl = event.currentTarget;
-    handleMessageInteraction(msg, event, messageEl);
-  }, [handleMessageInteraction]);
-
-  // Handle long press (mobile) - faster response
-  const handleTouchStart = useCallback((msg, event) => {
-    const messageEl = event.currentTarget;
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      const rect = messageEl.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top - 10;
-
-      setDropdownState({
-        isOpen: true,
-        message: msg,
-        position: { x, y },
+    // Handle reply from dropdown
+  const handleReplyFromDropdown = useCallback((msg) => {
+    if (setReplyTo) {
+      const sentByUser = msg.from_user_id === user._id;
+      setReplyTo({
+        _id: msg._id,
+        text: msg.text || (msg.message_type === 'image' ? 'Image' : msg.message_type === 'audio' ? 'Audio' : 'Message'),
+        from_user_id: msg.from_user_id,
+        name: sentByUser ? 'You' : (receiver?.name || 'User'),
+        message_type: msg.message_type
       });
-    }, 400); // 400ms long press - faster on mobile
-  }, []);
 
-  const handleTouchEnd = useCallback((event) => {
-    // Prevent click from firing after long press
-    if (isLongPress.current) {
-      event.preventDefault();
-      event.stopPropagation();
+      // Focus the input with a small delay to ensure state update is processed
+      setTimeout(() => {
+        if (inputRef?.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     }
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
+  }, [setReplyTo, user?._id, receiver, inputRef]);
+
+
 
   useEffect(() => {
   if (!containerRef?.current) return;
@@ -317,26 +306,6 @@ useEffect(() => {
     });
   }, []);
 
-  // Handle reply from dropdown
-  const handleReplyFromDropdown = useCallback((msg) => {
-    if (setReplyTo) {
-      const sentByUser = msg.from_user_id === user._id;
-      setReplyTo({
-        _id: msg._id,
-        text: msg.text || (msg.message_type === 'image' ? 'Image' : msg.message_type === 'audio' ? 'Audio' : 'Message'),
-        from_user_id: msg.from_user_id,
-        name: sentByUser ? 'You' : (receiver?.name || 'User'),
-        message_type: msg.message_type
-      });
-
-      // Focus the input with a small delay to ensure state update is processed
-      setTimeout(() => {
-        if (inputRef?.current) {
-          inputRef.current.focus();
-        }
-      }, 100);
-    }
-  }, [setReplyTo, user?._id, receiver, inputRef]);
 
   // Handle copy text
   const handleCopyText = useCallback((text) => {
@@ -417,15 +386,69 @@ useEffect(() => {
   });
   // All socket listeners and seen logic now handled by useSeenManager hook
   // Location: seenManager.lastSeenMessage, seenManager.receiverLastSeen, etc.
+  const handleContextMenu = useCallback((msg, event) => {
+    const messageEl = event.currentTarget;
+    handleMessageInteraction(msg, event, messageEl);
+  }, [handleMessageInteraction]);
 
+  const handleTouchStart = useCallback((msg, event) => {
+    const touch = event.touches[0];
+    swipeStartX.current = touch.clientX;
+    swipeStartY.current = touch.clientY;
+    swipeMsg.current = msg;
+    isLongPress.current = false;
+
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      if (navigator.vibrate) navigator.vibrate(40);
+      const messageEl = event.currentTarget;
+      const rect = messageEl.getBoundingClientRect();
+      setDropdownState({
+        isOpen: true,
+        message: msg,
+        position: { x: rect.left + rect.width / 2, y: rect.top - 10 },
+      });
+    }, LONG_PRESS_DELAY);
+  }, []);
+
+  const handleTouchMove = useCallback((event) => {
+    const touch = event.touches[0];
+    const dx = touch.clientX - (swipeStartX.current ?? touch.clientX);
+    const dy = Math.abs(touch.clientY - (swipeStartY.current ?? touch.clientY));
+
+    if (Math.abs(dx) > 8 || dy > 8) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    }
+
+    if (!isLongPress.current && dx < -SWIPE_THRESHOLD && dy < 30 && swipeMsg.current) {
+      if (navigator.vibrate) navigator.vibrate(30);
+      handleReplyFromDropdown(swipeMsg.current);
+      swipeMsg.current = null;
+      swipeStartX.current = null;
+    }
+  }, [handleReplyFromDropdown]);
+
+  const handleTouchEnd = useCallback((event) => {
+    if (isLongPress.current) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+    swipeMsg.current = null;
+  }, []);
 
   return (
-    <div
-      className="relative flex flex-col min-h-full pb-4"
-      style={{ paddingBottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}
-    >
-      <div className="space-y-2 max-w-4xl mx-auto w-full px-2 pt-4">
-        {sortedDates.map((date) => (
+   <div className="relative flex flex-col w-full">
+  <div className="space-y-2 max-w-4xl mx-auto w-full px-2 pt-4 pb-[90px]">
+     {sortedDates.map((date) => (
           <div key={date} className="flex flex-col">
             {/* Date Separator */}
             <div className="flex justify-center my-3 sticky top-4 z-10 pointer-events-none">
@@ -462,6 +485,7 @@ useEffect(() => {
   onContextMenu={(e) => handleContextMenu(msg, e)}
   onDoubleClick={(e) => handleDoubleClick(msg, e)}
   onTouchStart={(e) => handleTouchStart(msg, e)}
+  onTouchMove={handleTouchMove}
   onTouchEnd={handleTouchEnd}
   className={`flex flex-col group relative mb-4 ${
     sentByUser ? "items-end" : "items-start"
