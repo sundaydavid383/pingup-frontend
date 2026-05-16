@@ -5,27 +5,26 @@ import { useAuth } from '../../context/AuthContext';
 import axiosBase from '../../utils/axiosBase';
 import toast from 'react-hot-toast';
 
+const ALL_INTERESTS = [
+  'spirituality',
+  'technology',
+  'sports',
+  'entertainment',
+  'news',
+  'health',
+  'education',
+  'business',
+  'music',
+  'art',
+  'travel',
+  'food',
+];
+
 const ContentPreferences = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [interests, setInterests] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // All available interests
-  const availableInterests = [
-    'spirituality',
-    'technology',
-    'sports',
-    'entertainment',
-    'news',
-    'health',
-    'education',
-    'business',
-    'music',
-    'art',
-    'travel',
-    'food'
-  ];
 
   // Load user interests on mount
   useEffect(() => {
@@ -35,9 +34,9 @@ const ContentPreferences = ({ isEmbedded = false }) => {
   }, [user]);
 
   const toggleInterest = (interest) => {
-    setInterests(prev => 
+    setInterests((prev) =>
       prev.includes(interest)
-        ? prev.filter(i => i !== interest)
+        ? prev.filter((i) => i !== interest)
         : [...prev, interest]
     );
   };
@@ -46,12 +45,12 @@ const ContentPreferences = ({ isEmbedded = false }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axiosBase.put('/api/settings/content-preferences', {
-        interests
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const res = await axiosBase.put(
+        '/api/settings/content-preferences',
+        { interests },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       if (res.data.success) {
         toast.success('Content preferences updated successfully');
       } else {
@@ -68,7 +67,6 @@ const ContentPreferences = ({ isEmbedded = false }) => {
     <div>
       {!isEmbedded && (
         <div className="max-w-2xl mx-auto p-4 md:p-6">
-          {/* Header */}
           <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => navigate(-1)}
@@ -77,57 +75,69 @@ const ContentPreferences = ({ isEmbedded = false }) => {
             >
               <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
             </button>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+            <h1
+              className="text-3xl font-bold"
+              style={{ color: 'var(--text-main)' }}
+            >
               Content Preferences
             </h1>
           </div>
         </div>
       )}
-      <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : ''}>
-        {/* Interests */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Your Interests
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {availableInterests.map((interest) => (
-              <button
-                key={interest}
-                onClick={() => toggleInterest(interest)}
-                className={`p-4 rounded-lg font-medium transition text-center capitalize ${
-                  interests.includes(interest)
-                    ? 'custom-gradient text-white'
-                    : 'border'
-                }`}
-                style={
-                  !interests.includes(interest)
-                    ? {
+
+      <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : 'sr-page'}>
+        {/* Section heading */}
+        <p className="sr-section-heading">Your Interests</p>
+        <p
+          style={{
+            fontSize: '.8rem',
+            color: 'var(--text-secondary)',
+            marginBottom: 16,
+          }}
+        >
+          Select topics that interest you for a personalised feed.
+        </p>
+
+        {/* Interest grid */}
+        <div
+          className="sr-interest-grid sr-stagger"
+          style={{ marginBottom: 24 }}
+        >
+          {ALL_INTERESTS.map((interest) => (
+            <button
+              key={interest}
+              onClick={() => toggleInterest(interest)}
+              className={`sr-interest-btn${
+                interests.includes(interest)
+                  ? ' sr-interest-active custom-gradient'
+                  : ''
+              }`}
+              style={
+                !interests.includes(interest)
+                  ? {
                       backgroundColor: 'var(--form-bg)',
                       borderColor: 'var(--input-border)',
-                      color: 'var(--text-main)'
+                      color: 'var(--text-main)',
                     }
-                    : {}
-                }
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {interests.includes(interest) && <Check className="w-4 h-4" style={{ color: 'white' }} />}
-                  <span>{interest}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+                  : {}
+              }
+            >
+              {interests.includes(interest) && (
+                <Check size={12} style={{ color: '#fff' }} />
+              )}
+              {interest}
+            </button>
+          ))}
         </div>
 
-        {/* Save Button */}
-        <div className="mt-6">
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="w-full py-3 px-6 rounded-lg font-semibold custom-gradient text-white hover:opacity-90 transition disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : 'Save Preferences'}
-          </button>
-        </div>
+        {/* Save button */}
+        <button
+          className="sr-btn-primary custom-gradient"
+          disabled={loading}
+          onClick={handleSave}
+        >
+          {loading ? 'Saving…' : 'Save Preferences'}
+        </button>
       </div>
     </div>
   );

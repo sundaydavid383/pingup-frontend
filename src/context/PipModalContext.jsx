@@ -25,14 +25,14 @@ export const PipModalProvider = ({ children }) => {
     setPipState((prev) => ({ ...prev, chatLoading: loading }));
   }, []);
 
-  const openPipModal = useCallback((userId) => {
+ const openPipModal = useCallback((userId) => {
     setPipState((prev) => {
       if (prev.pipOpen && prev.activeChatId === userId) {
-        return prev;
+        return { ...prev, pipOpen: true };
       }
       return { ...initialPipState, pipOpen: true, activeChatId: userId };
     });
-  }, []);
+}, []);
 
   const closePipModal = useCallback(() => {
     setPipState(initialPipState);

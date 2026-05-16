@@ -105,7 +105,7 @@ const AboutPage = () => {
               {
                 year: '2024',
                 title: 'App Launch',
-                description: 'SpringsConnect launched with core features: Bible reader, voice search, and community feed.',
+                description: 'SpringsCircle launched with core features: Bible reader, voice search, and community feed.',
               },
               {
                 year: '2024',
@@ -120,7 +120,7 @@ const AboutPage = () => {
               {
                 year: '2026',
                 title: 'Global Growth',
-                description: 'SpringsConnect now serves thousands of believers worldwide with daily spiritual connections.',
+                description: 'SpringsCircle now serves thousands of believers worldwide with daily spiritual connections.',
               },
             ].map((milestone, idx) => (
               <div key={idx} className="flex gap-6">
@@ -165,7 +165,7 @@ const AboutPage = () => {
             {[
               {
                 avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mariasantos',
-                quote: '"SpringsConnect has transformed my daily spiritual practice. I can read the Bible anytime and connect with believers who share my faith."',
+                quote: '"SpringsCircle has transformed my daily spiritual practice. I can read the Bible anytime and connect with believers who share my faith."',
                 author: 'Maria Santos',
                 role: 'User from Brazil',
               },

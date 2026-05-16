@@ -53,6 +53,13 @@ input, textarea, select {
   --really-bright-glass: rgba(255, 255, 255, 0.4);
   --white-glass: rgba(255, 255, 255, 0.8);
   --off-white: rgba(249, 249, 249, 1);
+    --ob-surface: #f4f6fd;
+   --ob-surface-2: #edf0fb;
+   --ob-shimmer: rgba(255,255,255,0.06);
+   --ob-niche-glow: rgba(59,92,203,0.18);
+   --ob-header-h1: #0e1a40;
+   --ob-mesh-1: rgba(59,92,203,0.07);
+   --ob-mesh-2: rgba(131,109,240,0.06);
 
   /* Animations */
   --animate-spin-slow: spin 3s linear infinite;
@@ -85,7 +92,8 @@ input, textarea, select {
   --hover-gradient: linear-gradient(to right, var(--hover-light), var(--hover-dark));
   --inverse-hover-gradient: linear-gradient(to right, var(--hover-dark), var(--hover-light));
   --chat-custom-gradient: linear-gradient(to right, var(--color-6), var(--white));
-
+    --sidebar-full-width: 208px;   /* w-52 */
+  --sidebar-icon-width: 80px; 
   --scripture-custom-gradient: conic-gradient(
     from 90deg,
     var(--white) 0%, 
@@ -143,6 +151,17 @@ input, textarea, select {
       var(--secondary) 45%,
       rgba(143,211,244,0.06) 100%       /* color-5 soft lift */
     );
+}
+@media (min-width: 768px) {
+  :root {
+    --sidebar-full-width: 224px; /* md:w-56 */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --sidebar-full-width: 240px; /* lg:w-60 */
+  }
 }
 /* ===== Global Scrollbar Styling ===== */
 .story-wrapper {

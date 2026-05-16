@@ -180,8 +180,11 @@ const App = () => {
 
   useEffect(() => {
     document.title = modalOpen ? toTitleCase(user?.name) : "{APP_NAME} – News Feed";
-    document.body.style.overflow = modalOpen ? 'hidden' : 'auto';
-    return () => (document.body.style.overflow = 'auto');
+    const originalOverflow = document.body.style.overflow;
+    if (modalOpen) document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
   }, [modalOpen, user]);
 
   // Auto-show onboarding after password modal closes if user hasn't completed onboarding
@@ -245,7 +248,7 @@ const App = () => {
                 setUser(updatedUser);
                 
                 // Sync to localStorage for persistence
-                localStorage.setItem("springsConnectUser", JSON.stringify(updatedUser));
+                localStorage.setItem("springsCircleUser", JSON.stringify(updatedUser));
                 console.log("💾 [App.jsx] User synced to localStorage");
                 
                 // Close modal

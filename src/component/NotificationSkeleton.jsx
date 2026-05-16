@@ -1,29 +1,61 @@
-// NotificationSkeleton.jsx
 const NotificationSkeleton = () => {
   return (
-    <div className="space-y-4 p-3">
-      {[...Array(3)].map((_, i) => (
-        <div
-          key={i}
-          className="relative flex items-center gap-4 p-4 rounded-xl bg-gray-100 shadow-sm overflow-hidden"
-        >
-          {/* Circle skeleton for icon */}
-          <div className="w-10 h-10 rounded-full bg-gray-300 relative overflow-hidden">
-            <div className={`absolute inset-0 shimmer shimmer-${i}`}></div>
-          </div>
+    <>
+      <style>{`
+        @keyframes gn-shimmer {
+          0%   { background-position: -400px 0; }
+          100% { background-position:  400px 0; }
+        }
+        .gn-sk {
+          background: linear-gradient(90deg, #f1f3f4 25%, #e8eaed 50%, #f1f3f4 75%);
+          background-size: 800px 100%;
+          animation: gn-shimmer 1.4s ease-in-out infinite;
+          border-radius: 6px;
+        }
+      `}</style>
 
-          {/* Text skeleton */}
-          <div className="flex-1 space-y-3">
-            <div className="h-3 w-3/4 bg-gray-300 rounded relative overflow-hidden">
-              <div className={`absolute inset-0 shimmer shimmer-${i}`}></div>
-            </div>
-            <div className="h-2 w-1/3 bg-gray-300 rounded relative overflow-hidden">
-              <div className={`absolute inset-0 shimmer shimmer-${i}`}></div>
-            </div>
-          </div>
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,.12)',
+        overflow: 'hidden',
+        fontFamily: "'Google Sans Text', sans-serif",
+      }}>
+        {/* fake header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f3f4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="gn-sk" style={{ width: 140, height: 22 }} />
+          <div className="gn-sk" style={{ width: 100, height: 32, borderRadius: 20 }} />
         </div>
-      ))}
-    </div>
+
+        {/* fake tabs */}
+        <div style={{ display: 'flex', gap: 0, padding: '0 24px', borderBottom: '1px solid #e8eaed' }}>
+          {[80, 90, 75, 65, 85, 90].map((w, i) => (
+            <div key={i} style={{ padding: '16px 16px 14px' }}>
+              <div className="gn-sk" style={{ width: w, height: 14 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* fake items */}
+        <div style={{ padding: '8px 0' }}>
+          {[1, 2, 3, 4].map((_, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14,
+              padding: '14px 24px',
+              borderLeft: i === 0 ? '3px solid #1a73e8' : '3px solid transparent',
+              background: i === 0 ? '#e8f0fe22' : 'transparent',
+            }}>
+              <div className="gn-sk" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="gn-sk" style={{ width: '72%', height: 14 }} />
+                <div className="gn-sk" style={{ width: '40%', height: 12 }} />
+              </div>
+              {i === 0 && <div className="gn-sk" style={{ width: 8, height: 8, borderRadius: '50%', marginTop: 6 }} />}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 };
 

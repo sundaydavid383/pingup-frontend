@@ -1,0 +1,607 @@
+/* ============================================================
+   AWARD-WINNING SIDEBAR — Crystalline Glass + Liquid Metal
+   Drop into your project alongside ui.css. Uses your :root vars.
+   ============================================================ */
+
+/* ---------- Google Font — pair with your project ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+/* ── SIDEBAR SHELL ── */
+.sidebar-container {
+  /* Layered crystalline glass stack */
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 40%, rgba(var(--primary-rgb),0.08) 100%),
+    linear-gradient(to bottom, rgba(27,40,71,0.82), rgba(15,23,42,0.92));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid transparent;
+  overflow: hidden;
+  position: relative;
+    isolation: isolate;          /* ← contains the stacking context */
+  transform: translateZ(0);    /* ← forces GPU layer, clips backdrop-filter bleed */
+  will-change: transform;
+}
+
+/* Crystal prism right-edge glow */
+.sidebar-container::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(153,183,224,0.55) 0%,
+    rgba(var(--primary-rgb),0.45) 20%,
+    rgba(153,183,224,0.08) 50%,
+    rgba(var(--primary-rgb),0.35) 80%,
+    rgba(153,183,224,0.45) 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Ambient aurora blob — top-left */
+.sidebar-container::after {
+  content: '';
+  position: absolute;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--primary-rgb),0.22) 0%, transparent 70%);
+  top: -70px; left: -50px;
+  pointer-events: none;
+  animation: sb-aurora-drift 9s ease-in-out infinite alternate;
+}
+
+/* Second aurora blob — bottom-right */
+.sidebar-aurora-blob {
+  position: absolute;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(128,156,240,0.14) 0%, transparent 70%);
+  bottom: 90px; right: -60px;
+  pointer-events: none;
+  z-index: 0;
+  animation: sb-aurora-drift 12s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes sb-aurora-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(20px, 30px) scale(1.18); }
+}
+
+/* Entry animation */
+.sidebar-container {
+  animation: sb-reveal 0.65s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes sb-reveal {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── LOGO ZONE ── */
+.sidebar-logo-zone {
+  padding: 20px 18px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Logo icon mark — use instead of or alongside your <img> */
+.sidebar-logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--primary), rgba(var(--primary-rgb),0.7));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1px rgba(153,183,224,0.3),
+    0 4px 20px rgba(var(--primary-rgb),0.4),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.sidebar-logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.sidebar-logo-text small {
+  display: block;
+  font-size: 9px; font-weight: 400;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-secondary);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Your existing <img> logo — just make it cursor-pointer and size it */
+.sidebar-container img.logo {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── PRISMATIC DIVIDER ── */
+.sidebar-hr {
+  height: 1px;
+  margin: 16px 18px 14px;
+  border: none;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(153,183,224,0.55) 20%,
+    rgba(var(--primary-rgb),0.65) 50%,
+    rgba(153,183,224,0.35) 80%,
+    transparent 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-hr::after {
+  content: '';
+  position: absolute;
+  inset: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: sb-shimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes sb-shimmer {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: translateX(100%);  opacity: 0; }
+}
+
+/* ── SECTION LABELS ── */
+.sb-section-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148,163,184,0.45);
+  font-weight: 500;
+  padding: 0 18px;
+  margin-bottom: 5px;
+  margin-top: 4px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── SECTION SEPARATOR ── */
+.sb-section-sep {
+  height: 1px;
+  margin: 8px 10px;
+  background: linear-gradient(90deg, transparent, rgba(153,183,224,0.14), transparent);
+  border: none;
+}
+
+/* ── NAV ITEM — FULL ── */
+.nav-item {
+  position: relative;
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  text-decoration: none;
+  color: rgba(148,163,184,0.85);
+  font-size: 13px; font-weight: 400;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  /* Staggered reveal — apply manually or via JS */
+  animation: sb-item-reveal 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes sb-item-reveal {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Liquid hover surface */
+.nav-item::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(var(--primary-rgb),0.12), rgba(128,156,240,0.08));
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.nav-item:hover::before { opacity: 1; }
+
+.nav-item:hover {
+  color: var(--hover-dark);
+  transform: translateX(4px);
+}
+
+/* Active — full state */
+.nav-item.active {
+  color: var(--hover-light);
+  font-weight: 500;
+}
+
+.nav-item.active::before {
+  opacity: 1;
+  background: linear-gradient(135deg,
+    rgba(var(--primary-rgb),0.22) 0%,
+    rgba(48,85,209,0.14) 100%
+  );
+}
+
+/* Active crystal left rail */
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 25%; bottom: 25%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(
+    180deg,
+    rgba(128,156,240,0.9),
+    var(--primary),
+    rgba(128,156,240,0.9)
+  );
+  box-shadow: 0 0 10px rgba(var(--primary-rgb),0.9), 0 0 20px rgba(var(--primary-rgb),0.4);
+  animation: sb-rail-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes sb-rail-pulse {
+  0%,100% {
+    opacity: 0.85;
+    box-shadow: 0 0 6px rgba(var(--primary-rgb),0.7), 0 0 14px rgba(var(--primary-rgb),0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(var(--primary-rgb),1), 0 0 28px rgba(var(--primary-rgb),0.55);
+  }
+}
+
+/* ── NAV ICON BOX ── */
+.nav-icon {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: all 0.25s;
+  position: relative;
+}
+
+.nav-item.active .nav-icon {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb),0.3), rgba(48,85,209,0.2));
+  box-shadow: 0 0 0 1px rgba(153,183,224,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.nav-item:hover .nav-icon {
+  background: rgba(var(--primary-rgb),0.1);
+}
+
+.nav-icon svg,
+.nav-item > svg {
+  width: 16px; height: 16px;
+  stroke: currentColor; stroke-width: 1.75;
+  fill: none; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+  transition: stroke 0.2s;
+}
+
+.nav-item.active .nav-icon svg {
+  stroke: var(--hover-dark);
+}
+
+.nav-label {
+  font-size: 13px; flex: 1;
+  transition: color 0.2s;
+}
+
+/* ── UNREAD BADGE ── */
+.sb-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: white;
+  font-size: 10px; font-weight: 700;
+  min-width: 18px; height: 18px;
+  border-radius: 9px; padding: 0 5px;
+  font-family: 'DM Sans', sans-serif;
+  box-shadow: 0 0 8px rgba(192,57,43,0.55);
+  letter-spacing: 0;
+  animation: sb-badge-pop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+/* Dot-only badge (for icon-only mode) */
+.sb-badge-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #e74c3c;
+  box-shadow: 0 0 6px rgba(231,76,60,0.75);
+}
+
+@keyframes sb-badge-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── CREATE POST BUTTON ── */
+.create-post {
+  display: flex; align-items: center; gap: 10px;
+  margin: 10px 10px 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: white;
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--primary), rgba(var(--primary-rgb),0.85));
+  box-shadow:
+    0 0 0 1px rgba(153,183,224,0.25),
+    0 4px 22px rgba(var(--primary-rgb),0.38),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  animation: sb-create-reveal 0.6s 0.45s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes sb-create-reveal {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Liquid shine sweep on hover */
+.create-post::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.55s ease;
+}
+
+.create-post:hover::before { left: 150%; }
+
+.create-post:hover {
+  box-shadow:
+    0 0 0 1px rgba(153,183,224,0.4),
+    0 8px 32px rgba(var(--primary-rgb),0.52),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
+/* Icon-only mode */
+.create-post.icon-only {
+  margin: 10px auto 14px;
+  width: 40px; height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+/* ── USER PROFILE FOOTER ── */
+.sidebar-footer {
+  padding: 10px;
+  border-top: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Prismatic top border on footer */
+.sidebar-footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(var(--primary-rgb),0.5),
+    transparent
+  );
+}
+
+.user-profile-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+  background: none; border: none; width: 100%;
+  text-align: left;
+}
+
+.user-profile-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg,
+    rgba(var(--primary-rgb),0.1),
+    rgba(128,156,240,0.07)
+  );
+  border-radius: 10px;
+  opacity: 0; transition: opacity 0.2s;
+}
+
+.user-profile-btn:hover::before { opacity: 1; }
+
+/* Avatar ring — animated */
+.sb-avatar-ring {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), rgba(131,109,240,0.85));
+  padding: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(153,183,224,0.2), 0 2px 14px rgba(var(--primary-rgb),0.38);
+  animation: sb-avatar-pulse 3s ease-in-out infinite;
+}
+
+.sb-avatar-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a294a, #0f172a);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 700;
+  color: var(--hover-light);
+  overflow: hidden;
+}
+
+.sb-avatar-inner img {
+  width: 100%; height: 100%;
+  object-fit: cover; border-radius: 50%;
+}
+
+@keyframes sb-avatar-pulse {
+  0%,100% {
+    box-shadow: 0 0 0 1px rgba(153,183,224,0.2), 0 2px 14px rgba(var(--primary-rgb),0.38);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(153,183,224,0.38), 0 2px 22px rgba(var(--primary-rgb),0.58);
+  }
+}
+
+.sb-user-name {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.sb-user-handle {
+  font-size: 10px; color: var(--text-secondary);
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 1px;
+}
+
+.sb-kebab {
+  display: flex; flex-direction: column;
+  gap: 2.5px; align-items: center;
+  opacity: 0.45; transition: opacity 0.2s;
+  padding: 4px;
+}
+.user-profile-btn:hover .sb-kebab { opacity: 1; }
+.sb-kebab span {
+  display: block; width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+/* ── ICON-ONLY MODE (collapsed) ── */
+/* Apply to nav items when onlyIconPage is true */
+.nav-item.collapsed {
+  width: 40px; height: 40px;
+  padding: 0; margin: 0 auto 4px;
+  justify-content: center;
+  gap: 0;
+}
+
+.nav-item.collapsed .nav-label,
+.nav-item.collapsed .sb-badge { display: none; }
+
+.nav-item.collapsed .nav-icon {
+  width: 100%; height: 100%;
+  border-radius: 10px;
+}
+
+.nav-item.collapsed .sb-badge-dot { display: block; }
+
+/* ── SIDEBAR TOOLTIP PORTAL ── */
+/* Matches your existing SidebarTooltipPortal */
+.sb-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: rgba(27,40,71,0.96);
+  border: 1px solid rgba(153,183,224,0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-main);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb),0.25);
+  transform: translateX(6px) translateY(-50%);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+/* ── HOVER GRADIENT (for .gradient-hover Tailwind class) ── */
+/* Your existing class — now with a crystalline feel */
+.gradient-hover:hover {
+  background: linear-gradient(90deg,
+    rgba(var(--primary-rgb),0.1) 0%,
+    rgba(128,156,240,0.07) 100%
+  ) !important;
+}
+
+/* ── CUSTOM GRADIENT ACTIVE (your .custom-gradient class) ── */
+.custom-gradient {
+  background: linear-gradient(135deg,
+    rgba(var(--primary-rgb),0.22) 0%,
+    rgba(48,85,209,0.14) 100%
+  ) !important;
+}
+
+/* ── SCROLLBAR ── */
+.sidebar-container *::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-container *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-container *::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-rgb),0.35);
+  border-radius: 10px;
+}
+.sidebar-container *::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-rgb),0.6);
+}
+
+/* ── MOBILE OVERLAY ── */
+/* Keep your existing overlay — just enhance */
+.sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,13,58,0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 40;
+  animation: sb-overlay-in 0.2s ease both;
+}
+
+@keyframes sb-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── MENU TOGGLE BUTTON (hamburger) ── */
+.sb-menu-toggle {
+  background: rgba(27,40,71,0.9) !important;
+  border: 1px solid rgba(153,183,224,0.2) !important;
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb),0.25) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--hover-light) !important;
+  transition: all 0.2s !important;
+}
+
+.sb-menu-toggle:hover {
+  background: rgba(var(--primary-rgb),0.2) !important;
+  border-color: rgba(153,183,224,0.4) !important;
+}
+
+/* ── STAGGERED ENTRY DELAYS ── */
+/* Add these inline or via nth-child in Sidebar.jsx */
+.sb-delay-1 { animation-delay: 0.05s; }
+.sb-delay-2 { animation-delay: 0.10s; }
+.sb-delay-3 { animation-delay: 0.15s; }
+.sb-delay-4 { animation-delay: 0.20s; }
+.sb-delay-5 { animation-delay: 0.25s; }
+.sb-delay-6 { animation-delay: 0.30s; }
+.sb-delay-7 { animation-delay: 0.35s; }
+.sb-delay-8 { animation-delay: 0.40s; }
+.sb-delay-9 { animation-delay: 0.45s; }
+.sb-delay-10{ animation-delay: 0.50s; }

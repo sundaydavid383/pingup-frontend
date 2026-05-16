@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Palette, Bell, FileText, Brain, HelpCircle, X } from 'lucide-react';
+import {
+  ArrowLeft, X, User, Lock, Palette, Bell, FileText, Brain,
+  HelpCircle, Eye, EyeOff, Check, ChevronRight, Calendar,
+  MapPin, ExternalLink
+} from 'lucide-react';
 import AccountSettings from './AccountSettings';
 import PrivacySafety from './PrivacySafety';
 import Appearance from './Appearance';
@@ -8,214 +12,181 @@ import NotificationSettings from './NotificationSettings';
 import PersonalInfo from './PersonalInfo';
 import ContentPreferences from './ContentPreferences';
 import HelpAbout from './HelpAbout';
+import "../../styles/settings.css"
+// import { useAuth } from '../../context/AuthContext';
+// import { useTheme } from '../../context/ThemeContext';
+// import axiosBase from '../../utils/axiosBase';
+// import toast from 'react-hot-toast';
+// import { APP_NAME } from '../../constants/appConfig';
 
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HELPER COMPONENTS
+   ─────────────────────────────────────────────────────────────────────────── */
+const Input = ({ label, type = 'text', value, onChange, placeholder, required, rightIcon }) => (
+  <div style={{ marginBottom: 16 }}>
+    {label && <label className="sr-label">{label}</label>}
+    <div className="sr-input-wrap">
+      <input
+        className={`sr-input${rightIcon ? ' sr-input-has-icon' : ''}`}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+      />
+      {rightIcon}
+    </div>
+  </div>
+);
+
+const Toggle = ({ on, onToggle, disabled }) => (
+  <button
+    type="button"
+    className={`sr-toggle-track${on ? ' sr-toggle-on custom-gradient' : ''}`}
+    onClick={onToggle}
+    disabled={disabled}
+  >
+    <div className="sr-toggle-thumb" />
+  </button>
+);
+
+const SkeletonList = ({ n = 3 }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    {Array.from({ length: n }).map((_, i) => (
+      <div key={i} className="sr-skeleton" style={{ animationDelay: `${i * .1}s` }} />
+    ))}
+  </div>
+);
+
+const Saved = () => (
+  <span className="sr-saved-badge">
+    <Check size={12} /> Saved
+  </span>
+);
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUB-PAGES
+   ─────────────────────────────────────────────────────────────────────────── */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CATEGORIES CONFIG
+   ─────────────────────────────────────────────────────────────────────────── */
+const CATEGORIES = [
+  { id: 'account',       label: 'Account',      shortLabel: 'Account',   icon: User,        description: 'Password, email, security',      component: AccountSettings      },
+  { id: 'privacy',       label: 'Privacy',      shortLabel: 'Privacy',   icon: Lock,        description: 'Control who sees your content',  component: PrivacySafety        },
+  { id: 'appearance',    label: 'Appearance',   shortLabel: 'Look',      icon: Palette,     description: 'Theme, font size, language',     component: Appearance           },
+  { id: 'notifications', label: 'Alerts',       shortLabel: 'Alerts',    icon: Bell,        description: 'Alerts and preferences',         component: NotificationSettings },
+  { id: 'personal',      label: 'Personal',     shortLabel: 'Personal',  icon: FileText,    description: 'Birth date, gender, location',   component: PersonalInfo         },
+  { id: 'content',       label: 'Content',      shortLabel: 'Content',   icon: Brain,       description: 'Manage your interests',          component: ContentPreferences   },
+  { id: 'help',          label: 'Help',         shortLabel: 'Help',      icon: HelpCircle,  description: 'Support and info',               component: HelpAbout            },
+];
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN SETTINGS COMPONENT
+   ─────────────────────────────────────────────────────────────────────────── */
 const Settings = () => {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('account');
+  const [active, setActive] = useState('account');
 
-  // Change category
-  const handleCategoryChange = (categoryId) => {
-    setActiveCategory(categoryId);
-  };
-
-  const settingsCategories = [
-    {
-      id: 'account',
-      label: 'Account',
-      icon: User,
-      description: 'Password, email, security',
-      component: AccountSettings
-    },
-    {
-      id: 'privacy',
-      label: 'Privacy & Safety',
-      icon: Lock,
-      description: 'Control who sees your content',
-      component: PrivacySafety
-    },
-    {
-      id: 'appearance',
-      label: 'Appearance',
-      icon: Palette,
-      description: 'Theme, font size, language',
-      component: Appearance
-    },
-    {
-      id: 'notifications',
-      label: 'Notifications',
-      icon: Bell,
-      description: 'Alerts and preferences',
-      component: NotificationSettings
-    },
-    {
-      id: 'personal',
-      label: 'Personal Info',
-      icon: FileText,
-      description: 'Birth date, gender, location',
-      component: PersonalInfo
-    },
-    {
-      id: 'content',
-      label: 'Content Preferences',
-      icon: Brain,
-      description: 'Manage your interests',
-      component: ContentPreferences
-    },
-    {
-      id: 'help',
-      label: 'Help & About',
-      icon: HelpCircle,
-      description: 'Support and info',
-      component: HelpAbout
-    }
-  ];
-
-  const activeItem = settingsCategories.find(cat => cat.id === activeCategory);
+  const activeItem = CATEGORIES.find(c => c.id === active);
   const ActiveComponent = activeItem?.component;
 
   return (
-    <div
-      className="min-h-screen w-full max-w-7xl mx-auto flex flex-col lg:flex-row overflow-x-hidden"
-      style={{ backgroundColor: 'var(--bg-main)' }}
-    >
-      {/* Header with back button (Mobile & Tablet) */}
-      <div className="lg:hidden flex items-center justify-between p-3 sm:p-4 border-b sticky top-0 z-50" style={{ borderColor: 'var(--input-border)', backgroundColor: 'var(--bg-main)' }}>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg hover:opacity-70 transition"
-          style={{ backgroundColor: 'var(--form-bg)' }}
-        >
-          <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
-        </button>
-        <h1 className="text-lg sm:text-xl font-bold flex-1 ml-2" style={{ color: 'var(--text-main)' }}>
-          Settings
-        </h1>
-      </div>
+    <>
 
-      {/* Horizontal Tab Bar for Mobile - Always Visible */}
-      <div className="lg:hidden overflow-x-auto border-b sticky top-14 sm:top-16 z-40 scrollbar-hide" style={{ borderColor: 'var(--input-border)', backgroundColor: 'var(--bg-main)' }}>
-        <div className="flex gap-1 sm:gap-2 md:gap-3 p-2 min-w-min">
-          {settingsCategories.map((category) => {
-            const Icon = category.icon;
-            const isActive = activeCategory === category.id;
-            return (
-              <button
-                key={category.id}
-                onClick={() => handleCategoryChange(category.id)}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 md:px-4 py-2 rounded-lg whitespace-nowrap transition-all flex-shrink-0 text-xs sm:text-sm md:text-base font-medium ${isActive
-                  ? 'custom-gradient text-white shadow-md'
-                  : 'bg-white/5 text-gray-600 hover:bg-white/10'
-                  }`}
-                style={
-                  isActive ? {} : { color: 'var(--text-main)', backgroundColor: 'var(--form-bg)' }
-                }
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" style={{ color: 'white' }} />
-                <span className="hidden xs:inline sm:inline">{category.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Left Sidebar - Categories (Desktop Only) */}
-      <div
-        className="hidden lg:flex lg:flex-col lg:static w-full lg:w-64 xl:w-72 2xl:w-80 lg:h-screen lg:border-r"
-        style={{
-          backgroundColor: 'var(--form-bg)',
-          borderColor: 'var(--input-border)'
-        }}
-      >
-        {/* Desktop Header */}
-        <div className="flex items-center justify-between p-4 lg:p-6 border-b" style={{ borderColor: 'var(--input-border)' }}>
-          <h1 className="text-xl lg:text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-            Settings
-          </h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg hover:opacity-70 transition"
-            style={{ backgroundColor: 'var(--bg-main)' }}
-          >
-            <X className="w-5 h-5" style={{ color: 'white' }} />
-          </button>
-        </div>
-
-        {/* Categories List */}
-        <div className="overflow-y-auto h-full lg:pb-6">
-          <nav className="p-3 lg:p-4 space-y-2">
-            {settingsCategories.map((category) => {
-              const Icon = category.icon;
-              const isActive = activeCategory === category.id;
-
+      <div className="sr">
+        {/* ── Desktop Sidebar ── */}
+        <aside className="sr-sidebar">
+          <div className="sr-sidebar-head">
+            <h1 className="sr-sidebar-title">Settings</h1>
+            <button className="sr-close-btn" onClick={() => navigate(-1)}>
+              <X size={14} />
+            </button>
+          </div>
+          <nav className="sr-sidebar-nav">
+            <span className="sr-nav-section-label">Preferences</span>
+            {CATEGORIES.map(({ id, label, icon: Icon, description }) => {
+              const isActive = active === id;
               return (
                 <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`w-full px-4 lg:px-6 py-3 lg:py-4 rounded-lg transition-all duration-200 flex items-center gap-3 group ${isActive
-                    ? 'custom-gradient text-white shadow-lg scale-[1.02]'
-                    : 'hover:scale-[1.01]'
-                    }`}
-                  style={
-                    !isActive
-                      ? {
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-main)'
-                      }
-                      : {}
-                  }
+                  key={id}
+                  onClick={() => setActive(id)}
+                  className={`sr-nav-btn${isActive ? ' sr-nav-active custom-gradient' : ''}`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} style={{ color: 'white' }} />
-                  <div className="text-left min-w-0">
-                    <div className={`font-medium text-base lg:text-lg ${isActive ? 'text-white' : ''}`}>
-                      {category.label}
-                    </div>
-                    <div className={`text-sm lg:text-base mt-0.5 hidden lg:block ${isActive ? 'text-white/80' : 'opacity-60'}`}>
-                      {category.description}
-                    </div>
-                  </div>
+                  <span className="sr-nav-icon">
+                    <Icon size={14} style={{ color: isActive ? '#fff' : 'var(--text-secondary)' }} />
+                  </span>
+                  <span className="sr-nav-text">
+                    <span className="sr-nav-label">{label}</span>
+                    <span className="sr-nav-desc">{description}</span>
+                  </span>
+                  <span className="sr-nav-dot" />
                 </button>
               );
             })}
           </nav>
+        </aside>
+
+        {/* ── Right column ── */}
+        <div className="sr-right">
+
+          {/* Mobile top bar */}
+          <div className="sr-mob-header">
+            <button className="sr-back-btn" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} />
+            </button>
+            <h1 className="sr-mob-title">Settings</h1>
+          </div>
+
+          {/* Pill tab bar */}
+          <div className="sr-tab-bar">
+            {CATEGORIES.map(({ id, label, shortLabel, icon: Icon }) => {
+              const isActive = active === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActive(id)}
+                  className={`sr-tab${isActive ? ' sr-tab-active custom-gradient' : ''}`}
+                >
+                  <Icon />
+                  <span className="sr-tab-label">{label}</span>
+                  <span className="sr-tab-shortlabel">{shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile section label */}
+          <div className="sr-mob-section">
+            <p className="sr-mob-section-title">{activeItem?.label}</p>
+            <p className="sr-mob-section-desc">{activeItem?.description}</p>
+          </div>
+
+          {/* Content */}
+          <div className="sr-content">
+            {ActiveComponent && (
+              <div key={active}>
+                <ActiveComponent />
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Mobile Header - Below Tab Bar */}
-      <div className="lg:hidden mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--text-main)' }}>
-          {activeItem?.label}
-        </h2>
-        <p className="text-xs sm:text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-          {activeItem?.description}
-        </p>
-      </div>
-
-      {/* Content Component */}
-      <div className="flex-1 p-4 lg:p-6 xl:p-8 2xl:p-10">
-        {ActiveComponent && (
-          <div className="animate-fadeIn">
-            <ActiveComponent isEmbedded={true} />
-          </div>
-        )}
-
-        {/* Animation styles (scoped) */}
-        <style>{`
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(8px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-fadeIn {
-            animation: fadeIn 0.3s ease-out;
-          }
-        `}</style>
-      </div>
-    </div>
+    </>
   );
 };
 

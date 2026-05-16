@@ -188,6 +188,7 @@ export default function VideoPlayer({
       (entries) => {
         entries.forEach((entry) => {
           const vid = videoRef.current;
+          if (!vid) return;
 
           // 👀 ENTER viewport
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
@@ -453,15 +454,17 @@ export default function VideoPlayer({
 
   const observer = new IntersectionObserver(
     ([entry]) => {
+      const currentVid = videoRef.current;
+      if (!currentVid) return;
       if (!entry.isIntersecting && playing) {
         // 👋 inline disappeared → detach
         updateVideoState({
           isDetached: true,
-          currentTime: vid.currentTime,
+          currentTime: currentVid.currentTime,
           playing: true,
         });
 
-        vid.pause(); // stop inline
+        currentVid.pause(); // stop inline
       }
     },
     { threshold: 0.1 }

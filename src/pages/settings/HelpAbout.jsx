@@ -41,96 +41,194 @@ const HelpAbout = ({ isEmbedded = false }) => {
   };
 
   return (
-    <div>
+    <div className="sr-page sr-stagger">
       {!isEmbedded && (
         <div className="max-w-2xl mx-auto p-4 md:p-6">
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
-              style={{ backgroundColor: 'var(--form-bg)' }}
+              className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+              style={{
+                background: 'var(--form-bg)',
+                border: '1px solid var(--input-border)',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.08)'
+              }}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
+              <ArrowLeft
+                className="w-5 h-5"
+                style={{ color: 'var(--text-main)' }}
+              />
             </button>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
-              Help & About
-            </h1>
+
+            <div>
+              <h1
+                className="text-2xl md:text-3xl font-bold"
+                style={{
+                  color: 'var(--text-main)',
+                  letterSpacing: '-0.03em'
+                }}
+              >
+                Help & About
+              </h1>
+
+              <p
+                className="text-sm mt-1"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Support resources and app information
+              </p>
+            </div>
           </div>
         </div>
       )}
+
       <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : ''}>
-        {/* Help Links */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Need Help?
-          </h2>
-          <div className="space-y-3">
+        {/* Help Section */}
+        <div className="mb-10">
+          <p className="sr-section-heading">Need Help?</p>
+
+          <div className="flex flex-col gap-3 mt-4">
             {helpLinks.map((link) => (
               <a
                 key={link.id}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-4 rounded-lg transition hover:scale-[1.02]"
+                className="flex items-center justify-between p-4 rounded-2xl transition-all duration-300 hover:scale-[1.015] active:scale-[0.99]"
                 style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)'
+                  background: 'var(--form-bg)',
+                  border: '1px solid var(--input-border)',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.06)'
                 }}
               >
-                <div className="text-left">
-                  <p className="font-medium" style={{ color: 'var(--text-main)' }}>
+                <div className="min-w-0">
+                  <span
+                    className="block font-semibold"
+                    style={{
+                      color: 'var(--text-main)',
+                      fontSize: '0.96rem'
+                    }}
+                  >
                     {link.label}
-                  </p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  </span>
+
+                  <span
+                    className="block mt-1 text-sm"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
                     {link.description}
-                  </p>
+                  </span>
                 </div>
-                <ExternalLink className="w-5 h-5" style={{ color: 'white' }} />
+
+                <ExternalLink
+                  size={18}
+                  style={{
+                    color: 'var(--text-secondary)',
+                    flexShrink: 0
+                  }}
+                />
               </a>
             ))}
           </div>
         </div>
 
-        {/* About App */}
-        <div className="border-t pt-8" style={{ borderColor: 'var(--input-border)' }}>
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
+        {/* Divider */}
+        <div
+          className="my-8"
+          style={{
+            height: '1px',
+            background:
+              'linear-gradient(90deg, transparent, var(--input-border), transparent)'
+          }}
+        />
+
+        {/* About Section */}
+        <div>
+          <p className="sr-section-heading">
             About {appInfo.name}
-          </h2>
+          </p>
+
           <div
-            className="p-6 rounded-lg text-center space-y-3"
+            className="mt-4 rounded-3xl p-6 text-center"
             style={{
-              backgroundColor: 'var(--form-bg)',
-              border: '1px solid var(--input-border)'
+              background: 'var(--form-bg)',
+              border: '1px solid var(--input-border)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.08)'
             }}
           >
-            <h3 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>
-              {appInfo.name}
-            </h3>
-            <div className="space-y-2" style={{ color: 'var(--text-secondary)' }}>
-              <p>
-                <span className="font-medium">Version:</span> {appInfo.version}
-              </p>
-              <p>
-                <span className="font-medium">Build:</span> {appInfo.buildNumber}
-              </p>
-              <p>
-                <span className="font-medium">Last Updated:</span> {appInfo.lastUpdated}
-              </p>
-            </div>
-            <p
-              className="text-sm pt-4"
-              style={{ color: 'var(--text-secondary)', borderTop: '1px solid var(--input-border)' }}
+            <h2
+              style={{
+                fontFamily: 'Syne, sans-serif',
+                fontSize: '1.7rem',
+                fontWeight: 800,
+                color: 'var(--text-main)',
+                letterSpacing: '-0.04em',
+                marginBottom: '12px'
+              }}
             >
-              Connecting spiritually, sharing scriptures, and growing with {APP_NAME}.
+              {appInfo.name}
+            </h2>
+
+            <div
+              className="flex flex-col gap-2"
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '.88rem'
+              }}
+            >
+              <span>
+                <strong style={{ color: 'var(--text-main)' }}>
+                  Version:
+                </strong>{' '}
+                {appInfo.version}
+              </span>
+
+              <span>
+                <strong style={{ color: 'var(--text-main)' }}>
+                  Build:
+                </strong>{' '}
+                {appInfo.buildNumber}
+              </span>
+
+              <span>
+                <strong style={{ color: 'var(--text-main)' }}>
+                  Last Updated:
+                </strong>{' '}
+                {appInfo.lastUpdated}
+              </span>
+            </div>
+
+            <div
+              className="my-5"
+              style={{
+                height: '1px',
+                background:
+                  'linear-gradient(90deg, transparent, var(--input-border), transparent)'
+              }}
+            />
+
+            <p
+              className="whitespace-pre-wrap leading-relaxed text-[0.9rem]"
+              style={{
+                color: 'var(--text-secondary)'
+              }}
+            >
+              Connecting spiritually, sharing scriptures, and growing together with {APP_NAME}.
             </p>
           </div>
         </div>
 
-        {/* Development Info */}
+        {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            © 2024-2026 Newsprings Youth. All rights reserved.
+          <p
+            className="text-xs"
+            style={{
+              color: 'var(--text-secondary)',
+              opacity: 0.85
+            }}
+          >
+            © 2024–2026 Newsprings Youth. All rights reserved.
           </p>
         </div>
       </div>

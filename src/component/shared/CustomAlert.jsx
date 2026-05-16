@@ -77,7 +77,7 @@ const CustomAlert = ({
 
   return (
     <div
-      className={`fixed z-[9999] ${positionClasses[position]} pointer-events-auto`}
+      className={`fixed z-[6000000] ${positionClasses[position]} pointer-events-auto`}
     >
       <div
         className={`

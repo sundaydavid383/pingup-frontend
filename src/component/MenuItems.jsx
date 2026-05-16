@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useMessageSeen } from '../../MessageSeenContext';
 import { Home, Users, User, Bell, Book, MessageSquareText, Compass, BookOpen, Settings, LogOut } from 'lucide-react';
 import "../styles/ui.css";
+import "../styles/sidebar-award.css"; // ← ADD THIS
 import useMediaQuery from "../hooks/useMediaQuery";
 import { useSidebarTooltip } from "./shared/SidebarTooltipPortal";
 
@@ -15,21 +16,21 @@ const MenuItems = ({ setSidebarOpen }) => {
   const navigate = useNavigate();
   const { showTooltip, hideTooltip } = useSidebarTooltip();
 
-  const isMessageTab = location.pathname.startsWith('/messages');
-  const isSettingsTab = location.pathname.startsWith('/settings');
+  const isMessageTab   = location.pathname.startsWith('/messages');
+  const isSettingsTab  = location.pathname.startsWith('/settings');
   const isDiscoveriesTab = location.pathname.startsWith('/discover');
-  const isProfileTab = location.pathname.startsWith('/profile') || location.pathname === '/profile';
+  const isProfileTab   = location.pathname.startsWith('/profile') || location.pathname === '/profile';
   const isCollapsed = isMessageTab || isSettingsTab || isDiscoveriesTab || isProfileTab;
 
   const menuItems = [
-    { to: "/", label: "Home", icon: Home },
-    { to: "/messages", label: "Message", icon: MessageSquareText },
-    { to: "/connections", label: "Connections", icon: Users },
-    { to: "/discover", label: "Discover", icon: Compass },
-    { to: `/profile/${user?._id}`, label: "Profile", icon: User },
-    { to: "/notification", label: "Notification", icon: Bell },
-    { to: "/scriptures", label: "Scriptures", icon: BookOpen },
-    { to: "/bible", label: "Bible", icon: Book },
+    { to: "/",                     label: "Home",         icon: Home },
+    { to: "/messages",             label: "Messages",     icon: MessageSquareText },
+    { to: "/connections",          label: "Connections",  icon: Users },
+    { to: "/discover",             label: "Discover",     icon: Compass },
+    { to: `/profile/${user?._id}`, label: "Profile",      icon: User },
+    { to: "/notification",         label: "Notifications",icon: Bell },
+    { to: "/scriptures",           label: "Scriptures",   icon: BookOpen },
+    { to: "/bible",                label: "Bible",        icon: Book },
   ];
 
   const handleLogout = async () => {
@@ -40,26 +41,31 @@ const MenuItems = ({ setSidebarOpen }) => {
   const handleMouseEnter = (e, label) => {
     if (isCollapsed && e.currentTarget) {
       const rect = e.currentTarget.getBoundingClientRect();
-      showTooltip(label, rect.right, rect.top + rect.height / 2);
+      showTooltip(label, rect.right + 8, rect.top + rect.height / 2);
     }
   };
 
+  // Stagger delay helpers
+  const delays = ['sb-delay-1','sb-delay-2','sb-delay-3','sb-delay-4',
+                  'sb-delay-5','sb-delay-6','sb-delay-7','sb-delay-8'];
+
   return (
-    <div className={`space-y-1 flex flex-col ${isCollapsed ? 'items-center' : ''}`}>
-      {menuItems.map(({ to, label, icon: Icon }) => (
+    <div className={`space-y-0.5 flex flex-col w-full ${isCollapsed ? 'items-center' : ''}`}>
+
+      {/* ── Section label (full mode only) ── */}
+      {!isCollapsed && <div className="sb-section-label">Main</div>}
+
+      {menuItems.map(({ to, label, icon: Icon }, idx) => (
         <NavLink
           key={to}
           to={to}
           end={to === "/"}
-          className={({ isActive }) =>
-            `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
-              isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
-            } ${
-              isActive
-                ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed && "translate-x-3"}`
-                : `hover:text-[var(--hover-dark)] ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`
-            }`
-          }
+          className={({ isActive }) => [
+            'nav-item',
+            delays[idx] || '',
+            isCollapsed ? 'collapsed' : '',
+            isActive ? 'active' : '',
+          ].join(' ')}
           onClick={() => {
             if (typeof setSidebarOpen === "function" && isSmallScreen) {
               setSidebarOpen(false);
@@ -68,78 +74,78 @@ const MenuItems = ({ setSidebarOpen }) => {
           onMouseEnter={(e) => handleMouseEnter(e, label)}
           onMouseLeave={hideTooltip}
         >
-          <div className="relative flex items-center justify-center">
-            <Icon className="w-[18px] h-5" />
-
-            {/* Message unread badge */}
-            {label === "Message" && totalUnreadCount > 0 && (
-              <span
-                className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${
-                  isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"
-                }`}
-              >
-                {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
-              </span>
+          {/* Icon */}
+          <div className="nav-icon">
+            <Icon />
+            {/* Dot badge for collapsed mode */}
+            {label === "Messages" && totalUnreadCount > 0 && isCollapsed && (
+              <span className="sb-badge-dot" />
             )}
-
-            {/* Notification unread badge */}
-            {label === "Notification" && unreadNotifications > 0 && (
-              <span
-                className={`absolute bg-red-600 text-white text-[10px] font-bold px-1.5 py-[0.5px] rounded-full animate-pulse ${
-                  isCollapsed ? "-top-1 -right-1" : "-top-2 -right-0.5"
-                }`}
-              >
-                {unreadNotifications > 99 ? "99+" : unreadNotifications}
-              </span>
+            {label === "Notifications" && unreadNotifications > 0 && isCollapsed && (
+              <span className="sb-badge-dot" />
             )}
           </div>
-          {!isCollapsed && <span className="truncate text-[13px]">{label}</span>}
+
+          {/* Label + pill badge (full mode) */}
+          {!isCollapsed && (
+            <>
+              <span className="nav-label">{label}</span>
+              {label === "Messages" && totalUnreadCount > 0 && (
+                <span className="sb-badge">
+                  {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                </span>
+              )}
+              {label === "Notifications" && unreadNotifications > 0 && (
+                <span className="sb-badge">
+                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                </span>
+              )}
+            </>
+          )}
         </NavLink>
       ))}
 
-      {!isCollapsed && <hr className="my-2 border-[var(--input-border)]" />}
+      {/* Section sep + label */}
+      <hr className="sb-section-sep" />
+      {!isCollapsed && <div className="sb-section-label">Account</div>}
 
       {/* Settings */}
       <NavLink
         to="/settings"
-        className={({ isActive }) =>
-          `relative flex items-center rounded-md transition-all duration-300 ease-in-out ${
-            isCollapsed ? "w-10 h-10 justify-center group" : "pl-3 py-[7px] gap-3 w-full"
-          } ${
-            isActive
-              ? `custom-gradient text-[var(--text-accent-dark)] font-semibold ${!isCollapsed ? "translate-x-3" : ""}`
-              : isCollapsed
-              ? "hover:text-[var(--hover-dark)]"
-              : "hover:text-[var(--text-accent-dark)] hover:translate-x-3 gradient-hover"
-          }`
-        }
+        className={({ isActive }) => [
+          'nav-item sb-delay-9',
+          isCollapsed ? 'collapsed' : '',
+          isActive ? 'active' : '',
+        ].join(' ')}
         onClick={() => {
-          if (typeof setSidebarOpen === "function" && isSmallScreen) {
-            setSidebarOpen(false);
-          }
+          if (typeof setSidebarOpen === "function" && isSmallScreen) setSidebarOpen(false);
         }}
         onMouseEnter={(e) => handleMouseEnter(e, "Settings")}
         onMouseLeave={hideTooltip}
       >
-        <div className="relative flex items-center justify-center">
-          <Settings className="w-[18px] h-5" />
-        </div>
-        {!isCollapsed && <span className="truncate text-[13px]">Settings</span>}
+        <div className="nav-icon"><Settings /></div>
+        {!isCollapsed && <span className="nav-label">Settings</span>}
       </NavLink>
 
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className={`relative flex items-center rounded-md transition-all duration-300 ease-in-out hover:text-red-600 group ${
-          isCollapsed ? "w-10 h-10 justify-center" : "pl-3 py-[7px] gap-3 w-full"
-        } ${!isCollapsed ? "hover:translate-x-3 gradient-hover" : ""}`}
-        onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
-        onMouseLeave={hideTooltip}
+        className={[
+          'nav-item sb-delay-10',
+          isCollapsed ? 'collapsed' : '',
+        ].join(' ')}
+        style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%' }}
+        onMouseEnter={(e) => {
+          handleMouseEnter(e, "Logout");
+          e.currentTarget.style.color = '#f87171';
+        }}
+        onMouseLeave={(e) => {
+          hideTooltip();
+          e.currentTarget.style.color = '';
+        }}
       >
-        <div className="relative flex items-center justify-center">
-          <LogOut className="w-[18px] h-5" />
-        </div>
-        {!isCollapsed && <span className="truncate text-[13px]">Logout</span>}
+        <div className="nav-icon"><LogOut /></div>
+        {!isCollapsed && <span className="nav-label">Logout</span>}
       </button>
     </div>
   );

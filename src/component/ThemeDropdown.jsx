@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { FaArrowDown } from "react-icons/fa";
 import "./themeDropdown.css";
 import { useTheme } from "../context/ThemeContext";
@@ -384,7 +383,7 @@ const ThemeDropdown = ({
     setCoords({ top: Math.max(8, top), left, width: menuWidth });
   };
 
-  const toggleOpen = (next = null) => {
+  const toggleOpen = (event, next = null) => {
     event?.stopPropagation?.();
     const val = next === null ? !open : next;
     if (val) {
@@ -395,7 +394,7 @@ const ThemeDropdown = ({
     }
   };
 
-  const handleSelect = (key) => {
+  const handleSelect = (key, event) => {
     // Stop propagation to prevent closing parent dropdowns
     event?.stopPropagation?.();
     setCurrentTheme(key);
@@ -431,10 +430,15 @@ const ThemeDropdown = ({
         {items && items.length > 0 && (
           <div className="theme-settings-section" style={{ padding: 8 }}>
             {items.map((it, i) => (
-              <button key={`s-${i}`} className="theme-dropdown-item" onClick={() => { it.onClick && it.onClick(); setOpen(false); }}>
-                <div className="theme-preview">
-                  <span className="theme-name">{it.label}</span>
-                </div>
+                  <button
+                    key={`s-${i}`}
+                    className="theme-dropdown-item"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      it.onClick && it.onClick();
+                      setOpen(false);
+                    }}
+                  >
               </button>
             ))}
             <div style={{ height: 8 }} />
@@ -450,7 +454,7 @@ const ThemeDropdown = ({
               type="button"
               role="menuitem"
               className={`theme-dropdown-item ${selected ? "selected" : ""}`}
-              onClick={() => handleSelect(key)}
+              onClick={(event) => handleSelect(key, event)}
             >
               <div className="theme-preview">
                 <span
@@ -479,7 +483,7 @@ const ThemeDropdown = ({
           type="button"
           className="p-2 hover:brightness-110 active:scale-95 transition"
           aria-label="Change Theme"
-          onClick={() => toggleOpen()}
+          onClick={(event) => toggleOpen(event)}
           style={{
             backgroundColor: THEMES[currentTheme]?.vars["--input-accent"] || "#6366f1",
             color: "white",

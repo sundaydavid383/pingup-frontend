@@ -7,6 +7,7 @@ import axiosBase from "../utils/axiosBase";
 import { useSocket } from "../context/SocketContext";
 import MessageOptionsDropdown from "./MessageOptionsDropdown";
 import useSeenManager from "../hooks/useSeenManager";
+import "./../styles/chatmessagesfull.css"
 
 const ChatMessagesFull = ({
   messages,
@@ -101,7 +102,7 @@ const seenManager = useSeenManager({
   const longPressTimer = useRef(null);
   const isLongPress = useRef(false);
   const messageElementRefs = useRef({});
-  const hasScrolledToLastSeen = useRef(false);
+  const hasScrolledToLastSeen = useRef({});
 const prevChatIdRef = useRef(null);
   // Handle right-click, long-press, or double-click to show dropdown
   const handleMessageInteraction = useCallback((msg, event, messageEl) => {
@@ -216,41 +217,77 @@ const scrollToMessageAndHighlight = useCallback((messageId) => {
 
 
 useEffect(() => {
-    // Reset scroll flag when chat changes so we always scroll on new chat open
-    if (chatId !== prevChatIdRef.current) {
-        hasScrolledToLastSeen.current = false;
+    if (!chatId || messages.length === 0) return;
+    if (!seenManager.hasInitialized) return;
+
+    // Reset flag when chat changes
+    if (prevChatIdRef.current !== chatId) {
+        hasScrolledToLastSeen.current = {};
         prevChatIdRef.current = chatId;
     }
 
-    if (!chatId || !seenManager.lastSeenMessage || messages.length === 0) return;
-    if (hasScrolledToLastSeen.current) return;
+    if (hasScrolledToLastSeen.current[chatId]) return;
 
-    // Only scroll to lastSeen if there are unread messages below it
+    // Mark immediately to prevent double-fire from React StrictMode / re-renders
+    hasScrolledToLastSeen.current[chatId] = true;
+
     const lastMsg = messages[messages.length - 1];
-    const lastSeenIsLatest = lastMsg?._id === seenManager.lastSeenMessage._id ||
-        new Date(lastMsg?.createdAt) <= new Date(seenManager.lastSeenMessage.createdAt);
 
-    if (lastSeenIsLatest) {
-        // Already at the latest — scroll to bottom instead
-        hasScrolledToLastSeen.current = true;
-        setTimeout(() => {
+    // No lastSeenMessage or already at latest → scroll to bottom
+    if (
+        !seenManager.lastSeenMessage ||
+        !lastMsg ||
+        new Date(lastMsg.createdAt) <= new Date(seenManager.lastSeenMessage.createdAt)
+    ) {
+        requestAnimationFrame(() => {
             if (containerRef?.current) {
-                containerRef.current.scrollTo({
-                    top: containerRef.current.scrollHeight,
-                    behavior: 'auto'
-                });
+                containerRef.current.scrollTop = containerRef.current.scrollHeight;
             }
-        }, 150);
+        });
         return;
     }
 
-    const timer = setTimeout(() => {
-        seenManager.scrollToLastSeen();
-        hasScrolledToLastSeen.current = true;
-    }, 300);
+    // There are unseen messages below lastSeenMessage — scroll to it
+    // Use a MutationObserver to wait for the target element to appear in DOM
+    const targetId = `msg_${seenManager.lastSeenMessage._id}`;
 
-    return () => clearTimeout(timer);
-}, [chatId, seenManager.lastSeenMessage, messages]);
+    const doScroll = () => {
+        seenManager.scrollToLastSeen();
+    };
+
+    const existing = document.getElementById(targetId);
+    if (existing) {
+        // Already rendered — scroll immediately
+        requestAnimationFrame(doScroll);
+        return;
+    }
+
+    // Wait for it to appear
+    const observer = new MutationObserver(() => {
+        if (document.getElementById(targetId)) {
+            observer.disconnect();
+            requestAnimationFrame(doScroll);
+        }
+    });
+
+    if (containerRef?.current) {
+        observer.observe(containerRef.current, { childList: true, subtree: true });
+    }
+
+    // Safety timeout
+    const timeout = setTimeout(() => {
+        observer.disconnect();
+        if (containerRef?.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+    }, 3000);
+
+    return () => {
+        observer.disconnect();
+        clearTimeout(timeout);
+    };
+}, [chatId, seenManager.hasInitialized, seenManager.lastSeenMessage, messages.length]);
+
 useEffect(() => {
   if (!containerRef?.current) return;
 
@@ -507,7 +544,7 @@ useEffect(() => {
   {/* ─── TEXT ─── */}
   {msg.message_type === "text" && (
     <div className="flex flex-col gap-1.5">
-      <p className="whitespace-pre-wrap leading-relaxed text-[14px]">
+      <p className="whitespace-pre-wrap leading-relaxed text-[0.8rem]">
         {getDisplayText(msg.text, msg._id)}
       </p>
 
@@ -670,7 +707,7 @@ useEffect(() => {
     className="text-[var(--secondary)] drop-shadow-md" 
   />
 
-      {observerReady && seenManager.lastSeenMessage && seenManager.unseenBelowCount > 0 && (
+      {observerReady && seenManager.unseenBelowCount > 0 && (
           <span
             className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold text-white animate-pulse"
             style={{ 

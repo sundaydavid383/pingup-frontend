@@ -8,6 +8,7 @@ import { usePipModal } from "../context/PipModalContext";
 import ProfileAvatar from "./shared/ProfileAvatar";
 import RecentMessagesSkeleton from "./skeleton/RecentMessagesSkeleton";
 import { useMessageSeen } from "../../MessageSeenContext";
+import "../styles/recentmessages.css";
 
 const RecentMessages = () => {
   const [connections, setConnections] = useState([]);
@@ -185,130 +186,136 @@ const sortedConnections = React.useMemo(() => {
 
   return arr; // keep metadata attached for use in render
 }, [connections, lastMessages, conversations, unreadCountsMap]);
-  return (
+return (
     <>
-      {(
-        <div className="w-full bg-white rounded-xl shadow-md p-0 m-0">
-          <h3 className="font-semibold text-sm px-2 pt-2 mb-2">Recent Messages</h3>
-          <div className="flex flex-col max-h-[60vh] overflow-y-auto ">
-            {loading ? <RecentMessagesSkeleton /> : connections.length === 0 ? (
-        <p className="text-xs text-gray-500 px-3 py-4">
-          No messages yet
-        </p>
-      ) : sortedConnections.map(({ usr, convoId, unread }, index) => {
-  const last = lastMessages[usr._id];
+      <div className="rm-root">
 
-  const firstUnreadIndex = sortedConnections.findIndex(
-    (item) => item.unread > 0
-  );
-  const isFirstUnread = unread > 0 && index === firstUnreadIndex;
+        {/* Header */}
+        <div className="rm-header">
+          <span className="rm-title">
+            <span className="rm-title-pulse" />
+            Recent Messages
+          </span>
+        </div>
+        <hr className="rm-header-rule" />
 
-  return (
-    <div
-      key={usr._id}
-      onClick={() => {
-        openPipModal(usr._id);
-        fetchChatHistory(usr._id);
-        handleUserClick(usr)
-        if (convoId) clearUnreadForChat(convoId);
-      }}
-      className={`flex gap-3 px-3 py-3 cursor-pointer rounded-lg transition-all duration-200 ${
-        isFirstUnread
-          ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100"
-          : "hover:bg-[var(--hover-subtle-bg)] hover:shadow-sm"
-      }`}
-    >
-                  {/* Profile Avatar */}
-                  <ProfileAvatar user={usr} size={44} />
+        {/* List */}
+        <div className="rm-list">
+          {loading ? (
+            <RecentMessagesSkeleton />
+          ) : connections.length === 0 ? (
+            <div className="rm-empty">
+              <span className="rm-empty-icon">💬</span>
+              <p className="rm-empty-text">No messages yet</p>
+            </div>
+          ) : (
+            sortedConnections.map(({ usr, convoId, unread }, index) => {
+              const last = lastMessages[usr._id];
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    {/* Top row: username and timestamp */}
-                    <div className="flex justify-between items-center">
-                      <span
-                        className={`flex items-center gap-1 truncate text-xs min-w-0 ${
-                          isFirstUnread ? "font-semibold text-red-600" : ""
-                        }`}
-                        style={!isFirstUnread ? { color: "var(--text-secondary)" } : {}}
-                      >
-                        @{usr.username}
-                      </span>
-                      {last && (
-                        <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
-                          {moment(last.createdAt).format("h:mm A")}
-                        </span>
-                      )}
+              const firstUnreadIndex = sortedConnections.findIndex(
+                (item) => item.unread > 0
+              );
+              const isFirstUnread = unread > 0 && index === firstUnreadIndex;
+
+              return (
+                <React.Fragment key={usr._id}>
+                  {/* Unread divider label — only before the first unread */}
+                  {isFirstUnread && (
+                    <div className="rm-unread-label">Unread</div>
+                  )}
+
+                  <div
+                    onClick={() => {
+                      openPipModal(usr._id);
+                      fetchChatHistory(usr._id);
+                      handleUserClick(usr);
+                      if (convoId) clearUnreadForChat(convoId);
+                    }}
+                    className={`rm-row ${isFirstUnread ? "rm-row--unread" : ""}`}
+                  >
+                    {/* Avatar */}
+                    <div className="rm-avatar-wrap">
+                      <ProfileAvatar user={usr} size={40} />
                     </div>
 
-                    {/* Bottom row: last message + unread */}
-                    <div className="flex justify-between -mt-3 items-center mt-1">
-                      <span
-                        className="flex items-center gap-1 truncate text-xs flex items-start"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {!last && "Click to chat"}
+                    {/* Content */}
+                    <div className="rm-content">
 
-                        {last?.type === "text" && (
-                          <div className="flex flex-col gap-0.5 w-full">
-                            <span className="truncate w-full">{getDisplayText(last.text, last._id)}</span>
-                            {shouldShowReadMore(last.text) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleMessageExpansion(last._id);
-                                }}
-                                className="flex items-center gap-1 text-[10px] font-semibold opacity-70 hover:opacity-100 transition-opacity"
-                                style={{ color: "var(--primary)" }}
-                              >
-                                {expandedMessages.has(last._id) ? "Less" : "More"}
-                              </button>
-                            )}
-                          </div>
+                      {/* Top: username + time */}
+                      <div className="rm-top-row">
+                        <span className="rm-username">@{usr.username}</span>
+                        {last && (
+                          <span className="rm-time">
+                            {moment(last.createdAt).format("h:mm A")}
+                          </span>
                         )}
+                      </div>
 
-                        {last?.type === "image" && (
-                          <>
-                            <ImageIcon size={12} />
-                            <span>Photo</span>
-                          </>
+                      {/* Bottom: preview + badge */}
+                      <div className="rm-bottom-row">
+                        <span className="rm-preview">
+                          {!last && (
+                            <span className="rm-preview-text" style={{ fontStyle: "italic", opacity: 0.6 }}>
+                              Click to chat
+                            </span>
+                          )}
+
+                          {last?.type === "text" && (
+                            <span className="flex flex-col w-full min-w-0">
+                              <span className="rm-preview-text">
+                                {getDisplayText(last.text, last._id)}
+                              </span>
+                              {shouldShowReadMore(last.text) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleMessageExpansion(last._id);
+                                  }}
+                                  className="rm-read-more"
+                                >
+                                  {expandedMessages.has(last._id) ? "Less ↑" : "More ↓"}
+                                </button>
+                              )}
+                            </span>
+                          )}
+
+                          {last?.type === "image" && (
+                            <>
+                              <ImageIcon size={12} className="rm-preview-icon" />
+                              <span className="rm-preview-text">Photo</span>
+                            </>
+                          )}
+
+                          {last?.type === "audio" && (
+                            <>
+                              <Mic size={12} className="rm-preview-icon" />
+                              <span className="rm-preview-text">Voice message</span>
+                            </>
+                          )}
+
+                          {last?.type === "file" && (
+                            <>
+                              <FileText size={12} className="rm-preview-icon" />
+                              <span className="rm-preview-text">Document</span>
+                            </>
+                          )}
+                        </span>
+
+                        {unread > 0 && (
+                          <span className={`rm-badge ${isFirstUnread ? "rm-badge--unread" : "rm-badge--normal"}`}>
+                            {unread}
+                          </span>
                         )}
+                      </div>
 
-                        {last?.type === "audio" && (
-                          <>
-                            <Mic size={12} />
-                            <span>Voice message</span>
-                          </>
-                        )}
-
-                        {last?.type === "file" && (
-                          <>
-                            <FileText size={12} />
-                            <span>Document</span>
-                          </>
-                        )}
-                      </span>
-
-                       {unread > 0 && (
-        <span
-          className={`flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-bold ${
-            isFirstUnread ? "animate-pulse" : ""
-          }`}
-          style={{
-            background: isFirstUnread ? "#ef4444" : "var(--primary)",
-            color: "var(--white)",
-          }}
-        >
-          {unread}
-        </span>
-      )}
                     </div>
                   </div>
-                </div>
+                </React.Fragment>
               );
-            })}
-          </div>
+            })
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 };

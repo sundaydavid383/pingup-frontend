@@ -23,34 +23,37 @@ const Layout = () => {
     console.log(sidebarOpen, "sidebarOpen in Layout");
   }, [sidebarOpen]);
 
-  return user ? (
-    <div className="w-full flex h-screen relative no-scrollbar overflow-x-hidden">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      {!hideMobileNavbar && <MobileNavbar setSidebarOpen={setSidebarOpen} />}
+return user ? (
+  <div className="w-full h-screen relative no-scrollbar overflow-hidden">
+    <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+    {!hideMobileNavbar && <MobileNavbar setSidebarOpen={setSidebarOpen} />}
 
-      <div
-        className={`flex-1 bg-slate-50 transition-all duration-300
-          ${sidebarOpen
-            ? (isMessageTab || isSettingsTab || isProfileTab  || isDiscoverTab)
-              ? 'ml-20' // Matches Sidebar reduced width
-              : 'ml-52 md:ml-56 lg:ml-60' // Matches Sidebar full width
-            : 'ml-0'
-          } ${!hideMobileNavbar ? 'mobilenav_intervention'  : 'pt-0'}`}
-      >
-        <Outlet />
-      </div>
+    <div
+  className={`absolute top-0 right-0 bottom-0 overflow-y-auto bg-slate-50
+    ${!hideMobileNavbar ? 'mobilenav_intervention' : 'pt-0'}`}
+  style={{
+    isolation: 'isolate',
+    left: sidebarOpen
+      ? (isMessageTab || isSettingsTab || isProfileTab || isDiscoverTab)
+        ? 'var(--sidebar-icon-width)'
+        : 'var(--sidebar-full-width)'
+      : '0',
+    transition: 'left 300ms ease-in-out'
+  }}
+>
+  <Outlet />
+</div>
 
-      {/* Show toggle only on small screens */}
-      {!sidebarOpen && (
-        <Menu
-          className="fixed top-1 left-1 z-[50] bg-white rounded-md shadow w-10 h-10 p-2 text-gray-600 md:hidden cursor-pointer"
-          onClick={() => setSidebarOpen(true)}
-        />
-      )}
-    </div>
-  ) : (
-    <Loading />
-  );
+    {!sidebarOpen && (
+      <Menu
+        className="fixed top-1 left-1 z-[50] bg-white rounded-md shadow w-10 h-10 p-2 text-gray-600 md:hidden cursor-pointer"
+        onClick={() => setSidebarOpen(true)}
+      />
+    )}
+  </div>
+) : (
+  <Loading />
+);
 };
 
 export default Layout;

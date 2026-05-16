@@ -27,7 +27,7 @@ export default function ImageComposer({ image, setImage, caption, setCaption, on
         <div className="relative w-full flex-shrink-0">
           <BlurImage
             src={URL.createObjectURL(image)}
-            onClick={() => setShowViewer(true)}
+            
           />
 
           {/* CLOSE BUTTON */}
@@ -57,10 +57,10 @@ export default function ImageComposer({ image, setImage, caption, setCaption, on
             onClick={onSend}
             disabled={sending}
             style={{ backgroundColor: "var(--input-primary)" }}
-            className="text-white p-2 rounded-full flex items-center justify-center"
+            className="text-[var(--primary)] p-2 rounded-full flex items-center justify-center"
             title="send"
           >
-            {sending ? <Spinner /> : <SendHorizonal size={16} />}
+            {sending ? <Spinner size={26}/> : <SendHorizonal size={26} />}
           </button>
         </div>
       </div>
@@ -138,26 +138,28 @@ function EmojiInput({ value, setValue }) {
   );
 }
 
-function Spinner() {
+function Spinner({ size = 18, color = "currentColor" }) {
   return (
     <svg
-      className="animate-spin h-4 w-4 text-white"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
+      style={{ width: size, height: size }}
+      className="animate-spin"
       viewBox="0 0 24 24"
+      fill="none"
     >
       <circle
-        className="opacity-25"
         cx="12"
         cy="12"
         r="10"
-        stroke="currentColor"
+        stroke={color}
         strokeWidth="4"
+        className="opacity-25"
       />
       <path
+        d="M4 12a8 8 0 018-8"
+        stroke={color}
+        strokeWidth="4"
         className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+        strokeLinecap="round"
       />
     </svg>
   );

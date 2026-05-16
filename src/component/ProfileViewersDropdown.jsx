@@ -17,6 +17,8 @@ const ProfileViewersDropdown = ({ viewers = [], totalViews = 0 }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  console.log("👀 [ProfileViewersDropdown] Viewers:", viewers, "Total Views:", totalViews);
+
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
@@ -31,7 +33,7 @@ const ProfileViewersDropdown = ({ viewers = [], totalViews = 0 }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 bottom-12 mt-2 w-64 bg-white shadow-lg rounded-lg max-h-60 overflow-y-auto border border-gray-200 z-50">
+        <div className="absolute right-[-6rem] bottom-12 mt-2 w-64 bg-white shadow-lg rounded-lg max-h-60 overflow-y-auto border border-gray-200 z-50">
           {viewers.length === 0 ? (
             <p className="p-2 text-sm text-gray-500">No viewers yet.</p>
           ) : (

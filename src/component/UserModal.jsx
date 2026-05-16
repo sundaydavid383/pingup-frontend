@@ -158,7 +158,7 @@ const handleSave = async () => {
     // 6️⃣ Handle success
     const updatedUser = data?.user;
     if (updatedUser) {
-      localStorage.setItem("springsConnectUser", JSON.stringify(updatedUser));
+      localStorage.setItem("springsCircleUser", JSON.stringify(updatedUser));
       setFormData(updatedUser); // Keep local state in sync
     }
 
@@ -211,7 +211,7 @@ const handleDeleteAccount =     async () => {
       setMsg("Account deleted successfully.", "success");
 
       // Clear local storage and redirect
-      localStorage.removeItem("springsConnectUser");
+      localStorage.removeItem("springsCircleUser");
       window.location.href = "/"; // redirect to homepage or login
     } catch (err) {
       setMsg(err?.response?.data?.message || "Failed to delete user.", "error");

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { Users, Search, Sprout, MapPin, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, Search, Sprout, X, ChevronDown, ChevronUp } from "lucide-react";
 import UserCard from "../component/UserCard";
 import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
 import CustomDropdown from "../component/shared/CustomDropdown";
@@ -55,8 +55,8 @@ export default function Discover() {
         params: { page: 1, limit: 20 },
       });
       const fetched = normalizeArray(res.data);
-      localStorage.setItem("springsConnectDiscoveredSuggestedUsers", fetched)
-      setUsers(fetched || localStorage.getItem("springsConnectDiscoveredSuggestedUsers") || []);
+      localStorage.setItem("springsCircleDiscoveredSuggestedUsers", fetched);
+      setUsers(fetched || localStorage.getItem("springsCircleDiscoveredSuggestedUsers") || []);
       setHasMore(fetched.length === 20);
       setPage(1);
       pageRef.current = 1;
@@ -143,19 +143,14 @@ export default function Discover() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Scroll and data persistence keys
-  const DISCOVER_SCROLL_KEY = 'discover_scroll_position';
-  const DISCOVER_DATA_KEY = 'discover_cached_data';
+  const DISCOVER_SCROLL_KEY = "discover_scroll_position";
+  const DISCOVER_DATA_KEY = "discover_cached_data";
 
-  // Restore on mount
   useEffect(() => {
-    // Restore scroll
     const savedScroll = localStorage.getItem(DISCOVER_SCROLL_KEY);
     if (savedScroll) {
       setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
     }
-    
-    // Load cached data
     const cached = localStorage.getItem(DISCOVER_DATA_KEY);
     if (cached) {
       try {
@@ -169,77 +164,79 @@ export default function Discover() {
     }
   }, []);
 
-  // Save scroll on scroll
   useEffect(() => {
     const handleScroll = () => {
       localStorage.setItem(DISCOVER_SCROLL_KEY, window.scrollY.toString());
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Cache data when it changes
   useEffect(() => {
     if (users.length > 0) {
       localStorage.setItem(DISCOVER_DATA_KEY, JSON.stringify(users));
     }
   }, [users]);
 
-  // Manual refresh
   const handleRefresh = () => {
     setIsRefreshing(true);
     hasFetched.current = false;
     fetchSuggestions();
   };
 
-  // Reset refreshing state after loading completes
   React.useEffect(() => {
     if (!loadingInitial && isRefreshing) {
       setTimeout(() => setIsRefreshing(false), 500);
     }
   }, [loadingInitial, isRefreshing]);
+
   useEffect(() => {
     if (filters.city || filters.country || filters.occupation) {
       searchUsers(true);
     }
   }, [filters]);
 
-
   const handleUserUpdate = (updatedUser) => {
-    setUsers((prev) => prev.map((u) => (u._id === updatedUser._id ? updatedUser : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u._id === updatedUser._id ? updatedUser : u))
+    );
   };
 
-  return (
-    <div className="discover-page bg-slate-50 min-h-screen pb-10">
-      {/* STICKY SEARCH HEADER */}
-     <div id="discover-search-wrapper" className={`discover_search_wrapper fixed left-0 right-0 top-4 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? 'py-1' : 'py-2'}`}>
-        <div className="max-w-6xl mx-auto px-5">
-          {/* Refresh Button */}
+  const hasActiveFilter =
+    input || filters.city || filters.country || filters.occupation;
 
-          <div className="discover_search_bar w-full rounded-2xl px-4 py-3">
-            <div className="flex flex-col gap-4">
-              {/* SEARCH INPUT WITH ICON INSIDE */}
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1 group">
+  return (
+    <div className="discover-page min-h-screen pb-10">
+      {/* ── STICKY SEARCH HEADER ── */}
+      <div
+        id="discover-search-wrapper"
+        className={`discover_search_wrapper fixed left-0 right-0 top-0 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? "py-1" : "py-2"}`}
+      >
+        <div className="max-w-6xl mx-auto px-5 flex flex-col justify-center items-center">
+          <div className="discover_search_bar w-[90%]">
+            <div className="flex flex-col gap-3">
+              {/* Search input row */}
+  
+                <div className="max-h-10 relative flex ">
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Search name, location, or occupation..."
-                    className="discoveries_iput w-full pl-5 pr-12 py-1.5"
+                    placeholder="Search name, location, or occupation…"
+                    className="discoveries_iput w-[80%]"
                     onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   />
                   <button
                     onClick={applySearch}
                     aria-label="Search"
-                    className="discoveries_btn absolute right-2 top-1/2 -translate-y-1/2 p-2 flex items-center justify-center"
+                    className="discoveries_btn "
                   >
-                    <Search size={18} />
+                    <Search size={16} />
                   </button>
-                </div>
+            
 
-                {/* CLEAR BUTTON */}
-                {(input || filters.city || filters.country || filters.occupation) && (
+                {/* Desktop clear */}
+                {hasActiveFilter && (
                   <button
                     onClick={() => {
                       setInput("");
@@ -249,13 +246,13 @@ export default function Discover() {
                     }}
                     className="discoveries_clear_btn hidden md:flex items-center gap-2 text-sm font-medium transition-colors"
                   >
-                    <X size={16} />
+                    <X size={15} />
                     <span>Clear</span>
                   </button>
                 )}
-              </div>
+          </div>
 
-              {/* FILTER TOGGLE BUTTON (Mobile Only) */}
+              {/* Mobile filter toggle */}
               <button
                 onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                 className="discover_filter_toggle md:hidden flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -263,22 +260,38 @@ export default function Discover() {
                 <span className="flex items-center gap-2">
                   <span>Filters</span>
                   {(filters.city || filters.country || filters.occupation) && (
-                    <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span
+                      style={{
+                        background: "var(--primary-color)",
+                        color: "#fff",
+                        fontSize: "10px",
+                        padding: "2px 8px",
+                        borderRadius: "99px",
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
                       Active
                     </span>
                   )}
                 </span>
-                {isFilterExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {isFilterExpanded ? (
+                  <ChevronUp size={17} />
+                ) : (
+                  <ChevronDown size={17} />
+                )}
               </button>
 
-              {/* FILTER DROPDOWNS */}
-              <div className={`flex-wrap gap-2 overflow-visible ${isFilterExpanded ? 'flex' : 'hidden md:flex'}`}>
+              {/* Filter dropdowns */}
+              <div
+                className={`flex-wrap gap-2 overflow-visible ${isFilterExpanded ? "flex" : "hidden md:flex"}`}
+              >
                 <CustomDropdown
                   id="city"
                   label="City"
                   options={["Ikeja", "Mumbai", "London"]}
                   value={filters.city}
-                  onChange={(val) => setFilters(p => ({ ...p, city: val }))}
+                  onChange={(val) => setFilters((p) => ({ ...p, city: val }))}
                   openDropdownId={openDropdownId}
                   setOpenDropdownId={setOpenDropdownId}
                   setInput={setInput}
@@ -288,7 +301,7 @@ export default function Discover() {
                   label="Country"
                   options={["Nigeria", "India", "USA", "UK"]}
                   value={filters.country}
-                  onChange={(val) => setFilters(p => ({ ...p, country: val }))}
+                  onChange={(val) => setFilters((p) => ({ ...p, country: val }))}
                   openDropdownId={openDropdownId}
                   setOpenDropdownId={setOpenDropdownId}
                   setInput={setInput}
@@ -298,14 +311,16 @@ export default function Discover() {
                   label="Occupation"
                   options={["Developer", "Designer", "Engineer"]}
                   value={filters.occupation}
-                  onChange={(val) => setFilters(p => ({ ...p, occupation: val }))}
+                  onChange={(val) =>
+                    setFilters((p) => ({ ...p, occupation: val }))
+                  }
                   openDropdownId={openDropdownId}
                   setOpenDropdownId={setOpenDropdownId}
                   setInput={setInput}
                 />
-                
-                {/* Mobile Clear Button */}
-                {(input || filters.city || filters.country || filters.occupation) && (
+
+                {/* Mobile clear all */}
+                {hasActiveFilter && (
                   <button
                     onClick={() => {
                       setInput("");
@@ -316,16 +331,18 @@ export default function Discover() {
                     }}
                     className="discover_clear_all_btn md:hidden w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
                   >
-                    <X size={16} />
+                    <X size={15} />
                     <span>Clear All Filters</span>
                   </button>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex justify-end mb-2">
-            <RefreshButton 
-              onRefresh={handleRefresh} 
+
+          {/* Refresh row */}
+          <div className="discover-refresh-row">
+            <RefreshButton
+              onRefresh={handleRefresh}
               isRefreshing={isRefreshing}
               label="Refresh"
             />
@@ -333,42 +350,115 @@ export default function Discover() {
         </div>
       </div>
 
-      {/* USERS GRID - Scrollable container */}
+      {/* ── MAIN CONTENT ── */}
       <div className="max-w-6xl mx-auto px-5 discover_content_container">
-        <div className="discoveries_grid pb-20">
-          {users.map((userItem) => (
-            <UserCard key={userItem._id} user={userItem} onUserUpdate={handleUserUpdate} />
-          ))}
+        {/* Page title */}
+        <div className="discover-page-head">
+          <div className="discover-eyebrow">
+            <span>✦</span> People
+          </div>
+          <h1 className="discover-h1">
+            Discover <em>people</em>
+          </h1>
+          <p className="discover-sub">
+            Find and connect with people who share your interests and passions.
+          </p>
         </div>
 
-        {loadingInitial && (
-          <div className="grid discoveries_grid mt-8">
-            {Array.from({ length: 6 }).map((_, idx) => <SkeletonUserCard key={idx} />)}
+        {/* Result meta */}
+        {!loadingInitial && users.length > 0 && (
+          <div className="discover-meta-bar">
+            <p className="discover-result-count">
+              Showing <strong>{users.length}</strong>{" "}
+              {hasActiveFilter ? "results" : "suggested people"}
+            </p>
           </div>
         )}
 
-        {/* LOADING & ERROR STATES */}
-        <div className="flex flex-col items-center py-10">
-          {loadingMore && <div className="animate-pulse text-blue-600 font-medium">Loading more...</div>}
-          {fetchError && (
-            <button onClick={() => searchUsers()} className="px-6 py-2 bg-blue-600 text-white rounded-full">
+        {/* ── Skeleton loaders ── */}
+        {loadingInitial && (
+          <div className="grid discoveries_grid">
+            {Array.from({ length: 9 }).map((_, idx) => (
+              <SkeletonUserCard key={idx} />
+            ))}
+          </div>
+        )}
+
+        {/* ── Users grid ── */}
+        {!loadingInitial && users.length > 0 && (
+          <div className="discoveries_grid pb-20">
+            {users.map((userItem) => (
+              <UserCard
+                key={userItem._id}
+                user={userItem}
+                onUserUpdate={handleUserUpdate}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── Empty state ── */}
+        {!loadingInitial && users.length === 0 && (
+          <div className="disc-empty">
+            <div className="disc-empty-orbit">
+              <Users size={26} />
+            </div>
+            <p className="disc-empty-title">No results found</p>
+            <p className="disc-empty-text">
+              Try different search terms or clear your filters to explore everyone.
+            </p>
+          </div>
+        )}
+
+        {/* ── Loading more ── */}
+        {loadingMore && (
+          <div className="disc-loading-more">
+            <span className="disc-loading-dot" />
+            <span className="disc-loading-dot" />
+            <span className="disc-loading-dot" />
+            <span style={{ marginLeft: 6 }}>Loading more</span>
+          </div>
+        )}
+
+        {/* ── Fetch error retry ── */}
+        {fetchError && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+            <button
+              onClick={() => searchUsers()}
+              style={{
+                padding: "10px 28px",
+                background: "var(--primary-color)",
+                color: "#fff",
+                borderRadius: "10px",
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 600,
+                fontSize: "13px",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(59,92,203,0.3)",
+              }}
+            >
               Retry
             </button>
-          )}
-          {!loadingInitial && users.length === 0 && (
-            <div className="text-gray-400 text-center">
-              <Users size={48} className="mx-auto mb-2 opacity-20" />
-              <p>No results found</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      <InfiniteScrollTrigger onReachBottom={fetchMore} enabled={hasMore && !loadingInitial} />
+      <InfiniteScrollTrigger
+        onReachBottom={fetchMore}
+        enabled={hasMore && !loadingInitial}
+      />
 
-      <div className="mt-20 pb-10 text-gray-400 flex flex-col items-center gap-2">
-        <Sprout size={24} className="text-green-500 opacity-50" />
-        <span className="text-xs uppercase tracking-widest">Connect & Grow</span>
+      {/* ── Footer flourish ── */}
+      <div className="disc-footer">
+        <div className="disc-footer-rule" />
+        <div className="disc-footer-badge">
+          <Sprout
+            size={13}
+            style={{ color: "#16a34a", opacity: 0.8 }}
+          />
+          Connect &amp; Grow
+        </div>
       </div>
     </div>
   );

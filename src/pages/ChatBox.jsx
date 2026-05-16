@@ -10,6 +10,7 @@ import AudioMessage from "../component/shared/AudioMessage";
 import ChatMessagesFull from "../component/ChatMessagesFull";
 import ChatboxHeader from "../component/shared/ChatboxHeader";
 import ChatboxInput from "../component/shared/ChatboxInput";
+import VoiceRecorderPreview from "../component/shared/VoiceRecorderPreview";
 import HeaderArrow from "../component/shared/HeaderArrow";
 import ImageComposer from "../component/shared/ImageComposer";
 import { CallContext, CALL_TYPES } from "../context/CallContext";
@@ -78,9 +79,9 @@ const ChatBox = ({ userId: propUserId }) => {
   const [lastActive, setLastActive] = useState(null)
   const [audioURL, setAudioURL] = useState(null);
   const [recording, setRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
   const [typingUser, setTypingUser] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [chatId, setChatId] = useState(null);
   const [receiver, setReceiver] = useState(null);
   /* const [loading, setLoading] = useState(true); */
@@ -116,6 +117,7 @@ useEffect(() => {
   const containerRef = useRef(null);
   const chatContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const audioStreamRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordTimerRef = useRef(null);
   const pausedTimeRef = useRef(0);
@@ -126,13 +128,14 @@ useEffect(() => {
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const showMenuRef = useRef(null);
+  const isPausedRef = useRef(false);
   const mediaDropdownRef = useRef(null);
   const MAX_RECORD_TIME = 60;
   const placeholders = ["Say hi 👋", "Send a quick note...", "Type your message...", "What's on your mind?", "Write a reply...", "Start the conversation 💬", "Drop a thought here ✨", "Share your idea 💡",];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   /* const [sending, setSending] = useState(false); */
   const hasInitialScrolledRef = useRef(false);
-
+  const recordingMimeRef = useRef("audio/webm"); 
   //==================chnage placeholderfs ===============
   useEffect(() => {
     const interval = setInterval(() => {
@@ -580,7 +583,9 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
   const sendMessage = async (overrideText = null) => {
     const currentText = (overrideText !== null) ? overrideText : text;
     if (!currentText && !image && !audioURL) return;
-
+ 
+    setText("");
+    setReplyTo(null); 
     const message_type = audioURL ? "audio" : image ? "image" : "text";
     const tempId = "temp_" + Date.now();
 
@@ -606,13 +611,9 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
       status: "sending",
     };
 
-    setReplyTo(null); // reset reply state
-
     // optimistic UI
     setMessages((p) => [...p, tempMsg]);
 
-    // clear only the controlled input state (not needed when overrideText used), // but keep consistent UX:
-    setText("");
     try {
       setSending(true);
       const formData = new FormData();
@@ -625,7 +626,7 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
       if (image) formData.append("media", image, image.name || `image_${Date.now()}`);
       if (audioURL) {
         const blob = await fetch(audioURL).then(r => r.blob());
-        let ext = blob.type === "audio/webm" ? "webm" : "mp3";
+        let ext = blob.type === "audio/webm" ? "webm" : "";
         formData.append("media", blob, `audio_${Date.now()}.${ext}`);
       }
       requestAnimationFrame(() => {
@@ -889,108 +890,134 @@ const handleBlockUser = async () => {
 };
 
   // ========================= AUDIO RECORD ==========================
-  const startRecording = async () => {
-    setRecording(true); // <-- immediately show the recording UI
-    setIsPaused(false);
-    pausedTimeRef.current = 0;
-
+const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/wav")
-          ? "audio/wav"
-          : "audio/mp3";
-
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      audioStreamRef.current = stream;
+      setRecording(true);
+      setIsPaused(false);
+      isPausedRef.current = false;
+      pausedTimeRef.current = 0;
       audioChunksRef.current = [];
       setRecordTime(0);
 
-      // Ensure we collect data periodically for longer recordings
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
+      const SUPPORTED_MIME = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+        "audio/mp4",
+      ].find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
 
-      // Request data every second to prevent data loss
-      const dataInterval = setInterval(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.requestData();
+      const recorderOptions = SUPPORTED_MIME ? { mimeType: SUPPORTED_MIME } : {};
+      mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
+      recordingMimeRef.current = mediaRecorderRef.current.mimeType || SUPPORTED_MIME || "audio/webm";
+      console.log("🎙️ Recording with MIME:", recordingMimeRef.current);
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
-      }, 1000);
+      };
 
       mediaRecorderRef.current.onstop = () => {
-        clearInterval(dataInterval);
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log("🎤 Recorded blob:", blob, "size:", blob.size);
-        if (blob.size > 0) setAudioURL(URL.createObjectURL(blob));
-        else console.error("❌ Audio blob is empty!");
-        // Stop all tracks in the stream
-        stream.getTracks().forEach(track => track.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recordingMimeRef.current });
+        if (blob.size > 0) {
+          if (audioURL) {
+            URL.revokeObjectURL(audioURL);
+          }
+          setAudioURL(URL.createObjectURL(blob));
+        } else {
+          console.error("Voice recording produced an empty file.");
+          setAudioURL(null);
+        }
+
+        setRecording(false);
+        setIsPaused(false);
+        isPausedRef.current = false;
+
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach((track) => track.stop());
+          audioStreamRef.current = null;
+        }
       };
 
-      mediaRecorderRef.current.onerror = (e) => {
-        console.error("MediaRecorder error:", e);
-        clearInterval(dataInterval);
-        stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error("MediaRecorder error:", event);
+        setRecording(false);
+        setIsPaused(false);
+        isPausedRef.current = false;
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach((track) => track.stop());
+          audioStreamRef.current = null;
+        }
       };
 
-      mediaRecorderRef.current.start(1000); // Start collecting data every 1 second
       recordingStartRef.current = Date.now();
+      lastPauseTimeRef.current = null;
 
       recordTimerRef.current = setInterval(() => {
-        if (!isPaused) {
-          const sec = Math.floor((Date.now() - recordingStartRef.current - pausedTimeRef.current) / 1000);
-          setRecordTime(sec);
-          if (sec >= MAX_RECORD_TIME) stopRecording();
+        if (!isPausedRef.current && recordingStartRef.current) {
+          const elapsed = Math.floor(
+            (Date.now() - recordingStartRef.current - pausedTimeRef.current) / 1000
+          );
+          setRecordTime(elapsed);
+          if (elapsed >= MAX_RECORD_TIME) {
+            stopRecording();
+          }
         }
-      }, 100); // Update every 100ms for smoother timer
+      }, 100);
+
+      mediaRecorderRef.current.start(1000);
     } catch (err) {
       console.error("Mic error:", err);
-      // Handle permission denied
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
         alert("Microphone access was denied. Please allow microphone access to record voice messages.");
       }
-      setRecording(false); // reset UI if mic fails
+      setRecording(false);
+      setIsPaused(false);
+      isPausedRef.current = false;
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
     clearInterval(recordTimerRef.current);
     setRecording(false);
     setIsPaused(false);
+    isPausedRef.current = false;
   };
 
   const togglePause = () => {
-    if (mediaRecorderRef.current) {
-      if (isPaused) {
-        // Resuming from pause
-        // Calculate how long we were paused and add to total paused time
-        const pauseDuration = Date.now() - lastPauseTimeRef.current;
-        pausedTimeRef.current += pauseDuration;
+    if (!mediaRecorderRef.current) return;
+    if (mediaRecorderRef.current.state === "inactive") return;
 
-        mediaRecorderRef.current.resume();
-        recordingStartRef.current = Date.now(); // Reset start time for next calculation
-        setIsPaused(false);
-      } else {
-        // Pausing
-        lastPauseTimeRef.current = Date.now();
-        mediaRecorderRef.current.pause();
-        setIsPaused(true);
-      }
+    if (isPausedRef.current) {
+      const pauseDuration = Date.now() - (lastPauseTimeRef.current || Date.now());
+      pausedTimeRef.current += pauseDuration;
+      lastPauseTimeRef.current = null;
+      mediaRecorderRef.current.resume();
+      isPausedRef.current = false;
+      setIsPaused(false);
+    } else {
+      lastPauseTimeRef.current = Date.now();
+      mediaRecorderRef.current.pause();
+      isPausedRef.current = true;
+      setIsPaused(true);
     }
   };
 
-
   useEffect(() => {
     return () => {
-      // Cleanup: stop any ongoing recording when component unmounts
       clearInterval(recordTimerRef.current);
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+        audioStreamRef.current = null;
       }
     };
   }, []);
@@ -1019,7 +1046,25 @@ const handleBlockUser = async () => {
     }
   }, [loading, sortedMessages.length]);
 
-  // Auto-scroll to bottom when new messages are added\n  useEffect(() => {\n    if (containerRef.current && sortedMessages.length > 0) {\n      // Only auto-scroll if user is NOT actively scrolling - prevents bounce\n      if (isUserScrollingRef.current) {\n        return;\n      }\n      \n      const container = containerRef.current;\n      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;\n      \n      if (isNearBottom) {\n        containerRef.current.scrollTo({\n          top: containerRef.current.scrollHeight,\n          behavior: "smooth"\n        });\n      }\n    }\n  }, [sortedMessages]);
+  // Auto-scroll to bottom when new messages are added
+useEffect(() => {
+  if (containerRef.current && sortedMessages.length > 0) {
+    // Only auto-scroll if user is NOT actively scrolling - prevents bounce
+    if (isUserScrollingRef.current) {
+      return;
+    }
+    
+    const container = containerRef.current;
+    const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+    
+    if (isNearBottom) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }
+}, [sortedMessages]);
 
 
   // //================disconnect user================
@@ -1212,7 +1257,7 @@ const handleBlockUser = async () => {
 
               <div
                 ref={showMenuRef}
-                className="fixed right-4 top-16 w-56 z-[100] animate-in fade-in zoom-in duration-150 origin-top-right"
+                className="fixed right-4 top-6 w-56 z-[100] animate-in fade-in zoom-in duration-150 origin-top-right"
 
                 style={{
                   background: "rgba(255, 255, 255, 0.95)",
@@ -1877,7 +1922,6 @@ const handleBlockUser = async () => {
               )
         }
       {/* Extra padding so last message isn't hidden under input */}
-      <div className="h-24" aria-hidden="true"></div>
       </div >
 
 
@@ -1942,12 +1986,11 @@ const handleBlockUser = async () => {
             />
           )}
 
-          {/* Image preview - displays above input controls */}
           {image instanceof File && (
             <div className="flex flex-wrap gap-3 pl-2">
               {image && (
                 <div className="image-preview">
-                  <img
+                  {/* <img
                     src={URL.createObjectURL(image)}
                     alt="Selected"
                     style={{ maxWidth: "120px", maxHeight: "120px", borderRadius: "12px" }}
@@ -1958,7 +2001,7 @@ const handleBlockUser = async () => {
                     title="Remove image"
                   >
                     ×
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>
@@ -1976,7 +2019,7 @@ const handleBlockUser = async () => {
                     className="media-button"
                     title="Attach media"
                   >
-                    <ImageUpIcon size={20} />
+                    <ImageUpIcon size={25} />
                   </button>
 
                   {/* MEDIA DROPDOWN - Fixed positioning with proper constraints */}
@@ -2060,7 +2103,7 @@ const handleBlockUser = async () => {
             )}
 
             {/* Image Composer - for editing before send */}
-            {!recording && !audioURL && image instanceof File ? (
+            {!recording && !audioURL && !sending && image instanceof File ? (
               <ImageComposer
                 image={image}
                 setImage={setImage}
@@ -2071,122 +2114,8 @@ const handleBlockUser = async () => {
               />
             ) : null}
 
-            {/* Recording / audio preview - Part 6 Enhanced UI */}
-            {(audioURL || recording) && (
-              <div className="w-full">
-                {audioURL ? (
-                  /* Audio Preview with Send/Delete buttons */
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="flex-1">
-                      <AudioMessage msg={{ media_url: audioURL }} />
-                    </div>
-                    {/* Delete button */}
-                    <button
-                      onClick={() => setAudioURL(null)}
-                      className="flex items-center justify-center w-10 h-10 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
-                      title="Delete recording"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                    {/* Send button */}
-                    <button
-                      onClick={() => { scrollToBottom(); sendMessage() }}
-                      className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
-                      title="Send voice note"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                      </svg>
-                    </button>
-                  </div>
-                ) : (
-                  /* Active Recording UI - Part 6 Enhanced with big Stop button */
-                  <div className="recording-container">
-                    {/* Left side - Big Red Stop Button */}
-                    <button
-                      onClick={stopRecording}
-                      className="recording-stop"
-                      title="Stop recording"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                        <rect x="6" y="6" width="12" height="12" rx="2" />
-                      </svg>
-                    </button>
-
-                    {/* Center - Timer and Waveform */}
-                    <div className="recording-center">
-                      {/* Recording indicator */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        <span className="text-xs text-red-500 font-medium">
-                          {isPaused ? 'PAUSED' : 'RECORDING'}
-                        </span>
-                      </div>
-                      
-                      {/* Timer */}
-                      <span className="recording-timer">
-                        {Math.floor(recordTime / 60)}:{String(recordTime % 60).padStart(2, '0')}
-                      </span>
-
-                      {/* Waveform */}
-                      <div className="recording-waveform">
-                        {[...Array(7)].map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`wave-bar ${isPaused ? 'paused' : 'active'}`}
-                            style={{ animationDelay: `${i * 0.1}s` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Right side - Pause, Delete */}
-                    <div className="recording-actions">
-                      {/* Delete button */}
-                      <button
-                        onClick={() => {
-                          stopRecording();
-                          setRecording(false);
-                          setRecordTime(0);
-                        }}
-                        className="recording-delete"
-                        title="Cancel recording"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-
-                      {/* Pause/Resume button */}
-                      <button
-                        onClick={togglePause}
-                        className="recording-pause"
-                        title={isPaused ? "Resume recording" : "Pause recording"}
-                      >
-                        {isPaused ? (
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                            <polygon points="5 3 19 12 5 21 5 3" />
-                          </svg>
-                        ) : (
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                            <rect x="6" y="4" width="4" height="16" rx="1" />
-                            <rect x="14" y="4" width="4" height="16" rx="1" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Send button (shows if text, image, or audio exist) */}
-            {(!recording && (text?.trim() || image || audioURL)) && !(image instanceof File) && (
+            {(!recording && !audioURL&& (text?.trim() || image || audioURL)) && !(image instanceof File) && (
               <button
                 onClick={() => { scrollToBottom(); sendMessage() }}
                 className="send-button"
@@ -2227,10 +2156,23 @@ const handleBlockUser = async () => {
                 className="record-button"
                 title="Start voice recording"
               >
-                <Mic size={18} />
+                <Mic size={25} />
               </button>
             )}
           </div>
+           <VoiceRecorderPreview
+  audioURL={audioURL}
+  recording={recording}
+  stopRecording={stopRecording}
+  togglePause={togglePause}
+  isPausedRef={isPausedRef}
+  recordTime={recordTime}
+  setAudioURL={setAudioURL}
+  setRecording={setRecording}
+  setRecordTime={setRecordTime}
+  scrollToBottom={scrollToBottom}
+  sendMessage={sendMessage}
+/>
         </div>
       </ChatboxInput>
      }
@@ -2238,7 +2180,8 @@ const handleBlockUser = async () => {
     </div>
   );
 
-}; export default ChatBox;
+}; 
+export default ChatBox;
 
 
 

@@ -26,7 +26,7 @@ import ActionNotifier from "./shared/ActionNotifier";
 import Loading from "./shared/Loading";
 import VoiceNoteCard from "./shared/VoiceNoteCard";
 import { useGlobalVideo } from "../context/GlobalVideoContext";
-
+import "../styles/postcard.css";
 
 const PostCard = ({ post,
   setFeeds,
@@ -375,18 +375,14 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
 
 
 
-  return (
-    <div className="bg-[var(--white-glass)] rounded-xl shadow p-2 py-3 space-y-4 w-full max-w-3xl mx-auto relative">
+return (
+    <div className="pc-root space-y-0">
 
       {/* Header */}
-      <div className="flex justify-between items-center w-full ">
-        {/* LEFT: user details */}
-        <div
-          className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-          onDoubleClick={onHeaderClick}  >
-          <div onClick={() => navigate(`/profile/${post.user?._id}`)}>
+      <div className="pc-header">
+        <div className="pc-author" onDoubleClick={onHeaderClick}>
+          <div className="pc-avatar-wrap" onClick={() => navigate(`/profile/${post.user?._id}`)}>
             <ProfileAvatar
-
               user={{
                 name: post.user?.name || "User",
                 profilePicUrl: post.user?.profilePicUrl,
@@ -396,25 +392,17 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
             />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center space-x-1 text-sm truncate">
-              <span className="font-semibold truncate">
-                {post.user?.full_name}
-              </span>
-              <BadgeCheck
-                className="w-4 h-4 flex-shrink-0"
-                style={{ color: "var(--primary)" }}
-              />
+            <div className="flex items-center gap-1 truncate">
+              <span className="pc-author-name">{post.user?.full_name}</span>
+              <BadgeCheck className="w-4 h-4 flex-shrink-0" style={{ color: "var(--primary)" }} />
             </div>
-            <div className="flex flex-col text-[13px] text-gray-500 truncate">
+            <div className="pc-author-handle">
               @{post.user?.username}
-              <p className="text-[12px] font-light">
-                {moment(post.createdAt).fromNow()}
-              </p>
+              <p className="pc-author-time">{moment(post.createdAt).fromNow()}</p>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: ... menu */}
         <UserActionMenu
           isOwnPost={isOwnPost}
           isFollowing={isFollowing}
@@ -425,26 +413,21 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
         />
       </div>
 
-
-
       {/* Content */}
       {post.content && (
-        <div className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">
+        <div className="pc-content">
           <div dangerouslySetInnerHTML={{ __html: processedContent }} />
           {shouldTruncate && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs text-[var(--primary)] mt-1 inline-block"
-            >
+            <button onClick={() => setIsExpanded(!isExpanded)} className="pc-read-more">
               {isExpanded ? "Read Less" : "Read More"}
             </button>
           )}
         </div>
       )}
 
-      {/* YouTube Video - when sent as separate fields or nested object */}
+      {/* YouTube Video - standalone fields */}
       {hasYouTube && youTubeUrl && !post.attachments?.some(att => att.type === "youtube") && (
-        <div className="w-full rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "16/9" }}>
+        <div className="pc-media-wrap" style={{ aspectRatio: "16/9" }}>
           <iframe
             src={youTubeUrl}
             title="YouTube video"
@@ -457,142 +440,83 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
         </div>
       )}
 
+      {/* Audio Attachments */}
+      {audioAttachments.length > 0 && audioAttachments.map((file, index) => (
+        <VoiceNoteCard
+          key={file.url || index}
+          audioUrl={file.url}
+          ref={(el) => { if (el) audioRefs.current[file.url] = el; }}
+        />
+      ))}
 
-      {/* Attachments */}
-   {audioAttachments.length > 0 && audioAttachments.map((file, index) => (
-  <VoiceNoteCard
-    key={file.url || index}
-    audioUrl={file.url}
-    ref={(el) => {
-      if (el) audioRefs.current[file.url] = el;
-    }}
-  />
-))}
-
+      {/* Non-audio Attachments */}
       {nonAudioAttachments?.length > 0 && (
         <div
-          className={`w-full grid gap-2  ${hasVideoAttachment ? "bg-black" : ""}
-      ${post.attachments.length === 1 && "flex justify-center"}
-      ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
-      ${post.attachments.length === 3 && "grid-cols-2"}
-      ${post.attachments.length >= 4 && "grid-cols-2"}
-    `}
+          className={`w-full grid gap-2 ${hasVideoAttachment ? "bg-black" : ""}
+            ${post.attachments.length === 1 && "flex justify-center"}
+            ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
+            ${post.attachments.length === 3 && "grid-cols-2"}
+            ${post.attachments.length >= 4 && "grid-cols-2"}
+          `}
         >
           {nonAudioAttachments.map((file, index) => {
             const count = nonAudioAttachments.length;
             const single = count === 1;
-
             const isImage = file.type === "image";
             const isVideo = file.type === "video";
             const isYouTube = file.type === "youtube";
-
-
-            // ✅ Detect portrait / mobile-shaped images
             const isMobileShaped = isImage && file?.aspect === "tall" && !single;
-            // ✅ Detect landscape / desktop-shaped images
             const isLandscapeShaped = isImage && file?.aspect === "wide" && !single;
             const isPortraitVideo = isVideo && file?.aspect === "tall";
-      
-             //const isPortraitVideo = isVideo && file?.height && file?.width && (file.height / file.width > 1.35);
-
-            // ✅ Special case: last item in 3 attachments
             const isLastOfThree = count === 3 && index === 2;
 
-            // ✅ Dynamic max height (GRID SAFE)
             let maxHeight;
+            if (single) maxHeight = "500px";
+            else if (count === 4) maxHeight = "450px";
+            else if (count === 3) maxHeight = "400px";
+            else if (isMobileShaped) maxHeight = "350px";
+            else if (isLandscapeShaped) maxHeight = "350px";
+            else maxHeight = "450px";
 
-
-            if (single) {
-              maxHeight = "500px"; // 1 image - allow more height
-            } else if (count === 4) {
-              maxHeight = "450px"; // 2x2 grid
-            } else if (count === 3) {
-              maxHeight = "400px"; // balanced grid
-            } else if (isMobileShaped) {
-              maxHeight = "350px"; // tall portrait - constrain to match video player
-            } else if (isLandscapeShaped) {
-              maxHeight = "350px"; // wide landscape - constrain height
-            } else {
-              maxHeight = "450px"; // default grid
-            }
             let widthClass = "w-full";
-            if (count === 2) {
-              widthClass = "w-1/2"; // 2 side-by-side
-            } else if (count === 3) {
-              widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto"; // last one centered
-            } else if (count === 4) {
-              widthClass = "w-1/2"; // 2x2 grid
-            }
+            if (count === 2) widthClass = "w-1/2";
+            else if (count === 3) widthClass = index < 2 ? "w-1/2" : "w-full lg:w-[70%] mx-auto";
+            else if (count === 4) widthClass = "w-1/2";
 
-            // ✅ Make portrait videos slightly wider (less thin)
             let portraitWidthClass = "";
             if (isPortraitVideo) {
-              if (single) {
-                portraitWidthClass = "max-w-[420px] mx-auto";
-              } else {
-                portraitWidthClass = "max-w-[380px] mx-auto";
-              }
+              portraitWidthClass = single ? "max-w-[420px] mx-auto" : "max-w-[380px] mx-auto";
             }
-
-
-            // ✅ Aspect ratio - use auto for natural ratio, only force for grid
-            const aspectRatio = single
-              ? "auto"
-              : isYouTube
-                ? "16 / 9" // YouTube always 16:9
-                : "auto"; // Let images use natural ratio via maxHeight
-
 
             return (
               <div
                 key={index}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isImage) onImageClick(index);
-                }}
+                onClick={(e) => { e.stopPropagation(); if (isImage) onImageClick(index); }}
                 className={`relative overflow-hidden cursor-pointer
-    ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
-    ${single ? "rounded-lg" : "rounded-sm"}
-    ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
-    ${portraitWidthClass}
-  `}
+                  ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
+                  ${single ? "rounded-xl" : "rounded-md"}
+                  ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+                  ${portraitWidthClass}
+                `}
                 style={isYouTube ? { aspectRatio: "16/9" } : {}}
               >
-
-
-                {/* ✅ IMAGE */}
                 {isImage && (
                   <img
                     src={file.url}
                     alt={`attachment-${index}`}
                     className={`w-full h-full rounded-md ${isMobileShaped ? "object-contain" : "object-cover"}`}
-                    style={{
-                      maxHeight,
-                      width: "auto",
-                      maxWidth: "100%",
-                      height: "auto",
-                      margin: "auto",
-                      userSelect: "none",
-                    }}
+                    style={{ maxHeight, width: "auto", maxWidth: "100%", height: "auto", margin: "auto", userSelect: "none" }}
                     draggable={false}
                     onContextMenu={(e) => e.preventDefault()}
                   />
-
                 )}
 
-                {/* ✅ VIDEO */}
-
-                              {isVideo && (
+                {isVideo && (
                   <div className="w-full h-full flex items-center justify-center bg-black">
                     <VideoPlayer
                       src={file.url}
                       poster={file.poster || ""}
-                      className={`
-                        w-full 
-                        ${isPortraitVideo ? "max-w-[420px] mx-auto" : "max-w-full"}
-                        h-auto
-                        object-contain
-                      `}
+                      className={`w-full ${isPortraitVideo ? "max-w-[420px] mx-auto" : "max-w-full"} h-auto object-contain`}
                       primaryColor="#FF4D4F"
                       autoPlayOnView={true}
                       sectionId={`feed-${post._id}`}
@@ -611,9 +535,6 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
                   </div>
                 )}
 
-
-
-                {/* ✅ YOUTUBE IFRAME */}
                 {isYouTube && (
                   <div className="w-full h-full flex items-center justify-center bg-black">
                     <iframe
@@ -628,20 +549,9 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
                   </div>
                 )}
 
-
-
-
-                {/* ✅ YOUTUBE */}
                 {isYouTube && (
                   <div className="w-full h-full absolute inset-0 flex items-center justify-center bg-black">
-                    <div
-                      className="w-full h-full max-w-full"
-                      style={{
-                        position: "relative",
-                        paddingBottom: "56.25%", // 16:9 aspect ratio
-                        height: 0,
-                      }}
-                    >
+                    <div className="w-full h-full max-w-full" style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
                       <iframe
                         src={`https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
                         title={`youtube-${index}`}
@@ -660,67 +570,50 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
         </div>
       )}
 
-
-
-
-
-
-
-
-      {/* {viewerOpen && <MediaViewer post={post} initialIndex={viewerIndex} onClose={() => setViewerOpen(false)} />} */}
-
       {/* Actions */}
-      <div className="flex flex-wrap items-center gap-6 pt-3 border-t border-gray-200">
+      <div className="pc-divider" />
+      <div className="pc-actions">
 
-        {/* Like */}
-        <div className="relative flex items-center gap-1"> {/* increased gap */}
-          {/* Like Button */}
+        {/* Like group */}
+        <div className="relative flex items-center">
           <div
             onClick={handleLike}
-            className={`flex items-center cursor-pointer relative ${likeLoading ? "opacity-50 pointer-events-none" : ""}`}
+            className={`pc-action ${liked ? "liked" : ""} ${likeLoading ? "opacity-50 pointer-events-none" : ""}`}
           >
             {liked ? (
-              <FaHeart className="text-red-500 w-5 h-5 transition-transform transform scale-110" />
+              <FaHeart className="w-4 h-4 pc-like-icon-active" />
             ) : (
-              <HeartOutline className="text-primary w-5 h-5 transition-transform" />
+              <HeartOutline className="w-4 h-4" />
             )}
+            <span className="pc-action-count">{likesCount}</span>
           </div>
 
-          {/* People who liked (moved outside & spaced) */}
+          {/* People who liked */}
           <div
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShowLikes(post._id);
-            }}
-            className="flex items-center justify-center mt-4 w-4 h-4 bg-gray-400 rounded-full hover:bg-primary transition"
+            onClick={(e) => { e.stopPropagation(); handleShowLikes(post._id); }}
+            className="pc-likes-peek"
           >
-            <FaUsers className="text-white w-3 h-3" />
+            <FaUsers className="w-3 h-3 text-gray-500" />
           </div>
-
-          {/* Likes Count */}
-          <span className="text-sm font-medium">{likesCount}</span>
         </div>
 
+        {/* Dislike */}
         <DislikeButton
           postId={post._id}
           post={post}
           onToggle={(payload) => {
             const serverPost = payload?.post || payload;
             if (!serverPost) return;
-
             setLikesCount(serverPost.likesCount);
             setDislikesCount(serverPost.dislikesCount);
-
             const meLiked = serverPost.recentReactions?.some(
               (r) => r.user?._id?.toString() === userId?.toString()
             );
-
             const meDisliked = (serverPost.recentDislikes || []).some(
               (r) =>
                 (r.user?._id?.toString() === userId?.toString()) ||
                 (r.user?.toString?.() === userId?.toString())
             );
-
             setLiked(meLiked);
             setDisliked(meDisliked);
           }}
@@ -728,53 +621,72 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
           setDisliked={setDisliked}
           dislikesCount={dislikesCount}
           setDislikesCount={setDislikesCount}
-
-
         />
 
-
-
         {/* Comment */}
-        <div onClick={() => setShowCommentsSection((s) => !s)} className="flex items-center gap-1 cursor-pointer text-sm text-gray-700">
-          <MessageCircle className="w-5 h-5" />
-          <span className="font-medium">{commentsCount}</span>
+        <div
+          onClick={() => setShowCommentsSection((s) => !s)}
+          className={`pc-action ${showCommentsSection ? "liked" : ""}`}
+          style={showCommentsSection ? { color: "var(--primary)", background: "rgba(var(--primary-rgb),0.07)", borderColor: "rgba(var(--primary-rgb),0.2)" } : {}}
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span className="pc-action-count">{commentsCount}</span>
         </div>
 
         {/* Share */}
-        <button onClick={(e) => { e.stopPropagation(); onShare() }} className="flex items-center gap-1 text-sm text-gray-700">
-          <Share2 className="w-5 h-5" />
-          <span className="font-medium">{post.sharesCount}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onShare(); }}
+          className="pc-action"
+        >
+          <Share2 className="w-4 h-4" />
+          <span className="pc-action-count">{post.sharesCount}</span>
         </button>
       </div>
 
+      {/* Comment section */}
+      {showCommentsSection && (
+        <div className="pc-comments-enter">
+          <CommentSection
+            commentsCount={commentsCount}
+            postId={post._id}
+            onCommentAdded={() => setCommentsCount((c) => c + 1)}
+          />
+        </div>
+      )}
 
-      {showCommentsSection && <CommentSection commentsCount={commentsCount} postId={post._id} onCommentAdded={() => setCommentsCount((c) => c + 1)} />}
-      {showConfirm && (<ActionNotifier action="delete this post" onConfirm={onConfirmDelete} onCancel={onCancelDelete} />)}
+      {showConfirm && (
+        <ActionNotifier action="delete this post" onConfirm={onConfirmDelete} onCancel={onCancelDelete} />
+      )}
       {deleting && <Loading text="Deleting post..." />}
-
 
       {/* Likes popup */}
       {showLikesBar && (
-        <div ref={likeBarRef} className="absolute bg-white shadow-lg rounded-2xl border border-gray-200 p-4 z-50 w-72 max-h-72 overflow-y-auto bottom-16 right-2 transition-all duration-300">
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="font-semibold text-gray-700 text-sm">People who liked this</h4>
-            <X onClick={() => setShowLikesBar(false)} className="w-4 h-4 cursor-pointer text-gray-500" />
+        <div ref={likeBarRef} className="pc-likes-popup">
+          <div className="pc-likes-popup-header">
+            <h4 className="pc-likes-popup-title">People who liked this</h4>
+            <button className="pc-likes-popup-close" onClick={() => setShowLikesBar(false)}>
+              <X className="w-3 h-3 text-gray-500" />
+            </button>
           </div>
+
           {loadingLikes ? (
             <div className="flex flex-col items-center justify-center py-6 text-gray-500">
-              <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mb-2"></div>
+              <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mb-2" />
               <p className="text-sm">Loading likes...</p>
             </div>
           ) : likesList.length === 0 ? (
             <p className="text-gray-500 text-sm">No likes yet.</p>
           ) : (
             likesList.map((l, idx) => (
-              <div key={idx} onClick={() => navigate(`/profile/${l._id}`)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition">
-                {l.profilePicUrl ? <img src={l.profilePicUrl} alt={l.full_name} className="w-8 h-8 rounded-full" /> : <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-medium">{l.full_name?.charAt(0)?.toUpperCase()}</div>}
+              <div key={idx} onClick={() => navigate(`/profile/${l._id}`)} className="pc-likes-popup-item">
+                {l.profilePicUrl
+                  ? <img src={l.profilePicUrl} alt={l.full_name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                  : <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">{l.full_name?.charAt(0)?.toUpperCase()}</div>
+                }
                 <div className="truncate">
-                  <p className="text-sm font-medium truncate">{l.full_name}</p>
-                  <p className="text-xs text-gray-500 truncate">@{l.username}</p>
-                  {l.occupation && <small className="text-xs text-gray-500 truncate">{l.occupation}</small>}
+                  <p className="pc-likes-popup-name truncate">{l.full_name}</p>
+                  <p className="pc-likes-popup-handle truncate">@{l.username}</p>
+                  {l.occupation && <small className="pc-likes-popup-handle truncate">{l.occupation}</small>}
                 </div>
               </div>
             ))

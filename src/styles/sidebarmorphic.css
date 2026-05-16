@@ -1,0 +1,711 @@
+/* ============================================================
+   SIDEBAR — Sophisticated Morphic Edition
+   Award-Winning Glassmorphism + Liquid Indigo Design
+   Uses only provided :root variables
+   ============================================================ */
+
+/* ── Google Font Import ──────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* ============================================================
+   SIDEBAR SHELL
+   ============================================================ */
+.sidebar-shell {
+  font-family: 'DM Sans', sans-serif;
+  position: relative;
+  background:
+    /* soft mesh layer 1 */
+    radial-gradient(ellipse 80% 60% at 10% 20%, var(--ob-mesh-1) 0%, transparent 60%),
+    /* soft mesh layer 2 */
+    radial-gradient(ellipse 60% 80% at 90% 80%, var(--ob-mesh-2) 0%, transparent 60%),
+    /* base glass */
+    var(--form-bg);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset -1px 0 0 rgba(255,255,255,0.05),
+    4px 0 40px rgba(0,0,0,0.35),
+    1px 0 0 rgba(var(--primary-rgb), 0.12);
+  overflow: hidden;
+}
+
+/* Animated shimmer grain overlay */
+.sidebar-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.012) 2px,
+      rgba(255,255,255,0.012) 4px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glowing orb — top */
+.sidebar-shell::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, var(--ob-niche-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbPulse 6s ease-in-out infinite;
+}
+
+@keyframes orbPulse {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50%       { opacity: 1;   transform: translateX(-50%) scale(1.15); }
+}
+
+/* Everything inside sits above the decorative layers */
+.sidebar-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   LOGO AREA
+   ============================================================ */
+.sidebar-logo {
+  display: block;
+  cursor: pointer;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  filter: drop-shadow(0 0 8px rgba(var(--primary-rgb), 0.4));
+}
+
+.sidebar-logo:hover {
+  opacity: 0.85;
+  transform: scale(0.97);
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.sidebar-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(var(--primary-rgb), 0.35) 30%,
+    rgba(255,255,255,0.12) 50%,
+    rgba(var(--primary-rgb), 0.35) 70%,
+    transparent
+  );
+  margin-bottom: 0.75rem;
+}
+
+/* ============================================================
+   MENU ITEMS — shared nav link
+   ============================================================ */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  transition:
+    background 0.25s ease,
+    transform  0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    color      0.2s ease;
+  overflow: hidden;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* Shimmer surface on hover */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.06) 0%,
+    rgba(255,255,255,0.01) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.nav-item:hover::before {
+  opacity: 1;
+}
+
+/* Left accent bar that slides in on active */
+.nav-item::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18%;
+  height: 64%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(to bottom, var(--primary-color), rgba(var(--primary-rgb), 0.3));
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 2px 0 12px rgba(var(--primary-rgb), 0.6);
+}
+
+.nav-item.active::after,
+.nav-item[aria-current="page"]::after {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+/* ── Expanded (full-width) ── */
+.nav-item--expanded {
+  gap: 11px;
+  padding: 8px 12px 8px 14px;
+  width: 100%;
+}
+
+.nav-item--expanded:hover {
+  background: rgba(255,255,255,0.055);
+  transform: translateX(4px);
+  color: var(--hover-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 16px rgba(0,0,0,0.15);
+}
+
+.nav-item--expanded.active,
+.nav-item--expanded[aria-current="page"] {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary-rgb), 0.2) 0%,
+    rgba(var(--primary-rgb), 0.08) 100%
+  );
+  color: var(--hover-light);
+  font-weight: 600;
+  transform: translateX(5px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    inset 0 -1px 0 rgba(0,0,0,0.1),
+    0 4px 20px rgba(var(--primary-rgb), 0.18);
+}
+
+/* ── Collapsed (icon-only) ── */
+.nav-item--collapsed {
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+}
+
+.nav-item--collapsed:hover {
+  background: rgba(var(--primary-rgb), 0.15);
+  color: var(--hover-dark);
+  box-shadow:
+    0 0 0 1px rgba(var(--primary-rgb), 0.25),
+    0 4px 20px rgba(var(--primary-rgb), 0.2);
+  transform: scale(1.08);
+}
+
+.nav-item--collapsed.active,
+.nav-item--collapsed[aria-current="page"] {
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.3), rgba(var(--primary-rgb), 0.12));
+  color: var(--hover-light);
+  box-shadow:
+    0 0 0 1px rgba(var(--primary-rgb), 0.4),
+    0 0 20px rgba(var(--primary-rgb), 0.3),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* ── Icon wrapper ── */
+.nav-item__icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-item__icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.nav-item:hover .nav-item__icon {
+  transform: scale(1.12);
+}
+
+/* ── Label ── */
+.nav-item__label {
+  truncate: true;
+  font-size: 13px;
+  font-weight: inherit;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   BADGE (unread count)
+   ============================================================ */
+.nav-badge {
+  position: absolute;
+  background: var(--danger);
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4.5px;
+  border-radius: 99px;
+  animation: badgePulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+}
+
+.nav-badge--expanded {
+  top: -8px;
+  right: -2px;
+}
+
+.nav-badge--collapsed {
+  top: -4px;
+  right: -4px;
+}
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(220,38,38,0.5); }
+  50%       { box-shadow: 0 0 14px rgba(220,38,38,0.85); }
+}
+
+/* ============================================================
+   SECTION DIVIDER between menu sections
+   ============================================================ */
+.nav-section-divider {
+  border: none;
+  height: 1px;
+  margin: 8px 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,255,255,0.07) 30%,
+    rgba(255,255,255,0.07) 70%,
+    transparent
+  );
+}
+
+/* ============================================================
+   LOGOUT BUTTON
+   ============================================================ */
+.nav-logout {
+  color: rgba(255,255,255,0.5);
+}
+
+.nav-logout:hover {
+  color: var(--error) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  box-shadow:
+    0 0 0 1px rgba(239,68,68,0.2),
+    0 4px 16px rgba(239,68,68,0.12) !important;
+}
+
+.nav-logout:hover .nav-item__icon {
+  filter: drop-shadow(0 0 6px rgba(239,68,68,0.7));
+}
+
+/* ============================================================
+   CREATE POST BUTTON — Hero CTA
+   ============================================================ */
+.create-post-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--white);
+  overflow: hidden;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
+
+  /* Layered gradient background */
+  background:
+    linear-gradient(
+      135deg,
+      var(--primary-color) 0%,
+      #5b7cef 40%,
+      #3055d1 100%
+    );
+  box-shadow:
+    0 4px 20px rgba(var(--primary-rgb), 0.45),
+    0 1px 0 rgba(255,255,255,0.15) inset,
+    0 -1px 0 rgba(0,0,0,0.2) inset;
+}
+
+/* Animated gradient shimmer */
+.create-post-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.18) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.create-post-btn:hover::before {
+  transform: translateX(100%);
+}
+
+.create-post-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 8px 30px rgba(var(--primary-rgb), 0.6),
+    0 1px 0 rgba(255,255,255,0.2) inset;
+  filter: brightness(1.1);
+}
+
+.create-post-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow:
+    0 2px 10px rgba(var(--primary-rgb), 0.4),
+    0 1px 0 rgba(255,255,255,0.1) inset;
+}
+
+/* Collapsed icon version */
+.create-post-btn--collapsed {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  padding: 0;
+}
+
+/* Expanded version */
+.create-post-btn--expanded {
+  width: 100%;
+  height: 44px;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.create-post-btn__icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+.create-post-btn:hover .create-post-btn__icon {
+  transform: rotate(90deg) scale(1.1);
+}
+
+/* ============================================================
+   BOTTOM USER PROFILE STRIP
+   ============================================================ */
+.sidebar-user-strip {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(
+    to top,
+    rgba(var(--primary-rgb), 0.08) 0%,
+    transparent 100%
+  );
+  position: relative;
+}
+
+.sidebar-user-strip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(var(--primary-rgb), 0.4) 40%,
+    rgba(var(--primary-rgb), 0.4) 60%,
+    transparent
+  );
+}
+
+/* ============================================================
+   TOOLTIP PORTAL
+   ============================================================ */
+.sidebar-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--white);
+  letter-spacing: 0.02em;
+
+  background: var(--deeper-opaque-secondary);
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
+
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255,255,255,0.04) inset;
+
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.sidebar-tooltip.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Arrow */
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--deeper-opaque-secondary);
+  filter: drop-shadow(-2px 0 4px rgba(0,0,0,0.2));
+}
+
+/* ============================================================
+   SCROLLBAR — styled for sidebar
+   ============================================================ */
+.sidebar-scroll-container {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary-rgb), 0.25) transparent;
+}
+
+.sidebar-scroll-container::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-rgb), 0.3);
+  border-radius: 99px;
+}
+
+.sidebar-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-rgb), 0.55);
+}
+
+/* ============================================================
+   SECTION LABEL (optional, for grouped menus)
+   ============================================================ */
+.nav-section-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  padding: 0 14px;
+  margin: 12px 0 4px;
+}
+
+/* ============================================================
+   MOBILE OVERLAY
+   ============================================================ */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 40;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============================================================
+   ENTRY ANIMATION — stagger nav items on mount
+   ============================================================ */
+@keyframes slideInItem {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.nav-item {
+  animation: slideInItem 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger delays — apply to nth children in your JSX via inline style
+   or enumerate them here */
+.nav-item:nth-child(1)  { animation-delay: 0.04s; }
+.nav-item:nth-child(2)  { animation-delay: 0.08s; }
+.nav-item:nth-child(3)  { animation-delay: 0.12s; }
+.nav-item:nth-child(4)  { animation-delay: 0.16s; }
+.nav-item:nth-child(5)  { animation-delay: 0.20s; }
+.nav-item:nth-child(6)  { animation-delay: 0.24s; }
+.nav-item:nth-child(7)  { animation-delay: 0.28s; }
+.nav-item:nth-child(8)  { animation-delay: 0.32s; }
+.nav-item:nth-child(9)  { animation-delay: 0.36s; }
+.nav-item:nth-child(10) { animation-delay: 0.40s; }
+
+/* ============================================================
+   ICON GLASS BUTTON (reuse across app)
+   ============================================================ */
+.icon-glass-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: var(--opaque-primary);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: var(--transition-default);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+.icon-glass-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--white);
+  transition: var(--transition-default);
+}
+
+@media (hover: hover) {
+  .icon-glass-btn:hover {
+    background: var(--glassy-white);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transform: scale(1.05);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.2),
+      0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  .icon-glass-btn:hover .icon-glass-icon {
+    color: var(--primary);
+    transform: scale(1.1);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE: hide sidebar on mobile when closed
+   ============================================================ */
+@media (max-width: 634px) {
+  .sidebar-shell {
+    box-shadow:
+      4px 0 60px rgba(0,0,0,0.55),
+      1px 0 0 rgba(var(--primary-rgb), 0.15);
+  }
+}
+
+/* ============================================================
+   CHAT LOADER (unchanged logic, refined visuals)
+   ============================================================ */
+.chat-loader {
+  width: 75px;
+  aspect-ratio: 1;
+  display: grid;
+}
+
+.chat-loader::before,
+.chat-loader::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 35px;
+  aspect-ratio: 1;
+  box-shadow: 0 0 0 3px var(--text-secondary) inset;
+  filter: drop-shadow(40px 40px 0 var(--text-secondary));
+  animation: chatLoader 2s infinite alternate;
+}
+
+.chat-loader::after {
+  margin-left: auto;
+  filter: drop-shadow(-40px 40px 0 var(--text-secondary));
+  animation-delay: -1s;
+}
+
+@keyframes chatLoader {
+  0%, 10%   { border-radius: 0; }
+  30%, 40%  { border-radius: 50% 0; }
+  60%, 70%  { border-radius: 50%; }
+  90%, 100% { border-radius: 0 50%; }
+}
+
+/* ============================================================
+   CONNECTION NOTICE
+   ============================================================ */
+.connection_notice_text {
+  color: var(--secondary);
+  background-color: var(--hover-light);
+  backdrop-filter: blur(33px);
+  text-align: center;
+  margin: 9px auto;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  font-style: italic;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.1);
+}
+
+/* ============================================================
+   CUSTOM GRADIENT ACTIVE STATE (replaces .custom-gradient)
+   ============================================================ */
+.custom-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary-rgb), 0.22) 0%,
+    rgba(var(--primary-rgb), 0.07) 100%
+  ) !important;
+}
+
+/* ============================================================
+   GRADIENT HOVER (replaces .gradient-hover)
+   ============================================================ */
+.gradient-hover:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.055) 0%,
+    rgba(var(--primary-rgb), 0.06) 100%
+  );
+}

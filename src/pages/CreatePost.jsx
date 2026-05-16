@@ -5,10 +5,572 @@ import { X, Image, Video as VideoIcon, Trash2, Headphones, Youtube, Link, AlertC
 import CustomAlert from "../component/shared/CustomAlert";
 import location from "../utils/location";
 import BackButton from "../component/shared/BackButton";
-import ProfileAvatar from "../component/shared/ProfileAvatar"
+import ProfileAvatar from "../component/shared/ProfileAvatar";
 import AudioMessage from "../component/shared/AudioMessage";
 import { useNavigate } from "react-router-dom";
 
+/* ─── Scoped styles ─────────────────────────────────────────────────────── */
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&display=swap');
+
+  .cp-page {
+    min-height: 100svh;
+    background: linear-gradient(160deg, #f0f4ff 0%, #ffffff 55%, #f8f0ff 100%);
+    padding: 24px 16px 48px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Ambient mesh blobs */
+  .cp-page::before, .cp-page::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(80px);
+    opacity: 0.35;
+  }
+  .cp-page::before {
+    width: 500px; height: 500px;
+    top: -120px; left: -120px;
+    background: radial-gradient(circle, rgba(59,92,203,0.28) 0%, transparent 70%);
+  }
+  .cp-page::after {
+    width: 400px; height: 400px;
+    bottom: 0; right: -80px;
+    background: radial-gradient(circle, rgba(131,109,240,0.22) 0%, transparent 70%);
+  }
+
+  .cp-inner {
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Page header */
+  .cp-head {
+    margin-bottom: 24px;
+    padding-top: 8px;
+  }
+  .cp-head-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    background: rgba(59,92,203,0.08);
+    border: 1px solid rgba(59,92,203,0.16);
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-bottom: 10px;
+  }
+  .cp-head-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--secondary);
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    margin: 0 0 6px;
+  }
+  .cp-head-sub {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* Card */
+  .cp-card {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(59,92,203,0.1);
+    box-shadow:
+      0 1px 3px rgba(59,92,203,0.06),
+      0 12px 40px rgba(59,92,203,0.09),
+      0 32px 64px rgba(5,13,58,0.06);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Card inner top glow */
+  .cp-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(59,92,203,0.25) 40%, rgba(131,109,240,0.2) 70%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* User row */
+  .cp-user-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cp-user-info h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--secondary);
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .cp-user-info p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* Composer area */
+  .cp-composer {
+    position: relative;
+  }
+  .cp-textarea {
+    width: 100%;
+    resize: none;
+    outline: none;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text-dark);
+    line-height: 1.65;
+    transition: all 0.2s ease;
+    min-height: 90px;
+    max-height: 49vh;
+    overflow-y: auto;
+    display: block;
+    padding: 0;
+  }
+  .cp-textarea::placeholder {
+    color: #b0bcd6;
+    font-style: italic;
+  }
+  .cp-textarea:disabled {
+    opacity: 0.5;
+  }
+
+  /* Divider line under textarea */
+  .cp-composer-rule {
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(59,92,203,0.15) 60%, transparent 100%);
+    border-radius: 99px;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+  }
+  .cp-char-count {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-char-count.near-limit {
+    color: var(--warning);
+    font-weight: 600;
+  }
+  .cp-char-count.at-limit {
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  /* Visibility row */
+  .cp-visibility-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cp-visibility-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .cp-visibility-select {
+    appearance: none;
+    background: var(--color-6);
+    border: 1.5px solid rgba(59,92,203,0.18);
+    border-radius: 8px;
+    padding: 6px 28px 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-color);
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233b5ccb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    font-family: inherit;
+  }
+  .cp-visibility-select:hover, .cp-visibility-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59,92,203,0.1);
+  }
+
+  /* YouTube section */
+  .cp-yt-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cp-yt-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+  .cp-yt-label svg { color: #ff0000; }
+  .cp-yt-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: 11px;
+    border: 1.5px solid var(--input-border);
+    background: var(--off-white);
+    transition: all 0.2s ease;
+    min-height: 42px;
+  }
+  .cp-yt-input-wrap.has-preview {
+    border-color: var(--primary-color);
+    background: var(--color-6);
+    box-shadow: 0 0 0 3px rgba(59,92,203,0.08);
+  }
+  .cp-yt-input-wrap.has-error {
+    border-color: var(--error);
+    background: rgba(239,68,68,0.04);
+  }
+  .cp-yt-input-wrap svg { color: var(--text-secondary); flex-shrink: 0; }
+  .cp-yt-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    padding: 10px 0;
+  }
+  .cp-yt-input::placeholder { color: #b0bcd6; }
+  .cp-yt-remove {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(239,68,68,0.1);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--danger);
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .cp-yt-remove:hover { background: rgba(239,68,68,0.2); transform: scale(1.1); }
+  .cp-yt-error {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--error);
+    padding: 0 2px;
+  }
+  .cp-yt-preview {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(59,92,203,0.2);
+    box-shadow: 0 4px 16px rgba(59,92,203,0.1);
+  }
+  .cp-yt-preview-iframe-wrap {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+  }
+  .cp-yt-preview-iframe-wrap iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .cp-yt-preview-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--color-6);
+    border-top: 1px solid rgba(59,92,203,0.1);
+  }
+  .cp-yt-preview-meta span {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .cp-yt-preview-meta span:last-child {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+
+  /* Media thumbnails */
+  .cp-media-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cp-thumb {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1.5px solid rgba(59,92,203,0.1);
+    background: var(--off-white);
+    flex-shrink: 0;
+  }
+  .cp-thumb-img {
+    width: 90px; height: 90px;
+    object-fit: cover;
+    display: block;
+  }
+  .cp-thumb-vid {
+    width: 128px; height: 80px;
+    object-fit: contain;
+    display: block;
+  }
+  .cp-thumb-remove {
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(5,13,58,0.7);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    backdrop-filter: blur(4px);
+    transition: all 0.18s;
+    z-index: 2;
+  }
+  .cp-thumb-remove:hover { background: var(--danger); transform: scale(1.1); }
+
+  /* Toolbar & footer */
+  .cp-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(59,92,203,0.1);
+  }
+  .cp-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Tool button base */
+  .cp-tool-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(59,92,203,0.14);
+    background: var(--off-white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s cubic-bezier(.4,0,.2,1);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .cp-tool-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--color-6);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(59,92,203,0.14);
+  }
+  .cp-tool-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(59,92,203,0.3);
+  }
+  .cp-tool-btn.recording {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+    animation: cp-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(220,38,38,0.4);
+  }
+  @keyframes cp-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.35); }
+    50% { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+  }
+  .cp-tool-btn.rec-dot::after {
+    content: '';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--danger);
+    border-radius: 50%;
+    animation: cp-blink 1s step-start infinite;
+  }
+  @keyframes cp-blink {
+    0%,100%{opacity:1} 50%{opacity:0}
+  }
+
+  .cp-tool-divider {
+    width: 1px; height: 24px;
+    background: rgba(59,92,203,0.12);
+    margin: 0 2px;
+    flex-shrink: 0;
+  }
+
+  /* Audio preview inline */
+  .cp-audio-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-6);
+    border: 1.5px solid rgba(59,92,203,0.15);
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin-top: 4px;
+  }
+  .cp-audio-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--danger);
+    display: flex; align-items: center;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .cp-audio-remove:hover { transform: scale(1.15); }
+
+  /* Action buttons */
+  .cp-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cp-cancel-btn {
+    padding: 9px 18px;
+    background: rgba(220,38,38,0.08);
+    color: var(--danger);
+    border: 1.5px solid rgba(220,38,38,0.2);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .cp-cancel-btn:hover {
+    background: rgba(220,38,38,0.14);
+    border-color: var(--danger);
+  }
+  .cp-publish-btn {
+    padding: 9px 24px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: 'Sora', sans-serif;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(.4,0,.2,1);
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    box-shadow: 0 4px 14px rgba(59,92,203,0.3);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .cp-publish-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary) 0%, #1e3a8a 100%);
+    box-shadow: 0 6px 20px rgba(59,92,203,0.4);
+    transform: translateY(-1px);
+  }
+  .cp-publish-btn:active:not(:disabled) { transform: translateY(0); }
+  .cp-publish-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .cp-publish-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    animation: cp-blink 1s step-start infinite;
+  }
+
+  /* Upload progress */
+  .cp-progress-wrap {
+    width: 100%;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cp-progress-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .cp-progress-label span:last-child {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-progress-track {
+    width: 100%;
+    height: 5px;
+    background: var(--color-6);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .cp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--hover-dark) 100%);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+  }
+  .cp-progress-fill.processing {
+    width: 100% !important;
+    animation: cp-shimmer 1.4s linear infinite;
+    background-size: 200% 100%;
+    background-image: linear-gradient(90deg, var(--primary-color) 0%, var(--hover-dark) 40%, var(--primary-color) 100%);
+  }
+  @keyframes cp-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Spin icon */
+  .cp-spin {
+    animation: cp-rotate 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes cp-rotate { to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .cp-page { padding: 16px 12px 40px; }
+    .cp-head-title { font-size: 22px; }
+    .cp-card { padding: 18px 16px; gap: 16px; }
+    .cp-footer { gap: 8px; }
+    .cp-publish-btn { flex: 1; justify-content: center; }
+  }
+`;
 
 const CreatePost = () => {
   const { user, token } = useAuth();
@@ -16,473 +578,275 @@ const CreatePost = () => {
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const navigate = useNavigate();
-    // YouTube embed state
+
   const [youtubeInput, setYoutubeInput] = useState("");
   const [youtubeError, setYoutubeError] = useState("");
   const [youtubePreview, setYoutubePreview] = useState(null);
-  const [youtubeType, setYoutubeType] = useState(null); // 'iframe' or 'url'
-  
-  // Draft management
-  const DRAFT_KEY = 'createPost_draft';
-  const MAX_DRAFT_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB max per image for draft
-  
-  // Save draft to localStorage
+  const [youtubeType, setYoutubeType] = useState(null);
+
+  const DRAFT_KEY = "createPost_draft";
+  const MAX_DRAFT_IMAGE_SIZE = 2 * 1024 * 1024;
+
   const saveDraft = useCallback((text, imgs, vids, ytPreview, ytInput, ytType) => {
     try {
-      const draft = {
-        content: text,
-        youtubeInput: ytInput,
-        youtubePreview: ytPreview,
-        youtubeType: ytType,
-        timestamp: Date.now()
-      };
-      // For images, try to store as dataURL if small enough
+      const draft = { content: text, youtubeInput: ytInput, youtubePreview: ytPreview, youtubeType: ytType, timestamp: Date.now() };
       if (imgs.length > 0) {
         const smallImages = [];
         for (const file of imgs) {
           if (file.size <= MAX_DRAFT_IMAGE_SIZE) {
             const reader = new FileReader();
-            // We'll handle this asynchronously
             smallImages.push({ name: file.name, size: file.size, type: file.type });
           }
         }
         draft.imageCount = imgs.length;
         draft.hasLargeImages = imgs.length > smallImages.length;
       }
-      // For videos, just store count (can't persist actual video files easily)
-      if (vids.length > 0) {
-        draft.videoCount = vids.length;
-      }
+      if (vids.length > 0) draft.videoCount = vids.length;
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    } catch (e) {
-      console.warn('Failed to save draft:', e);
-    }
+    } catch (e) { console.warn("Failed to save draft:", e); }
   }, []);
-  
-  // Clear draft from localStorage
+
   const clearDraft = useCallback(() => {
-    try {
-      localStorage.removeItem(DRAFT_KEY);
-    } catch (e) {
-      console.warn('Failed to clear draft:', e);
-    }
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { console.warn("Failed to clear draft:", e); }
   }, []);
-  
-  // Restore draft from localStorage
+
   useEffect(() => {
     try {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
-        setContent(draft.content || '');
-        setYoutubeInput(draft.youtubeInput || '');
+        setContent(draft.content || "");
+        setYoutubeInput(draft.youtubeInput || "");
         setYoutubePreview(draft.youtubePreview || null);
         setYoutubeType(draft.youtubeType || null);
-        if (draft.hasLargeImages) {
-          // Show a message that some images couldn't be restored
-          console.log('Some images were too large to restore from draft');
-        }
       }
-    } catch (e) {
-      console.warn('Failed to restore draft:', e);
-    }
+    } catch (e) { console.warn("Failed to restore draft:", e); }
   }, []);
-  
-  // Auto-save draft when content or YouTube changes
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (content || youtubeInput || youtubePreview) {
         saveDraft(content, images, videos, youtubePreview, youtubeInput, youtubeType);
       }
-    }, 500); // Debounce save
+    }, 500);
     return () => clearTimeout(timer);
   }, [content, youtubeInput, youtubePreview, youtubeType, images.length, videos.length, saveDraft]);
+
   const [visibility, setVisibility] = useState("public");
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadState, setUploadState] = useState("");
-  const streamRef = useRef(null); // To store the media stream for cleanup
+  const streamRef = useRef(null);
 
-  const [audio, setAudio] = useState(null); // stores the recorded/selected audio
-  const [recording, setRecording] = useState(false); // is recording active
-  const mediaRecorderRef = useRef(null); // media recorder ref
-  const audioChunksRef = useRef([]); // to store audio chunks
+  const [audio, setAudio] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
-  // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-
 
   const textareaRef = useRef(null);
 
-  // YouTube validation and extraction functions
   const extractVideoId = (input) => {
-    // Handle full YouTube URL
     const urlPatterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
       /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
     ];
-
     for (const pattern of urlPatterns) {
       const match = input.match(pattern);
-      if (match && match[1]) {
-        return match[1];
-      }
+      if (match && match[1]) return match[1];
     }
     return null;
   };
 
   const validateYoutubeInput = (input) => {
     if (!input.trim()) return { valid: false, videoId: null, type: null };
-
-    // Check if it's a complete iframe
     const iframeMatch = input.match(/<iframe[^>]*src=["']([^"']*)["'][^>]*>/i);
     if (iframeMatch) {
-      const src = iframeMatch[1];
-      const videoId = extractVideoId(src);
-      if (videoId) {
-        return { valid: true, videoId, type: 'iframe' };
-      }
+      const videoId = extractVideoId(iframeMatch[1]);
+      if (videoId) return { valid: true, videoId, type: "iframe" };
     }
-
-    // Check if it's a YouTube URL
     const videoId = extractVideoId(input);
-    if (videoId) {
-      return { valid: true, videoId, type: 'url' };
-    }
-
+    if (videoId) return { valid: true, videoId, type: "url" };
     return { valid: false, videoId: null, type: null };
   };
 
-  const getYoutubeEmbedUrl = (videoId) => {
-    return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
-  };
+  const getYoutubeEmbedUrl = (videoId) =>
+    `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
 
   const handleYoutubeInputChange = (e) => {
     const value = e.target.value;
     setYoutubeInput(value);
     setYoutubeError("");
-
-    if (!value.trim()) {
-      setYoutubePreview(null);
-      setYoutubeType(null);
-      return;
-    }
-
+    if (!value.trim()) { setYoutubePreview(null); setYoutubeType(null); return; }
     const validation = validateYoutubeInput(value);
     if (validation.valid) {
-      setYoutubePreview({
-        videoId: validation.videoId,
-        embedUrl: getYoutubeEmbedUrl(validation.videoId),
-      });
+      setYoutubePreview({ videoId: validation.videoId, embedUrl: getYoutubeEmbedUrl(validation.videoId) });
       setYoutubeType(validation.type);
-      setYoutubeError("");
     } else {
-      setYoutubePreview(null);
-      setYoutubeType(null);
-      if (value.trim().length > 0) {
-        setYoutubeError("Invalid YouTube URL or embed code");
-      }
+      setYoutubePreview(null); setYoutubeType(null);
+      if (value.trim().length > 0) setYoutubeError("Invalid YouTube URL or embed code");
     }
   };
 
   const handleRemoveYoutube = () => {
-    setYoutubeInput("");
-    setYoutubePreview(null);
-    setYoutubeError("");
-    setYoutubeType(null);
+    setYoutubeInput(""); setYoutubePreview(null); setYoutubeError(""); setYoutubeType(null);
   };
-
 
   const MAX_TEXT_LENGTH = 500;
   const MAX_IMAGES = 4;
-  const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
+  const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
   const MAX_VIDEOS = 1;
-  const MAX_VIDEO_SIZE = 15 * 1024 * 1024; // 15MB
-  const MAX_VIDEO_DURATION = 1040; // seconds
+  const MAX_VIDEO_SIZE = 15 * 1024 * 1024;
+  const MAX_VIDEO_DURATION = 1040;
 
   const showAlert = (message, type = "info") => setAlert({ message, type });
 
   const autoResizeTextarea = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     textarea.style.height = "auto";
-
-    const maxHeight = window.innerHeight * 0.49; // 49vh
+    const maxHeight = window.innerHeight * 0.49;
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-
     textarea.style.height = `${newHeight}px`;
-    textarea.style.overflowY =
-      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   };
-  useEffect(() => {
-    autoResizeTextarea();
-  }, [content]);
 
+  useEffect(() => { autoResizeTextarea(); }, [content]);
 
-
-  // Clean and validate text input
   const handleTextChange = (e) => {
-    let value = e.target.value.replace(/\n{2,}/g, "\n").trimStart().replace(/\n+$/g, '');
-    if (value.length > MAX_TEXT_LENGTH) {
-      return showAlert(`Text cannot exceed ${MAX_TEXT_LENGTH} characters.`, "warning");
-    }
+    let value = e.target.value.replace(/\n{2,}/g, "\n").trimStart().replace(/\n+$/g, "");
+    if (value.length > MAX_TEXT_LENGTH) return showAlert(`Text cannot exceed ${MAX_TEXT_LENGTH} characters.`, "warning");
     setContent(value);
     autoResizeTextarea();
   };
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const text = e.clipboardData.getData("text/plain").replace(/\n{2,}/g, '\n').trim();
-    setContent(prev => {
-      const cleaned = `${prev}\n${text}`.replace(/\n{2,}/g, '\n').trimStart();
+    const text = e.clipboardData.getData("text/plain").replace(/\n{2,}/g, "\n").trim();
+    setContent((prev) => {
+      const cleaned = `${prev}\n${text}`.replace(/\n{2,}/g, "\n").trimStart();
       return cleaned.slice(0, MAX_TEXT_LENGTH);
     });
   };
 
-
   const handleImageUpload = (e) => {
-
-    if (videos.length > 0) {
-      return showAlert("You cannot upload images while a video is selected. Delete the video first.", "warning");
-    }
-
-    if (youtubePreview) {
-      return showAlert("You cannot upload images while a YouTube video is selected. Remove the YouTube video first.", "warning");
-    }
-
+    if (videos.length > 0) return showAlert("You cannot upload images while a video is selected. Delete the video first.", "warning");
+    if (youtubePreview) return showAlert("You cannot upload images while a YouTube video is selected. Remove the YouTube video first.", "warning");
     const files = Array.from(e.target.files);
-    if (images.length + files.length > MAX_IMAGES) {
-      return showAlert(`You can only upload up to ${MAX_IMAGES} images.`, "warning");
-    }
-    for (const file of files) {
-      if (file.size > MAX_IMAGE_SIZE) {
-        return showAlert(`Image ${file.name} exceeds 15MB.`, "warning");
-      }
-    }
+    if (images.length + files.length > MAX_IMAGES) return showAlert(`You can only upload up to ${MAX_IMAGES} images.`, "warning");
+    for (const file of files) if (file.size > MAX_IMAGE_SIZE) return showAlert(`Image ${file.name} exceeds 15MB.`, "warning");
     setImages([...images, ...files]);
   };
 
   const handleVideoUpload = (e) => {
-    if (images.length > 0) {
-      return showAlert("You cannot upload a video while images are selected. Delete the images first.", "warning");
-    }
-
-    if (youtubePreview) {
-      return showAlert("You cannot upload a video while a YouTube video is selected. Remove the YouTube video first.", "warning");
-    }
-
+    if (images.length > 0) return showAlert("You cannot upload a video while images are selected. Delete the images first.", "warning");
+    if (youtubePreview) return showAlert("You cannot upload a video while a YouTube video is selected. Remove the YouTube video first.", "warning");
     const files = Array.from(e.target.files);
-    if (videos.length + files.length > MAX_VIDEOS) {
-      return showAlert("Only 1 video allowed. Delete the existing one using the cancel button.", "warning");
-
-    }
-
+    if (videos.length + files.length > MAX_VIDEOS) return showAlert("Only 1 video allowed. Delete the existing one using the cancel button.", "warning");
     files.forEach((file) => {
-      if (file.size > MAX_VIDEO_SIZE) {
-        return showAlert(`Video ${file.name} exceeds 15MB.`, "warning");
-      }
-
+      if (file.size > MAX_VIDEO_SIZE) return showAlert(`Video ${file.name} exceeds 15MB.`, "warning");
       const video = document.createElement("video");
       video.preload = "metadata";
       video.src = URL.createObjectURL(file);
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
-        if (video.duration > MAX_VIDEO_DURATION) {
-          return showAlert(`Video ${file.name} exceeds ${MAX_VIDEO_DURATION} seconds.`, "warning");
-        } else {
-          setVideos(prev => [...prev, file]);
-        }
+        if (video.duration > MAX_VIDEO_DURATION) showAlert(`Video ${file.name} exceeds ${MAX_VIDEO_DURATION} seconds.`, "warning");
+        else setVideos((prev) => [...prev, file]);
       };
     });
   };
 
   const handleSubmit = async () => {
-    if (!content && images.length === 0 && videos.length === 0 && !audio && !youtubePreview) {
+    if (!content && images.length === 0 && videos.length === 0 && !audio && !youtubePreview)
       return showAlert("Please add content, images, videos, audio, or a YouTube video", "warning");
-    }
-
     setLoading(true);
     abortControllerRef.current = new AbortController();
-
     const isDev = import.meta.env.MODE === "development";
-
     try {
       if (isDev) console.group("📌 Creating Post");
-
-      if (isDev) console.log("Content:", content);
-      if (isDev) console.log("Images:", images.map(f => f.name));
-      if (isDev) console.log("Videos:", videos.map(f => f.name));
-      if (isDev) console.log("Visibility:", visibility);
-
       const formData = new FormData();
       formData.append("content", content);
       formData.append("visibility", visibility);
-
-      // Use user's saved location if available
       if (user?.locationCoords) {
-        const { coordinates } = user.locationCoords; // [longitude, latitude]
-        formData.append(
-          "location",
-          JSON.stringify({ coords: { type: "Point", coordinates }, city: user.currentCity, country: user.country })
-        );
-        if (isDev) console.log("Using user's saved location:", user.locationCoords);
-      } else {
-        if (isDev) console.log("No location available, skipping location.");
+        const { coordinates } = user.locationCoords;
+        formData.append("location", JSON.stringify({ coords: { type: "Point", coordinates }, city: user.currentCity, country: user.country }));
       }
-
-      images.forEach(file => formData.append("media", file));
-      videos.forEach(file => formData.append("media", file));
+      images.forEach((file) => formData.append("media", file));
+      videos.forEach((file) => formData.append("media", file));
       if (audio) formData.append("media", audio);
-
-      // Add YouTube video data
       if (youtubePreview) {
         formData.append("youtubeVideoId", youtubePreview.videoId);
         formData.append("youtubeEmbedUrl", youtubePreview.embedUrl);
-        formData.append("youtubeType", youtubeType || 'url');
-        if (isDev) console.log("YouTube Video ID:", youtubePreview.videoId);
-        if (isDev) console.log("YouTube Type:", youtubeType);
+        formData.append("youtubeType", youtubeType || "url");
       }
-
-      if (isDev) console.log("FormData entries:", Array.from(formData.entries()).map(([k, v]) => [k, v instanceof File ? { name: v.name, size: v.size, type: v.type } : v]));
-
-      const res = await axios.post(
-        `${import.meta.env.VITE_SERVER}api/posts/add`,
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortControllerRef.current.signal,
-          timeout: 0,
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-              setUploadProgress(percent);
-
-              if (percent < 100) {
-                setUploadState("Uploading...");
-              } else {
-                setUploadState("Processing...");
-              }
-            }
-          },
-
-        }
-      );
-
-      if (isDev) console.log("Response status:", res.status, "Data:", res.data);
- X
-
+      const res = await axios.post(`${import.meta.env.VITE_SERVER}api/posts/add`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: abortControllerRef.current.signal,
+        timeout: 0,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+            setUploadProgress(percent);
+            setUploadState(percent < 100 ? "Uploading..." : "Processing...");
+          }
+        },
+      });
+      if (isDev) console.groupEnd();
       if (res.status >= 200 && res.status < 300) {
         showAlert("✅ Post published successfully!", "success");
-
-        // Clear the draft after successful post
         clearDraft();
-        
-        setContent("");
-        setImages([]);
-        setVideos([]);
-        setVisibility("public");
-        setYoutubeInput("");
-        setYoutubePreview(null);
-        setYoutubeError("");
-        setYoutubeType(null);
-         setTimeout(() => {
-           navigate("/");
-         }, 3000);
-
-
-
-        // Reset now
-        setUploadProgress(0);
-        setUploadState("");
-      }
-      else {
+        setContent(""); setImages([]); setVideos([]); setVisibility("public");
+        setYoutubeInput(""); setYoutubePreview(null); setYoutubeError(""); setYoutubeType(null);
+        setTimeout(() => navigate("/"), 3000);
+        setUploadProgress(0); setUploadState("");
+      } else {
         showAlert(res.data.message || "Something went wrong.", "error");
       }
-
-      if (isDev) console.groupEnd();
     } catch (err) {
-      if (isDev) console.error("❌ Error creating post:", err);
-
-      setUploadProgress(0);
-      setUploadState("");
-
-      if (axios.isCancel(err)) {
-        showAlert("❌ Post cancelled.", "warning");
-        setUploadProgress(0);
-        setUploadState("");
-      } else {
-        showAlert("Server error. Try again later.", "error");
-      }
-    } finally {
-      setLoading(false);
-
-    }
+      setUploadProgress(0); setUploadState("");
+      if (axios.isCancel(err)) showAlert("❌ Post cancelled.", "warning");
+      else showAlert("Server error. Try again later.", "error");
+    } finally { setLoading(false); }
   };
 
-
-  // Clean up recording stream properly
   const cleanupRecording = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
+    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
   };
 
   const startRecording = async () => {
-    if (images.length > 0 || videos.length > 0) {
-      return showAlert("You cannot record audio while images or videos are selected. Delete them first.", "warning");
-    }
-    else if (youtubePreview) {
-      return showAlert("You cannot record audio while a YouTube video is selected. Remove it first.", "warning");
-    }
-    else if (audio) {
-      return showAlert("Audio already selected. Remove it first to record new audio.", "warning");
-    }
+    if (images.length > 0 || videos.length > 0) return showAlert("You cannot record audio while images or videos are selected. Delete them first.", "warning");
+    else if (youtubePreview) return showAlert("You cannot record audio while a YouTube video is selected. Remove it first.", "warning");
+    else if (audio) return showAlert("Audio already selected. Remove it first to record new audio.", "warning");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream; // Store stream for cleanup
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
-      };
-
+      mediaRecorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
       mediaRecorder.onstop = () => {
-        cleanupRecording(); // Clean up the stream when recording stops
+        cleanupRecording();
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const file = new File([blob], `recording_${Date.now()}.webm`, { type: "audio/webm" });
         setAudio(file);
-        console.log("✅ Audio recorded:", file.name, file.size, file.type);
       };
-
       mediaRecorder.start();
       setRecording(true);
-    }
-    catch (err) {
-      console.error("❌ Error accessing microphone:", err);
-      showAlert("Unable to access microphone.", "error");
-    }
+    } catch (err) { showAlert("Unable to access microphone.", "error"); }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
-      // Note: Stream cleanup happens in onstop callback
       setRecording(false);
     }
   };
@@ -490,348 +854,262 @@ const CreatePost = () => {
   const handleAudioUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (youtubePreview) {
-      return showAlert("You cannot upload audio while a YouTube video is selected. Remove it first.", "warning");
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      return showAlert("Audio file exceeds 10MB.", "warning");
-    }
-
+    if (youtubePreview) return showAlert("You cannot upload audio while a YouTube video is selected. Remove it first.", "warning");
+    if (file.size > 10 * 1024 * 1024) return showAlert("Audio file exceeds 10MB.", "warning");
     setAudio(file);
   };
 
+  /* Char count coloring */
+  const charPct = content.length / MAX_TEXT_LENGTH;
+  const charClass = charPct >= 1 ? "at-limit" : charPct >= 0.85 ? "near-limit" : "";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-4 sm:p-6">
-      {/* Back button */}
-      <BackButton top="2" right="2" />
+    <>
+      <style>{styles}</style>
 
-      {/* Dark overlay when alert is visible */}
-      {alert && <div className="fixed inset-0 bg-black/30 z-30"></div>}
+      <div className="cp-page">
+        <BackButton top="2" right="2" />
 
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-2 text-slate-900 title">Create Post</h1>
-        <p className="text-gray-600 mb-4">Share your thoughts with the world</p>
+        {alert && <div style={{ position: "fixed", inset: 0, background: "rgba(5,13,58,0.35)", zIndex: 30 }} />}
 
-        <div className="relative bg-[var(--really-bright-glass)] rounded-xl shadow-md p-4 sm:p-6 space-y-4 overflow-hidden">
-
-          {/* Blurry background highlight */}
-          <div
-            className="
-    absolute -inset-10
-    rounded-full
-    blur-[120px]
-    opacity-40
-    pointer-events-none
-    z-0
-  "
-            style={{
-              background: "radial-gradient(circle, rgba(53, 70, 129, 0.3) 0%, rgba(30, 64, 175, 0.25) 40%, rgba(79, 95, 161, 0.3) 70%, transparent 90%)"
-            }}
-          ></div>
-
-
-          {/* User Info */}
-          <div className="relative z-10 flex items-center gap-3">
-            <ProfileAvatar
-              user={{
-                name: user?.name || "User",
-                profilePicUrl: user?.profilePicUrl,
-                profilePicBackground: user?.profilePicBackground,
-              }}
-              size={48}
-            />
-            <div>
-              <h2 className="font-semibold">{user.full_name}</h2>
-              <p className="text-sm text-gray-500">@{user.username}</p>
+        <div className="cp-inner">
+          {/* Page header */}
+          <div className="cp-head">
+            <div className="cp-head-eyebrow">
+              <span>✦</span> New Post
             </div>
+            <h1 className="cp-head-title">Create Post</h1>
+            <p className="cp-head-sub">Share your thoughts with the community</p>
           </div>
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            className="relative z-10 w-full resize-none text-sm outline-none placeholder-gray-400 border-b pb-1 overflow-hidden transition-[height] duration-150"
-            style={{ minHeight: "80px", maxHeight: "49vh" }}
-            placeholder="What's on your mind?"
-            value={content}
-            onChange={handleTextChange}
-            onPaste={handlePaste}
-            disabled={loading}
-          />
+          {/* Main card */}
+          <div className="cp-card">
 
-          <div className="relative z-10 text-xs text-gray-500 text-right">
-            {content.length}/{MAX_TEXT_LENGTH}
-          </div>
-          {/* Visibility */}
-          <div className="flex items-center gap-2 mt-2 text-sm">
-            <label className="font-semibold text-gray-700">Visibility:</label>
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-sm"
-            >
-              <option value="public">Public</option>
-              <option value="friends">Friends</option>
-              <option value="private">Private</option>
-              <option value="unlisted">Unlisted</option>
-            </select>
-          </div>
-
-          {/* YouTube Embed Input - Hidden on Mobile */}
-          {!isMobile && (
-          <div className="relative z-10 mt-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Youtube className="w-5 h-5 text-[var(--primary)]" />
-              <span className="text-sm font-medium text-gray-700">Add YouTube Video</span>
+            {/* User row */}
+            <div className="cp-user-row">
+              <ProfileAvatar
+                user={{ name: user?.name || "User", profilePicUrl: user?.profilePicUrl, profilePicBackground: user?.profilePicBackground }}
+                size={48}
+              />
+              <div className="cp-user-info">
+                <h2>{user.full_name}</h2>
+                <p>@{user.username}</p>
+              </div>
             </div>
-            <div className={`relative rounded-lg border transition-all duration-200 ${youtubeError ? 'border-red-400 bg-red-50/50' : youtubePreview ? 'border-[var(--primary)] bg-[var(--glassy-white)]' : 'border-[var(--input-border)] bg-[var(--input-bg)]'}`}>
-              <div className="flex items-center px-3 py-2">
-                <Link className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
-                <input
-                  id="youtubeInput"
-                  type="text"
-                  value={youtubeInput}
-                  onChange={handleYoutubeInputChange}
-                  placeholder="Paste YouTube URL or embed code (e.g., https://www.youtube.com/watch?v=...)"
-                  className="flex-1 bg-transparent outline-none text-sm text-[var(--text-main)] placeholder-gray-400"
-                  disabled={loading}
-                />
+
+            {/* Composer */}
+            <div className="cp-composer">
+              <textarea
+                ref={textareaRef}
+                className="cp-textarea"
+                placeholder="What's on your mind?"
+                value={content}
+                onChange={handleTextChange}
+                onPaste={handlePaste}
+                disabled={loading}
+              />
+              <div className="cp-composer-rule" />
+              <div className={`cp-char-count ${charClass}`}>
+                {content.length} / {MAX_TEXT_LENGTH}
+              </div>
+            </div>
+
+            {/* Visibility */}
+            <div className="cp-visibility-row">
+              <span className="cp-visibility-label">Visibility</span>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                className="cp-visibility-select"
+              >
+                <option value="public">🌍 Public</option>
+                <option value="friends">👥 Friends</option>
+                <option value="private">🔒 Private</option>
+                <option value="unlisted">🔗 Unlisted</option>
+              </select>
+            </div>
+
+            {/* YouTube section — desktop only */}
+            {!isMobile && (
+              <div className="cp-yt-section">
+                <div className="cp-yt-label">
+                  <Youtube size={16} />
+                  <span>Add YouTube Video</span>
+                </div>
+                <div className={`cp-yt-input-wrap${youtubePreview ? " has-preview" : ""}${youtubeError ? " has-error" : ""}`}>
+                  <Link size={15} />
+                  <input
+                    id="youtubeInput"
+                    type="text"
+                    value={youtubeInput}
+                    onChange={handleYoutubeInputChange}
+                    placeholder="Paste YouTube URL or embed code…"
+                    className="cp-yt-input"
+                    disabled={loading}
+                  />
+                  {youtubePreview && (
+                    <button onClick={handleRemoveYoutube} className="cp-yt-remove" title="Remove YouTube video">
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+                {youtubeError && (
+                  <div className="cp-yt-error">
+                    <AlertCircle size={12} /> <span>{youtubeError}</span>
+                  </div>
+                )}
                 {youtubePreview && (
+                  <div className="cp-yt-preview">
+                    <div className="cp-yt-preview-iframe-wrap">
+                      <iframe
+                        src={youtubePreview.embedUrl}
+                        title="YouTube video preview"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <div className="cp-yt-preview-meta">
+                      <span>{youtubeType === "iframe" ? "Embed code detected" : "URL detected"}</span>
+                      <span>ID: {youtubePreview.videoId}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Media thumbnails */}
+            {(images.length > 0 || videos.length > 0) && (
+              <div className="cp-media-grid">
+                {images.map((img, i) => (
+                  <div key={i} className="cp-thumb">
+                    <img src={URL.createObjectURL(img)} alt="Upload" className="cp-thumb-img" />
+                    <button className="cp-thumb-remove" onClick={() => setImages(images.filter((_, idx) => idx !== i))}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                {videos.map((vid, i) => (
+                  <div key={i} className="cp-thumb">
+                    <video src={URL.createObjectURL(vid)} className="cp-thumb-vid" controls />
+                    <button className="cp-thumb-remove" onClick={() => setVideos(videos.filter((_, idx) => idx !== i))}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Audio preview */}
+            {audio && (
+              <div className="cp-audio-preview">
+                <AudioMessage msg={{ media_url: URL.createObjectURL(audio) }} />
+                <button onClick={() => setAudio(null)} className="cp-audio-remove" title="Remove audio">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            )}
+
+            {/* Footer toolbar */}
+            <div className="cp-footer">
+              <div className="cp-tools">
+                {/* Audio upload */}
+                <label htmlFor="audioFile" className="cp-tool-btn" title={audio ? "Audio selected" : "Upload audio file"}>
+                  <Headphones size={18} />
+                </label>
+                <input type="file" id="audioFile" accept="audio/*" hidden onChange={handleAudioUpload} />
+
+                {/* Record / Stop */}
+                {!recording ? (
+                  <button onClick={startRecording} className="cp-tool-btn rec-dot" title="Start recording">
+                    <span style={{ fontSize: 18, lineHeight: 1 }}>⏺</span>
+                  </button>
+                ) : (
+                  <button onClick={stopRecording} className="cp-tool-btn recording" title="Stop recording">
+                    <span style={{ fontSize: 18, lineHeight: 1 }}>⏹</span>
+                  </button>
+                )}
+
+                <div className="cp-tool-divider" />
+
+                {/* Images */}
+                <label htmlFor="images" className="cp-tool-btn" title="Upload images">
+                  <Image size={18} />
+                </label>
+                <input type="file" id="images" accept="image/*" hidden multiple onChange={handleImageUpload} />
+
+                {/* Videos */}
+                <label htmlFor="videos" className="cp-tool-btn" title="Upload video">
+                  <VideoIcon size={18} />
+                </label>
+                <input type="file" id="videos" accept="video/*" hidden multiple onChange={handleVideoUpload} />
+
+                {/* YouTube focus — desktop only */}
+                {!isMobile && (
                   <button
-                    onClick={handleRemoveYoutube}
-                    className="ml-2 p-1 rounded-full hover:bg-red-100 transition-colors"
-                    title="Remove YouTube video"
+                    onClick={() => { const el = document.getElementById("youtubeInput"); if (el) el.focus(); }}
+                    className={`cp-tool-btn${youtubePreview ? " active" : ""}`}
+                    title="Add YouTube video"
                   >
-                    <X className="w-4 h-4 text-red-500" />
+                    <Youtube size={18} />
                   </button>
                 )}
               </div>
 
-              {/* Error message */}
-              {youtubeError && (
-                <div className="flex items-center gap-1 px-3 pb-2 text-xs text-red-500">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>{youtubeError}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Live YouTube Preview */}
-            {youtubePreview && (
-              <div className="mt-3 rounded-lg overflow-hidden border border-[var(--primary)]/30 shadow-lg">
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  <iframe
-                    src={youtubePreview.embedUrl}
-                    title="YouTube video preview"
-                    className="absolute top-0 left-0 w-full h-full"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-                <div className="px-3 py-2 bg-[var(--bg-light)]/50 flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-secondary)]">
-                    {youtubeType === 'iframe' ? 'Embed code detected' : 'URL detected'}
-                  </span>
-                  <span className="text-xs text-[var(--primary)] font-medium">
-                    Video ID: {youtubePreview.videoId}
-                  </span>
-                </div>
+              {/* Action buttons */}
+              <div className="cp-actions">
+                {loading && (
+                  <button
+                    onClick={() => { if (abortControllerRef.current) abortControllerRef.current.abort(); setLoading(false); }}
+                    className="cp-cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                )}
+                {!recording && (
+                  <button onClick={handleSubmit} disabled={loading} className="cp-publish-btn">
+                    {loading ? (
+                      <><span className="cp-publish-dot" /> Publishing…</>
+                    ) : (
+                      <>Publish Post</>
+                    )}
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-          )}
-
-          {/* Media Previews */}
-          {(images.length > 0 || videos.length > 0) && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {/* Image Previews */}
-              {images.map((img, i) => (
-                <div
-                  key={i}
-                  className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-gray-200"
-                >
-                  <img
-                    src={URL.createObjectURL(img)}
-                    alt="Upload"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    className="absolute top-1 right-1 bg-black/60 p-1 rounded-full z-10"
-                    onClick={() => setImages(images.filter((_, idx) => idx !== i))}
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Video Previews */}
-              {videos.map((vid, i) => (
-                <div
-                  key={i}
-                  className="relative w-32 h-20 flex-shrink-0 rounded-md overflow-hidden border border-gray-200"
-                >
-                  <video
-                    src={URL.createObjectURL(vid)}
-                    className="w-full h-full object-contain"
-                    controls
-                  />
-                  <button
-                    className="absolute top-1 right-1 bg-black/60 p-1 rounded-full z-10"
-                    onClick={() => setVideos(videos.filter((_, idx) => idx !== i))}
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-
-          {/* Upload & Publish */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-300">
-            {/* Image & Video Upload Icons */}
-            <div className="flex gap-2">
-              <label
-                htmlFor="audioFile"
-                className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition cursor-pointer border rounded-md"
-                title={audio ? "Audio selected" : "Upload audio file"}
-              >
-                < Headphones className="w-6 h-6" />
-              </label>
-              <input
-                type="file"
-                id="audioFile"
-                accept="audio/*"
-                hidden
-                onChange={handleAudioUpload}
-              />
-
-              {/* Recording controls */}
-              {!recording ? (
-                <button
-                  onClick={startRecording}
-                  className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition border rounded-md"
-                  title="Start recording"
-                >
-                  ⏺
-                </button>
-              ) : (
-                <button
-                  onClick={stopRecording}
-                  className="flex items-center justify-center w-10 h-10 text-red-500 hover:text-red-700 transition border rounded-md"
-                  title="Stop recording"
-                >
-                  ⏹
-                </button>
-              )}
-
-              {/* Preview recorded/uploaded audio */}
-              {audio && (
-                <div className="flex items-center gap-2 mt-1">
-                  <AudioMessage msg={{ media_url: URL.createObjectURL(audio) }} />
-                  <button onClick={() => setAudio(null)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              )}
-
-              <label
-                htmlFor="images"
-                className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition cursor-pointer border rounded-md"
-              >
-                <Image className="w-6 h-6" />
-              </label>
-              <input type="file" id="images" accept="image/*" hidden multiple onChange={handleImageUpload} />
-
-              <label
-                htmlFor="videos"
-                className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-700 transition cursor-pointer border rounded-md"
-              >
-                <VideoIcon className="w-6 h-6" />
-              </label>
-              <input type="file" id="videos" accept="video/*" hidden multiple onChange={handleVideoUpload} />
-
-              {/* YouTube Button - Hidden on Mobile */}
-              {!isMobile && (
-              <button
-                onClick={() => {
-                  const ytInput = document.getElementById('youtubeInput');
-                  if (ytInput) ytInput.focus();
-                }}
-                className={`flex items-center justify-center w-10 h-10 transition border rounded-md ${youtubePreview ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'text-gray-500 hover:text-gray-700 border-gray-300'}`}
-                title="Add YouTube video"
-              >
-                <Youtube className="w-6 h-6" />
-              </button>
-              )}
             </div>
 
-            {/* Publish Button */}
-            {loading && (
-              <button
-                onClick={() => {
-                  if (abortControllerRef.current) abortControllerRef.current.abort();
-                  setLoading(false);
-                }}
-                className="ml-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-              >
-                Cancel
-              </button>
-            )}
-            {!recording && (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="btn px-6 py-2 bg-[var(--accent)] text-white rounded-md hover:bg-[var(--accent-dark)] transition flex-1 sm:flex-none"
-              >
-                {loading ? "Publishing..." : "Publish Post"}
-            </button>)}
-
+            {/* Upload progress */}
             {uploadProgress > 0 && (
-              <div className="w-full mt-3 flex flex-col gap-1">
-                <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
-                  {uploadState}
-                  {uploadState === "Uploading..." && `${uploadProgress}%`}
-                  {uploadState === "Processing..." && (
-                    <svg className="animate-spin h-4 w-4 text-[var(--primary)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                    </svg>
-                  )}
-                </p>
-
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="cp-progress-wrap">
+                <div className="cp-progress-label">
+                  <span>
+                    {uploadState === "Processing..." ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span className="cp-spin">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                          </svg>
+                        </span>
+                        Processing…
+                      </span>
+                    ) : uploadState}
+                  </span>
+                  {uploadState === "Uploading..." && <span>{uploadProgress}%</span>}
+                </div>
+                <div className="cp-progress-track">
                   <div
-                    className="bg-blue-500 h-2 transition-all"
+                    className={`cp-progress-fill${uploadState === "Processing..." ? " processing" : ""}`}
                     style={{ width: uploadState === "Uploading..." ? `${uploadProgress}%` : "100%" }}
-                  ></div>
+                  />
                 </div>
               </div>
             )}
-
-
           </div>
         </div>
       </div>
 
-      {alert && (
-        <CustomAlert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)} // <- overlay will disappear immediately
-        />
-      )}
-
-
-      {/* Media queries to improve responsiveness */}
-      <style>{`
-        @media (max-width: 640px) {
-          textarea { min-height: 100px; }
-          .flex-wrap { gap: 4px; }
-        }
-      `}</style>
-    </div>
+      {alert && <CustomAlert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
+    </>
   );
 };
 

@@ -9,11 +9,12 @@ const AuthModal = ({ mode, onClose }) => {
     }
   };
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open — preserve original style
   React.useEffect(() => {
+    const original = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = original;
     };
   }, []);
 

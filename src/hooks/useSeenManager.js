@@ -1,38 +1,6 @@
 import { useEffect, useCallback, useRef, useState } from "react";
 import axiosBase from "../utils/axiosBase";
 
-/**
- * useSeenManager Hook
- *
- * Encapsulates all message seen logic for a WhatsApp-like chat experience.
- *
- * Responsibilities:
- * - Track last seen message based on viewport visibility
- * - Calculate unseen count below viewport
- * - Emit socket events for real-time sync
- * - Handle receiver's seen status
- * - Manage scroll stop detection
- * - Prevent race conditions & duplicate emissions
- *
- * @param {Object} config
- * @param {Array} config.messages - Current messages array
- * @param {Function} config.setMessages - State setter for messages
- * @param {string} config.chatId - Current chat ID
- * @param {string} config.userId - Current user's ID
- * @param {Object} config.socket - Socket.io instance
- * @param {Object} config.containerRef - Ref to message container
- * @param {number} config.scrollStopDebounce - Debounce delay in ms (default: 1200)
- * @param {boolean} config.enabled - Gate the IntersectionObserver (default: true)
- *
- * @returns {Object}
- * @returns {Object} lastSeenMessage - Last message user scrolled to
- * @returns {Object} receiverLastSeen - Last message receiver saw
- * @returns {number} unseenBelowCount - Unseen messages below viewport
- * @returns {Function} scrollToBottom - Scroll container to bottom
- * @returns {boolean} hasUnseenMessages - Whether any unseen messages exist
- * @returns {Function} onContainerScroll - Scroll event handler
- * @returns {Function} updateLastSeenOnBackend - Manually update seen status
- */
 export const useSeenManager = ({
     messages,
     setMessages,
@@ -43,47 +11,54 @@ export const useSeenManager = ({
     scrollStopDebounce = 1200,
     enabled = true, // ✅ FIX: default true, actually respected now
 }) => {
-    // ==========================================
-    // STATE
-    // ==========================================
-
     const [lastSeenMessage, setLastSeenMessage] = useState(null);
     const [receiverLastSeen, setReceiverLastSeen] = useState(null);
     const [unseenBelowCount, setUnseenBelowCount] = useState(0);
 
-    // ==========================================
-    // REFS - Prevent Race Conditions
-    // ==========================================
-
     const lastEmittedMessageIdRef = useRef(null);
-    const hasInitializedRef = useRef(false);
-    const messageRefs = useRef({});
-    const lastSeenMessageRef = useRef(null);
-    const isInitializingRef = useRef(false);
+const [hasInitialized, setHasInitialized] = useState(false);
+  const messageRefs = useRef({});
+  const isInitializingRef = useRef(false);
+  const scrollDirectionRef = useRef("down");
+  const isScrollingUpRef = useRef(false);
+  const lastScrollTop = useRef(0);
+  const lastSeenMessageRef = useRef(lastSeenMessage);
+  const messagesRef = useRef(messages);
+    const instrumentationRef = useRef({
+        scrollStopRuns: 0,
+        observerRuns: 0,
+        backendFetches: 0,
+        updateLastSeenCalls: 0,
+    });
 
-    // ✅ FIX: declared ONCE here, default "down" so first-load scroll works
-    // Your original declared these twice (once here, once before onContainerScroll)
-    // which caused the second declaration to shadow the first with null
-    const lastScrollTop = useRef(0);
-    const scrollStopTimer = useRef(null);
-    const scrollDirectionRef = useRef("down"); // ✅ "down" not null — critical
-    const isScrollingUpRef = useRef(false);
-    // ==========================================
-    // UTILITIES
-    // ==========================================
+    const lastObserverEmit = useRef(0); // timestamp of last observer batch emit
+    const scrollStopTimer = useRef(null); // ✅ FIX: add missing ref
 
-    /**
-     * Compare two messages by timestamp
-     * Returns true if msgA is newer than msgB
-     */
+    const debugEnabled = process.env.NODE_ENV === "development";
+    const logSeenEvent = useCallback((step, details = {}) => {
+        if (!debugEnabled) return;
+        console.log("[SeenManager]", step, {
+            chatId,
+            userId,
+            lastSeenMessage: lastSeenMessage?._id,
+            unseenBelowCount,
+            hasInitialized,
+            ...details,
+        });
+    }, [chatId, userId, lastSeenMessage, unseenBelowCount, hasInitialized, debugEnabled]);
+// useSeenManager.jsx — add near top of hook
+
+useEffect(() => { messagesRef.current = messages; }, [messages]);
+useEffect(() => {
+    lastSeenMessageRef.current = lastSeenMessage;
+}, [lastSeenMessage]);
+
     const isMessageNewer = useCallback((msgA, msgB) => {
         if (!msgA || !msgB) return false;
         return new Date(msgA.createdAt) > new Date(msgB.createdAt);
     }, []);
 
-    /**
-     * Check if a message should be marked as seen
-     */
+    
     const isMessageSeen = useCallback(
         (msg) => {
             if (!lastSeenMessage) return false;
@@ -114,7 +89,7 @@ export const useSeenManager = ({
             const visibilityPercent = msgRect.height > 0 ? visibleHeight / msgRect.height : 0;
 
             if (visibilityPercent >= 0.6) {
-                const msg = messages.find((m) => m._id === msgId);
+                const msg = messagesRef.current.find((m) => m._id === msgId);
                 if (msg) visibleMessages.push(msg);
             }
         });
@@ -132,9 +107,11 @@ export const useSeenManager = ({
      * Calculate how many unseen messages exist below the viewport
      * ✅ FIX: only counts messages from OTHER users, not your own sent messages
      */
-  const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
-    const baseline = overrideLastSeen || lastSeenMessage;
-    if (!baseline || messages.length === 0) {
+// useSeenManager.jsx — replace calculateUnseenBelowCount
+const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
+    const baseline = overrideLastSeen !== undefined ? overrideLastSeen : lastSeenMessage;
+    
+    if (messages.length === 0) {
         setUnseenBelowCount(0);
         return 0;
     }
@@ -143,13 +120,13 @@ export const useSeenManager = ({
         (msg) =>
             msg.from_user_id !== userId &&
             !String(msg._id).startsWith('temp_') &&
-            new Date(msg.createdAt) > new Date(baseline.createdAt)
+            // If no baseline, ALL other-user messages are unseen
+            (!baseline || new Date(msg.createdAt) > new Date(baseline.createdAt))
     ).length;
 
     setUnseenBelowCount(count);
     return count;
 }, [lastSeenMessage, messages, userId]);
-
     /**
      * Update last seen on backend and emit socket event
      * Prevents duplicate emissions using ref tracking
@@ -212,13 +189,18 @@ export const useSeenManager = ({
                     timestamp: new Date().toISOString(),
                 };
 
+                instrumentationRef.current.updateLastSeenCalls += 1;
+                logSeenEvent("updateLastSeenOnBackend.start", {
+                    callNumber: instrumentationRef.current.updateLastSeenCalls,
+                    messageId,
+                });
+
                 console.log("📡 Emitting socket event: updateLastSeen");
                 console.log("Socket payload:", socketPayload);
 
                 socket.emit("updateLastSeen", socketPayload);
 
                 console.log("✅ Socket emit completed");
-
             } catch (error) {
                 console.error("🔥 Error inside updateLastSeenOnBackend:");
                 console.error(error);
@@ -226,7 +208,7 @@ export const useSeenManager = ({
                 console.warn("Reset lastEmittedMessageIdRef due to error");
             }
         },
-        [socket, chatId, userId]
+        [socket, chatId, userId, logSeenEvent]
     );
 
     /**
@@ -235,6 +217,11 @@ export const useSeenManager = ({
     const fetchLastSeenFromBackend = useCallback(async () => {
         if (!chatId) return;
         if (isInitializingRef.current) return;
+
+        instrumentationRef.current.backendFetches += 1;
+        logSeenEvent("fetchLastSeenFromBackend.start", {
+            backendFetches: instrumentationRef.current.backendFetches,
+        });
 
         isInitializingRef.current = true;
 
@@ -245,25 +232,34 @@ export const useSeenManager = ({
 
             if (response.data?.message) {
                 setLastSeenMessage(response.data.message);
+                logSeenEvent("fetchLastSeenFromBackend.receivedMessage", {
+                    messageId: response.data.message._id,
+                });
             }
 
             if (response.data?.receiverLastSeen) {
                 setReceiverLastSeen(response.data.receiverLastSeen);
             }
 
-            hasInitializedRef.current = true;
+            setHasInitialized(true);
         } catch (error) {
             console.warn("Failed to fetch last seen:", error);
-            hasInitializedRef.current = true;
+            setHasInitialized(true);
         } finally {
             isInitializingRef.current = false;
         }
-    }, [chatId]);
+    }, [chatId, logSeenEvent]);
 
     /**
      * Handle scroll stop — updates seen status when user pauses while scrolling down
      */
     const handleScrollStop = useCallback(() => {
+        instrumentationRef.current.scrollStopRuns += 1;
+        logSeenEvent("handleScrollStop.start", {
+            scrollStopRuns: instrumentationRef.current.scrollStopRuns,
+            scrollDirection: scrollDirectionRef.current,
+        });
+
         if (!containerRef.current) return;
         if (messages.length === 0) return;
         if (scrollDirectionRef.current === "up") return;
@@ -271,8 +267,20 @@ export const useSeenManager = ({
         const lastVisible = getLastVisibleMessage();
         if (!lastVisible) return;
 
+        logSeenEvent("handleScrollStop.lastVisible", {
+            lastVisibleId: lastVisible._id,
+            fromUserId: lastVisible.from_user_id,
+        });
+
         // ✅ FIX: guard temp IDs in scroll handler too
         if (typeof lastVisible._id === 'string' && lastVisible._id.startsWith('temp_')) return;
+
+        // ✅ NEW: Prevent duplicate if observer just emitted (within 2s)
+        const now = Date.now();
+        if (now - lastObserverEmit.current < 2000) {
+            logSeenEvent("handleScrollStop.skipped", { reason: "observer_recently_emitted" });
+            return;
+        }
 
         // Prevent backward movement
         if (
@@ -288,7 +296,7 @@ export const useSeenManager = ({
         // ✅ FIX: only mark other-user messages as seen
         // If the last visible message is our own, find the latest OTHER user message instead
         if (lastVisible.from_user_id === userId) {
-            const otherMessages = messages.filter(m =>
+            const otherMessages = messagesRef.current.filter(m =>
                 m.from_user_id !== userId &&
                 !String(m._id).startsWith('temp_')
             );
@@ -326,6 +334,11 @@ const onContainerScroll = useCallback(() => {
     isScrollingUpRef.current = direction === "up"; // ✅ track scroll up
     lastScrollTop.current = scrollTop;
 
+    logSeenEvent("onContainerScroll", {
+        direction,
+        scrollTop,
+    });
+
     if (direction === "up") {
         if (scrollStopTimer.current) clearTimeout(scrollStopTimer.current);
         return;
@@ -337,8 +350,8 @@ const onContainerScroll = useCallback(() => {
         if (scrollDirectionRef.current === "down") {
             handleScrollStop();
         }
-    }, 1500);
-}, [handleScrollStop, containerRef]);
+    }, scrollStopDebounce);
+}, [handleScrollStop, containerRef, logSeenEvent, scrollStopDebounce]);
 
     /**
      * Scroll to bottom and mark as seen
@@ -355,7 +368,7 @@ const onContainerScroll = useCallback(() => {
         setTimeout(() => {
             if (messages.length === 0) return;
             // ✅ Find the latest message from the OTHER user, not just messages[-1]
-            const otherMessages = messages.filter(m =>
+            const otherMessages = messagesRef.current.filter(m =>
                 m.from_user_id !== userId &&
                 !String(m._id).startsWith('temp_')
             );
@@ -367,42 +380,49 @@ const onContainerScroll = useCallback(() => {
         }, smooth ? 300 : 100);
     }, [messages, userId, updateLastSeenOnBackend]);
 
-    /**
-     * Scroll to the last seen message — used on initial chat load
-     */
+
 const scrollToLastSeen = useCallback(() => {
-    if (!containerRef.current || !lastSeenMessage) return;
+    return new Promise((resolve) => {
+        if (!containerRef.current || !lastSeenMessage) return resolve(false);
 
-    const msgEl = document.getElementById(`msg_${lastSeenMessage._id}`);
-    if (!msgEl) return false;
+        const tryScroll = () => {
+            const msgEl = document.getElementById(`msg_${lastSeenMessage._id}`);
+            if (!msgEl) return resolve(false);
 
-    msgEl.scrollIntoView({ behavior: 'auto', block: 'center' });
+            // scrollIntoView is reliable regardless of offsetParent chain
+            msgEl.scrollIntoView({ block: 'center' });
+            resolve(true);
+        };
 
-    const doScroll = () => {
-        msgEl.scrollIntoView({ behavior: 'auto', block: 'center' });
-    };
+        // Wait for images in the container to finish loading first
+        const allImgs = containerRef.current.querySelectorAll('img');
+        const pendingImages = Array.from(allImgs).filter(img => !img.complete);
 
-    const allImgs = containerRef.current.querySelectorAll('img');
-    let pendingImages = 0;
-
-    allImgs.forEach(img => {
-        if (!img.complete) {
-            pendingImages++;
-            const onLoad = () => {
-                pendingImages--;
-                if (pendingImages === 0) doScroll();
-                img.removeEventListener('load', onLoad);
-                img.removeEventListener('error', onLoad);
-            };
-            img.addEventListener('load', onLoad);
-            img.addEventListener('error', onLoad);
+        if (pendingImages.length === 0) {
+            // Small rAF delay to ensure layout is committed
+            requestAnimationFrame(() => requestAnimationFrame(tryScroll));
+            return;
         }
-    });
 
-    setTimeout(doScroll, 400);
- 
-    console.log("scroll to the lastseen message...");
-    return true;
+        let settled = false;
+        const settle = () => {
+            if (settled) return;
+            settled = true;
+            pendingImages.forEach(img => {
+                img.removeEventListener('load', settle);
+                img.removeEventListener('error', settle);
+            });
+            requestAnimationFrame(() => requestAnimationFrame(tryScroll));
+        };
+
+        pendingImages.forEach(img => {
+            img.addEventListener('load', settle);
+            img.addEventListener('error', settle);
+        });
+
+        // Hard timeout — don't wait forever for slow images
+        setTimeout(() => settle(), 2000);
+    });
 }, [lastSeenMessage, containerRef]);
 
     // ==========================================
@@ -415,7 +435,7 @@ const scrollToLastSeen = useCallback(() => {
     useEffect(() => {
         if (!chatId) return;
 
-        hasInitializedRef.current = false;
+        setHasInitialized(false);
         lastEmittedMessageIdRef.current = null;
         setLastSeenMessage(null);
         setReceiverLastSeen(null);
@@ -428,15 +448,15 @@ const scrollToLastSeen = useCallback(() => {
      * Recalculate unseen count when messages or lastSeen changes
      */
     useEffect(() => {
-        if (!hasInitializedRef.current) return;
+        if (!hasInitialized) return;
         calculateUnseenBelowCount();
-    }, [messages, lastSeenMessage, calculateUnseenBelowCount]);
+    }, [messages, lastSeenMessage, calculateUnseenBelowCount, hasInitialized]);
 
    useEffect(() => {
         if (!enabled) return; // ✅ gate — 600ms delay from ChatMessagesFull
-        if (!hasInitializedRef.current) return;
+        if (!hasInitialized) return;
         if (!socket?.connected || !userId || !chatId) return;
-        if (!containerRef?.current || messages.length === 0) return;
+        if (!containerRef?.current || messagesRef.current.length === 0) return;
 
         const seenCache = new Set();
         let batchTimeout = null;
@@ -457,6 +477,10 @@ const scrollToLastSeen = useCallback(() => {
                 if (fromUserId === userId) return;
                 if (seenCache.has(messageId)) return;
 
+                // ✅ NEW: Check if already marked seen by scroll-stop
+                const msg = messagesRef.current.find(m => m._id?.toString() === messageId);
+                if (msg && new Date(msg.createdAt) <= new Date(lastSeenMessageRef.current?.createdAt || 0)) return
+
                 seenCache.add(messageId);
                 pendingBatch.add(messageId);
             });
@@ -464,6 +488,11 @@ const scrollToLastSeen = useCallback(() => {
             if (pendingBatch.size > 0 && !batchTimeout) {
                 batchTimeout = setTimeout(() => {
                     if (pendingBatch.size > 0) {
+                        instrumentationRef.current.observerRuns += 1;
+                        logSeenEvent("observer.batchEmit", {
+                            observerRuns: instrumentationRef.current.observerRuns,
+                            messageIds: [...pendingBatch],
+                        });
                         console.log("📤 Emitting messages-seen-batch:", [...pendingBatch]);
 
                         socket.emit("messages-seen-batch", {
@@ -473,16 +502,20 @@ const scrollToLastSeen = useCallback(() => {
                         });
 
                         // Optimistic local update
-                        if (setMessages) {
-                            setMessages(prev => prev.map(msg =>
-                                pendingBatch.has(msg._id?.toString())
-                                    ? { ...msg, status: 'seen', seenAt: new Date() }
-                                    : msg
-                            ));
-                        }
+if (setMessages) {
+                         setMessages(prev => prev.map(msg =>
+                             pendingBatch.has(msg._id?.toString())
+                                 ? { ...msg, status: 'seen', seenAt: new Date() }
+                                 : msg
+                         ));
+                     }
+                     
+                    // Optimistic update already emitted above; do not emit twice
+
+                     lastObserverEmit.current = Date.now(); // ✅ track emit time
 
                         // Advance lastSeenMessage to the latest just-seen message
-                        const justSeenMsgs = messages.filter(m =>
+                        const justSeenMsgs = messagesRef.current.filter(m =>
                             pendingBatch.has(m._id?.toString())
                         );
                         if (justSeenMsgs.length > 0) {
@@ -522,7 +555,7 @@ const scrollToLastSeen = useCallback(() => {
             observer.disconnect();
             if (batchTimeout) clearTimeout(batchTimeout);
         };
-    }, [enabled, socket, userId, chatId, messages, containerRef, setMessages, updateLastSeenOnBackend]);
+    }, [enabled, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend]);
 
     // ==========================================
     // EFFECTS - Socket Listeners
@@ -658,7 +691,7 @@ const scrollToLastSeen = useCallback(() => {
             }
 
             // ✅ from your original: if the deleted message was our lastSeen, roll back
-            if (lastSeenMessage?._id === messageId && messages.length > 0) {
+            if (lastSeenMessage?._id === messageId && messagesRef.current.length > 0) {
                 const newLastSeen = messages
                     .filter(m => m._id !== messageId)
                     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -680,6 +713,9 @@ const scrollToLastSeen = useCallback(() => {
         receiverLastSeen,
         unseenBelowCount,
         hasUnseenMessages: unseenBelowCount > 0,
+
+        // Indicates the hook has fetched initial backend state
+        hasInitialized,
 
         scrollToBottom,
         scrollToLastSeen,

@@ -67,13 +67,21 @@ export const SocketProvider = ({ children }) => {
   });
 
 
-    s.on("connect_error", (err) => {
+s.on("connect_error", (err) => {
       console.warn("⚠️ Socket connection error:", err.message);
     });
 
-// s.on("userOnline", (userId) => {
-//   setOnlineUsers(prev => new Set([...prev, userId]));
-// });
+  s.on("userOnline", (userId) => {
+    setOnlineUsers(prev => new Set([...prev, userId]));
+  });
+
+  s.on("userOffline", (userId) => {
+    setOnlineUsers((prev) => {
+      const s = new Set(prev);
+      s.delete(userId);
+      return s;
+    });
+  });
 
 
 
@@ -197,7 +205,7 @@ useEffect(() => {
 
       // ✅ 2. Update last message summary (for chat list, preview, etc.)
       updateLastMessage(msg.from_user_id, msg);
-
+      //addUnread(msg.from_user_id, msg);
       // ✅ 3. Dispatch global browser event for UI-specific components
       window.dispatchEvent(
         new CustomEvent("newMessageAlert", {
@@ -266,25 +274,25 @@ useEffect(() => {
     return () => socket.off("message-delivered", handleMessageDelivered);
   }, [socket, user]);
 
-  // 👁️ Listen for message-seen status updates
-  useEffect(() => {
-    if (!socket || !user) return;
+  // // 👁️ Listen for message-seen status updates
+  // useEffect(() => {
+  //   if (!socket || !user) return;
 
-    const handleMessageSeen = ({ messageId, chatId, seenAt, seenBy }) => {
-      console.log("👁️ Message seen:", messageId, "by:", seenBy);
+  //   const handleMessageSeen = ({ messageId, chatId, seenAt, seenBy }) => {
+  //     console.log("👁️ Message seen:", messageId, "by:", seenBy);
       
-      // Dispatch event for ChatBox to update checkmarks to blue
-      window.dispatchEvent(
-        new CustomEvent("message-seen", {
-          detail: { messageId, chatId, seenAt, seenBy },
-        })
-      );
-    };
+  //     // Dispatch event for ChatBox to update checkmarks to blue
+  //     window.dispatchEvent(
+  //       new CustomEvent("message-seen", {
+  //         detail: { messageId, chatId, seenAt, seenBy },
+  //       })
+  //     );
+  //   };
 
-    socket.on("message-seen", handleMessageSeen);
+  //   socket.on("message-seen", handleMessageSeen);
 
-    return () => socket.off("message-seen", handleMessageSeen);
-  }, [socket, user]);
+  //   return () => socket.off("message-seen", handleMessageSeen);
+  // }, [socket, user]);
 
   // 🟢 Join personal room for notifications
 useEffect(() => {

@@ -20,8 +20,8 @@ export default defineConfig({
       ],
 
       manifest: {
-        name: 'SpringsConnect',
-        short_name: 'Springs',
+        name: 'SpringsCircle',
+        short_name: 'SpringsCircle',
         description: 'Connect, grow spiritually, and walk daily in faith',
         start_url: '/',
         scope: '/',

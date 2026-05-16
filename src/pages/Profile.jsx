@@ -7,7 +7,6 @@ import "../styles/ui.css";
 import UserProfileInfo from "../component/UserProfileInfo";
 import PostCard from "../component/PostCard";
 import moment from "moment";
-import ProfileViewersDropdown from "../component/ProfileViewersDropdown";
 import ProfileModal from "../component/ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import CustomAlert from "../component/shared/CustomAlert";
@@ -38,6 +37,18 @@ const Profile = () => {
   // Alert state
   const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
   const showAlert = (message, type = "info") => setAlert({ show: true, message, type });
+
+  const uniqueById = (items = []) => {
+    const seen = new Set();
+    return Array.isArray(items)
+      ? items.filter((item) => {
+          const id = item?._id?.toString();
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        })
+      : [];
+  };
 
   // Top progress bar state (YouTube-like)
   const [progress, setProgress] = useState(0);
@@ -102,7 +113,7 @@ if (res.data.user?.viewerHasBlocked === true) {
 // If viewerHasBlocked is undefined (e.g., viewing own profile), leave as is
       }
       setProfileUser(userData);
-      setPosts(userPosts);
+      setPosts(uniqueById(userPosts));
     } catch (err) {
       console.error("❌ Error fetching profile:", err);
       // fallback to assets to avoid UI break (keeps interactions intact)
@@ -189,7 +200,7 @@ if (res.data.user?.viewerHasBlocked === true) {
             <ProfileSkeleton />
           ) : (
 <main
-  className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} min-h-screen profile_max_width overflow-y-auto py-4 md:py-8 mx-auto box-border overflow-x-hidden profile-main-content`}
+  className={`${isUnauthenticatedVisitor ? "w-full md:w-[60%]" : "profile-main flex-1"} no-scrollbar h-screen profile_max_width overflow-y-scroll py-1 md:py-3 mx-auto box-border overflow-x-hidden profile-main-content`}
             >
               {alert.show && (
                 <CustomAlert

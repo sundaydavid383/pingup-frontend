@@ -205,7 +205,7 @@ const ProfileModal = ({ setShowEdit }) => {
       setMsg("Account deleted successfully.", "success");
       setShowDeleteConfirm(false)
       // Clear local storage and redirect
-      localStorage.removeItem("springsConnectUser");
+      localStorage.removeItem("springsCircleUser");
       window.location.href = "/"; // redirect to homepage or signin
     } catch (err) {
       setMsg(err?.response?.data?.message || "Failed to delete user.", "error");
@@ -249,7 +249,7 @@ const ProfileModal = ({ setShowEdit }) => {
       setMsg(data?.message || "Profile updated!", "success");
 
       const updatedUser = data.user;
-      localStorage.setItem("springsConnectUser", JSON.stringify(updatedUser));
+      localStorage.setItem("springsCircleUser", JSON.stringify(updatedUser));
       updateUser(updatedUser); // Update context with new user data
       setFormData(updatedUser);
       setPhoneInput(updatedUser.phone || "");

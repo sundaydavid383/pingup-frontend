@@ -145,30 +145,39 @@ useEffect(() => {
   const getConnectionButton = () => {
     if (connectionStatus === "loading") {
       return (
-        <button disabled className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-100 text-blue-700">
-           <div className="animate-spin h-4 w-4 border-2 border-blue-700 border-t-transparent rounded-full"></div>
+        <button disabled className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold bg-slate-100 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20">
+           <div className="animate-spin h-4 w-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
            Connecting...
         </button>
       );
     }
     switch (connectionStatus) {
       case "connected":
-        return <button disabled className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-100 text-blue-700"><LinkIcon className="w-4 h-4" /> Connected</button>;
+        return (
+          <button disabled className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold bg-slate-100 text-slate-700 shadow-sm">
+            <LinkIcon className="w-4 h-4" /> Connected
+          </button>
+        );
       case "pending":
-        return <button disabled className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-yellow-100 text-yellow-700"><Clock className="w-4 h-4" /> Request Sent</button>;
+        return (
+          <button disabled className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold bg-amber-100 text-amber-700 shadow-sm">
+            <Clock className="w-4 h-4" /> Request Sent
+          </button>
+        );
       default:
-        return <button onClick={handleConnection} disabled={isLoading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all"><UserCheck className="w-4 h-4" /> Connect</button>;
+        return (
+          <button onClick={handleConnection} disabled={isLoading} className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold bg-[var(--accent)] text-white shadow-sm transition duration-200 hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20">
+            <UserCheck className="w-4 h-4" /> Connect
+          </button>
+        );
     }
   };
 
   if (!user) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 space-y-6 font-[Inter] overflow-visible">
-      
-      {/* 🔝 HEADER SECTION: Overlapping Avatar & Info */}
+    <div className="profile-info-card bg-white/95 border border-slate-200/70 shadow-[0_28px_90px_-44px_rgba(15,23,42,0.24)] rounded-[28px] p-6 sm:p-7 md:p-8 space-y-7 overflow-visible font-[Inter]">
       <div className="relative flex flex-col items-center md:items-start">
-        {/* Profile Picture Overlay Wrapper */}
         <div className="avatar-overlap-container">
           <ProfileAvatar
             user={{
@@ -176,122 +185,157 @@ useEffect(() => {
               profilePicUrl: user?.profilePicUrl,
               profilePicBackground: user?.profilePicBackground,
             }}
-            size={120}
+            size="100%"
           />
         </div>
 
-        {/* Name and Actions */}
-        <div className="w-full mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div className="text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+        <div className="w-full mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="text-center md:text-left max-w-3xl">
+            <div className="inline-flex flex-wrap items-center justify-center gap-3 md:justify-start">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-950">
                 {assets.capitalizeFullName(user.name) || "Unnamed User"}
               </h1>
-              {user.isVerified && <Verified className="w-5 h-5 text-blue-500" />}
+              {user.isVerified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 ring-1 ring-sky-200/80">
+                  <Verified className="w-4 h-4" /> Verified
+                </span>
+              )}
             </div>
-            <p className="text-gray-500 text-sm text-center md:text-left">@{user.username || "username"}</p>
+            <p className="mt-3 text-sm text-slate-500">@{user.username || "username"}</p>
           </div>
 
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-wrap justify-center gap-3">
             {!isOwnProfile && !isUnauthenticatedVisitor ? (
               <>
-                <button onClick={handleFollow} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${isFollowing ? "bg-gray-200" : "bg-[var(--accent)] text-white"}`}>
+                <button
+                  onClick={handleFollow}
+                  className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 ${isFollowing ? "bg-slate-100 text-slate-900 hover:bg-slate-200" : "bg-[var(--accent)] text-white hover:bg-slate-950"}`}
+                >
                   {isFollowing ? "Unfollow" : "Follow"}
                 </button>
                 {getConnectionButton()}
               </>
             ) : (
-              !isUnauthenticatedVisitor && <button onClick={() => setShowEdit(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
-                <PenBox className="w-4 h-4" /> Edit Profile
-              </button>
+              !isUnauthenticatedVisitor && (
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition duration-200 hover:border-slate-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+                >
+                  <PenBox className="w-4 h-4" /> Edit Profile
+                </button>
+              )
             )}
           </div>
         </div>
       </div>
 
-      {/* 📝 BIO */}
       {user.bio && (
-        <p className="text-gray-700 text-base max-w-2xl leading-relaxed text-left md:text-left family-[Inter]" style={{ whiteSpace: "pre-wrap" }}>
+        <p className="max-w-3xl text-base leading-7 tracking-normal text-slate-600 text-center md:text-left whitespace-pre-wrap">
           {user.bio}
         </p>
       )}
 
-      {/* 🌍 DETAILS (Location, Occupation, etc.) */}
-      <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-3 text-sm text-gray-600 border-t border-gray-50 pt-4">
-        {user.occupation && <span className="flex items-center gap-2"><Briefcase className="w-4 h-4 text-blue-500" /> {user.occupation}</span>}
-        {user.location && <span className="flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-500" /> {user.location}</span>}
-        {user.country && <span className="flex items-center gap-2"><Globe className="w-4 h-4 text-blue-500" /> {user.country}</span>}
-        {user.createdAt && <span className="flex items-center gap-2"><CalendarHeart className="w-4 h-4 text-blue-500" /> Joined {moment(user.createdAt).format("MMM YYYY")}</span>}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 items-start border-t border-slate-200/70 pt-5 text-sm text-slate-600">
+        {user.occupation && (
+          <span className="inline-flex items-center gap-2 rounded-3xl bg-slate-50 px-4 py-2 shadow-sm">
+            <Briefcase className="w-4 h-4 text-slate-400" /> {user.occupation}
+          </span>
+        )}
+        {user.location && (
+          <span className="inline-flex items-center gap-2 rounded-3xl bg-slate-50 px-4 py-2 shadow-sm">
+            <MapPin className="w-4 h-4 text-slate-400" /> {user.location}
+          </span>
+        )}
+        {user.country && (
+          <span className="inline-flex items-center gap-2 rounded-3xl bg-slate-50 px-4 py-2 shadow-sm">
+            <Globe className="w-4 h-4 text-slate-400" /> {user.country}
+          </span>
+        )}
+        {user.createdAt && (
+          <span className="inline-flex items-center gap-2 rounded-3xl bg-slate-50 px-4 py-2 shadow-sm">
+            <CalendarHeart className="w-4 h-4 text-slate-400" /> Joined {moment(user.createdAt).format("MMM YYYY")}
+          </span>
+        )}
       </div>
 
-      {/* 📊 STATS (Posts, Followers, Following) - Premium styling */}
-<div className="grid grid-cols-3 gap-2 sm:gap-4 border-y border-gray-100 py-6 px-4">
-  {/* Posts Column */}
-  <div className="text-center px-2">
-    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-      {posts?.length || 0}
-    </span>
-    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
-      Posts
-    </span>
+      <div className="rounded-[22px] border border-slate-200/70 bg-slate-50 px-4 py-5 shadow-sm">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-[18px] bg-white px-4 py-5 shadow-sm transition duration-200 hover:-translate-y-0.5">
+            <span className="block text-3xl font-semibold text-slate-950 tracking-tight">
+              {posts?.length || 0}
+            </span>
+            <span className="mt-2 block text-xs uppercase tracking-[0.24em] text-slate-500">Posts</span>
+          </div>
+          <div className="rounded-[18px] bg-white px-4 py-5 shadow-sm transition duration-200 hover:-translate-y-0.5">
+            <span className="block text-3xl font-semibold text-slate-950 tracking-tight">
+              {user.followers?.length || 0}
+            </span>
+            <span className="mt-2 block text-xs uppercase tracking-[0.24em] text-slate-500">Followers</span>
+          </div>
+          <div className="rounded-[18px] bg-white px-4 py-5 shadow-sm transition duration-200 hover:-translate-y-0.5">
+            <span className="block text-3xl font-semibold text-slate-950 tracking-tight">
+              {user.following?.length || 0}
+            </span>
+            <span className="mt-2 block text-xs uppercase tracking-[0.24em] text-slate-500">Following</span>
+          </div>
+        </div>
+      </div>
+
+      {canChat && !isOwnProfile && !isUnauthenticatedVisitor && (
+        <div className="w-full flex justify-center">
+          <button
+            onClick={() => navigate(`/chatbox/${user._id}`)}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] hover:text-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+          >
+            <MessageSquare className="w-4 h-4" /> Chat
+          </button>
+        </div>
+      )}
+
+      {!isUnauthenticatedVisitor && (
+        <div className="rounded-[24px] border border-slate-200/70 bg-slate-50 p-4 shadow-sm">
+          <ProfileViewersDropdown viewers={user.profileViewers || []} totalViews={user.profileViews || 0} />
+        </div>
+      )}
+
+<div className="pt-4">
+  <div className="flex items-center justify-center md:justify-start mb-4">
+    <h3 className="text-lg font-semibold text-slate-950">
+      Connections
+    </h3>
   </div>
 
-  {/* Followers Column */}
-  <div className="text-center px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
-    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-      {user.followers?.length || 0}
-    </span>
-    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
-      Followers
-    </span>
-  </div>
-
-  {/* Following Column */}
-  <div className="text-center px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded-md">
-    <span className="block text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-      {user.following?.length || 0}
-    </span>
-    <span className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold mt-1 block">
-      Following
-    </span>
-  </div>
-</div>
-
-{canChat && !isOwnProfile && !isUnauthenticatedVisitor && (
-  <div className="w-full flex justify-center mt-2">
-    <button
-      onClick={() => navigate(`/chatbox/${user._id}`)}
-      className="flex btn"
-    >
-      <MessageSquare className="w-4 h-4 mr-2" /> Chat
-    </button>
-  </div>
-)}
-
-      {/* 👁️ PROFILE VIEWS */}
-   { !isUnauthenticatedVisitor && <div className="bg-gray-50 rounded-xl p-4 flex justify-center">
-        <ProfileViewersDropdown viewers={user.profileViewers || []} totalViews={user.profileViews || 0} />
-      </div>}
-
-      {/* 🤝 CONNECTIONS */}
-      <div className="pt-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 text-center md:text-left">Connections</h3>
-        <div className="flex justify-center items-center md:justify-start m-auto">
+<div className="flex justify-center items-center md:justify-start">
           {connectionsLoading ? (
             <div className="connections-stack">
-              {Array.from({ length: 5 }).map((_, i) => <div key={i} className="stack-img skeleton-circle" />)}
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="stack-img skeleton-circle" />
+              ))}
             </div>
           ) : connections.length > 0 ? (
             <div className="connections-stack">
               {connections.slice(0, 8).map((conn, i) => (
-                <div key={conn._id} className="stack-item" style={{ zIndex: 10 - i }} onClick={() => navigate(`/profile/${conn._id}`)}>
-                  {conn.profilePicUrl ? <img src={conn.profilePicUrl} className="stack-img" alt="" /> : <div className="stack-img fallback" style={{backgroundColor: conn.profilePicBackground}}>{conn.name[0]}</div>}
-                  <div className="stack-tooltip"><p className="tooltip-name">{conn.name}</p></div>
+                <div
+                  key={conn._id}
+                  className="stack-item"
+                  style={{ zIndex: 10 - i }}
+                  onClick={() => navigate(`/profile/${conn._id}`)}
+                >
+                  {conn.profilePicUrl ? (
+                    <img src={conn.profilePicUrl} className="stack-img" alt={conn.name} />
+                  ) : (
+                    <div className="stack-img fallback" style={{ backgroundColor: conn.profilePicBackground }}>
+                      {conn.name[0]}
+                    </div>
+                  )}
+                  <div className="stack-tooltip">
+                    <p className="tooltip-name">{conn.name}</p>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 italic">No connections yet.</p>
+            <p className="text-slate-400 italic">No connections yet.</p>
           )}
         </div>
       </div>

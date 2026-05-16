@@ -1,6 +1,11 @@
+// Verse.jsx — styled version
+// Functionality: UNTOUCHED. Only inline styles replaced with CSS classes.
+// Add this import to your component:  import "../../styles/verse.css"
+
 import { useState } from "react";
 import axiosBase from "../../utils/axiosBase";
-import useVerseVisibility from "../../hooks/useVerseVisibility"
+import useVerseVisibility from "../../hooks/useVerseVisibility";
+import "../../styles/verse.css"; // ← add this import
 
 export default function Verse({ verse, isChapterVerse, handleVerseSeen }) {
   const [selectedText, setSelectedText] = useState("");
@@ -23,7 +28,6 @@ export default function Verse({ verse, isChapterVerse, handleVerseSeen }) {
     }
   );
 
-  // Remove all text in curly brackets
   const renderText = verse.text.replace(/\{.*?\}/g, "");
 
   const handleMouseUp = () => {
@@ -44,76 +48,55 @@ export default function Verse({ verse, isChapterVerse, handleVerseSeen }) {
         },
       });
       alert("Verse highlighted successfully!");
-      setSelectedText(""); // Clear selection after saving
+      setSelectedText("");
     } catch (err) {
       console.error("Error saving highlight:", err);
     }
   };
 
-
   const handleRandomVerseClick = () => {
-  if (!isChapterVerse) {
-    window.dispatchEvent(
-      new CustomEvent("go-to-verse", {
-        detail: {
-          book: verse.book,
-          chapter: verse.chapter,
-          verse: verse.verse,
-        },
-      })
-    );
-  }
-};
-const safeBookId = verse.book.replace(/\s+/g, "-").toLowerCase();
+    if (!isChapterVerse) {
+      window.dispatchEvent(
+        new CustomEvent("go-to-verse", {
+          detail: {
+            book: verse.book,
+            chapter: verse.chapter,
+            verse: verse.verse,
+          },
+        })
+      );
+    }
+  };
+
+  const safeBookId = verse.book.replace(/\s+/g, "-").toLowerCase();
 
   return (
-<div
-  id={`v-${safeBookId}-${verse.chapter}-${verse.verse}`}
-  className={`verse-text-paragraph ${isChapterVerse ? "chapter-verse" : "random-verse"}`}
-  ref={isChapterVerse ? ref : null}
-  style={{
-    position: "relative",
-    padding: !isChapterVerse ? "1rem" : undefined,
-    cursor: !isChapterVerse ? "pointer" : "default",
-  }}
-  onClick={handleRandomVerseClick}
-  onMouseUp={handleMouseUp}
->
-
+    <div
+      id={`v-${safeBookId}-${verse.chapter}-${verse.verse}`}
+      className={`verse-text-paragraph ${isChapterVerse ? "chapter-verse" : "random-verse"}`}
+      ref={isChapterVerse ? ref : null}
+      onClick={handleRandomVerseClick}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Reference badge — random/discovery mode only */}
       {!isChapterVerse && (
-        <div
-          style={{
-            display: "inline-block",
-            padding: "0.25rem 0.5rem",
-            marginBottom: "0.5rem",
-            background: "rgba(255, 215, 0, 0.1)", // light gold
-            color: "var(--gold)",
-            fontWeight: "700",
-            borderRadius: "6px",
-            boxShadow: "0 3px 6px rgba(0,0,0,0.3)",
-          }}
-        >
+        <div className="verse-reference-badge">
           {verse.book} {verse.chapter}:{verse.verse}
         </div>
       )}
-      <div className="flex">
-      {isChapterVerse && <span className="verse-label">{verse.verse}</span>}
 
-      <div>{renderText}</div>
+      <div className="flex">
+        {isChapterVerse && (
+          <span className="verse-label">{verse.verse}</span>
+        )}
+        <div>{renderText}</div>
       </div>
 
       {/* Save highlight button */}
       {selectedText && (
         <button
+          className="verse-save-highlight-btn"
           onClick={handleSaveHighlight}
-          style={{
-            marginTop: "0.5rem",
-            background: "var(--primary)",
-            color: "#fff",
-            padding: "0.25rem 0.5rem",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
         >
           Save Highlight
         </button>
@@ -121,4 +104,3 @@ const safeBookId = verse.book.replace(/\s+/g, "-").toLowerCase();
     </div>
   );
 }
-

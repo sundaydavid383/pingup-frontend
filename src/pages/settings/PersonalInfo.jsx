@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import axiosBase from '../../utils/axiosBase';
 import toast from 'react-hot-toast';
+
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Non-binary', value: 'non-binary' },
+  { label: 'Prefer not to say', value: 'prefer-not-to-say' },
+];
 
 const PersonalInfo = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
@@ -11,7 +18,7 @@ const PersonalInfo = ({ isEmbedded = false }) => {
   const [personalInfo, setPersonalInfo] = useState({
     dateOfBirth: '',
     gender: '',
-    location: ''
+    location: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -21,27 +28,29 @@ const PersonalInfo = ({ isEmbedded = false }) => {
       setPersonalInfo({
         dateOfBirth: user.dob ? new Date(user.dob).toISOString().split('T')[0] : '',
         gender: user.gender || '',
-        location: user.location || ''
+        location: user.location || '',
       });
     }
   }, [user]);
 
   const handleInputChange = (field, value) => {
-    setPersonalInfo({ ...personalInfo, [field]: value });
+    setPersonalInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axiosBase.put('/api/settings/personal-info', {
-        dob: personalInfo.dateOfBirth,
-        gender: personalInfo.gender,
-        location: personalInfo.location
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const res = await axiosBase.put(
+        '/api/settings/personal-info',
+        {
+          dob: personalInfo.dateOfBirth,
+          gender: personalInfo.gender,
+          location: personalInfo.location,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       if (res.data.success) {
         toast.success('Personal information updated successfully');
       } else {
@@ -62,7 +71,6 @@ const PersonalInfo = ({ isEmbedded = false }) => {
     <div>
       {!isEmbedded && (
         <div className="max-w-2xl mx-auto p-4 md:p-6">
-          {/* Header */}
           <div className="flex items-center gap-3 mb-8">
             <button
               onClick={() => navigate(-1)}
@@ -77,114 +85,79 @@ const PersonalInfo = ({ isEmbedded = false }) => {
           </div>
         </div>
       )}
-      <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : ''}>
-        {/* Personal Information Form */}
-        <div className="mb-8 space-y-6">
-          {/* Date of Birth */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-main)' }}>
-              Date of Birth
-            </label>
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5" style={{ color: 'white' }} />
-              <input
-                type="date"
-                value={personalInfo.dateOfBirth}
-                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                className="flex-1 px-4 py-2 rounded-lg"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)',
-                  color: 'var(--text-main)'
-                }}
-              />
-            </div>
-          </div>
 
-          {/* Gender */}
-          <div>
-            <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-main)' }}>
-              Gender (Optional)
-            </label>
-            <div className="space-y-2">
-              {[
-                { label: 'Male', value: 'male' },
-                { label: 'Female', value: 'female' },
-                { label: 'Non-binary', value: 'non-binary' },
-                { label: 'Prefer not to say', value: 'prefer-not-to-say' }
-              ].map((option) => (
-                <label
-                  key={option.value}
-                  className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:opacity-80 transition"
-                  style={{ backgroundColor: 'var(--form-bg)', border: '1px solid var(--input-border)' }}
-                >
-                  <input
-                    type="radio"
-                    name="gender"
-                    value={option.value}
-                    checked={personalInfo.gender === option.value}
-                    onChange={(e) => handleInputChange('gender', e.target.value)}
-                    className="w-4 h-4"
-                  />
-                  <span style={{ color: 'var(--text-main)' }}>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+      <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : 'sr-page sr-stagger'}>
+        <p className="sr-section-heading">Personal Information</p>
 
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-main)' }}>
-              Location
-            </label>
-            <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5" style={{ color: 'white' }} />
-              <input
-                type="text"
-                value={personalInfo.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                placeholder="City, Country"
-                className="flex-1 px-4 py-2 rounded-lg"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)',
-                  color: 'var(--text-main)'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Save Button */}
-          <button
-            onClick={handleSave}
-            className="w-full px-4 py-2 rounded-lg custom-gradient text-white font-semibold hover:opacity-90 transition"
-          >
-            Save Changes
-          </button>
+        {/* Date of Birth */}
+        <div className="sr-card" style={{ marginBottom: 10 }}>
+          <label className="sr-label">
+            <Calendar size={12} style={{ display: 'inline', marginRight: 5 }} />
+            Date of Birth
+          </label>
+          <input
+            type="date"
+            className="sr-input"
+            value={personalInfo.dateOfBirth}
+            onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+          />
         </div>
 
-        {/* Data Download */}
-        <div className="border-t pt-8" style={{ borderColor: 'var(--input-border)' }}>
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Data & Privacy
-          </h2>
-          <button
-            onClick={handleDownloadData}
-            className="w-full px-4 py-2 rounded-lg font-semibold transition"
-            style={{
-              backgroundColor: 'var(--form-bg)',
-              border: '1px solid var(--input-border)',
-              color: 'var(--text-main)'
-            }}
-          >
-            Download My Data
-          </button>
-          <p className="text-sm mt-3" style={{ color: 'var(--text-secondary)' }}>
-            Request a copy of all your personal data in a standard format.
-          </p>
+        {/* Gender */}
+        <div className="sr-card" style={{ marginBottom: 10 }}>
+          <label className="sr-label">Gender (Optional)</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {GENDER_OPTIONS.map((option) => (
+              <label key={option.value} className="sr-radio-card">
+                <input
+                  type="radio"
+                  name="gender"
+                  value={option.value}
+                  checked={personalInfo.gender === option.value}
+                  onChange={() => handleInputChange('gender', option.value)}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
+
+        {/* Location */}
+        <div className="sr-card" style={{ marginBottom: 16 }}>
+          <label className="sr-label">
+            <MapPin size={12} style={{ display: 'inline', marginRight: 5 }} />
+            Location
+          </label>
+          <input
+            type="text"
+            className="sr-input"
+            value={personalInfo.location}
+            onChange={(e) => handleInputChange('location', e.target.value)}
+            placeholder="City, Country"
+          />
+        </div>
+
+        {/* Save Button */}
+        <button
+          className="sr-btn-primary custom-gradient"
+          disabled={loading}
+          onClick={handleSave}
+        >
+          {loading ? 'Saving…' : 'Save Changes'}
+        </button>
+
+        {/* Data & Privacy */}
+        <div className="sr-divider" />
+        <p className="sr-section-heading">Data & Privacy</p>
+        <button className="sr-btn-secondary" onClick={handleDownloadData}>
+          Download My Data
+        </button>
+        <p style={{ fontSize: '.73rem', color: 'var(--text-secondary)', marginTop: 8 }}>
+          Request a copy of all your personal data in a standard format.
+        </p>
       </div>
     </div>
   );
 };
+
 export default PersonalInfo;

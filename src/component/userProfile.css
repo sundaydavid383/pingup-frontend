@@ -1,204 +1,836 @@
-/* userProfile.css */
+﻿/* ================================================================
+   PROFILE PAGE — EDITORIAL LUXURY SYSTEM
+   userProfile.css + profile.css upgrade
+   
+   Aesthetic direction: Vogue meets high-end social network.
+   Crisp whites. Deep slate. Serif display type. Breathing space.
+   Every shadow is intentional. Every radius tells a story.
+   ================================================================ */
 
-/* 1. Main Profile Info Container 
-*/
-.profile-info-card {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  margin-top: 0;
-  overflow: visible; /* Critical for overlapping elements */
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500;600&family=Cinzel:wght@400;500&display=swap');
+
+/* ================================================================
+   DESIGN TOKENS
+   ================================================================ */
+:root {
+  --pf-white: #ffffff;
+  --pf-surface: #f8f9fc;
+  --pf-card: rgba(255, 255, 255, 0.97);
+  --pf-border: rgba(15, 23, 42, 0.08);
+  --pf-border-strong: rgba(15, 23, 42, 0.14);
+  --pf-ink: #0f172a;
+  --pf-ink-muted: #64748b;
+  --pf-ink-faint: #94a3b8;
+  --pf-accent: var(--accent, #3b82f6);
+  --pf-gold: #b8860b;
+  --pf-gold-light: rgba(184, 134, 11, 0.08);
+
+  /* Shadows — layered for depth */
+  --pf-shadow-card: 0 2px 4px rgba(15,23,42,0.04), 0 12px 40px rgba(15,23,42,0.08), 0 1px 0 rgba(255,255,255,0.8) inset;
+  --pf-shadow-card-hover: 0 4px 8px rgba(15,23,42,0.06), 0 24px 64px rgba(15,23,42,0.12);
+  --pf-shadow-avatar: 0 0 0 4px #fff, 0 0 0 5px rgba(15,23,42,0.06), 0 16px 40px rgba(15,23,42,0.18);
+  --pf-shadow-stat: 0 1px 3px rgba(15,23,42,0.04), 0 4px 16px rgba(15,23,42,0.06);
+  --pf-shadow-stat-hover: 0 2px 8px rgba(15,23,42,0.06), 0 8px 24px rgba(15,23,42,0.1);
+  --pf-shadow-tooltip: 0 8px 32px rgba(15,23,42,0.22), 0 2px 8px rgba(15,23,42,0.1);
+  --pf-shadow-btn: 0 1px 2px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.08);
+  --pf-shadow-btn-hover: 0 2px 4px rgba(15,23,42,0.1), 0 8px 24px rgba(15,23,42,0.14);
+
+  --pf-radius-card: 28px;
+  --pf-radius-stat: 20px;
+  --pf-radius-pill: 9999px;
+  --pf-radius-chip: 12px;
+
+  --pf-font-display: 'Playfair Display', Georgia, serif;
+  --pf-font-body: 'DM Sans', system-ui, sans-serif;
+  --pf-font-label: 'Cinzel', serif;
+
+  --pf-transition: 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  --pf-transition-spring: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 2. Overlapping Avatar Styles 
-   This moves the profile picture up into the cover image area.
-*/
-/* userProfile.css updates */
+/* ================================================================
+   PAGE SHELL
+   ================================================================ */
+.profile-main-content {
+  font-family: var(--pf-font-body);
+  max-width: 700px;
+  margin: 0 auto;
+}
 
-/* userProfile.css updates */
+/* YouTube-style top progress bar */
+.top-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  z-index: 9999;
+  background: linear-gradient(90deg, var(--pf-accent), #818cf8, var(--pf-accent));
+  background-size: 200% 100%;
+  animation: progressShimmer 1.4s linear infinite;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  transition: width 0.3s ease;
+}
 
-/* userProfile.css */
+@keyframes progressShimmer {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
 
-/* Add this to your CSS file */
-.avatar-overlap-container img, 
-div[style*="border-radius: 50%"] img {
-  height: 100% !important;
+/* ================================================================
+   PROFILE CARD OUTER SHELL
+   ================================================================ */
+.profile-card {
+  background: var(--pf-card);
+  border-radius: var(--pf-radius-card);
+  border: 1px solid var(--pf-border);
+  box-shadow: var(--pf-shadow-card);
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto;
+  transition: box-shadow var(--pf-transition);
+}
+
+.profile-card:hover {
+  box-shadow: var(--pf-shadow-card-hover);
+}
+
+/* ================================================================
+   COVER PHOTO
+   ================================================================ */
+.cover-wrapper {
+  position: relative;
+  height: 11rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 50%, #f8fafc 100%);
+}
+
+/* Luminous overlay */
+.cover-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.45) 0%, transparent 55%),
+    linear-gradient(180deg, transparent 55%, rgba(15,23,42,0.22) 100%);
+  z-index: 1;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.cover-wrapper:hover .cover-image {
+  transform: scale(1.04);
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(140deg,
+    #dde4f0 0%,
+    #e8edf7 30%,
+    #f0f4fb 60%,
+    #eef2ff 100%
+  );
+  position: relative;
+}
+
+/* Decorative pattern on placeholder */
+.cover-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(148, 163, 184, 0.07) 0px,
+      rgba(148, 163, 184, 0.07) 1px,
+      transparent 1px,
+      transparent 20px
+    );
+}
+
+/* ================================================================
+   PROFILE INFO CARD (the main content card inside .profile-card)
+   ================================================================ */
+.profile-info-card {
+  position: relative;
+  background: transparent;
+  padding: 0 2rem 2rem;
+  overflow: visible;
+  z-index: 2;
+  font-family: var(--pf-font-body);
+}
+
+/* ================================================================
+   AVATAR
+   ================================================================ */
+.avatar-overlap-container {
+  position: relative;
+  margin-top: -68px;
+  width: 136px;
+  min-width: 136px;
+  height: 136px;
+  border-radius: var(--pf-radius-pill);
+  border: 5px solid #ffffff;
+  background: #ffffff;
+  box-shadow: var(--pf-shadow-avatar);
+  overflow: hidden;
+  z-index: 10;
+  transition: box-shadow var(--pf-transition), transform var(--pf-transition-spring);
+}
+
+.avatar-overlap-container:hover {
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 0 0 4px #fff, 0 0 0 6px rgba(59, 130, 246, 0.15), 0 20px 50px rgba(15,23,42,0.2);
+}
+
+.avatar-overlap-container img,
+.avatar-overlap-container .profile-avatar-placeholder {
   width: 100% !important;
+  height: 100% !important;
   object-fit: cover !important;
 }
 
-.avatar-overlap-container {
-  position: relative;
-  margin-top: -4rem; /* Pull the avatar up */
-  border: 4px solid #ffffff; /* White border around avatar */
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background-color: #ffffff; /* Fallback background */
-  overflow: hidden; /* Ensure image fits within circle */
+/* ================================================================
+   NAME + HEADER ROW
+   ================================================================ */
+.profile-info-card h1 {
+  font-family: var(--pf-font-display) !important;
+  font-size: 2.1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  color: var(--pf-ink) !important;
+  line-height: 1.15 !important;
 }
 
-@media (max-width: 640px) {
-  .avatar-overlap-container {
-    margin-top: -3rem; /* Slightly less pull-up on mobile */
-  }
-  
-  /* Make the avatar slightly smaller on mobile */
-  .avatar-overlap-container img, 
-  .avatar-overlap-container .profile-avatar-placeholder {
-    width: 90px !important;
-    height: 90px !important;
-  }
+/* Username */
+.profile-info-card .text-sm.text-slate-500 {
+  font-family: var(--pf-font-body);
+  font-size: 0.875rem;
+  color: var(--pf-ink-faint);
+  letter-spacing: 0.02em;
 }
 
-/* Fix the connection stack for mobile */
-.connections-stack {
-  display: flex;
-  flex-wrap: wrap; /* Allow wrapping if there are many */
-  justify-content: center;
-  margin: auto;
-  gap: 4px; /* Add gap if they wrap */
+/* Verified badge */
+.profile-info-card .bg-slate-100.text-sky-700 {
+  background: linear-gradient(135deg, #eff6ff, #e0f2fe) !important;
+  color: #0369a1 !important;
+  border: 1px solid rgba(3, 105, 161, 0.15) !important;
+  font-family: var(--pf-font-label);
+  font-size: 0.65rem !important;
+  letter-spacing: 0.14em !important;
+  padding: 0.3rem 0.75rem !important;
+  border-radius: var(--pf-radius-pill) !important;
+  box-shadow: 0 2px 8px rgba(3, 105, 161, 0.1);
 }
 
+/* ================================================================
+   ACTION BUTTONS
+   ================================================================ */
 
-  
-  /* Make the avatar slightly smaller on mobile */
-  .avatar-overlap-container img, 
-  .avatar-overlap-container .profile-avatar-placeholder {
-    width: 120px !important;
-    height: 120px !important;
-  }
-
-
-/* Fix the connection stack for mobile */
-.connections-stack {
-  display: flex;
-  flex-wrap: wrap; /* Allow wrapping if there are many */
-  justify-content: center;
-  gap: 4px; /* Add gap if they wrap */
+/* Follow/Unfollow */
+.profile-info-card button.bg-\[var\(--accent\)\] {
+  font-family: var(--pf-font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  padding: 0.65rem 1.4rem !important;
+  border-radius: var(--pf-radius-pill) !important;
+  box-shadow: var(--pf-shadow-btn) !important;
+  transition: transform var(--pf-transition-spring), box-shadow var(--pf-transition), background var(--pf-transition) !important;
 }
 
-@media (min-width: 768px) {
-  .connections-stack {
-    gap: 0; /* Revert to overlapping on desktop */
-  }
-  .stack-item {
-    margin-left: -12px;
-  }
+.profile-info-card button.bg-\[var\(--accent\)\]:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: var(--pf-shadow-btn-hover) !important;
 }
-/* 3. Connections Section 
-   Ensures the overlapping circles look clean.
-*/
+
+/* All rounded-full buttons in the action row */
+.profile-info-card .flex.flex-wrap.justify-center.gap-3 button {
+  font-family: var(--pf-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.65rem 1.4rem;
+  transition: transform var(--pf-transition-spring), box-shadow var(--pf-transition) !important;
+}
+
+.profile-info-card .flex.flex-wrap.justify-center.gap-3 button:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--pf-shadow-btn-hover);
+}
+
+/* Edit profile button */
+.profile-info-card button.bg-slate-50 {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border: 1px solid var(--pf-border-strong) !important;
+  box-shadow: var(--pf-shadow-btn) !important;
+}
+
+.profile-info-card button.bg-slate-50:hover {
+  background: #ffffff !important;
+  border-color: var(--pf-accent) !important;
+  color: var(--pf-accent) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--pf-shadow-btn-hover) !important;
+}
+
+/* ================================================================
+   BIO
+   ================================================================ */
+.profile-info-card .max-w-3xl.text-base {
+  font-family: var(--pf-font-body);
+  font-size: 0.975rem !important;
+  line-height: 1.8 !important;
+  color: #475569 !important;
+  letter-spacing: 0.005em;
+}
+
+/* ================================================================
+   INFO CHIPS (occupation, location, etc.)
+   ================================================================ */
+.profile-info-card .grid.grid-cols-1 .inline-flex.rounded-3xl {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border: 1px solid var(--pf-border) !important;
+  font-family: var(--pf-font-body);
+  font-size: 0.82rem !important;
+  color: #475569 !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: var(--pf-radius-chip) !important;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+  transition: transform var(--pf-transition-spring), box-shadow var(--pf-transition), background var(--pf-transition);
+  letter-spacing: 0.01em;
+}
+
+.profile-info-card .grid.grid-cols-1 .inline-flex.rounded-3xl:hover {
+  background: #fff !important;
+  border-color: var(--pf-border-strong) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--pf-shadow-stat) !important;
+}
+
+.profile-info-card .grid.grid-cols-1 .inline-flex svg {
+  color: var(--pf-ink-faint) !important;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   STATS BLOCK
+   ================================================================ */
+.profile-info-card .rounded-\[22px\] {
+  background: rgba(248, 250, 252, 0.7) !important;
+  border: 1px solid var(--pf-border) !important;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+  padding: 1.25rem !important;
+}
+
+/* Individual stat card */
+.profile-info-card .rounded-\[18px\].bg-white {
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  border: 1px solid var(--pf-border) !important;
+  box-shadow: var(--pf-shadow-stat) !important;
+  padding: 1.25rem 1rem !important;
+  transition: transform var(--pf-transition-spring), box-shadow var(--pf-transition) !important;
+  cursor: default;
+}
+
+.profile-info-card .rounded-\[18px\].bg-white:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--pf-shadow-stat-hover) !important;
+}
+
+/* Stat number */
+.profile-info-card .rounded-\[18px\] .text-3xl {
+  font-family: var(--pf-font-display) !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: var(--pf-ink) !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.1 !important;
+}
+
+/* Stat label */
+.profile-info-card .rounded-\[18px\] .text-xs.uppercase {
+  font-family: var(--pf-font-label) !important;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.2em !important;
+  color: var(--pf-ink-faint) !important;
+  margin-top: 0.4rem !important;
+}
+
+/* ================================================================
+   CHAT BUTTON
+   ================================================================ */
+.profile-info-card .w-full.flex.justify-center button {
+  font-family: var(--pf-font-body) !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.7rem 1.75rem !important;
+  border: 1px solid var(--pf-border-strong) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: var(--pf-ink) !important;
+  box-shadow: var(--pf-shadow-btn) !important;
+  letter-spacing: 0.01em;
+  transition: all var(--pf-transition-spring) !important;
+}
+
+.profile-info-card .w-full.flex.justify-center button:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  border-color: var(--pf-accent) !important;
+  color: var(--pf-accent) !important;
+  box-shadow: var(--pf-shadow-btn-hover) !important;
+}
+
+/* ================================================================
+   PROFILE VIEWERS
+   ================================================================ */
+.profile-info-card .rounded-\[24px\] {
+  background: rgba(248, 250, 252, 0.6) !important;
+  border: 1px solid var(--pf-border) !important;
+  border-radius: 20px !important;
+  padding: 1rem !important;
+}
+
+/* ================================================================
+   CONNECTIONS SECTION
+   ================================================================ */
+.profile-info-card h3.text-lg.font-semibold {
+  font-family: var(--pf-font-display) !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  font-style: italic !important;
+  color: var(--pf-ink) !important;
+  letter-spacing: -0.01em !important;
+}
+
 .connections-stack {
   display: flex;
   align-items: center;
-  padding-left: 12px;
-  margin-top: 1rem;
   position: relative;
+  padding: 0.5rem 0;
 }
 
 .stack-item {
   position: relative;
-  margin-left: -12px; /* Creates the overlap effect */
+  margin-left: -14px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform var(--pf-transition-spring), z-index 0s;
+}
+
+.stack-item:first-child {
+  margin-left: 0;
 }
 
 .stack-item:hover {
-  transform: translateY(-4px);
-  z-index: 50 !important;
+  transform: translateY(-5px) scale(1.1);
+  z-index: 20 !important;
 }
 
 .stack-img {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
-  border-radius: 50%;
-  border: 3px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-radius: var(--pf-radius-pill);
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+  display: block;
+  transition: box-shadow var(--pf-transition);
+}
+
+.stack-item:hover .stack-img {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
 }
 
 .stack-img.fallback {
-  display: flex;
-  justify-content: center;
+  display: inline-flex;
   align-items: center;
-  font-size: 18px;
-  color: #ffffff;
-  font-weight: bold;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  font-family: var(--pf-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  border: 3.5px solid #ffffff;
 }
 
-/* 4. Tooltips for Connections 
-   Positioned above the stack item.
-*/
 .stack-tooltip {
   position: absolute;
-  top: -55px;
+  top: -52px;
   left: 50%;
-  transform: translateX(-50%);
-  width: max-content;
-  background: #ffffff;
-  padding: 6px 10px;
-  border-radius: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transform: translateX(-50%) translateY(6px);
+  min-width: max-content;
+  background: rgba(10, 15, 35, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.42rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--pf-shadow-tooltip);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   white-space: nowrap;
-  z-index: 100;
+  z-index: 30;
+}
+
+/* Tooltip arrow */
+.stack-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 5px;
+  background: rgba(10, 15, 35, 0.95);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 .stack-item:hover .stack-tooltip {
   opacity: 1;
-}
-
-.tooltip-arrow {
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #ffffff;
+  transform: translateX(-50%) translateY(0);
 }
 
 .tooltip-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #1f2937;
   margin: 0;
+  color: rgba(248, 250, 252, 0.95);
+  font-family: var(--pf-font-body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
-.tooltip-occupation {
-  font-size: 10px;
-  color: #6b7280;
-  margin: 0;
-}
-
-/* 5. Skeleton Loading Animations */
+/* ================================================================
+   SKELETON
+   ================================================================ */
 .skeleton-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  border: 3px solid #ffffff;
-  animation: pulse 1.6s infinite ease-in-out;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--pf-radius-pill);
+  background: linear-gradient(
+    105deg,
+    rgba(226, 232, 240, 0.7) 0%,
+    rgba(241, 245, 249, 0.95) 40%,
+    rgba(226, 232, 240, 0.7) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
+  border: 3.5px solid #ffffff;
 }
 
 .skeleton-line {
-  height: 8px;
-  border-radius: 4px;
-  background: #e5e7eb;
+  height: 10px;
+  border-radius: var(--pf-radius-pill);
+  background: linear-gradient(
+    105deg,
+    rgba(226, 232, 240, 0.7) 0%,
+    rgba(241, 245, 249, 0.95) 40%,
+    rgba(226, 232, 240, 0.7) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
   margin: 4px 0;
-  animation: pulse 1.6s infinite ease-in-out;
 }
 
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
-  100% { opacity: 0.4; }
+@keyframes shimmer {
+  0%   { background-position: 200% 0%; opacity: 0.5; }
+  50%  { background-position: 0% 0%; opacity: 1; }
+  100% { background-position: 200% 0%; opacity: 0.5; }
+}
+
+/* ================================================================
+   TABS
+   ================================================================ */
+.tabs-wrapper {
+  margin-top: 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  background: transparent;
+  padding: 0 0.25rem;
+}
+
+.tabs-container {
+  display: flex;
+  width: 100%;
+  gap: 0;
+  padding: 0.5rem 0.5rem 0;
+  justify-content: flex-start;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.85rem 1.25rem;
+  font-family: var(--pf-font-label);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pf-ink-faint);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color var(--pf-transition), border-color var(--pf-transition);
+  position: relative;
+}
+
+.tab-btn:hover {
+  color: var(--pf-ink);
+  background: transparent;
+}
+
+/* Active tab — editorial rule line */
+.tab-active {
+  color: var(--pf-ink) !important;
+  border-bottom-color: var(--pf-ink) !important;
+}
+
+.tab-inactive {
+  color: var(--pf-ink-faint);
+  border-bottom-color: transparent;
+}
+
+/* ================================================================
+   BLOCK BUTTON
+   ================================================================ */
+.block-wrapper {
+  padding: 0.75rem 1.5rem 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.block-btn {
+  font-family: var(--pf-font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--pf-radius-pill);
+  border: none;
+  cursor: pointer;
+  transition: all var(--pf-transition-spring);
+  box-shadow: var(--pf-shadow-btn);
+}
+
+.block-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--pf-shadow-btn-hover);
+}
+
+.block-btn-active {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.block-btn-active:hover {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+}
+
+.block-btn-unblock {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+}
+
+.block-btn-unblock:hover {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+}
+
+/* ================================================================
+   POSTS WRAPPER
+   ================================================================ */
+.posts-wrapper {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 0 1rem;
+}
+
+.text-muted {
+  font-family: var(--pf-font-body);
+  color: var(--pf-ink-faint);
+  font-style: italic;
+}
+
+/* ================================================================
+   AUTH SIDE PANEL (unauthenticated visitor split view)
+   ================================================================ */
+.auth-side-wrapper {
+  background: linear-gradient(160deg, #f1f5f9 0%, #e8edf7 50%, #f0f4fb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative grid pattern */
+.auth-side-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(148,163,184,0.08) 0, rgba(148,163,184,0.08) 1px, transparent 1px, transparent 60px),
+    repeating-linear-gradient(90deg, rgba(148,163,184,0.08) 0, rgba(148,163,184,0.08) 1px, transparent 1px, transparent 60px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-side-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ================================================================
+   CONNECTION STATUS BUTTON OVERRIDES
+   ================================================================ */
+
+/* Connected */
+.profile-info-card button.bg-slate-100.text-slate-700[disabled] {
+  background: linear-gradient(135deg, rgba(241, 245, 249, 0.9), rgba(248, 250, 252, 0.9)) !important;
+  border: 1px solid var(--pf-border-strong) !important;
+  color: #475569 !important;
+  font-family: var(--pf-font-body);
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: var(--pf-radius-pill) !important;
+  box-shadow: var(--pf-shadow-btn) !important;
+}
+
+/* Pending */
+.profile-info-card button.bg-amber-100.text-amber-700[disabled] {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  border: 1px solid rgba(217, 119, 6, 0.2) !important;
+  color: #92400e !important;
+  font-family: var(--pf-font-body);
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: var(--pf-radius-pill) !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1) !important;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 768px) {
+  .profile-info-card {
+    padding: 0 1.25rem 1.5rem;
+  }
+
+  .cover-wrapper {
+    height: 8rem;
+  }
+
+  .avatar-overlap-container {
+    width: 108px;
+    min-width: 108px;
+    height: 108px;
+    margin-top: -54px;
+  }
+
+  .profile-info-card h1 {
+    font-size: 1.7rem !important;
+  }
+
+  .tabs-container {
+    gap: 0;
+    padding: 0.35rem 0.25rem 0;
+  }
+
+  .tab-btn {
+    padding: 0.75rem 0.6rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+  }
+
+  .block-wrapper {
+    justify-content: center;
+    padding: 0.75rem 1rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cover-wrapper {
+    height: 6rem;
+  }
+
+  .profile-info-card h1 {
+    font-size: 1.45rem !important;
+  }
+
+  .avatar-overlap-container {
+    width: 96px;
+    min-width: 96px;
+    height: 96px;
+    margin-top: -48px;
+  }
+
+  .stack-img,
+  .stack-img.fallback,
+  .skeleton-circle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .profile-info-card {
+    padding: 0 1rem 1.25rem;
+  }
+}
+
+/* ================================================================
+   PROFILE.CSS ADDITIONS — page-level layout polish
+   ================================================================ */
+
+.profile_max_width {
+  max-width: 700px !important;
+}
+
+/* Skeleton pulse */
+.bg-skeleton {
+  background: linear-gradient(
+    105deg,
+    rgba(226, 232, 240, 0.7) 0%,
+    rgba(241, 245, 249, 0.95) 40%,
+    rgba(226, 232, 240, 0.7) 80%
+  );
+  background-size: 200% 100%;
+}
+
+.animate-skeleton {
+  animation: shimmer 1.6s infinite ease-in-out;
+}
+
+/* Mobile card flush */
+@media (max-width: 640px) {
+  .profile-card {
+    border-radius: 20px;
+    box-shadow: 0 2px 16px rgba(15, 23, 42, 0.08);
+  }
 }

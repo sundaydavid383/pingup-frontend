@@ -96,24 +96,54 @@ export const MessageSeenProvider = ({ children }) => {
     );
   }, []);
 
-  // ─── Socket: listen for new incoming messages ─────────────────────────────
-  useEffect(() => {
-    if (!socket || !user?._id) return;
+// ─── Socket: listen for new incoming messages ─────────────────────────────
+   useEffect(() => {
+     if (!socket || !user?._id) return;
 
-    const handleNewMessageAlert = (data) => {
-      const { from_user_id, chatId, message } = data;
+     const handleNewMessageAlert = (data) => {
+       const { from_user_id, chatId, message } = data;
 
-      if (from_user_id?.toString() === user._id?.toString()) return;
-      if (activeChatIdRef.current?.toString() === from_user_id?.toString()) return;
+       // Don't increment for our own messages
+       if (from_user_id?.toString() === user._id?.toString()) return;
 
-      updateConversationLastMessage(chatId, message);
-      incrementUnread(chatId);
-    };
-    socket.on("newMessageAlert", handleNewMessageAlert);
-    return () => {
-      socket.off("newMessageAlert", handleNewMessageAlert);
-  };
-  }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
+       // Get the conversation to find the other user ID
+       const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
+       const otherUserId = convo?.otherUser?._id?.toString();
+       
+       // Don't increment if we're currently viewing this chat (compare with other user)
+       if (otherUserId && activeChatIdRef.current?.toString() === otherUserId) return;
+
+       updateConversationLastMessage(chatId, message);
+       incrementUnread(chatId);
+     };
+     socket.on("newMessageAlert", handleNewMessageAlert);
+
+     const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
+       setUnreadCountsMap((prev) => {
+         // Get the conversation to find the other user ID
+         const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
+         const otherUserId = convo?.otherUser?._id?.toString();
+         
+         // If active chat, always keep count at 0
+         if (otherUserId && activeChatIdRef.current?.toString() === otherUserId) {
+           const updated = { ...prev, [chatId]: 0 };
+           setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+           return updated;
+         }
+         
+         const updated = { ...prev, [chatId]: unreadCount };
+         setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+         return updated;
+       });
+     };
+
+     socket.on("unreadCountUpdated", handleUnreadCountUpdated);
+
+     return () => {
+       socket.off("newMessageAlert", handleNewMessageAlert);
+       socket.off("unreadCountUpdated", handleUnreadCountUpdated);
+   };
+   }, [socket, user?._id, incrementUnread, updateConversationLastMessage, conversations]);
 
 //   // ─── Socket: listen for unread count updates from server ──────────────────
 // // Replace the unreadCountUpdated handler:

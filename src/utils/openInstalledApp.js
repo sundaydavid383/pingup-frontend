@@ -16,7 +16,7 @@ export function openInstalledApp() {
       }, 1500);
 
       // Attempt to open the installed app
-      window.location.href = "web+springsConnect://open";
+      window.location.href = "web+springsCircle://open";
 
       // If it succeeds, clear timeout (though unlikely to reach here)
       setTimeout(() => clearTimeout(timeoutId), 100);

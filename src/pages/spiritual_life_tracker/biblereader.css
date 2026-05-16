@@ -577,116 +577,6 @@ text-align: center;
   border-left: 4px solid #2563eb;
 }
 
-/* ============== mode button ============== */
-.mode-buttons {
-  position: fixed;
-  top: 2%;
-  right: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-  align-items: flex-end;
-}
-
-/* Base style for all buttons */
-.mode-buttons button {
-  padding: 10px;
-  width: 50px; /* small circle for inactive */
-  height: 50px;
-  border-radius: 50%;
-  border: 1px solid rgba(0,0,0,0.2);
-  font-weight: 600;
-  cursor: pointer;
-  background: #fff;
-  color: var(--primary);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Hover scale for inactive buttons */
-.mode-buttons button:not(:disabled):hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 10px rgba(0,0,0,0.15);
-}
-
-/* Active button style */
-.mode-buttons button:disabled {
-  width: 120px; /* expanded */
-  border-radius: 12px;
-  color: #fff;
-  cursor: not-allowed;
-  font-weight: 700;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-background: linear-gradient(90deg,
-  #3086f7 0%,
-  #0b67fa 25%,
-  #6b71a5 50%,
-  #204bdb 75%,
-  #8a95f8 100%
-);
-  background-size: 300% 100%;
-  animation: gradientShift 5s linear infinite;
-}
-
-/* Morphing blob layers */
-.mode-buttons button:disabled::before,
-.mode-buttons button:disabled::after {
-  content: '';
-  position: absolute;
-  width: 250%;
-  height: 250%;
-  top: -75%;
-  left: -75%;
-  border-radius: 50%;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.mode-buttons button:disabled::before {
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%);
-  animation: morph1 6s ease-in-out infinite;
-}
-
-.mode-buttons button:disabled::after {
-  background: radial-gradient(circle at 70% 70%, rgba(255,255,255,0.1) 0%, transparent 70%);
-  animation: morph2 8s ease-in-out infinite;
-}
-
-/* Gradient animation */
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Morphing blob animations */
-@keyframes morph1 {
-  0% { border-radius: 40% 60% 55% 45%; transform: translate(0,0) scale(1); }
-  25% { border-radius: 50% 50% 60% 40%; transform: translate(15%, -10%) scale(1.1); }
-  50% { border-radius: 60% 40% 50% 50%; transform: translate(-10%, 15%) scale(0.95); }
-  75% { border-radius: 45% 55% 50% 60%; transform: translate(-5%, -15%) scale(1.05); }
-  100% { border-radius: 40% 60% 55% 45%; transform: translate(0,0) scale(1); }
-}
-
-@keyframes morph2 {
-  0% { border-radius: 55% 45% 60% 40%; transform: translate(0,0) scale(1); }
-  25% { border-radius: 60% 50% 45% 55%; transform: translate(-10%, 5%) scale(1.05); }
-  50% { border-radius: 45% 55% 50% 60%; transform: translate(10%, -10%) scale(0.95); }
-  75% { border-radius: 50% 50% 55% 45%; transform: translate(-5%, 10%) scale(1.1); }
-  100% { border-radius: 55% 45% 60% 40%; transform: translate(0,0) scale(1); }
-}
-
-
-
-
-
 
 /* ===== Random 3 Verse Cards ===== */
 .random-verse-card {
@@ -880,59 +770,111 @@ background: linear-gradient(90deg,
     box-shadow: 0 0 14px rgba(30, 64, 175, 0.35);
   }
 }
-
 .verse-card {
-  animation: verse-rise 420ms cubic-bezier(0.22, 1, 0.36, 1);
-  background: linear-gradient(
-    180deg,
-    rgba(220, 227, 248, 0.6),
-    transparent 40%
-  ),
-  rgba(95, 120, 196, 0.06)
-  ;
-  backdrop-filter: blur(22px);
-  transition:.3s linear;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--input-border);
+  background: var(--verse-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  animation: verse-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.verse-card:hover{
-    background: linear-gradient(
-    180deg,
-    rgba(185, 189, 197, 0.6),
-    transparent 40%
-  ),
-  rgba(69, 98, 185, 0.6);
-  backdrop-filter: blur(22px);
+ 
+/* Left accent bar */
+.verse-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--primary);
+  opacity: 0;
+  border-radius: 0 2px 2px 0;
+  transition: opacity 0.25s ease;
 }
-
-
-
-.verse-reference{
+ 
+.verse-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(99, 102, 241, 0.08);
+}
+ 
+.verse-card:hover::before {
+  opacity: 1;
+}
+ 
+/* Reference label */
+.verse-reference {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--primary);
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
 }
-.verse-card:hover .verse-reference{
-  color: var(--bg-light)
+ 
+.verse-card:hover .verse-reference {
+  opacity: 1;
+  color: var(--hover-light);
 }
-
+ 
+/* Glow accent (replaces the radial after pseudo) */
 .verse-card::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
   background: radial-gradient(
-    circle at top left,
-    var(--radial-highlight),
-    transparent 60%
+    ellipse at top left,
+    rgba(255, 255, 255, 0.04),
+    transparent 55%
   );
 }
-
+ 
+/* Accent class keeps existing animation */
 .verse-accent {
   animation: accent-glow 500ms ease-out forwards;
 }
-
-/* ===== Navigation Feedback Flash ===== */
+ 
+ 
+/* ═══════════════════════════════════════════════════
+   NAV FEEDBACK FLASH — Replace existing block
+   ═══════════════════════════════════════════════════ */
+ 
 @keyframes navFeedbackFade {
-  0% { opacity: 0; transform: translate(-50%, -10px); }
-  15% { opacity: 1; transform: translate(-50%, 0); }
-  85% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -10px); }
+  0%   { opacity: 0; transform: translate(-50%, -14px) scale(0.94); }
+  12%  { opacity: 1; transform: translate(-50%, 0)     scale(1);    }
+  80%  { opacity: 1; transform: translate(-50%, 0)     scale(1);    }
+  100% { opacity: 0; transform: translate(-50%, -8px)  scale(0.97); }
 }
+ 
+/* The nav pill itself — in ScriptureAssistant JSX, add class="nav-feedback-pill" */
+.nav-feedback-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--primary);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 4px 20px rgba(30, 64, 175, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: navFeedbackFade 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+ 
+.nav-feedback-pill::before {
+  content: '→';
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+ 

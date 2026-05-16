@@ -1,0 +1,475 @@
+/* ============================================================
+   POSTCARD — Refined Editorial Glass
+   Drop alongside your existing component styles.
+   Uses your :root vars + adds postcard-scoped tokens.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap');
+
+/* ── SCOPED TOKENS ── */
+.pc-root {
+  --pc-glass:        rgba(255, 255, 255, 0.72);
+  --pc-glass-hover:  rgba(255, 255, 255, 0.86);
+  --pc-border:       rgba(200, 210, 235, 0.55);
+  --pc-border-hover: rgba(var(--primary-rgb), 0.28);
+  --pc-shadow:
+    0 1px 2px  rgba(30, 50, 100, 0.04),
+    0 4px 12px rgba(30, 50, 100, 0.06),
+    0 16px 40px rgba(30, 50, 100, 0.07);
+  --pc-shadow-hover:
+    0 2px 4px  rgba(30, 50, 100, 0.06),
+    0 8px 24px rgba(30, 50, 100, 0.10),
+    0 28px 56px rgba(30, 50, 100, 0.12);
+  --pc-radius:       18px;
+  --pc-action-color: #64748b;
+  --pc-transition:   all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── CARD SHELL ── */
+.pc-root {
+  position: relative;
+  background: var(--pc-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--pc-border);
+  border-radius: var(--pc-radius);
+  box-shadow: var(--pc-shadow);
+  padding: 18px 18px 14px;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  transition: var(--pc-transition);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Top prismatic sheen */
+.pc-root::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 8%; right: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.85) 40%,
+    rgba(var(--primary-rgb), 0.4) 60%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Subtle ambient glow on hover */
+.pc-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--pc-radius);
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(var(--primary-rgb), 0.06) 0%,
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pc-root:hover {
+  border-color: var(--pc-border-hover);
+  box-shadow: var(--pc-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.pc-root:hover::after {
+  opacity: 1;
+}
+
+/* ── HEADER ── */
+.pc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 14px;
+}
+
+.pc-author {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Avatar wrapper — animated ring */
+.pc-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.pc-avatar-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 180deg,
+    rgba(var(--primary-rgb), 0.7),
+    rgba(150, 180, 255, 0.4),
+    rgba(var(--primary-rgb), 0.1),
+    rgba(var(--primary-rgb), 0.7)
+  );
+  animation: pc-ring-spin 6s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.pc-root:hover .pc-avatar-wrap::before {
+  opacity: 1;
+}
+
+.pc-avatar-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: var(--pc-glass);
+  z-index: -1; /* clips the conic behind the avatar */
+}
+
+@keyframes pc-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Author text */
+.pc-author-name {
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--secondary, #1e2a3a);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pc-author-name .badge-check {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.pc-author-handle {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.pc-author-time {
+  font-size: 11px;
+  color: #b0bec5;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+}
+
+/* ── CONTENT ── */
+.pc-content {
+  font-family: 'Geist', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #334155;
+  white-space: pre-line;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 14px;
+  letter-spacing: 0.005em;
+}
+
+/* Long-form quote feel: italicise first paragraph if it's short */
+.pc-content p:first-child:only-child {
+  font-family: 'Instrument Serif', serif;
+  font-size: 15.5px;
+  color: #1e293b;
+}
+
+/* Read More button */
+.pc-read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Geist', sans-serif;
+  color: var(--primary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.pc-read-more:hover { opacity: 0.7; }
+
+/* ── MEDIA / ATTACHMENTS ── */
+.pc-media-wrap {
+  position: relative;
+  z-index: 2;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid rgba(200, 210, 235, 0.4);
+  box-shadow: 0 2px 12px rgba(30, 50, 100, 0.07);
+}
+
+.pc-media-wrap img,
+.pc-media-wrap video {
+  display: block;
+  border-radius: 12px;
+}
+
+/* ── DIVIDER ── */
+.pc-divider {
+  height: 1px;
+  margin: 12px 0 10px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(200, 210, 235, 0.7) 20%,
+    rgba(var(--primary-rgb), 0.2) 50%,
+    rgba(200, 210, 235, 0.5) 80%,
+    transparent
+  );
+  border: none;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── ACTION BAR ── */
+.pc-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+}
+
+/* Generic action pill */
+.pc-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--pc-action-color);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--pc-transition);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.pc-action:hover {
+  background: rgba(var(--primary-rgb), 0.06);
+  border-color: rgba(var(--primary-rgb), 0.15);
+  color: var(--primary);
+}
+
+/* Like — active state */
+.pc-action.liked {
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.07);
+  border-color: rgba(225, 29, 72, 0.18);
+}
+
+.pc-action.liked:hover {
+  background: rgba(225, 29, 72, 0.12);
+  border-color: rgba(225, 29, 72, 0.28);
+}
+
+/* Dislike — active state */
+.pc-action.disliked {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.07);
+  border-color: rgba(249, 115, 22, 0.18);
+}
+
+/* Like count bubble */
+.pc-action-count {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Like icon — heartbeat on active */
+.pc-like-icon-active {
+  animation: pc-heartbeat 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes pc-heartbeat {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.35); }
+  60%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* People-liked mini button (FaUsers) */
+.pc-likes-peek {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.pc-likes-peek:hover {
+  background: var(--primary);
+  transform: scale(1.1);
+}
+
+.pc-likes-peek:hover svg {
+  color: white;
+}
+
+/* ── LIKES POPUP ── */
+.pc-likes-popup {
+  position: absolute;
+  bottom: 56px;
+  right: 8px;
+  width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(200, 210, 235, 0.6);
+  border-radius: 16px;
+  box-shadow:
+    0 4px 24px rgba(30, 50, 100, 0.12),
+    0 1px 4px rgba(30, 50, 100, 0.06);
+  padding: 14px;
+  z-index: 50;
+  animation: pc-popup-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pc-popup-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pc-likes-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pc-likes-popup-title {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pc-likes-popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+}
+
+.pc-likes-popup-close:hover { background: #e2e8f0; }
+
+.pc-likes-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.pc-likes-popup-item:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.pc-likes-popup-name {
+  font-family: 'Geist', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pc-likes-popup-handle {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ── COMMENT SECTION TRANSITION ── */
+.pc-comments-enter {
+  animation: pc-expand-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pc-expand-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── STAGGER ENTRY ── */
+.pc-root {
+  animation: pc-card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pc-card-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Feed list: stagger each card via nth-child (add to feed wrapper) */
+.feed-list .pc-root:nth-child(1)  { animation-delay: 0.04s; }
+.feed-list .pc-root:nth-child(2)  { animation-delay: 0.08s; }
+.feed-list .pc-root:nth-child(3)  { animation-delay: 0.12s; }
+.feed-list .pc-root:nth-child(4)  { animation-delay: 0.16s; }
+.feed-list .pc-root:nth-child(5)  { animation-delay: 0.20s; }
+.feed-list .pc-root:nth-child(n+6){ animation-delay: 0.24s; }
+
+/* ── SCROLLBAR (popup) ── */
+.pc-likes-popup::-webkit-scrollbar { width: 3px; }
+.pc-likes-popup::-webkit-scrollbar-track { background: transparent; }
+.pc-likes-popup::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-rgb), 0.3);
+  border-radius: 10px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .pc-root { padding: 14px 13px 11px; border-radius: 14px; }
+  .pc-action { padding: 5px 9px; font-size: 12px; }
+}

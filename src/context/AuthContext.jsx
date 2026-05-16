@@ -9,7 +9,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("springsConnectUser");
+    const saved = localStorage.getItem("springsCircleUser");
     const returning = saved ? JSON.parse(saved) : null;
     console.log("🔄 [AuthContext] Initializing from localStorage:", {
       hasUser: !!returning,
@@ -102,11 +102,11 @@ useEffect(() => {
         username: user.username,
         onboardingCompleted: user.onboardingCompleted
       });
-      localStorage.setItem("springsConnectUser", JSON.stringify(user));
+      localStorage.setItem("springsCircleUser", JSON.stringify(user));
       localStorage.setItem("token", token);
     } else {
       console.log("🗑️  [AuthContext] Clearing localStorage (logout)");
-      localStorage.removeItem("springsConnectUser");
+      localStorage.removeItem("springsCircleUser");
       localStorage.removeItem("token");
     }
   }, [user, token]);

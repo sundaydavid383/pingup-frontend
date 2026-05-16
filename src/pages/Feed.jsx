@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Megaphone, X, Globe, PenLine} from "lucide-react";
 import axios from "axios";
 import Loading from "../component/shared/Loading";
@@ -44,6 +44,7 @@ const Feed = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const pageRef = useRef(1);
+  const mainRef = useRef(null);
   const [ref, inView] = useInView();
   const navigate = useNavigate()
   const [currentPost, setCurrentPost] = useState(null)
@@ -54,19 +55,38 @@ const Feed = () => {
 
 
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
+  const authHeaders = useMemo(
+    () => ({ Authorization: `Bearer ${token}` }),
+    [token]
+  );
 
-  const getLocation = async (userId) => {
-    try {
-      const { latitude, longitude, city, country } = await location();
-      await axios.get(`${BASE}api/user/getlocation`, {
-        params: { userId, currentCity: city, country, latitude, longitude },
-        headers: authHeaders,
-      });
-    } catch (err) {
-      console.error("❌ Location error:", err.message);
-    }
+  const dedupePosts = (posts = []) => {
+    const seen = new Set();
+    return Array.isArray(posts)
+      ? posts.filter((post) => {
+          const id = post?._id?.toString();
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        })
+      : [];
   };
+
+  const getLocation = useCallback(
+    async (userId) => {
+      if (!userId) return;
+      try {
+        const { latitude, longitude, city, country } = await location();
+        await axios.get(`${BASE}api/user/getlocation`, {
+          params: { userId, currentCity: city, country, latitude, longitude },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.error("❌ Location error:", err.message);
+      }
+    },
+    [BASE, token]
+  );
 
   const fetchFeeds = useCallback(
     async (reset = false) => {
@@ -83,8 +103,8 @@ const Feed = () => {
 
         const { posts = [], hasMore: backendHasMore } = res.data;
 
-        if (reset) setFeeds(posts);
-        else setFeeds((prev) => [...prev, ...posts]);
+        if (reset) setFeeds(dedupePosts(posts));
+        else setFeeds((prev) => dedupePosts([...prev, ...posts]));
 
         setHasMore(backendHasMore);
 
@@ -93,9 +113,10 @@ const Feed = () => {
         console.error("Feed fetch error:", err.message);
         if (reset)
           setFeeds(
-            localStorage.getItem("springsconnectfeeds")
-              ? JSON.parse(localStorage.getItem("springsconnectfeeds"))
-              : assets.dummyPostData
+            dedupePosts(
+              localStorage.getItem("springscirclefeeds") &&
+              JSON.parse(localStorage.getItem("springscirclefeeds"))
+            )
           );
         setError("Failed to load live feed, showing fallback data.");
         setHasMore(false);
@@ -136,63 +157,57 @@ const Feed = () => {
 
 
 useEffect(() => {
-  // runOncePerSession({
-  //   key: "springs_connect_feeds",
-  //   callback: () => {
-      fetchFeeds(true);
-      getLocation(user._id);
-  
-  //   },
-  //   debug: false // set to true for logging
-  // });
-}, []);
+  const initializeFeed = async () => {
+    if (!user?._id) return;
 
-// Restore scroll position and cached data on mount (no auto-refresh)
-useEffect(() => {
-  // Restore scroll position
-  const savedScroll = localStorage.getItem(FEED_SCROLL_KEY);
-  if (savedScroll) {
-    setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
-  }
-  
-  // Load cached data if available (don't fetch fresh)
-  const cachedData = localStorage.getItem(FEED_DATA_KEY);
-  if (cachedData) {
-    try {
-      const parsed = JSON.parse(cachedData);
-      setFeeds(parsed);
-      setLoadingInitial(false);
-    } catch (e) {
-      console.warn('Failed to load cached feed:', e);
-      fetchFeeds(true);
+    const savedScroll = localStorage.getItem(FEED_SCROLL_KEY);
+    const cachedData = localStorage.getItem(FEED_DATA_KEY);
+
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        setFeeds(dedupePosts(parsed));
+        setLoadingInitial(false);
+      } catch (e) {
+        console.warn('Failed to load cached feed:', e);
+        await fetchFeeds(true);
+      }
+    } else {
+      await fetchFeeds(true);
     }
-  } else {
-    // First visit - fetch fresh
-    fetchFeeds(true);
-  }
-  
-  getLocation(user._id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
 
-// Save scroll position on scroll
-useEffect(() => {
-  const handleScroll = () => {
-    localStorage.setItem(FEED_SCROLL_KEY, window.scrollY.toString());
+    if (savedScroll && mainRef.current) {
+      mainRef.current.scrollTo({ top: parseInt(savedScroll, 10), behavior: 'auto' });
+    }
+
+    await getLocation(user._id);
   };
-  window.addEventListener('scroll', handleScroll, { passive: true });
-  return () => window.removeEventListener('scroll', handleScroll);
-}, []);
+
+  initializeFeed();
+}, [fetchFeeds, getLocation, user?._id]);
+
+// Save scroll position on the actual feed scroll container
+useEffect(() => {
+  const container = mainRef.current;
+  if (!container) return;
+
+  const handleScroll = () => {
+    localStorage.setItem(FEED_SCROLL_KEY, container.scrollTop.toString());
+  };
+
+  container.addEventListener('scroll', handleScroll, { passive: true });
+  return () => container.removeEventListener('scroll', handleScroll);
+}, [mainRef]);
 
 // Save feed data to cache when it changes
 useEffect(() => {
-  if (feeds.length > 0) {
+  if (feeds?.length > 0) {
     localStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
   }
 }, [feeds]);
 
   useEffect(() => {
-    console.log("FEED IDS:", feeds.map((f) => f._id));
+    console.log("FEED IDS:", feeds?.map((f) => f._id));
   }, [feeds]);
 
 
@@ -202,10 +217,11 @@ useEffect(() => {
       <div className="w-full max-w-[100vw] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0">
         {/* Main Feed */}
         <main
-          className="page-container flex-1 min-h-screen overflow-y-auto py-8 mx-auto box-border overflow-x-hidden
-          [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
-        >
-          {/* Refresh Button */}
+          ref={mainRef}
+           className="page-container flex-1 h-screen overflow-y-scroll py-8 mx-auto box-border overflow-x-hidden
+  [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
+  
+        >         {/* Refresh Button */}
           <div className="flex justify-end mb-2 px-4">
             <RefreshButton 
               onRefresh={handleRefresh} 
@@ -265,9 +281,9 @@ useEffect(() => {
           <div className="space-y-6 py-5 no-scrollbar pb-25 relative max-w-[500px] mx-auto">
             {loadingInitial ? (
       <PostCardSkeleton />
-    ) :    feeds.length === 0 ? (
+    ) :    feeds?.length === 0 ? (
   <EmptyFeed />
-): feeds.map((post, i) => (
+): feeds?.map((post, i) => (
   <PostWrapper
   key={post._id}
   index={i}
@@ -306,7 +322,7 @@ useEffect(() => {
           </div>
 
           {hasMore && (
-            <InfiniteScrollTrigger onReachBottom={() => fetchFeeds(false)} />
+            <InfiniteScrollTrigger root={mainRef.current} onReachBottom={() => fetchFeeds(false)} />
           )}
           {loadingMore && (
             <div className="loading-dots">

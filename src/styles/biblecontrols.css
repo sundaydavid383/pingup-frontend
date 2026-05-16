@@ -1,31 +1,110 @@
-/* FILE: biblecontrols.css */
-/* UI polish only: spacing, padding, margins inside controls bar and popovers */
+/* ============================================================
+   BIBLECONTROLS.CSS  —  Cinematic Scripture Controls
+   Deep redesign. Zero functionality changes.
+   All existing class names preserved exactly.
+   ============================================================ */
 
-/* ============================= */
-/* BibleControls - YouTube Style */
-/* ============================= */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
 
-/* Main bottom bar - only applies within bible reader context */
+/* ============================================================
+   DESIGN TOKENS — layered on top of biblereader.css vars
+   ============================================================ */
+.bible-page[data-theme="dark"],
+:root {
+  --ctrl-bar-bg: rgba(6, 10, 28, 0.92);
+  --ctrl-bar-border: rgba(99, 130, 245, 0.12);
+  --ctrl-bar-glow: 0 -8px 40px rgba(30, 64, 175, 0.15), 0 -1px 0 rgba(99, 130, 245, 0.15);
+  --ctrl-btn-bg: rgba(255, 255, 255, 0.05);
+  --ctrl-btn-border: rgba(255, 255, 255, 0.08);
+  --ctrl-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --ctrl-btn-active-bg: rgba(223, 190, 61, 0.15);
+  --ctrl-btn-active-border: rgba(223, 190, 61, 0.4);
+  --ctrl-btn-active-color: rgb(223, 190, 61);
+  --ctrl-popover-bg: rgba(6, 12, 35, 0.97);
+  --ctrl-popover-border: rgba(223, 190, 61, 0.12);
+  --ctrl-popover-shadow: 0 -4px 40px rgba(0,0,0,0.6), 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  --ctrl-track-bg: rgba(255, 255, 255, 0.08);
+  --ctrl-thumb-shadow: 0 0 8px rgba(223, 190, 61, 0.5), 0 2px 6px rgba(0,0,0,0.4);
+  --ctrl-label-color: rgba(223, 190, 61, 0.75);
+  --ctrl-text: rgba(220, 225, 255, 0.9);
+  --ctrl-text-muted: rgba(148, 163, 200, 0.7);
+  --ctrl-separator: rgba(99, 130, 245, 0.1);
+  --ctrl-progress-thumb-size: 16px;
+  --ctrl-mood-option-hover: rgba(223, 190, 61, 0.08);
+  --ctrl-mood-option-active-bg: linear-gradient(90deg, rgba(223, 190, 61, 0.18), rgba(223, 190, 61, 0.06));
+  --ctrl-input-bg: rgba(15, 25, 65, 0.7);
+  --ctrl-input-border: rgba(223, 190, 61, 0.2);
+  --ctrl-input-focus-border: rgba(223, 190, 61, 0.6);
+  --ctrl-input-focus-ring: rgba(223, 190, 61, 0.1);
+}
+
+.bible-page[data-theme="light"] {
+  --ctrl-bar-bg: rgba(248, 250, 255, 0.96);
+  --ctrl-bar-border: rgba(30, 64, 175, 0.1);
+  --ctrl-bar-glow: 0 -8px 40px rgba(30, 64, 175, 0.08), 0 -1px 0 rgba(30, 64, 175, 0.12);
+  --ctrl-btn-bg: rgba(0, 0, 0, 0.04);
+  --ctrl-btn-border: rgba(0, 0, 0, 0.08);
+  --ctrl-btn-hover-bg: rgba(30, 64, 175, 0.08);
+  --ctrl-btn-active-bg: rgba(180, 130, 20, 0.1);
+  --ctrl-btn-active-border: rgba(180, 130, 20, 0.35);
+  --ctrl-btn-active-color: #b45309;
+  --ctrl-popover-bg: rgba(255, 255, 255, 0.99);
+  --ctrl-popover-border: rgba(180, 130, 20, 0.2);
+  --ctrl-popover-shadow: 0 -4px 40px rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04) inset;
+  --ctrl-track-bg: rgba(0, 0, 0, 0.1);
+  --ctrl-thumb-shadow: 0 0 6px rgba(180, 130, 20, 0.35), 0 2px 4px rgba(0,0,0,0.2);
+  --ctrl-label-color: rgba(120, 80, 10, 0.8);
+  --ctrl-text: rgba(15, 23, 42, 0.9);
+  --ctrl-text-muted: rgba(71, 85, 105, 0.7);
+  --ctrl-separator: rgba(30, 64, 175, 0.08);
+  --ctrl-progress-thumb-size: 16px;
+  --ctrl-mood-option-hover: rgba(30, 64, 175, 0.06);
+  --ctrl-mood-option-active-bg: linear-gradient(90deg, rgba(180, 130, 20, 0.14), rgba(180, 130, 20, 0.04));
+  --ctrl-input-bg: rgba(240, 245, 255, 0.8);
+  --ctrl-input-border: rgba(30, 64, 175, 0.2);
+  --ctrl-input-focus-border: rgba(30, 64, 175, 0.5);
+  --ctrl-input-focus-ring: rgba(30, 64, 175, 0.08);
+}
+
+/* ============================================================
+   MAIN CONTROLS BAR
+   ============================================================ */
 .bible-page .bible-controls-bar,
 .bible-controls-bar.bible-page-context {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 85px;
-  background: var(--form-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  height: 80px;
+  background: var(--ctrl-bar-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--ctrl-bar-border);
+  box-shadow: var(--ctrl-bar-glow);
   z-index: 900;
-  transition: opacity 0.35s ease, transform 0.35s ease;
-  padding: 0 1.5rem;
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 0 2rem;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Thin accent line at very top of bar */
+.bible-page .bible-controls-bar::before,
+.bible-controls-bar.bible-page-context::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold, #dfbe3d), transparent);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .bible-controls-bar.hidden {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(100%);
   pointer-events: none;
 }
 
@@ -35,7 +114,9 @@
   pointer-events: auto;
 }
 
-/* Inner flex container */
+/* ============================================================
+   INNER LAYOUT
+   ============================================================ */
 .bible-controls-inner {
   display: flex;
   align-items: center;
@@ -46,10 +127,12 @@
   margin: 0 auto;
 }
 
-/* Progress Section - takes most space */
+/* ============================================================
+   PROGRESS SECTION
+   ============================================================ */
 .progress-section {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
 }
 
 .progress-control {
@@ -59,52 +142,94 @@
   width: 100%;
 }
 
-.progress-control input[type="range"] {
+/* Progress range — override track + thumb */
+.progress-control input[type="range"],
+.chapter-progress-slider {
   flex: 1;
-  height: 6px;
-  border-radius: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: height 0.15s ease;
+  outline: none;
+  transition: height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: var(--ctrl-track-bg);
 }
 
-.progress-control input[type="range"]:hover {
-  height: 8px;
-}
-
-/* YouTube-style progress track colors */
-.chapter-progress-slider::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, var(--gold, #fbbf24) 0%, var(--gold, #fbbf24) var(--progress, 0%), rgba(255,255,255,0.2) var(--progress, 0%), rgba(255,255,255,0.2) 100%);
+.progress-control input[type="range"]:hover,
+.chapter-progress-slider:hover {
   height: 6px;
-  border-radius: 3px;
+}
+
+.chapter-progress-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent; /* set via inline style */
 }
 
 .chapter-progress-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: var(--ctrl-progress-thumb-size);
+  height: var(--ctrl-progress-thumb-size);
   border-radius: 50%;
-  background: var(--gold, #fbbf24);
+  background: radial-gradient(circle at 35% 35%, #fde68a, var(--gold, #dfbe3d));
+  border: 2px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  margin-top: -4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  margin-top: -6px;
+  box-shadow: var(--ctrl-thumb-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chapter-progress-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 0 14px rgba(223, 190, 61, 0.7), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.chapter-progress-slider::-moz-range-thumb {
+  width: var(--ctrl-progress-thumb-size);
+  height: var(--ctrl-progress-thumb-size);
+  border-radius: 50%;
+  background: var(--gold, #dfbe3d);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  box-shadow: var(--ctrl-thumb-shadow);
 }
 
 .progress-value {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--gold, #fbbf24);
-  min-width: 45px;
+  font-family: 'Cinzel', serif;
+  color: var(--gold, #dfbe3d);
+  min-width: 42px;
   text-align: right;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
 }
 
-/* Right controls section */
+/* ============================================================
+   RIGHT CONTROLS
+   ============================================================ */
 .controls-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
 }
 
-/* Control icon buttons */
+/* Vertical divider before right controls */
+.controls-right::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 28px;
+  background: var(--ctrl-separator);
+  margin-right: 0.2rem;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   CONTROL ICON WRAPPER + BUTTON
+   ============================================================ */
 .control-icon-wrapper {
   position: relative;
 }
@@ -112,106 +237,148 @@
 .control-icon-btn {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.9);
+  gap: 0.38rem;
+  padding: 0.45rem 0.8rem;
+  background: var(--ctrl-btn-bg);
+  border: 1px solid var(--ctrl-btn-border);
+  border-radius: 8px;
+  color: var(--ctrl-text);
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer on hover */
+.control-icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .control-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
+  background: var(--ctrl-btn-hover-bg);
+  border-color: rgba(99, 130, 245, 0.25);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.control-icon-btn:hover::after {
+  opacity: 1;
+}
+
+.control-icon-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .control-icon-btn.active {
-  background: rgba(251, 191, 36, 0.2);
-  border-color: var(--gold, #fbbf24);
-  color: var(--gold, #fbbf24);
+  background: var(--ctrl-btn-active-bg);
+  border-color: var(--ctrl-btn-active-border);
+  color: var(--ctrl-btn-active-color);
+  box-shadow: 0 0 12px rgba(223, 190, 61, 0.15);
 }
 
 .control-icon-btn svg {
-  font-size: 1rem;
+  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 
 .icon-label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 500;
+  letter-spacing: 0.02em;
+  color: inherit;
 }
 
-/* Popover sliders */
+/* ============================================================
+   POPOVER PANELS
+   ============================================================ */
 .popover-slider {
   position: absolute;
-  bottom: calc(100% + 14px);
-  right: 10%;
-  transform: translateX(-50%);
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.95));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(251, 191, 36, 0.15);
+  bottom: calc(100% + 12px);
+  right: 0;
+  transform: none;
+  background: var(--ctrl-popover-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--ctrl-popover-border);
   border-radius: 16px;
-  padding: 1.25rem;
+  padding: 1.2rem 1.3rem;
   min-width: 260px;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: var(--ctrl-popover-shadow);
   z-index: 1001;
-  animation: popoverSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'DM Sans', sans-serif;
+  animation: popoverSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Part 3: Mobile dropdown overflow fix */
-@media (max-width: 640px) {
-  .popover-slider {
-    right: 20%;
-    right: auto;
-    transform: translateX(-50%);
-    width: calc(100vw - 32px);
-    max-width: 320px;
-    min-width: unset;
-    border-radius: 16px;
-  }
-  
-  /* Ensure popover doesn't overflow right edge */
-  .popover-slider.speed-popover,
-  .popover-slider.volume-popover,
-  .popover-slider.mood-popover {
-    right: 0%;
-  }
-  
-  /* Center align on very small screens */
-  @media (max-width: 400px) {
-    .popover-slider {
-      width: calc(100vw - 24px);
-      max-width: 280px;
-    }
-  }
+/* Gold accent line at top of popover */
+.popover-slider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(223, 190, 61, 0.5), transparent);
+  border-radius: 1px;
 }
 
 @keyframes popoverSlideIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(8px);
+    transform: translateY(10px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
+/* ============================================================
+   POPOVER LABEL
+   ============================================================ */
 .popover-label {
-  display: block;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: rgba(251, 191, 36, 0.85);
-  margin-bottom: 0.75rem;
-  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ctrl-label-color);
+  margin-bottom: 1rem;
 }
 
+/* Decorative dash before label */
+.popover-label::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 1px;
+  background: var(--ctrl-label-color);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   POPOVER SLIDER INNER (range + value)
+   ============================================================ */
 .popover-slider-inner {
   display: flex;
   align-items: center;
@@ -220,141 +387,327 @@
 
 .popover-slider-inner input[type="range"] {
   flex: 1;
-  height: 6px;
-  border-radius: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
   cursor: pointer;
+  outline: none;
+  background: var(--ctrl-track-bg);
+  transition: height 0.15s ease;
+}
+
+.popover-slider-inner input[type="range"]:hover {
+  height: 6px;
 }
 
 .popover-slider-inner input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--gold, #fbbf24);
+  background: radial-gradient(circle at 35% 35%, #fde68a, var(--gold, #dfbe3d));
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  box-shadow: var(--ctrl-thumb-shadow);
+  transition: transform 0.15s ease;
+}
+
+.popover-slider-inner input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.popover-slider-inner input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gold, #dfbe3d);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   cursor: pointer;
 }
 
 .popover-value {
-  font-size: 0.85rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--gold, #fbbf24);
+  color: var(--gold, #dfbe3d);
   min-width: 40px;
   text-align: right;
+  letter-spacing: 0.04em;
 }
 
-/* Mood popover - wider for dropdown */
+/* ============================================================
+   SPEED POPOVER — specific layout
+   ============================================================ */
+.speed-popover {
+  min-width: 240px;
+}
+
+/* ============================================================
+   VOLUME POPOVER
+   ============================================================ */
+.volume-popover {
+  min-width: 240px;
+}
+
+/* ============================================================
+   MOOD POPOVER
+   ============================================================ */
 .mood-popover {
-  min-width: 280px;
-  padding: 0.75rem;
-  /* Dynamic positioning to prevent overflow */
-  right: 10%;
-  transform: translateX(-50%);
+  min-width: 290px;
+  padding: 0.85rem;
+  right: 0;
+  transform: none;
 }
 
-/* Ensure dropdown doesn't overflow viewport */
-@media (max-width: 640px) {
-  .mood-popover {
-    min-width: 260px;
-    right: 10%;
-    transform: none;
-  }
+/* ============================================================
+   MOOD SELECTOR CONTAINER (inside popover)
+   ============================================================ */
+.mood-selector-container {
+  position: relative;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+  width: 100%;
+  bottom: auto;
+  right: auto;
+  margin-bottom: 0;
 }
 
-
-
-/* On mobile, align dropdown to right edge */
-@media (max-width: 640px) {
-  .mood-dropdown {
-  
-    right: 10%;
-    transform: none;
-    width: 100%;
-    max-height: 180px;
-  }
+.mood-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ctrl-label-color);
+  margin-bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-/* ============================= */
-/* Mobile Responsive */
-/* ============================= */
-@media (max-width: 768px) {
-  .bible-controls-bar {
-    height: 110px;
-    padding: 0 1rem;
-  }
-
-  .bible-controls-inner {
-    flex-direction: column;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    padding-top: 0.75rem;
-  }
-
-  .progress-section {
-    width: 100%;
-    order: 2;
-  }
-
-  .controls-right {
-    order: 1;
-    width: 100%;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .control-icon-btn {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
-  }
-
-  .icon-label {
-    display: none;
-  }
-
-  .popover-slider {
-    min-width: 200px;
-    padding: 0.8rem;
-    left: auto;
-    right: 0;
-    transform: none;
-  }
-
-  .mood-popover {
-    min-width: 260px;
-    
-    right: 10%;
-    transform: none;
-  }
-
-  @keyframes popoverSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+.mood-label::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 1px;
+  background: var(--ctrl-label-color);
+  opacity: 0.6;
 }
 
-@media (max-width: 380px) {
-  .bible-controls-bar {
-    height: 120px;
-  }
-
-  .controls-right {
-    gap: 0.4rem;
-  }
-
-  .control-icon-btn {
-    padding: 0.5rem;
-  }
+/* Volume slider inside mood */
+.mood-volume-slider {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--ctrl-separator);
 }
 
-/* ============================= */
-/* Existing styles preserved */
-/* ============================= */
+.mood-volume-slider .popover-label {
+  margin-bottom: 0.6rem;
+}
 
+.mood-volume-slider input[type="range"] {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--ctrl-track-bg);
+  outline: none;
+}
+
+.mood-volume-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fde68a, var(--gold, #dfbe3d));
+  cursor: pointer;
+  box-shadow: var(--ctrl-thumb-shadow);
+}
+
+/* ============================================================
+   MOOD INPUT (search field)
+   ============================================================ */
+.mood-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.mood-input {
+  width: 100%;
+  padding: 0.62rem 2.4rem 0.62rem 0.85rem;
+  border-radius: 9px;
+  border: 1px solid var(--ctrl-input-border);
+  background: var(--ctrl-input-bg);
+  color: var(--ctrl-text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.mood-input:focus {
+  border-color: var(--ctrl-input-focus-border);
+  box-shadow: 0 0 0 3px var(--ctrl-input-focus-ring);
+}
+
+.mood-input::placeholder {
+  color: var(--ctrl-text-muted);
+  font-style: italic;
+}
+
+/* ============================================================
+   MOOD DROPDOWN LIST
+   ============================================================ */
+.mood-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 210px;
+  overflow-y: auto;
+  background: var(--ctrl-popover-bg);
+  border: 1px solid var(--ctrl-popover-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  z-index: 1002;
+  padding: 0.35rem;
+  list-style: none;
+  margin: 0;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: popoverSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  /* Scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(223, 190, 61, 0.3) transparent;
+}
+
+.mood-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mood-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(223, 190, 61, 0.25);
+  border-radius: 4px;
+}
+
+.mood-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================================================
+   MOOD OPTION ROW
+   ============================================================ */
+.mood-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ctrl-text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  transition: background 0.15s ease, padding-left 0.15s ease;
+}
+
+.mood-option:hover {
+  background: var(--ctrl-mood-option-hover);
+  padding-left: 1rem;
+}
+
+.mood-option.active {
+  background: var(--ctrl-mood-option-active-bg);
+  color: var(--gold, #dfbe3d);
+  border: 1px solid rgba(223, 190, 61, 0.18);
+}
+
+.mood-name {
+  flex: 1;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+/* ============================================================
+   MOOD PLAY BUTTON + EQ BARS
+   ============================================================ */
+.mood-play-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.mood-play-btn:hover {
+  background: rgba(223, 190, 61, 0.1);
+}
+
+.mood-play-btn .loader {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(223, 190, 61, 0.4);
+  border-top-color: var(--gold, #dfbe3d);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.eq {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  align-items: flex-end;
+}
+
+.eq span {
+  width: 3px;
+  height: 4px;
+  background: var(--ctrl-text-muted);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.mood-play-btn.playing .eq span {
+  background: var(--gold, #dfbe3d);
+  animation: eqMove 0.9s infinite ease-in-out;
+}
+
+.mood-play-btn.playing .eq span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.mood-play-btn.playing .eq span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes eqMove {
+  0%   { height: 4px; }
+  50%  { height: 14px; }
+  100% { height: 4px; }
+}
+
+/* ============================================================
+   LEGACY — preserved exactly, untouched
+   ============================================================ */
 .bible-controls-fixed {
   position: fixed;
   top: 1rem;
@@ -435,9 +788,7 @@
   border: 1px solid #ccc;
 }
 
-.dropdown input[type="range"] {
-  width: 100%;
-}
+.dropdown input[type="range"] { width: 100%; }
 
 .dropdown button {
   background: #4f46e5;
@@ -472,13 +823,8 @@
   gap: 0.75rem;
 }
 
-.speed-control.horizontal {
-  flex-direction: row;
-}
-
-.speed-control.vertical {
-  flex-direction: column;
-}
+.speed-control.horizontal { flex-direction: row; }
+.speed-control.vertical   { flex-direction: column; }
 
 .speed-control input[type="range"] {
   -webkit-appearance: none;
@@ -507,11 +853,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at top left,
-    var(--white),
-    var(--hover-dark)
-  );
+  background: radial-gradient(circle at top left, var(--white), var(--hover-dark));
   border: 2px solid var(--gold);
   box-shadow: 0 0 10px rgba(223, 190, 61, 0.6);
   cursor: pointer;
@@ -535,193 +877,89 @@
   text-align: right;
 }
 
-.mood-selector-container {
-  position: relative;
-  margin-bottom: 1rem;
-  font-family: sans-serif;
-  background-color: var(--secondary);
-  border-radius: 0.7rem 0rem 0.7rem 0rem;
-  box-shadow: 0px 0px 2px;
-  backdrop-filter: blur(40px);
-  padding: 0.3rem;
-  position: relative;
-  width: 97%;
-  position: sticky;
-  bottom: 0rem;
-  right: 2%;
+/* ============================================================
+   MOBILE — stacked layout
+   ============================================================ */
+@media (max-width: 768px) {
+  .bible-page .bible-controls-bar,
+  .bible-controls-bar.bible-page-context {
+    height: 108px;
+    padding: 0 1rem;
+  }
+
+  .bible-controls-inner {
+    flex-direction: column;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    padding-top: 0.7rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .progress-section {
+    width: 100%;
+    order: 2;
+  }
+
+  .controls-right {
+    order: 1;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+
+  .controls-right::before {
+    display: none;
+  }
+
+  .control-icon-btn {
+    padding: 0.55rem 0.7rem;
+  }
+
+  .icon-label {
+    display: none;
+  }
+
+  .popover-slider {
+    min-width: 200px;
+    padding: 0.9rem 1rem;
+    right: 0;
+    transform: none;
+    border-radius: 14px;
+  }
+
+  .mood-popover {
+    min-width: 250px;
+    right: 0;
+    transform: none;
+  }
+
+  @keyframes popoverSlideIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
 }
 
-.mood-label {
-  font-size: 0.75rem;
-  color: var(--white);
-  margin-bottom: 0.25rem;
-  display: block;
-}
+@media (max-width: 400px) {
+  .bible-page .bible-controls-bar,
+  .bible-controls-bar.bible-page-context {
+    height: 116px;
+    padding: 0 0.75rem;
+  }
 
-/* Volume slider inside mood selector */
-.mood-volume-slider {
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
+  .controls-right {
+    gap: 0.35rem;
+  }
 
-.mood-volume-slider .popover-label {
-  margin-bottom: 0.5rem;
-}
+  .control-icon-btn {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+    border-radius: 7px;
+  }
 
-.mood-volume-slider input[type="range"] {
-  flex: 1;
-  height: 5px;
-  border-radius: 3px;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.mood-volume-slider input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--gold, #fbbf24);
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.mood-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.mood-input {
-  width: 100%;
-  padding: 0.7rem 2.6rem 0.7rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  background: rgba(30, 41, 59, 0.6);
-  color: #f8fafc;
-  font-size: 0.9rem;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.mood-input:focus {
-  border-color: rgba(251, 191, 36, 0.7);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
-}
-
-.mood-input::placeholder {
-  color: rgba(248, 250, 252, 0.4);
-}
-
-.mood-dropdown {
-  position: absolute;
-  top: calc(10% + 0rem);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 1rem);
-  max-height: 220px;
-  overflow-y: auto;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.15);
-  border-radius: 12px;
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  z-index: 1000;
-  padding: 0.4rem;
-  list-style: none;
-}
-
-
-.mood-play-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mood-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.65rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #e2e8f0;
-  font-size: 0.9rem;
-  transition: all 0.18s ease;
-}
-
-.mood-option:hover {
-  background: rgba(251, 191, 36, 0.12);
-  color: #f8fafc;
-}
-
-.mood-option.active {
-  background: linear-gradient(
-    90deg,
-    rgba(251, 191, 36, 0.25),
-    rgba(251, 191, 36, 0.12)
-  );
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
-.mood-name {
-  flex: 1;
-  cursor: pointer;
-}
-
-.eq {
-  display: flex;
-  gap: 2px;
-  height: 14px;
-  align-items: flex-end;
-}
-
-.eq span {
-  width: 3px;
-  height: 4px;
-  background: var(--text-secondary);
-  border-radius: 2px;
-  transition: background 0.2s;
-}
-
-.mood-play-btn .loader {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--gold);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.mood-play-btn.playing .eq span {
-  background: var(--gold);
-  animation: eqMove 0.9s infinite ease-in-out;
-}
-
-.mood-play-btn.playing .eq span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.mood-play-btn.playing .eq span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes eqMove {
-  0% { height: 4px; }
-  50% { height: 14px; }
-  100% { height: 4px; }
+  .popover-slider {
+    right: 0;
+    width: calc(100vw - 1.5rem);
+    min-width: unset;
+    border-radius: 12px;
+  }
 }

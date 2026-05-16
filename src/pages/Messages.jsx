@@ -6,127 +6,105 @@ import axios from "../utils/axiosBase";
 import BackButton from "../component/shared/BackButton";
 import ProfileAvatar from "../component/shared/ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
-import { useSocket } from "../context/SocketContext"; // Corrected import path
-import { useMessageSeen } from "../../MessageSeenContext"; // Corrected import path
-import "../styles/message.css"
+import { useSocket } from "../context/SocketContext";
+import { useMessageSeen } from "../../MessageSeenContext";
+import "../styles/message.css";
 import RightSidebar from "../component/RightSidebar";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
-import { connect } from "socket.io-client";
-import { MdNetworkLocked, MdOutlineNetworkWifi1Bar } from "react-icons/md";
+import { MdNetworkLocked } from "react-icons/md";
 
 const Messages = () => {
-
   const [activeChatId, setActiveChatId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { user } = useAuth();
   const { socket } = useSocket();
   const navigate = useNavigate();
 
-  // Get data from the new MessageSeenContext
-  const { conversations, unreadCountsMap, totalUnreadCount, failedToFetch, loading, setLoading, setActiveChatId: setContextActiveChatId, clearUnreadForChat, getConvoByChatId } = useMessageSeen();
+  const {
+    conversations,
+    unreadCountsMap,
+    totalUnreadCount,
+    failedToFetch,
+    loading,
+    setLoading,
+    setActiveChatId: setContextActiveChatId,
+    clearUnreadForChat,
+    getConvoByChatId,
+  } = useMessageSeen();
 
-// Sync active chat ID with context so unread updates work correctly
-useEffect(() => {
-  setContextActiveChatId(activeChatId);
-}, [activeChatId, setContextActiveChatId]);
-
+  useEffect(() => {
+    setContextActiveChatId(activeChatId);
+  }, [activeChatId, setContextActiveChatId]);
 
   const sortedConversations = useMemo(() => {
     if (!conversations || conversations.length === 0) return [];
-    
-    /**
-     * WhatsApp-like Sorting Logic:
-     * 1. Active Chat (currently open) - ALWAYS first
-     * 2. Unread Messages (sorted by latest activity within this group)
-     * 3. Read Messages (sorted by latest activity)
-     */
-    
-    // Helper function to calculate priority and timestamp for each conversation
+
     const getConversationData = (convo) => {
       const unreadCount = unreadCountsMap[convo._id] || 0;
       const isActive = activeChatId === convo.otherUser?._id;
-      
-      // Determine priority level (lower number = higher priority)
       let priorityLevel;
-      if (isActive) {
-        priorityLevel = 0; // Active chat always first
-      } else if (unreadCount > 0) {
-        priorityLevel = 1; // Unread chats second
-      } else {
-        priorityLevel = 2; // Read chats last
-      }
-      
-      // Pre-compute timestamp to avoid creating Date objects during sort
-      const timestamp = convo.lastMessage?.createdAt 
-        ? new Date(convo.lastMessage.createdAt).getTime() 
+      if (isActive) priorityLevel = 0;
+      else if (unreadCount > 0) priorityLevel = 1;
+      else priorityLevel = 2;
+      const timestamp = convo.lastMessage?.createdAt
+        ? new Date(convo.lastMessage.createdAt).getTime()
         : 0;
-      
       return { priorityLevel, timestamp, unreadCount };
     };
-    
-    // Create array with pre-computed data for efficient sorting
+
     const conversationsWithData = conversations.map((convo) => ({
       convo,
-      ...getConversationData(convo)
+      ...getConversationData(convo),
     }));
-    
-    // Sort using pre-computed data
+
     conversationsWithData.sort((a, b) => {
-      // First, compare by priority level
-      if (a.priorityLevel !== b.priorityLevel) {
+      if (a.priorityLevel !== b.priorityLevel)
         return a.priorityLevel - b.priorityLevel;
-      }
-      
-      // Within same priority level, sort by latest activity (newest first)
-      // This ensures chats jump up when they receive new messages
       return b.timestamp - a.timestamp;
     });
-    
-    // Return only the conversations (without the metadata)
-    return conversationsWithData.map(item => item.convo);
+
+    return conversationsWithData.map((item) => item.convo);
   }, [conversations, unreadCountsMap, activeChatId]);
 
+  const filteredConnections = useMemo(
+    () =>
+      sortedConversations.filter((convo) => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        const otherUser = convo.otherUser;
+        if (!otherUser) return false;
+        return (
+          otherUser.name?.toLowerCase().includes(term) ||
+          otherUser.username?.toLowerCase().includes(term)
+        );
+      }),
+    [sortedConversations, searchTerm]
+  );
 
-  const filteredConnections = useMemo(() => sortedConversations.filter((convo) => {
-    if(!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    const otherUser = convo.otherUser;
-    if (!otherUser) return false;
-    return (
-      otherUser.name?.toLowerCase().includes(term) ||
-      otherUser.username?.toLowerCase().includes(term)
-    );
-  }), [sortedConversations, searchTerm]);
-
-  /*** Open chat ***/
   const handleOpenChat = (userId) => {
     setActiveChatId(userId);
-      const convo = conversations.find(c => c.otherUser?._id?.toString() === userId?.toString());
-  if (convo?._id) {
-    clearUnreadForChat(convo._id);
-  }
+    const convo = conversations.find(
+      (c) => c.otherUser?._id?.toString() === userId?.toString()
+    );
+    if (convo?._id) clearUnreadForChat(convo._id);
     if (window.innerWidth < 768) navigate(`/chatbox/${userId}`);
   };
 
-  // 🔎 Highlight matching text like WhatsApp
   const highlightMatch = (text, term) => {
     if (!term || !text) return text;
-
-    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = new RegExp(`(${escapedTerm})`, "gi");
-
     const parts = text.split(regex);
-
     return parts.map((part, index) =>
       regex.test(part) ? (
         <span
           key={index}
           style={{
-            backgroundColor: "rgba(139, 92, 246, 0.25)", // soft violet
+            backgroundColor: "rgba(139, 92, 246, 0.25)",
             color: "var(--primary)",
             fontWeight: 600,
             borderRadius: "4px",
-            padding: "0 2px"
+            padding: "0 2px",
           }}
         >
           {part}
@@ -137,166 +115,242 @@ useEffect(() => {
     );
   };
 
-
   return (
-    <div className="h-screen w-full flex bg-[var(--white)] overflow-hidden relative">
-      {/* LEFT: Conversation list */}
-      <div className="w-full md:w-[40%] lg:w-[35%] p-6 overflow-y-auto border-r h-full"
-      style={{
-        borderRightColor: "var(--hover-light)",
-        borderRightStyle: "solid",
-        borderRightWidth: "1px",}}>
-        <BackButton top="0px" left={"80px"}  />
+    /*
+     * Root: h-screen, flex-row always, overflow-hidden.
+     * Children use explicit widths — sidebar is fixed width on md+,
+     * right panel takes the rest with flex:1.
+     */
+    <div className="messages-root">
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 mb-1 title">
-            Messages
-          </h1>
-          <p className="text-slate-600">People you’ve connected with</p>
-        </div>
-        
-        <div className="mb-4 flex items-center gap-2 search-input">
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.target.blur();
-              }}
-              className=" bg-[var(--color-1)] flex-1 outline-none border-none focus:ring-0"
-            />
-            {searchTerm && (
-                <button
-                onClick={() => setSearchTerm("")}
-                className="px-3 py-1 text-sm  rounded-xl bg-[var(--hover-light)]  hover:bg-[var(--hover-dark)] cursor-pointer transition"
-                >
-                ✕
+      {/* ── LEFT: Conversation list ── */}
+      <div className="msg-sidebar-col">
+        <div className="msg-sidebar">
+
+          {/* decorative pseudo-elements come from CSS */}
+          <div className="msg-sidebar-inner">
+            <BackButton top="0px" left="80px" />
+
+            <div className="msg-header">
+              <div className="msg-eyebrow"><span>✦</span> Inbox</div>
+              <h1 className="msg-title">Your <em>messages</em></h1>
+              <p className="msg-subtitle">People you've connected with</p>
+            </div>
+
+            <div className="msg-search-wrap">
+              <svg className="msg-search-icon" width="15" height="15"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search conversations…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                className="msg-search-input"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")}
+                  className="msg-search-clear" aria-label="Clear search">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
-            )}
-        </div>
+              )}
+            </div>
 
-
-
-        <div className="flex flex-col gap-3">
-
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex gap-4 p-4 bg-white rounded shadow animate-pulse"
-              >
-                <div className="w-12 h-12 bg-gray-300 rounded-full" />
-                <div className="flex-1 space-y-2 py-1">
-                  <div className="h-4 bg-gray-300 rounded w-1/2" />
-                  <div className="h-3 bg-gray-300 rounded w-1/3" />
-                </div>
+            {!loading && filteredConnections.length > 0 && (
+              <div className="msg-section-label">
+                {searchTerm
+                  ? `${filteredConnections.length} result${filteredConnections.length !== 1 ? "s" : ""}`
+                  : "Recent"}
               </div>
-            ))
-          ) : filteredConnections.length > 0 ? (
-            filteredConnections.map((convo, index) => {
-              const otherUser = convo.otherUser;
-              if (!otherUser) return null;
+            )}
 
-              const last = convo.lastMessage;
-              const unreadCount = unreadCountsMap[convo._id] || 0;
-              const isActive = activeChatId === otherUser._id;
-              
-              // Check if this is the first unread message in the list
-              const hasUnread = unreadCount > 0;
-
-              return (
-                <div
-                  key={otherUser._id}
-                  onClick={() => handleOpenChat(otherUser._id)}
-                  className={`flex gap-5 px-3 py-2 rounded-md items-center  cursor-pointer transition ${
-                    hasUnread 
-                      ? "bg-red-50 border-l-4 border-red-500 hover:bg-red-100" 
-                      : isActive
-                        ? "bg-violet-100"
-                        : "bg-[var(--white)] hover:bg-[var(--hover-light)]"
-                  }`}
-                >
-                  <ProfileAvatar
-                    user={{
-                      name: otherUser.name || "User",
-                      profilePicUrl: otherUser.profile_picture || otherUser.profilePicUrl,
-                      profilePicBackground: otherUser.profilePicBackground,
-                    }}
-                    size={48}
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <p className={`truncate ${hasUnread ? "text-red-600 font-semibold" : "text-[var(--primary)]"}`}>
-                       @{highlightMatch(otherUser.username, searchTerm)}
-                    </p>
-                    
-                    {last && (
-                      <span
-                        className={`text-sm truncate flex items-center gap-1 ${
-                          unreadCount > 0 ? "text-red-600 font-bold" : "text-slate-600"
-                        }`}
-                      >
-                        {last.from_user_id === user._id && "You: "}
-                        {last.message_type === "image" ? (
-                          <>
-                            <ImageIcon size={16} className={unreadCount > 0 ? "text-red-600" : "text-[var(--primary)]"} /> Image
-                          </>
-                        ) : last.message_type === "audio" ? (
-                          <>
-                            <Mic size={16} className={unreadCount > 0 ? "text-red-600" : "text-[var(--primary)]"} /> Audio
-                          </>
-                        ) : (
-                          <p>{last.text?.substring(0, 17)}...</p>
-                        )}
-                      </span>
-                    )}
-
-
-                    {unreadCount > 0 && (
-                      <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-                        {unreadCount} new
-                      </span>
-                    )}
+            <div className="msg-list">
+              {loading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="msg-skeleton">
+                    <div className="msg-skeleton-avatar" />
+                    <div className="msg-skeleton-lines">
+                      <div className="msg-skeleton-line" style={{ width: "55%" }} />
+                      <div className="msg-skeleton-line" style={{ width: "38%" }} />
+                    </div>
                   </div>
+                ))}
+
+              {!loading &&
+                filteredConnections.length > 0 &&
+                filteredConnections.map((convo) => {
+                  const otherUser = convo.otherUser;
+                  if (!otherUser) return null;
+                  const last = convo.lastMessage;
+                  const unreadCount = unreadCountsMap[convo._id] || 0;
+                  const isActive = activeChatId === otherUser._id;
+                  const hasUnread = unreadCount > 0;
+
+                  let rowClass = "msg-row ";
+                  if (hasUnread) rowClass += "msg-row-unread";
+                  else if (isActive) rowClass += "msg-row-active";
+                  else rowClass += "msg-row-normal";
+
+                  return (
+                    <div key={otherUser._id}
+                      onClick={() => handleOpenChat(otherUser._id)}
+                      className={rowClass}>
+                      <div className="msg-avatar-wrap">
+                        <div className="msg-avatar-ring">
+                          <div className="msg-avatar-inner">
+                            <ProfileAvatar
+                              user={{
+                                name: otherUser.name || "User",
+                                profilePicUrl: otherUser.profile_picture || otherUser.profilePicUrl,
+                                profilePicBackground: otherUser.profilePicBackground,
+                              }}
+                              size={42}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="msg-text">
+                        <p className="msg-username">
+                          @{highlightMatch(otherUser.username, searchTerm)}
+                        </p>
+                        {last && (
+                          <p className={`msg-preview ${hasUnread ? "msg-preview-bold" : ""}`}>
+                            {last.from_user_id === user._id && (
+                              <span style={{ opacity: 0.7, marginRight: 2, flexShrink: 0 }}>You:</span>
+                            )}
+                            {last.message_type === "image" ? (
+                              <><ImageIcon size={13} style={{ flexShrink: 0 }} />Photo</>
+                            ) : last.message_type === "audio" ? (
+                              <><Mic size={13} style={{ flexShrink: 0 }} />Voice message</>
+                            ) : (
+                              <span className="msg-preview-text">
+                                {last.text?.substring(0, 28) + (last.text?.length > 28 ? "…" : "")}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      {unreadCount > 0 && (
+                        <span className="msg-unread-badge">{unreadCount}</span>
+                      )}
+                    </div>
+                  );
+                })}
+
+              {!loading && filteredConnections.length === 0 && (
+                <div className="msg-empty">
+                  {failedToFetch ? (
+                    <div className="msg-error-wrap">
+                      <span className="msg-error-icon"><MdNetworkLocked /></span>
+                      <p className="msg-error-text">No connection. Check your internet and try again.</p>
+                    </div>
+                  ) : searchTerm ? (
+                    <>
+                      <div className="msg-empty-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8" />
+                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                      </div>
+                      <p className="msg-empty-title">No results</p>
+                      <p className="msg-empty-text">No conversations match "{searchTerm}"</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="msg-empty-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
+                      <p className="msg-empty-title">No messages yet</p>
+                      <p className="msg-empty-text">Connect with people to start conversations.</p>
+                      {conversations.length === 0 && (
+                        <button onClick={() => navigate("/discover")} className="msg-cta-btn">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                          </svg>
+                          Find People
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
-              );
-            })
-          ) : (
-            <p className="text-center text-slate-500">
-              {searchTerm ? "No users found." : failedToFetch ?"Failed to load conversations check your internet connection and try again": !loading?"No accepted connections yet.":"" }
-            </p>
-          )}
-            {!searchTerm && conversations.length === 0 && !failedToFetch ? (
-    <button
-      onClick={() => navigate("/discover")} // redirect to your discover page
-      className="btn "
-    >
-      Find People
-    </button>
-  ):failedToFetch ?(
-    <span className="no_connection_icon"><MdNetworkLocked/> </span>
-  ):null}
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-     
-   {/* RIGHT: Chat box (desktop only) */}
-<div className="hidden md:flex flex-1 bg-[var(--white)] h-full overflow-hidden">
-  {activeChatId ? (
-    <div className="w-full h-full">
-      <ChatBox userId={activeChatId} />
-    </div>
-  ) : (
-    <div className="flex flex-1 flex-col items-center justify-center text-slate-400">
-      <div className="chat-loader" />
-      <span className="text-sm tracking-wide">
-        Select a conversation
-      </span>
-    </div>
-  )}
-</div>
-
+      {/* ── RIGHT: Chat box ── */}
+      <div className="msg-chat-col">
+        {activeChatId ? (
+          <div style={{ width: "100%", height: "100%", minWidth: 0 }}>
+            <ChatBox userId={activeChatId} />
+          </div>
+        ) : (
+          <div className="esp">
+            <div className="grid-lines" />
+            <div className="orb o1" /><div className="orb o2" />
+            <div className="orb o3" /><div className="orb o4" />
+            <div className="esi">
+              <div className="ring-wrap">
+                <div className="pulse-ring" /><div className="pulse-ring" /><div className="pulse-ring" />
+                <div className="orbit orbit1" /><div className="orbit orbit2" />
+                <div className="odot odot1" /><div className="odot odot2" /><div className="odot odot3" />
+                <div className="ring-bg">
+                  <svg className="icon-svg" width="34" height="34" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="1.5"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="es-title">Open a <span className="es-hi">conversation</span></p>
+              <p className="es-sub">Select any chat on the left — your messages load instantly, right here.</p>
+              <div className="tdots"><span /><span /><span /></div>
+              <div className="es-div" />
+              <div className="es-pills">
+                <div className="pill">💬 Text</div>
+                <div className="pill">🖼 Images</div>
+                <div className="pill">🎤 Voice</div>
+                <div className="pill">📞 Audio call</div>
+                <div className="pill">📹 Video call</div>
+                <div className="pill">↩️ Replies</div>
+                <div className="pill">🔍 Search history</div>
+              </div>
+              <div className="es-div" />
+              <div className="es-stats">
+                <div className="es-stat"><span className="es-stat-num">⚡</span><span className="es-stat-lbl">Instant delivery</span></div>
+                <div className="es-stat"><span className="es-stat-num">🔔</span><span className="es-stat-lbl">Live updates</span></div>
+                <div className="es-stat"><span className="es-stat-num">🔒</span><span className="es-stat-lbl">Private &amp; secure</span></div>
+              </div>
+              <div className="tip-box">
+                <div className="tip-line"><span className="tip-dot" />Unread messages always rise to the top</div>
+                <div className="tip-line"><span className="tip-dot" />Use search to find any person instantly</div>
+                <div className="tip-line"><span className="tip-dot" />Long press a message to reply or react</div>
+              </div>
+              <div className="es-badge">
+                <span className="es-badge-dot" />
+                End-to-end private — only you and the other person can see this
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   );

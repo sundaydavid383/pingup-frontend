@@ -1,7 +1,7 @@
 // Centralized App Configuration
 // This file contains all app-wide constants that can be easily updated
 
-export const APP_NAME = "SpringsConnect";
+export const APP_NAME = "SpringsCircle";
 
 // Get the base URL for the current environment
 export const getBaseUrl = () => {

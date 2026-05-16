@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"; 
+import { useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import NotificationSkeleton from "../component/NotificationSkeleton";
 import NotificationRemovalBar from "../component/shared/NotificationRemovalBar";
@@ -10,40 +10,61 @@ import { useNotificationContext } from "../context/NotificationContext";
 const Notification = () => {
   const { loadingNotifications, sponsors } = useAuth();
   const { activeNotifications, unreadCountByCategory } = useNotificationContext();
-  const [hasNewNotifications, setHasNewNotifications] = useState(false);
-  const prevNotificationCount = useRef(0);
+  const prevCountRef = useRef(0);
 
-  // Track new notifications arriving while on this page
   useEffect(() => {
-    if (activeNotifications && activeNotifications.length > prevNotificationCount.current) {
-      // Check if we have new unread notifications
-      const newUnread = activeNotifications.filter(n => !n.isRead);
-      if (newUnread.length > 0 && prevNotificationCount.current > 0) {
-        setHasNewNotifications(true);
-      }
-    }
-    prevNotificationCount.current = activeNotifications?.length || 0;
+    prevCountRef.current = activeNotifications?.length || 0;
   }, [activeNotifications]);
 
-  if (loadingNotifications) return <NotificationSkeleton />;
+  const hasUnread = Object.values(unreadCountByCategory).some((c) => c > 0);
 
   return (
-    <div className="flex">
-      <div className="w-full max-w-3xl mx-auto relative">
-        <CategoryNotifications />
-        
-        {/* Bottom bar */}
-        {Object.values(unreadCountByCategory).some(count => count > 0) && (
-          <div className="sticky bottom-4 left-0 z-[0] w-[100%] px-4 mt-4">
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        width: "100%",
+        minHeight: "100vh",
+        background: "#f8f9fa",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* ── Main notification column ── */}
+      <div
+        style={{
+          flex: "1 1 0%",   /* grow and shrink freely */
+          minWidth: 0,       /* critical: lets flex child shrink below content size */
+          padding: "24px 16px 80px",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          /* cap width when there's no sidebar (< lg) */
+          maxWidth: "100%",
+        }}
+      >
+        {loadingNotifications ? (
+          <NotificationSkeleton />
+        ) : (
+          <CategoryNotifications />
+        )}
+
+        {hasUnread && !loadingNotifications && (
+          <div style={{ position: "sticky", bottom: 16, zIndex: 10 }}>
             <NotificationRemovalBar />
           </div>
         )}
       </div>
 
-      {/* Sidebar */}
+      {/*
+       * RightSidebar renders an <aside className="hidden lg:flex w-[330px]">
+       * That aside is 0px wide on < lg (hidden), 330px wide on lg+.
+       * The flex row above means the notification column naturally fills
+       * whatever space remains after the aside takes its 330px.
+       * No margin-right hacks needed — flexbox handles it.
+       */}
       <RightSidebar sponsors={sponsors} loading={!sponsors} />
-      
-      {/* Sidebar toggle (medium screens) */}
+
       <MediumSidebarToggle sponsors={sponsors} />
     </div>
   );

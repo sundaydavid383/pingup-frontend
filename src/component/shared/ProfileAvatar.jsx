@@ -22,24 +22,23 @@ const ProfileAvatar = ({ user, size = 50 }) => {
   const avatarUrl = hasProfilePic && user.profilePicUrl
   const bgColor = user?.profilePicBackground || "#e6e2e2";
 
-  const containerStyle = {
-    width: size,
-    height: size,
-    position: "relative",
-    borderRadius: "50%",
-    overflow: "hidden",
-    border: "1px solid var(--primary)",
-    userSelect: "none",
-    backgroundColor: bgColor,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "var(--secondary)",
-    fontSize: size * 0.38,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  };
-
+const containerStyle = {
+  width: size,
+  height: size,
+  position: "relative",
+  borderRadius: "50%",
+  overflow: "hidden",
+  border: "1px solid var(--primary)",
+  userSelect: "none",
+  backgroundColor: bgColor,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "var(--secondary)",
+  fontSize: typeof size === "number" ? size * 0.38 : "2rem",
+  fontWeight: "bold",
+  textTransform: "uppercase",
+};
   return (
     <div style={containerStyle}>
       {/* Image */}

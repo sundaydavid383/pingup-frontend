@@ -160,7 +160,7 @@ export default function ScriptureAssistant({ currentUser }) {
       });
     }
 
-    const seenIntro = localStorage.getItem("SpringsConnectSeenIntro");
+    const seenIntro = localStorage.getItem("SpringsCircleSeenIntro");
     if (!seenIntro) setShowIntro(true);
   }, []);
 
@@ -257,7 +257,7 @@ export default function ScriptureAssistant({ currentUser }) {
   }, [currentContext]);
 
   const handleIntroComplete = () => {
-    localStorage.setItem("SpringsConnectSeenIntro", "true");
+    localStorage.setItem("SpringsCircleSeenIntro", "true");
     setShowIntro(false);
   };
 

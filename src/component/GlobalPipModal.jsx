@@ -35,9 +35,6 @@ const GlobalPipModal = () => {
     clearUnreadForChat(convo._id);
   }
 }, [activeChatId]);
-    const [position, setPosition] = useState({ x: 0, y: 20 });
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStartPos = useRef({ x: 0, y: 0 });
 
     const [activeUser, setActiveUser] = useState(null);
     const [expandedChatMessages, setExpandedChatMessages] = useState(new Set());
@@ -111,42 +108,80 @@ const GlobalPipModal = () => {
         };
     }, []);
 
-    // Drag handlers
-    const handleMouseDown = useCallback((e) => {
-        const targetTag = e.target.tagName;
-        if (targetTag === 'BUTTON' || targetTag === 'INPUT' || targetTag === 'TEXTAREA') {
-            return;
-        }
-        setIsDragging(true);
-        dragStartPos.current = {
-            x: e.clientX - position.x,
-            y: e.clientY - position.y
-        };
-    }, [position]);
 
-    const handleMouseMove = useCallback((e) => {
-        if (!isDragging) return;
-        const newPos = {
-            x: e.clientX - dragStartPos.current.x,
-            y: e.clientY - dragStartPos.current.y
-        };
-        setPosition(newPos);
-    }, [isDragging]);
+    const [position, setPosition] = useState({ x: window.innerWidth - 380, y: window.innerHeight - 540 });
+const isDragging = useRef(false);
+const dragStartPos = useRef({ x: 0, y: 0 });
 
-    const handleMouseUp = useCallback(() => {
-        setIsDragging(false);
-    }, []);
+const MODAL_W = 360;
+const MODAL_H = 500;
 
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        }
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, handleMouseMove, handleMouseUp]);
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const handleMouseDown = useCallback((e) => {
+    const tag = e.target.tagName;
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SVG' || tag === 'PATH') return;
+    e.preventDefault();
+    isDragging.current = true;
+    dragStartPos.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+    };
+
+    const handleMove = (moveEvent) => {
+        if (!isDragging.current) return;
+        const newX = clamp(
+            moveEvent.clientX - dragStartPos.current.x,
+            0,
+            window.innerWidth - MODAL_W
+        );
+        const newY = clamp(
+            moveEvent.clientY - dragStartPos.current.y,
+            0,
+            window.innerHeight - MODAL_H
+        );
+        setPosition({ x: newX, y: newY });
+    };
+
+    const handleUp = () => {
+        isDragging.current = false;
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleUp);
+    };
+
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+}, [position]);
+
+// Touch support
+const handleTouchStart = useCallback((e) => {
+    const tag = e.target.tagName;
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const touch = e.touches[0];
+    isDragging.current = true;
+    dragStartPos.current = {
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y,
+    };
+
+    const handleTouchMove = (moveEvent) => {
+        if (!isDragging.current) return;
+        moveEvent.preventDefault();
+        const t = moveEvent.touches[0];
+        const newX = clamp(t.clientX - dragStartPos.current.x, 0, window.innerWidth - MODAL_W);
+        const newY = clamp(t.clientY - dragStartPos.current.y, 0, window.innerHeight - MODAL_H);
+        setPosition({ x: newX, y: newY });
+    };
+
+    const handleTouchEnd = () => {
+        isDragging.current = false;
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+}, [position]);
 
     const handleScroll = () => {
         if (!scrollRef.current) return;
@@ -254,7 +289,19 @@ const GlobalPipModal = () => {
             setRecordTime(0);
             setAudioLevel(0);
 
-            const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/wav";
+            const SUPPORTED_MIME = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+  "audio/mp4",          // Safari 14.1+
+].find(t => MediaRecorder.isTypeSupported(t)) ?? "";
+
+// If empty string, let the browser pick its own default — still works
+const recorderOptions = SUPPORTED_MIME ? { mimeType: SUPPORTED_MIME } : {};
+mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
+const mimeType = mediaRecorderRef.current.mimeType; // read the actual type back
+console.log("🎙️ Recording with MIME:", mediaRecorderRef.current.mimeType);
             mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
             audioChunksRef.current = [];
 
@@ -313,263 +360,189 @@ const GlobalPipModal = () => {
         }
     };
 
-    if (!shouldRender) {
-        hasOpenedRef.current = false;
-        return null;
-    }
+if (!shouldRender) {
+    hasOpenedRef.current = false;
+    return null;
+}
 
-    return (
-        <div className="pip-wrapper">
-            <div style={{
-                position: "fixed",
-                right: "20px",
-                top: "0",
-                width: "360px",
-                height: "500px",
-                zIndex: 99950,
-                pointerEvents: "none"
-            }}>
-                <div
-                    ref={modalRef}
-                    className="modal-glass"
-                    style={{
-                        position: "absolute",
-                        left: position.x,
-                        top: position.y,
-                        cursor: isDragging ? "grabbing" : "grab",
-                        pointerEvents: "auto"
+return (
+    <>
+        <div
+    ref={modalRef}
+    className="modal-glass"
+    style={{
+        position: "fixed",
+        left: `${position.x}px`,   // ← left/top now, not right/bottom
+        top: `${position.y}px`,
+        width: `${MODAL_W}px`,
+        height: `${MODAL_H}px`,
+        zIndex: 99950,
+        cursor: isDragging.current ? "grabbing" : "grab",
+        display: "flex",
+        flexDirection: "column",
+        pointerEvents: "auto",
+        userSelect: "none",        // ← prevents text selection while dragging
+    }}
+    onMouseDown={handleMouseDown}
+    onTouchStart={handleTouchStart}
+>
+            {/* HEADER */}
+            <div className="modal-glass-header">
+                <div className="relative">
+                    <ProfileAvatar user={activeUser} size={42} />
+                </div>
+                <p className="text-sm font-bold truncate">{activeUser?.username}</p>
+
+                <button
+                    onClick={() => {
+                        navigate(`/chatbox/${activeChatId}`);
+                        closePipModal();
                     }}
-                    onMouseDown={handleMouseDown}
+                    className="p-1 rounded-full hover:bg-gray-200 transition absolute right-13"
+                    title="Maximize"
                 >
-                    {/* HEADER */}
-                    <div className="modal-glass-header">
-                        <div className="relative">
-                            <ProfileAvatar user={activeUser} size={42} />
-                        </div>
-                        <p className="text-sm font-bold truncate">{activeUser?.username}</p>
+                    <Maximize2 size={22} />
+                </button>
 
-                        <button
-                            onClick={() => {
-                                navigate(`/chatbox/${activeChatId}`);
-                                closePipModal();
-                            }}
-                            className="p-1 rounded-full hover:bg-gray-200 transition absolute right-13"
-                            title="Maximize"
-                        >
-                            <Maximize2 size={22} />
-                        </button>
+                <button
+                    onClick={closePipModal}
+                    className="p-1 rounded-full hover:bg-red-100 transition absolute right-0"
+                    title="Close"
+                >
+                    <X size={22} />
+                </button>
+            </div>
 
-                        <button
-                            onClick={closePipModal}
-                            className="p-1 rounded-full hover:bg-red-100 transition absolute right-0"
-                            title="Close"
-                        >
-                            <X size={22} />
-                        </button>
-                    </div>
-
-                    {/* MESSAGES */}
-                    <div
-                        ref={scrollRef}
-                        onScroll={handleScroll}
-                        className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]"
-                    >
-                        {chatLoading ? <ChatMessagesSkeleton /> : activeChatHistory?.map((msg, i) => (
-                            <div key={msg._id || i} className={`flex flex-col ${msg.from_user_id === user?._id ? "items-end" : "items-start"}`}>
-                                <div className={` ${msg.message_type === "image" || msg.message_type === "audio" ? "px-1 py-1" : "px-3 py-2"} rounded-2xl text-sm max-w-[85%] ${msg.from_user_id === user?._id ? "bg-black text-white rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
-                                    {msg.message_type === "text" && (
-                                        <div className="flex flex-col gap-1">
-                                            <p>{getDisplayChatText(msg.text, msg._id)}</p>
-                                            {shouldShowReadMore(msg.text) && (
-                                                <button
-                                                    onClick={() => toggleChatMessageExpansion(msg._id)}
-                                                    className="flex items-center gap-1 text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity mt-1"
-                                                    style={{ color: msg.from_user_id === user?._id ? 'rgba(255, 255, 255, 0.9)' : 'var(--primary)' }}
-                                                >
-                                                    {expandedChatMessages.has(msg._id) ? "Read less" : "Read more"}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {msg.message_type === "image" && (
-                                        <img
-                                            src={msg.media_url}
-                                            alt="sent"
-                                            className="max-w-[260px] rounded-xl"
-                                            onLoad={() => {
-                                                requestAnimationFrame(() => scrollToBottom(false));
-                                            }}
-                                            onClick={() => {
-                                                const images = activeChatHistory
-                                                    .filter(m => m.message_type === "image")
-                                                    .map(m => m.media_url);
-                                                const index = images.findIndex(url => url === msg.media_url);
-                                                setChatImages(images);
-                                                setMediaInitialIndex(index);
-                                                setMediaViewerOpen(true);
-                                            }}
-                                        />
-                                    )}
-
-                                    {msg.message_type === "audio" && (
-                                        <AudioMessage msg={{ media_url: msg.media_url }} />
+            {/* MESSAGES */}
+            <div
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]"
+            >
+                {chatLoading ? <ChatMessagesSkeleton /> : activeChatHistory?.map((msg, i) => (
+                    <div key={msg._id || i} className={`flex flex-col ${msg.from_user_id === user?._id ? "items-end" : "items-start"}`}>
+                        <div className={`${msg.message_type === "image" || msg.message_type === "audio" ? "px-1 py-1" : "px-3 py-2"} rounded-2xl text-sm max-w-[85%] ${msg.from_user_id === user?._id ? "bg-black text-white rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
+                            {msg.message_type === "text" && (
+                                <div className="flex flex-col gap-1">
+                                    <p>{getDisplayChatText(msg.text, msg._id)}</p>
+                                    {shouldShowReadMore(msg.text) && (
+                                        <button
+                                            onClick={() => toggleChatMessageExpansion(msg._id)}
+                                            className="flex items-center gap-1 text-xs font-semibold opacity-70 hover:opacity-100 transition-opacity mt-1"
+                                            style={{ color: msg.from_user_id === user?._id ? 'rgba(255,255,255,0.9)' : 'var(--primary)' }}
+                                        >
+                                            {expandedChatMessages.has(msg._id) ? "Read less" : "Read more"}
+                                        </button>
                                     )}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* INPUT AREA */}
-                    <div className="p-3 bg-white border-t">
-                        {image && (
-                            <ImagePreview
-                                file={image}
-                                onRemove={() => setImage(null)}
-                            />
-                        )}
-
-                        <div
-                            className="flex items-center gap-2 px-3 py-2 rounded-full"
-                            style={{
-                                borderRadius: "50px",
-                                backgroundColor: "rgba(255, 255, 255, 0.3)",
-                                backdropFilter: "blur(20px)",
-                                WebkitBackdropFilter: "blur(20px)",
-                            }}
-                        >
-                            {recording ? (
-                                <div className="mb-2 px-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-600 w-14">
-                                            {MAX_RECORD_TIME - recordTime}s left
-                                        </span>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="255"
-                                            value={audioLevel}
-                                            readOnly
-                                            className="flex-1 h-1 accent-green-500"
-                                        />
-                                        <span className="text-xs text-red-500">Recording…</span>
-                                    </div>
-                                </div>
-                            ) : audioURL ? (
-                                <div className="flex items-center gap-2 w-full">
-                                    <button
-                                        onClick={() => setAudioURL(null)}
-                                        className="p-1 rounded-full hover:bg-red-100 transition flex-1 text-center"
-                                    >
-                                        Delete
-                                    </button>
-                                    <button
-                                        onClick={handleSend}
-                                        className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition flex-1 text-center"
-                                    >
-                                        Send
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 w-full">
-                                    <input
-                                        value={draft}
-                                        disabled={recording}
-                                        onChange={(e) => setDraft(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                                        placeholder={recording ? "Recording voice…" : "Message..."}
-                                        className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-400"
-                                    />
-
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        id="pipImageInput"
-                                        hidden
-                                        onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            if (file) setImage(file);
-                                            e.target.value = "";
-                                        }}
-                                    />
-                                    <button
-                                        onClick={() => document.getElementById("pipImageInput").click()}
-                                        className="p-1 rounded-full hover:bg-[var(--secondary)] transition"
-                                        title="Upload Image"
-                                    >
-                                        <ImageIcon size={24} />
-                                    </button>
-
-                                    <button
-                                        onClick={recording ? stopRecording : startRecording}
-                                        className={`p-1 rounded-full transition ${audioURL ? "bg-green-100" : "hover:bg-[var(--secondary)]"}`}
-                                        title={recording ? "Stop Recording" : audioURL ? "Recorded" : "Record Audio"}
-                                    >
-                                        <Mic size={24} />
-                                    </button>
-
-                                    <button
-                                        onClick={handleSend}
-                                        disabled={!(draft.trim() || image || audioURL)}
-                                        className={`p-1 rounded-full transition ${draft.trim() || image || audioURL ? "text-black hover:bg-gray-200" : "text-gray-300 cursor-not-allowed"}`}
-                                    >
-                                        <Send size={24} fill="currentColor" />
-                                    </button>
-                                </div>
+                            )}
+                            {msg.message_type === "image" && (
+                                <img
+                                    src={msg.media_url}
+                                    alt="sent"
+                                    className="max-w-[260px] rounded-xl"
+                                    onLoad={() => requestAnimationFrame(() => scrollToBottom(false))}
+                                    onClick={() => {
+                                        const images = activeChatHistory
+                                            .filter(m => m.message_type === "image")
+                                            .map(m => m.media_url);
+                                        const index = images.findIndex(url => url === msg.media_url);
+                                        setChatImages(images);
+                                        setMediaInitialIndex(index);
+                                        setMediaViewerOpen(true);
+                                    }}
+                                />
+                            )}
+                            {msg.message_type === "audio" && (
+                                <AudioMessage msg={{ media_url: msg.media_url }} />
                             )}
                         </div>
                     </div>
+                ))}
+            </div>
 
-                    {/* Scroll to Bottom Button */}
-                    {!isAtBottom && (
-                        <button
-                            onClick={() => scrollToBottom(true)}
-                            className="scroll-to-bottom-btn"
-                            style={{
-                                position: "absolute",
-                                bottom: "80px",
-                                right: "20px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "6px",
-                                padding: "10px 14px",
-                                borderRadius: "50px",
-                                backgroundColor: "rgba(255, 255, 255, 0.85)",
-                                backdropFilter: "blur(10px)",
-                                WebkitBackdropFilter: "blur(10px)",
-                                boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
-                                color: "#111",
-                                fontWeight: "600",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease-in-out",
-                                zIndex: 100,
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = "translateY(0)";
-                            }}
-                        >
-                            <FaArrowDown size={18} strokeWidth={3} />
-                        </button>
+            {/* INPUT AREA */}
+            <div className="p-3 bg-white border-t flex-shrink-0">
+                {image && <ImagePreview file={image} onRemove={() => setImage(null)} />}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-full"
+                    style={{
+                        backgroundColor: "rgba(255,255,255,0.3)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                    }}
+                >
+                    {recording ? (
+                        <div className="flex items-center gap-2 w-full px-1">
+                            <span className="text-xs text-gray-600 w-14">{MAX_RECORD_TIME - recordTime}s left</span>
+                            <input type="range" min="0" max="255" value={audioLevel} readOnly className="flex-1 h-1 accent-green-500"/>
+                            <span className="text-xs text-red-500">Recording…</span>
+                        </div>
+                    ) : audioURL ? (
+                        <div className="flex items-center gap-2 w-full">
+                            <button onClick={() => setAudioURL(null)} className="p-1 rounded-full hover:bg-red-100 transition flex-1 text-center text-sm">Delete</button>
+                            <button onClick={handleSend} className="p-1 rounded-full bg-green-100 hover:bg-green-200 transition flex-1 text-center text-sm">Send</button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 w-full">
+                            <input
+                                value={draft}
+                                disabled={recording}
+                                onChange={(e) => setDraft(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                placeholder={recording ? "Recording voice…" : "Message..."}
+                                className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-400"
+                            />
+                            <input type="file" accept="image/*" id="pipImageInput" hidden
+                                onChange={(e) => { const f = e.target.files[0]; if (f) setImage(f); e.target.value = ""; }}
+                            />
+                            <button onClick={() => document.getElementById("pipImageInput").click()}
+                                className="p-1 rounded-full hover:bg-gray-100 transition" title="Upload Image">
+                                <ImageIcon size={20} />
+                            </button>
+                            <button onClick={recording ? stopRecording : startRecording}
+                                className={`p-1 rounded-full transition ${audioURL ? "bg-green-100" : "hover:bg-gray-100"}`}
+                                title={recording ? "Stop Recording" : "Record Audio"}>
+                                <Mic size={20} />
+                            </button>
+                            <button onClick={handleSend}
+                                disabled={!(draft.trim() || image || audioURL)}
+                                className={`p-1 rounded-full transition ${draft.trim() || image || audioURL ? "text-black hover:bg-gray-200" : "text-gray-300 cursor-not-allowed"}`}>
+                                <Send size={20} fill="currentColor" />
+                            </button>
+                        </div>
                     )}
                 </div>
-
-                {/* Media Viewer */}
-                {mediaViewerOpen && (
-                    <MediaViewer
-                        post={{
-                            attachments: chatImages,
-                        }}
-                        initialIndex={mediaInitialIndex}
-                        onClose={() => setMediaViewerOpen(false)}
-                    />
-                )}
             </div>
+
+            {/* Scroll to bottom */}
+            {!isAtBottom && (
+                <button
+                    onClick={() => scrollToBottom(true)}
+                    style={{
+                        position: "absolute",
+                        bottom: "80px", right: "20px",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "8px", borderRadius: "50%",
+                        backgroundColor: "rgba(255,255,255,0.9)",
+                        backdropFilter: "blur(10px)",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                        cursor: "pointer", zIndex: 100,
+                    }}
+                >
+                    <FaArrowDown size={16} />
+                </button>
+            )}
         </div>
-    );
+
+        {mediaViewerOpen && (
+            <MediaViewer
+                post={{ attachments: chatImages }}
+                initialIndex={mediaInitialIndex}
+                onClose={() => setMediaViewerOpen(false)}
+            />
+        )}
+    </>
+);
 };
 
 export default GlobalPipModal;

@@ -1,8 +1,35 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import axiosBase from '../../utils/axiosBase';
+
+/* ─── Saved badge (uses sr-saved-badge CSS from Settings.jsx) ─── */
+const Saved = () => (
+  <span className="sr-saved-badge">
+    <Check size={12} /> Saved
+  </span>
+);
+
+/* ─── Radio group (uses sr-radio-card CSS from Settings.jsx) ─── */
+const RadioGroup = ({ name, options, value, onChange }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} className="sr-stagger">
+    {options.map((o) => (
+      <label key={o.value} className="sr-radio-card">
+        <input
+          type="radio"
+          name={name}
+          value={o.value}
+          checked={value === o.value}
+          onChange={() => onChange(o.value)}
+        />
+        <span>{o.label}</span>
+      </label>
+    ))}
+  </div>
+);
+
+/* ─────────────────────────────────────────────────────────────── */
 
 const Appearance = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
@@ -13,20 +40,19 @@ const Appearance = ({ isEmbedded = false }) => {
   const [initialized, setInitialized] = useState(false);
   const isMounted = useRef(false);
 
-  // Load settings from backend on mount
+  /* ── Load settings from backend on mount ── */
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const token = localStorage.getItem('token');
         const res = await axiosBase.get('/api/settings', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (res.data.success && res.data.settings) {
           const { themePreferences } = res.data.settings;
           if (themePreferences) {
             setFontSize(themePreferences.fontSize || 'medium');
             setLanguage(themePreferences.language || 'english');
-            // Theme is handled by ThemeContext
             if (themePreferences.theme) {
               setCurrentTheme(themePreferences.theme);
             }
@@ -41,16 +67,15 @@ const Appearance = ({ isEmbedded = false }) => {
     fetchSettings();
   }, [setCurrentTheme]);
 
+  /* ── Auto-save to backend when settings change ── */
   const saveSettings = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       await axiosBase.put('/api/settings/theme', {
         theme: currentTheme,
         fontSize,
-        language
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+        language,
+      }, { headers: { Authorization: `Bearer ${token}` } });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -58,169 +83,101 @@ const Appearance = ({ isEmbedded = false }) => {
     }
   }, [currentTheme, fontSize, language]);
 
-  // Auto-save when settings change
   useEffect(() => {
-    if (!initialized) {
-      return;
-    }
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      saveSettings();
-    }, 500);
+    if (!initialized) return;
+    if (!isMounted.current) { isMounted.current = true; return; }
+    const timer = setTimeout(() => { saveSettings(); }, 500);
     return () => clearTimeout(timer);
   }, [currentTheme, fontSize, language, saveSettings, initialized]);
 
-  const handleThemeChange = (newTheme) => {
-    setCurrentTheme(newTheme);
-  };
-
-  const handleFontSizeChange = (newFontSize) => {
-    setFontSize(newFontSize);
-  };
-
-  const handleLanguageChange = (newLanguage) => {
-    setLanguage(newLanguage);
-  };
-
+  /* ── Options ── */
   const themeOptions = [
-    { label: 'Light', value: 'light' },
-    { label: 'Dark', value: 'dark' },
-    { label: 'System', value: 'system' }
+    { label: 'Light',  value: 'light'  },
+    { label: 'Dark',   value: 'dark'   },
+    { label: 'System', value: 'system' },
   ];
-
   const fontSizeOptions = [
-    { label: 'Small', value: 'small' },
-    { label: 'Medium', value: 'medium' },
-    { label: 'Large', value: 'large' },
-    { label: 'Extra Large', value: 'xlarge' }
+    { label: 'Small',       value: 'small'  },
+    { label: 'Medium',      value: 'medium' },
+    { label: 'Large',       value: 'large'  },
+    { label: 'Extra Large', value: 'xlarge' },
   ];
-
   const languageOptions = [
     { label: 'English', value: 'english' },
     { label: 'Spanish', value: 'spanish' },
-    { label: 'French', value: 'french' },
-    { label: 'German', value: 'german' },
-    { label: 'Chinese', value: 'chinese' }
+    { label: 'French',  value: 'french'  },
+    { label: 'German',  value: 'german'  },
+    { label: 'Chinese', value: 'chinese' },
   ];
 
+  /* ── Render ── */
   return (
     <div>
+      {/* Header — only when not embedded inside Settings.jsx */}
       {!isEmbedded && (
         <div className="max-w-2xl mx-auto p-4 md:p-6">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
-              style={{ backgroundColor: 'var(--form-bg)' }}
+              className="sr-back-btn"
+              style={{ width: 40, height: 40 }}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
+              <ArrowLeft size={17} style={{ color: 'var(--text-main)' }} />
             </button>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+            <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, letterSpacing: '-.02em' }}>
               Appearance
             </h1>
-            {saved && (
-              <span className="text-green-500 text-sm ml-auto">Saved!</span>
-            )}
+            {saved && <Saved />}
           </div>
         </div>
       )}
+
       <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : ''}>
-        {/* Theme Settings */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Theme
-          </h2>
-          <div className="space-y-3">
-            {themeOptions.map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center gap-3 p-4 rounded-lg cursor-pointer transition hover:opacity-80"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)'
-                }}
-              >
-                <input
-                  type="radio"
-                  name="theme"
-                  value={option.value}
-                  checked={currentTheme === option.value}
-                  onChange={(e) => handleThemeChange(e.target.value)}
-                  className="w-5 h-5"
-                />
-                <span style={{ color: 'var(--text-main)' }}>{option.label}</span>
-              </label>
-            ))}
+
+        {/* Saved badge — when embedded the header is hidden so show it here */}
+        {isEmbedded && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
+            <p className="sr-section-heading" style={{ margin: 0 }}>Appearance</p>
+            {saved && <Saved />}
           </div>
+        )}
+
+        {/* Theme */}
+        <div className="sr-page">
+          <p className="sr-section-heading" style={{ marginBottom: 10 }}>Theme</p>
+          <RadioGroup
+            name="theme"
+            options={themeOptions}
+            value={currentTheme}
+            onChange={setCurrentTheme}
+          />
+
+          <div className="sr-divider" />
+
+          {/* Font Size */}
+          <p className="sr-section-heading" style={{ marginBottom: 10 }}>Font Size</p>
+          <RadioGroup
+            name="fontSize"
+            options={fontSizeOptions}
+            value={fontSize}
+            onChange={setFontSize}
+          />
+
+          <div className="sr-divider" />
+
+          {/* Language */}
+          <p className="sr-section-heading" style={{ marginBottom: 10 }}>App Language</p>
+          <RadioGroup
+            name="language"
+            options={languageOptions}
+            value={language}
+            onChange={setLanguage}
+          />
         </div>
 
-        {/* Font Size Settings */}
-        <div className="mb-8">
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            Font Size
-          </h2>
-          <div className="space-y-3">
-            {fontSizeOptions.map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center gap-3 p-4 rounded-lg cursor-pointer transition hover:opacity-80"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)'
-                }}
-              >
-                <input
-                  type="radio"
-                  name="fontSize"
-                  value={option.value}
-                  checked={fontSize === option.value}
-                  onChange={(e) => handleFontSizeChange(e.target.value)}
-                  className="w-5 h-5"
-                />
-                <span style={{ color: 'var(--text-main)' }} className={`text-${option.value}`}>
-                  {option.label}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Language Settings */}
-        <div>
-          <h2 className="font-semibold text-lg mb-4" style={{ color: 'var(--text-main)' }}>
-            App Language
-          </h2>
-          <div className="space-y-3">
-            {languageOptions.map((option) => (
-              <label
-                key={option.value}
-                className="flex items-center gap-3 p-4 rounded-lg cursor-pointer transition hover:opacity-80"
-                style={{
-                  backgroundColor: 'var(--form-bg)',
-                  border: '1px solid var(--input-border)'
-                }}
-              >
-                <input
-                  type="radio"
-                  name="language"
-                  value={option.value}
-                  checked={language === option.value}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
-                  className="w-5 h-5"
-                />
-                <span style={{ color: 'var(--text-main)' }}>{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Appearance;

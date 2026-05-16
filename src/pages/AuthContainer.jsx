@@ -76,11 +76,11 @@ const AuthContainer = ({ initialError, initialTab = 'login', onClose, isModal = 
           >
             <img
               src={assets.logo}
-              alt="SpringsConnect Logo"
+              alt="SpringsCircle Logo"
               className="w-9 h-9 bg-white/20 rounded-2xl"
             />
             <div className="flex-1">
-              <div className="text-white font-semibold text-lg tracking-tight">SpringsConnect Youth</div>
+              <div className="text-white font-semibold text-lg tracking-tight">SpringsCircle Youth</div>
               <div className="text-white/75 text-xs flex items-center gap-1">
                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
                 online
@@ -187,11 +187,11 @@ const AuthContainer = ({ initialError, initialTab = 'login', onClose, isModal = 
                 <div className="flex items-center justify-center lg:justify-start gap-3 mb-8">
                   <img
                     src={assets.logo}
-                    alt="SpringsConnect Logo"
+                    alt="SpringsCircle Logo"
                     className="w-25 h-25"
                   />
                   <div>
-                    <h2 className="text-4xl font-semibold text-gray-900 tracking-tighter">SpringsConnect</h2>
+                    <h2 className="text-4xl font-semibold text-gray-900 tracking-tighter">SpringsCircle</h2>
                     <p className="text-sm text-gray-600 -mt-1">Connect • Grow • Stay Accountable</p>
                   </div>
                 </div>
@@ -251,13 +251,13 @@ const AuthContainer = ({ initialError, initialTab = 'login', onClose, isModal = 
               <div className="flex justify-center mb-8">
                 <img
                   src={assets.logo}
-                  alt="SpringsConnect Logo"
+                  alt="SpringsCircle Logo"
                   className="w-25 h-25"
                 />
               </div>
 
               <div className="text-center mb-10">
-                <h2 className="text-3xl font-semibold text-gray-900">Welcome to SpringsConnect</h2>
+                <h2 className="text-3xl font-semibold text-gray-900">Welcome to SpringsCircle</h2>
                 <p className="text-gray-600 mt-1">Connect with purpose. Grow with accountability.</p>
               </div>
 

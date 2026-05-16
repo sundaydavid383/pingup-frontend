@@ -1,81 +1,524 @@
-.friend-card {
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.25s ease;
-  position: relative;
+/* ============================================================
+   SHARE MODAL — Liquid Glass + Micro-editorial
+   Replace your existing sharemodal.css with this file.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+
+/* ── SCOPED TOKENS ── */
+.sm-overlay {
+  --sm-glass:        rgba(255, 255, 255, 0.78);
+  --sm-border:       rgba(200, 215, 240, 0.6);
+  --sm-radius:       22px;
+  --sm-shadow:
+    0 8px 32px rgba(20, 40, 100, 0.14),
+    0 2px 8px  rgba(20, 40, 100, 0.07),
+    0 0 0 1px  rgba(255, 255, 255, 0.6) inset;
+  --sm-primary-rgb:  var(--primary-rgb, 59, 92, 203);
+  --sm-transition:   all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── OVERLAY ── */
+.sm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5550;
   display: flex;
   align-items: center;
-  flex-direction: column;
-  padding: 8px;
-  border-radius: 18px;
+  justify-content: center;
+  padding: 16px;
+  animation: sm-overlay-in 0.22s ease both;
 }
 
-/* Beautiful hover */
-.friend-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.12);
-}
-
-/* Glow outline on hover */
-.friend-card::after {
-  content: "";
+.sm-overlay-bg {
   position: absolute;
   inset: 0;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--white), var(--hover-light));
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  background: rgba(10, 20, 60, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+@keyframes sm-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── MODAL SHELL ── */
+.sm-modal {
+  position: relative;
+  z-index: 60;
+  width: min(520px, 100%);
+  background: var(--sm-glass);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--sm-border);
+  border-radius: var(--sm-radius);
+  box-shadow: var(--sm-shadow);
+  padding: 22px 22px 18px;
+  font-family: 'Geist', sans-serif;
+  overflow: hidden;
+  animation: sm-modal-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Top prismatic sheen */
+.sm-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.9) 40%,
+    rgba(var(--sm-primary-rgb), 0.45) 60%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Ambient aurora blob */
+.sm-modal::after {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--sm-primary-rgb), 0.07) 0%, transparent 70%);
+  top: -100px; right: -80px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes sm-modal-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── HEADER ── */
+.sm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.sm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--secondary, #1e2a3a);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sm-title-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(var(--sm-primary-rgb), 1), rgba(130, 160, 255, 0.9));
+  box-shadow: 0 0 8px rgba(var(--sm-primary-rgb), 0.5);
+  animation: sm-dot-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes sm-dot-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(var(--sm-primary-rgb), 0.5); }
+  50%       { box-shadow: 0 0 14px rgba(var(--sm-primary-rgb), 0.9); }
+}
+
+.sm-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(200, 215, 240, 0.35);
+  border: 1px solid rgba(200, 215, 240, 0.5);
+  cursor: pointer;
+  transition: var(--sm-transition);
+  color: #64748b;
+}
+
+.sm-close-btn:hover {
+  background: rgba(var(--sm-primary-rgb), 0.1);
+  border-color: rgba(var(--sm-primary-rgb), 0.25);
+  color: var(--primary, #3b5ccb);
+  transform: rotate(90deg);
+}
+
+/* ── SEARCH + COPY ROW ── */
+.sm-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.sm-search-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.sm-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  width: 14px; height: 14px;
+}
+
+.sm-search {
+  width: 100%;
+  padding: 9px 12px 9px 32px;
+  font-family: 'Geist', sans-serif;
+  font-size: 13px;
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(200, 215, 240, 0.7);
+  border-radius: 10px;
+  outline: none;
+  transition: var(--sm-transition);
+  backdrop-filter: blur(8px);
+}
+
+.sm-search::placeholder { color: #b0bec5; }
+
+.sm-search:focus {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(var(--sm-primary-rgb), 0.4);
+  box-shadow: 0 0 0 3px rgba(var(--sm-primary-rgb), 0.1);
+}
+
+.sm-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(200, 215, 240, 0.7);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: var(--sm-transition);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.sm-copy-btn:hover {
+  background: rgba(var(--sm-primary-rgb), 0.08);
+  border-color: rgba(var(--sm-primary-rgb), 0.28);
+  color: var(--primary, #3b5ccb);
+  transform: translateY(-1px);
+}
+
+/* ── SECTION LABEL ── */
+.sm-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.7);
+  margin-bottom: 10px;
+  padding: 0 2px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── FRIENDS GRID ── */
+.sm-friends-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 2px 2px 4px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 400px) {
+  .sm-friends-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Scrollbar */
+.sm-friends-grid::-webkit-scrollbar { width: 3px; }
+.sm-friends-grid::-webkit-scrollbar-track { background: transparent; }
+.sm-friends-grid::-webkit-scrollbar-thumb {
+  background: rgba(var(--sm-primary-rgb), 0.25);
+  border-radius: 10px;
+}
+
+/* ── FRIEND CARD ── */
+.friend-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px 8px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: var(--sm-transition);
+  position: relative;
+  text-align: center;
+  user-select: none;
+}
+
+.friend-card:hover {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(var(--sm-primary-rgb), 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(var(--sm-primary-rgb), 0.1);
+}
+
+/* Selected state */
+.friend-card.selected {
+  background: rgba(var(--sm-primary-rgb), 0.08);
+  border-color: rgba(var(--sm-primary-rgb), 0.38);
+  box-shadow: 0 0 0 3px rgba(var(--sm-primary-rgb), 0.1);
+}
+
+/* Selected checkmark badge */
+.friend-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(var(--sm-primary-rgb), 1);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 16px;
+  text-align: center;
+  animation: sm-check-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes sm-check-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Avatar wrapper */
+.friend-avatar {
+  position: relative;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.22s;
+}
+
+.friend-card:hover .friend-avatar {
+  transform: scale(1.06);
+}
+
+.friend-card.selected .friend-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(var(--sm-primary-rgb), 0.8),
+    rgba(160, 190, 255, 0.5),
+    rgba(var(--sm-primary-rgb), 0.8)
+  );
+  animation: sm-ring-spin 3s linear infinite;
   z-index: -1;
 }
 
-.friend-card:hover::after {
-  opacity: 0.55;
+@keyframes sm-ring-spin {
+  to { transform: rotate(360deg); }
 }
 
-/* Avatar */
-
-
-
+/* Friend name */
+.friend-info { width: 100%; }
 
 .friend-name {
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: #222;
-}
-
-.friend-occupation {
-  font-size: 0.75rem;
-  color: #777;
-}
-.friend-name,
-.friend-occupation {
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;        /* required */
-  display: block;     /* ensures ellipsis works properly */
-}
-.friend-info {
-  width: 100%;
-  max-width: 130px;   /* adjust based on your design */
+  max-width: 100%;
+  transition: color 0.2s;
 }
 
-/* Selected State */
-.friend-card.selected {
-  transform: scale(1.03);
-  box-shadow: 0 6px 18px rgba(0, 120, 255, 0.15);
-  border: 1px solid var(--primary);
-  background: rgba(0, 120, 255, 0.05);
+.friend-card.selected .friend-name {
+  color: var(--primary, #3b5ccb);
+  font-weight: 600;
 }
 
-/* Selected glow ring */
-.friend-card.selected::after {
-  opacity: 0.9 !important;
-background: linear-gradient(135deg, var(--white), var(--hover-light));
+/* Already shared badge */
+.sm-already-badge {
+  font-size: 9.5px;
+  color: #f87171;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-/* Selected avatar emphasis */
-.friend-card.selected .friend-avatar {
-  transform: scale(1.1);
+/* ── SKELETON LOADER ── */
+.sm-skeleton-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(200,215,240,0.4) 0%, rgba(200,215,240,0.7) 50%, rgba(200,215,240,0.4) 100%);
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.4s ease-in-out infinite;
 }
 
+.sm-skeleton-name {
+  width: 48px; height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, rgba(200,215,240,0.4) 0%, rgba(200,215,240,0.7) 50%, rgba(200,215,240,0.4) 100%);
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.4s ease-in-out infinite 0.1s;
+}
+
+@keyframes sm-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── EMPTY STATE ── */
+.sm-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.sm-empty-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: rgba(200, 215, 240, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: #b0bec5;
+  font-size: 18px;
+}
+
+.sm-empty-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+/* ── DIVIDER ── */
+.sm-divider {
+  height: 1px;
+  margin: 16px 0 14px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(200, 215, 240, 0.8) 20%,
+    rgba(var(--sm-primary-rgb), 0.2) 50%,
+    rgba(200, 215, 240, 0.6) 80%,
+    transparent
+  );
+  border: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── FOOTER ROW ── */
+.sm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  gap: 12px;
+}
+
+.sm-selected-count {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.sm-selected-count.has-selection {
+  color: var(--primary, #3b5ccb);
+  font-weight: 600;
+}
+
+/* ── SEND BUTTON ── */
+.sm-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 22px;
+  font-family: 'Geist', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, rgba(var(--sm-primary-rgb), 1), rgba(80, 120, 230, 0.9));
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: var(--sm-transition);
+  box-shadow:
+    0 0 0 1px rgba(153, 183, 224, 0.3),
+    0 4px 16px rgba(var(--sm-primary-rgb), 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shine sweep */
+.sm-send-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -80%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.5s ease;
+}
+
+.sm-send-btn:hover::before { left: 150%; }
+
+.sm-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(153, 183, 224, 0.45),
+    0 8px 24px rgba(var(--sm-primary-rgb), 0.45),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.sm-send-btn:disabled {
+  background: linear-gradient(135deg, #cbd5e1, #e2e8f0);
+  box-shadow: none;
+  cursor: not-allowed;
+  color: #94a3b8;
+  transform: none;
+}
+
+.sm-send-btn:disabled::before { display: none; }
+
+/* Sending spinner */
+.sm-spinner {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: sm-spin 0.65s linear infinite;
+}
+
+@keyframes sm-spin {
+  to { transform: rotate(360deg); }
+}

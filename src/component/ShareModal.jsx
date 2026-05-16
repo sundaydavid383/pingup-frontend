@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { X, Link as LinkIcon } from "lucide-react";
+import { X, Link as LinkIcon, Share2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import axiosBase from "../utils/axiosBase";
 import { useNavigate } from "react-router-dom";
@@ -181,51 +181,133 @@ filtered.map((friend) => {
   const isSelected = selected.has(friend._id);
   const alreadyShared = post?.shares?.includes(friend._id);
 
-  return (
-    <div
-      key={friend._id}
-      className={`
-        friend-card
-        ${isSelected ? "selected" : ""}
-        ${alreadyShared ? "opacity-50 cursor-not-allowed" : ""}
-        
-      `}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!alreadyShared) toggleSelect(friend._id);
-        console.log("Clicked friend:", friend._id, "Already shared:", alreadyShared, "Is selected:", isSelected);
-      }}
-    >
-      {/* Avatar */}
-      <div className="friend-avatar">
-        <ProfileAvatar
-          user={{
-            name: friend.name,
-            profilePicUrl: friend.profilePicUrl,
-            profilePicBackground: friend.profilePicBackground,
-          }}
-          size={40}
+ return (
+    <div className="sm-overlay">
+      {alert && (
+        <CustomAlert
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert(null)}
         />
-      </div>
-
-      {/* Username */}
-      <div className="friend-info">
-        <div className="friend-name">@{friend.username || "unknown"}</div>
-      </div>
-
-      {/* Already shared badge */}
-      {alreadyShared && (
-        <div className="text-xs text-red-500 mt-1 font-medium">
-          Already shared
-        </div>
       )}
 
-      {/* Selected badge */}
-      {isSelected && !alreadyShared && (
-        <div className="text-xs text-blue-600 mt-1 font-medium">
-          Selected
+      {/* Overlay background */}
+      <div className="sm-overlay-bg" onClick={onClose} />
+
+      {/* Modal */}
+      <div className="sm-modal">
+
+        {/* Header */}
+        <div className="sm-header">
+          <h3 className="sm-title">
+            <span className="sm-title-dot" />
+            Share post
+          </h3>
+          <button onClick={onClose} className="sm-close-btn">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-      )}
+
+        {/* Search + Copy Link */}
+        <div className="sm-controls">
+          <div className="sm-search-wrap">
+            <svg className="sm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search friends..."
+              className="sm-search"
+            />
+          </div>
+          <button onClick={handleCopyLink} className="sm-copy-btn" title="Copy post link">
+            <LinkIcon className="w-4 h-4" />
+            Copy link
+          </button>
+        </div>
+
+        {/* Section label */}
+        <div className="sm-section-label">Connections</div>
+
+        {/* Friends Grid */}
+        <div className="sm-friends-grid">
+          {loadingFriends ? (
+            [...Array(8)].map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-2 p-2">
+                <div className="sm-skeleton-avatar" />
+                <div className="sm-skeleton-name" />
+              </div>
+            ))
+          ) : filtered.length === 0 ? (
+            <div className="sm-empty">
+              <div className="sm-empty-icon">👥</div>
+              <p className="sm-empty-text">No friends found</p>
+            </div>
+          ) : (
+            filtered.map((friend) => {
+              const isSelected = selected.has(friend._id);
+              const alreadyShared = post?.shares?.includes(friend._id);
+
+              return (
+                <div
+                  key={friend._id}
+                  className={`friend-card ${isSelected ? "selected" : ""} ${alreadyShared ? "opacity-50 cursor-not-allowed" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!alreadyShared) toggleSelect(friend._id);
+                  }}
+                >
+                  <div className="friend-avatar">
+                    <ProfileAvatar
+                      user={{
+                        name: friend.name,
+                        profilePicUrl: friend.profilePicUrl,
+                        profilePicBackground: friend.profilePicBackground,
+                      }}
+                      size={40}
+                    />
+                  </div>
+                  <div className="friend-info">
+                    <div className="friend-name">@{friend.username || "unknown"}</div>
+                  </div>
+                  {alreadyShared && (
+                    <div className="sm-already-badge">Shared</div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Divider */}
+        <hr className="sm-divider" />
+
+        {/* Footer */}
+        <div className="sm-footer">
+          <span className={`sm-selected-count ${selected.size > 0 ? "has-selection" : ""}`}>
+            {selected.size === 0 ? "No one selected" : `${selected.size} selected`}
+          </span>
+          <button
+            onClick={handleSend}
+            disabled={sending || selected.size === 0}
+            className="sm-send-btn"
+          >
+            {sending ? (
+              <>
+                <span className="sm-spinner" />
+                Sending…
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" />
+                Send
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 })

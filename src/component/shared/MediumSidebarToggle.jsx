@@ -8,77 +8,107 @@ const MediumSidebarToggle = ({ sponsors }) => {
   const sidebarRef = useRef(null);
   const buttonRef = useRef(null);
 
-  // Close sidebar if clicked outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const onDown = (e) => {
       if (
         showSidebar &&
-        sidebarRef.current &&
-        !sidebarRef.current.contains(e.target) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target)
-      ) {
-        setShowSidebar(false);
-      }
+        sidebarRef.current && !sidebarRef.current.contains(e.target) &&
+        buttonRef.current && !buttonRef.current.contains(e.target)
+      ) setShowSidebar(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, [showSidebar]);
 
   return (
     <>
-      {/* Sidebar */}
-     <div
-  ref={sidebarRef}
-  className={`fixed top-0 right-0 z-[555] bg-white shadow-lg w-[300px] transform transition-transform duration-300 ease-in-out md:block lg:hidden ${
-    showSidebar ? "translate-x-0" : "translate-x-full"
-  }`}
->
-  <div className="flex flex-col w-full max-h-[98vh] overflow-y-auto p-2">
-        {!sponsors ? (
-  <RightSidebarSkeleton />
-) : (
-          <a
-            href={sponsors.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-white text-xs p-4 rounded-md shadow-sm hover:shadow-lg transition-transform duration-300 ease-in-out block"
-          >
-            <h3 className="text-slate-800 font-semibold mb-2">
-              {sponsors.title}
-            </h3>
-            <img
-              src={sponsors.image}
-              alt={sponsors.brand}
-              className="w-full h-auto rounded-md mb-2 object-contain"
-            />
-            <p className="text-slate-600 font-medium">{sponsors.brand}</p>
-            <p className="text-slate-600">{sponsors.description}</p>
-          </a>
-        )}
+      <style>{`
+        .gn-msb {
+          position: fixed;
+          top: 0;
+          right: 0;
+          z-index: 555;
+          background: #fff;
+          width: 300px;
+          height: 100dvh;
+          box-shadow: -2px 0 12px rgba(0,0,0,.10);
+          transform: translateX(100%);
+          transition: transform .25s cubic-bezier(.4,0,.2,1);
+          display: flex;
+          flex-direction: column;
+          overflow-y: auto;
+          font-family: 'Google Sans Text', 'Segoe UI', sans-serif;
+        }
+        @media (min-width: 1024px) { .gn-msb { display: none; } }
+        .gn-msb.open { transform: translateX(0); }
 
-        <RecentMessages />
+        .gn-msb-inner { padding: 12px; flex: 1; }
+
+        .gn-msb-sponsor {
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,.10);
+          text-decoration: none;
+          display: block;
+          margin-bottom: 12px;
+          transition: box-shadow .15s;
+          color: inherit;
+        }
+        .gn-msb-sponsor:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+        .gn-msb-sponsor-body { padding: 14px; }
+        .gn-msb-sponsor h3 { font-size: 14px; font-weight: 600; color: #202124; margin-bottom: 8px; }
+        .gn-msb-sponsor img { width: 100%; height: auto; border-radius: 8px; margin-bottom: 8px; object-fit: contain; }
+        .gn-msb-sponsor p { font-size: 12px; color: #5f6368; margin: 2px 0; }
+
+        /* toggle button */
+        .gn-msb-toggle {
+          position: fixed;
+          top: 8px;
+          right: 8px;
+          z-index: 556;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: none;
+          background: #fff;
+          box-shadow: 0 2px 8px rgba(26,115,232,.35);
+          cursor: pointer;
+          transition: box-shadow .15s, background .15s;
+          color: #1a73e8;
+        }
+        @media (min-width: 1024px) { .gn-msb-toggle { display: none; } }
+        .gn-msb-toggle:hover {
+          background: #e8f0fe;
+          box-shadow: 0 2px 4px rgba(26,115,232,.2);
+        }
+      `}</style>
+
+      {/* Sidebar panel */}
+      <div ref={sidebarRef} className={`gn-msb${showSidebar ? ' open' : ''}`}>
+        <div className="gn-msb-inner">
+          {!sponsors ? (
+            <RightSidebarSkeleton />
+          ) : (
+            <a href={sponsors.link} target="_blank" rel="noopener noreferrer" className="gn-msb-sponsor">
+              <div className="gn-msb-sponsor-body">
+                <h3>{sponsors.title}</h3>
+                <img src={sponsors.image} alt={sponsors.brand} />
+                <p style={{ fontWeight: 600, color: '#202124' }}>{sponsors.brand}</p>
+                <p>{sponsors.description}</p>
+              </div>
+            </a>
+          )}
+          <RecentMessages />
         </div>
       </div>
 
       {/* Toggle button */}
-      <button
-        ref={buttonRef}
-        onClick={() => setShowSidebar(!showSidebar)}
-        className="flex lg:hidden fixed top-1 z-555 right-1 bg-white p-2 rounded-full transition duration-300"
-        style={{ boxShadow: "0 4px 10px var(--primary)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "none")}
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.boxShadow = "0 4px 10px var(--primary)")
-        }
-      >
-        {!showSidebar ? (
-          <Megaphone size={25} className="text-slate-700" />
-        ) : (
-          <X size={25} className="text-slate-700" />
-        )}
+      <button ref={buttonRef} className="gn-msb-toggle" onClick={() => setShowSidebar(p => !p)}>
+        {showSidebar ? <X size={20} /> : <Megaphone size={20} />}
       </button>
-
     </>
   );
 };
