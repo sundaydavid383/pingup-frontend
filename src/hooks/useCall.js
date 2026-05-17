@@ -1,25 +1,6 @@
 import { useContext, useCallback } from "react";
 import { CallContext } from "../context/CallContext";
 
-/**
- * useCall Hook
- * 
- * Provides call functionality to any component:
- * - initiateAudioCall()
- * - initiateVideoCall()
- * - acceptCall()
- * - rejectCall()
- * - endCall()
- * 
- * Usage:
- * const { initiateVideoCall, acceptCall } = useCall();
- * 
- * // Start a video call
- * <button onClick={() => initiateVideoCall(userId, userName, userImage)}>
- *   Call
- * </button>
- */
-
 const useCall = () => {
   const callContext = useContext(CallContext);
 
@@ -30,38 +11,49 @@ const useCall = () => {
 
   const initiateAudioCall = useCallback(
     (receiverId, receiverName, receiverImage = null) => {
-      return callContext.initiateCall(
-        receiverId,
-        receiverName,
-        callContext.CALL_TYPES.AUDIO,
-        receiverImage
-      );
+      const manager = callContext.callManagerRef?.current;
+      if (manager) {
+        return manager.initiateCall(
+          receiverId,
+          receiverName,
+          callContext.CALL_TYPES.AUDIO,
+          receiverImage
+        );
+      }
+      console.warn("⚠️ useCall: callManager not ready yet");
     },
     [callContext]
   );
 
   const initiateVideoCall = useCallback(
     (receiverId, receiverName, receiverImage = null) => {
-      return callContext.initiateCall(
-        receiverId,
-        receiverName,
-        callContext.CALL_TYPES.VIDEO,
-        receiverImage
-      );
+      const manager = callContext.callManagerRef?.current;
+      if (manager) {
+        return manager.initiateCall(
+          receiverId,
+          receiverName,
+          callContext.CALL_TYPES.VIDEO,
+          receiverImage
+        );
+      }
+      console.warn("⚠️ useCall: callManager not ready yet");
     },
     [callContext]
   );
 
   const acceptCall = useCallback(() => {
-    return callContext.acceptCall();
+    const manager = callContext.callManagerRef?.current;
+    if (manager) return manager.acceptCall();
   }, [callContext]);
 
   const rejectCall = useCallback((reason = "declined") => {
-    return callContext.rejectCall(reason);
+    const manager = callContext.callManagerRef?.current;
+    if (manager) return manager.rejectCall(reason);
   }, [callContext]);
 
   const endCall = useCallback(() => {
-    return callContext.endCall();
+    const manager = callContext.callManagerRef?.current;
+    if (manager) return manager.endCall();
   }, [callContext]);
 
   const hasActiveCall = useCallback(() => {
@@ -69,23 +61,18 @@ const useCall = () => {
   }, [callContext]);
 
   return {
-    // Call actions
     initiateAudioCall,
     initiateVideoCall,
     acceptCall,
     rejectCall,
     endCall,
-
-    // State accessors
     currentCall: callContext.currentCall,
     hasActiveCall,
     callState: callContext.getCallStatus(),
     CALL_STATES: callContext.CALL_STATES,
     CALL_TYPES: callContext.CALL_TYPES,
-
-    // Utils
     callHistory: callContext.callHistory,
-    callError: callContext.callError
+    callError: callContext.callError,
   };
 };
 

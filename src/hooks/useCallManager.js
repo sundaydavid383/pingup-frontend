@@ -492,7 +492,7 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     socket.on('joinCallRoom', ({ callId, room }) => {
     console.log("📞 useCallManager: Joining call room:", room);
     // The socket needs to join the call room for WebRTC signaling to work
-    socket.emit('joinRoom', callId); // reuse existing joinRoom which does socket.join
+    socket.emit('joinCallSignalRoom', { callId }); // reuse existing joinRoom which does socket.join
 });
     console.log("📞 useCallManager: Socket event listeners registered successfully");
 

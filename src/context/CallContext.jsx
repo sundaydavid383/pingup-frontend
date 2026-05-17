@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback, useContext } from "react";
+import React, { createContext, useState, useCallback, useContext, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 
@@ -33,6 +33,7 @@ const CALL_TYPES = {
 };
 
 export const CallProvider = ({ children }) => {
+  const callManagerRef = useRef(null);
   // Current active call
   const [currentCall, setCurrentCall] = useState(null);
 
@@ -315,6 +316,7 @@ export const CallProvider = ({ children }) => {
 
   const value = {
     // State
+    callManagerRef,
     currentCall,
     callHistory,
     callError,
