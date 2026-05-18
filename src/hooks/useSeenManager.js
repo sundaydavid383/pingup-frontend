@@ -37,14 +37,14 @@ const [hasInitialized, setHasInitialized] = useState(false);
     const debugEnabled = process.env.NODE_ENV === "development";
     const logSeenEvent = useCallback((step, details = {}) => {
         if (!debugEnabled) return;
-        console.log("[SeenManager]", step, {
-            chatId,
-            userId,
-            lastSeenMessage: lastSeenMessage?._id,
-            unseenBelowCount,
-            hasInitialized,
-            ...details,
-        });
+        // console.log("[SeenManager]", step, {
+        //     chatId,
+        //     userId,
+        //     lastSeenMessage: lastSeenMessage?._id,
+        //     unseenBelowCount,
+        //     hasInitialized,
+        //     ...details,
+        // });
     }, [chatId, userId, lastSeenMessage, unseenBelowCount, hasInitialized, debugEnabled]);
 // useSeenManager.jsx — add near top of hook
 
@@ -168,12 +168,12 @@ const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
                             `/api/chat/${chatId}/last-seen`,
                             { messageId }
                         );
-                        console.log("✅ REST persistence success");
-                        console.log("Response:", response?.data);
+                        // console.log("✅ REST persistence success");
+                        // console.log("Response:", response?.data);
                     } catch (err) {
-                        console.warn("⚠️ REST persistence failed:");
-                        console.warn(err);
-                        console.warn("Continuing to socket emit anyway...");
+                        // console.warn("⚠️ REST persistence failed:");
+                        // console.warn(err);
+                        // console.warn("Continuing to socket emit anyway...");
                     }
                 } else {
                     console.warn("⚠️ chatId missing - REST call skipped");
@@ -195,15 +195,15 @@ const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
                     messageId,
                 });
 
-                console.log("📡 Emitting socket event: updateLastSeen");
-                console.log("Socket payload:", socketPayload);
+                // console.log("📡 Emitting socket event: updateLastSeen");
+                // console.log("Socket payload:", socketPayload);
 
                 socket.emit("updateLastSeen", socketPayload);
 
                 console.log("✅ Socket emit completed");
             } catch (error) {
-                console.error("🔥 Error inside updateLastSeenOnBackend:");
-                console.error(error);
+                // console.error("🔥 Error inside updateLastSeenOnBackend:");
+                // console.error(error);
                 lastEmittedMessageIdRef.current = null;
                 console.warn("Reset lastEmittedMessageIdRef due to error");
             }
@@ -228,7 +228,7 @@ const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
         try {
             const response = await axiosBase.get(`/api/chat/${chatId}/last-seen`);
 
-            console.log(`after calling /api/chat/${chatId}/last-seen this is the response`, response);
+            //console.log(`after calling /api/chat/${chatId}/last-seen this is the response`, response);
 
             if (response.data?.message) {
                 setLastSeenMessage(response.data.message);

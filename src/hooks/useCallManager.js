@@ -21,6 +21,13 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
   const ringtoneSoundRef = useRef(new Audio("/audio/ringtone.mp3")); // Path to ringtone
   const callRejectionTimeoutRef = useRef(null);
   const connectionTimeoutRef = useRef(null);
+  const callContextRef = useRef(callContext);
+  const webrtcManagerRef = useRef(webrtcManager);
+  const rejectCallRef = useRef(null);
+  const endCallRef = useRef(null);
+
+  useEffect(() => { callContextRef.current = callContext; }, [callContext]);
+  useEffect(() => { webrtcManagerRef.current = webrtcManager; }, [webrtcManager]);
 
 
   /**
@@ -111,7 +118,7 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       // Stop ringtone
       console.log("📞 useCallManager: Stopping ringtone...");
       ringtoneSoundRef.current.pause();
-
+      clearTimeout(callRejectionTimeoutRef.current);
       // Update context
       console.log("📞 useCallManager: Accepting call in context...");
       callContext.acceptCall();
@@ -150,6 +157,7 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       callContext.setError(error.message);
     }
   }, [callContext, socket, user, webrtcManager, onCallStateChange]);
+
 
   /**
    * Reject incoming call
@@ -269,6 +277,8 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     }
   }, [callContext, socket, user, webrtcManager, onCallStateChange]);
 
+  useEffect(() => { rejectCallRef.current = rejectCall; }, [rejectCall]);
+  useEffect(() => { endCallRef.current = endCall; }, [endCall]);
   // Emit join event with user info when socket becomes available
   useEffect(() => {
     if (!socket || !user) return;
@@ -286,16 +296,15 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
   /**
    * Setup socket listeners for incoming calls
    */
-  useEffect(() => {
+useEffect(() => {
     if (!socket) {
       console.log("📞 useCallManager: Socket not available - skipping socket listener setup");
       return;
     }
-    
+
     console.log("📞 useCallManager: Setting up socket listeners for call events...");
     console.log("  -> socket.id:", socket.id);
 
-    // Incoming call from another user
     const handleIncomingCall = (callData) => {
       console.log("📞 useCallManager: handleIncomingCall() - Received incoming call");
       console.log("  -> callId:", callData.callId);
@@ -303,9 +312,9 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       console.log("  -> initiatorId:", callData.initiatorId);
       console.log("  -> initiatorName:", callData.initiatorName);
 
-      // Check if can accept (no active call)
-      if (callContext.hasActiveCall()) {
-        console.warn("📞 useCallManager: Cannot accept call - another call is active, rejecting as busy");
+      const ctx = callContextRef.current;
+      if (ctx.hasActiveCall()) {
+        console.warn("📞 useCallManager: Cannot accept call - another call is active");
         socket.emit("callRejected", {
           callId: callData.callId,
           rejecterId: user._id,
@@ -314,173 +323,164 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
         return;
       }
 
-      // Add current user to call data
-      const fullCallData = {
-        ...callData,
-        receiverId: user._id
+      const fullCallData = { 
+        ...callData, 
+        type: callData.callType,
+        receiverId: user._id 
       };
-
-      // Show incoming call
       console.log("📞 useCallManager: Handling incoming call in context...");
-      callContext.handleIncomingCall(fullCallData);
-      callContext.setCallStatusMessage(`📞 Incoming ${callData.callType || 'audio'} call from ${callData.initiatorName || 'unknown'}`);
+      ctx.handleIncomingCall(fullCallData);
+      ctx.setCallStatusMessage(`📞 Incoming ${callData.callType || 'audio'} call from ${callData.initiatorName || 'unknown'}`);
 
-      // Play ringtone
       console.log("📞 useCallManager: Playing ringtone...");
       try {
         ringtoneSoundRef.current.loop = true;
-        ringtoneSoundRef.current.play().catch(err => console.log("📞 useCallManager: Ringtone play failed:", err));
+        ringtoneSoundRef.current.play().catch(err =>
+          console.log("📞 useCallManager: Ringtone play failed:", err)
+        );
       } catch (error) {
         console.log("📞 useCallManager: Could not play ringtone:", error);
       }
 
-      // Auto-reject after 30 seconds
       console.log("📞 useCallManager: Setting 30s auto-reject timeout...");
-      const timeout = setTimeout(() => {
+       callRejectionTimeoutRef.current = setTimeout(() => {
         console.log("📞 useCallManager: Auto-rejecting call - no answer");
-        rejectCall("missed");
+        rejectCallRef.current?.("missed");
       }, 30000);
-
-      return () => clearTimeout(timeout);
     };
 
-    // Call was accepted by other user
-    const handleCallAcceptedAck = (data) => {
+    const handleCallAcceptedAck = async (data) => {
       console.log("📞 useCallManager: handleCallAcceptedAck() - Call was accepted by remote user");
       console.log("  -> data:", data);
+
+      const ctx = callContextRef.current;
+
+      // ✅ Guard against duplicates
+      if (!ctx?.currentCall) {
+        console.log("📞 useCallManager: Ignoring callAcceptedAck — no active call");
+        return;
+      }
+      if (
+        ctx.currentCall.status === ctx.CALL_STATES.CONNECTED ||
+        ctx.currentCall.status === ctx.CALL_STATES.CONNECTING
+      ) {
+        console.log("📞 useCallManager: Ignoring duplicate callAcceptedAck — already connecting/connected");
+        return;
+      }
+
       clearTimeout(callRejectionTimeoutRef.current);
       console.log("📞 useCallManager: Clearing rejection timeout");
 
-      // Update context
       console.log("📞 useCallManager: Accepting call in context (setting to CONNECTING)...");
-      callContext.acceptCall();
-      callContext.setCallStatusMessage('🔗 Connecting...');
+      ctx.acceptCall();
+      ctx.setCallStatusMessage('🔗 Connecting...');
 
-      // Initialize WebRTC
-      if (webrtcManager) {
+      const wrtc = webrtcManagerRef.current;
+      if (wrtc) {
         console.log("📞 useCallManager: Initializing WebRTC after call accepted...");
-        webrtcManager.initialize().catch(error => {
+        wrtc.initialize().catch(error => {
           console.error("📞 useCallManager: WebRTC init failed:", error);
-          callContext.setError("Failed to establish connection");
-          endCall();
+          ctx.setError("Failed to establish connection");
+          endCallRef.current?.();
         });
       } else {
         console.warn("📞 useCallManager: webrtcManager not available for WebRTC initialization");
       }
-      
-      // Notify state change
-      if (onCallStateChange) {
-        onCallStateChange('accepted');
-      }
+
+      if (onCallStateChange) onCallStateChange('accepted');
     };
 
-    // Call was rejected
     const handleCallRejectedAck = (data) => {
       console.log("📞 useCallManager: handleCallRejectedAck() - Call was rejected by remote user");
       console.log("  -> reason:", data.reason);
       clearTimeout(callRejectionTimeoutRef.current);
       console.log("📞 useCallManager: Clearing rejection timeout");
 
+      const ctx = callContextRef.current;
       let userMessage = "Call rejected";
-      if (data.reason === 'offline') {
-        userMessage = "📴 User is offline — call could not connect";
-      } else if (data.reason === 'busy') {
-        userMessage = "⏳ User is busy";
-      } else if (data.reason === 'declined') {
-        userMessage = "❌ Call declined";
-      } else if (data.reason === 'timeout') {
-        userMessage = "⏱️ No response — call timed out";
-      }
-      
-      console.log("📞 useCallManager: Setting call status message:", userMessage);
-      callContext.setCallStatusMessage(userMessage);
-      callContext.rejectCall(data.reason);
+      if (data.reason === 'offline') userMessage = "📴 User is offline — call could not connect";
+      else if (data.reason === 'busy') userMessage = "⏳ User is busy";
+      else if (data.reason === 'declined') userMessage = "❌ Call declined";
+      else if (data.reason === 'timeout') userMessage = "⏱️ No response — call timed out";
 
-      console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
-      setTimeout(() => {
-        callContext.clearCall();
-      }, 2000);
-      
-      // Notify state change
-      if (onCallStateChange) {
-        onCallStateChange('rejected');
-      }
+      console.log("📞 useCallManager: Setting call status message:", userMessage);
+      ctx.setCallStatusMessage(userMessage);
+      ctx.rejectCall(data.reason);
+      setTimeout(() => ctx.clearCall(), 2000);
+      if (onCallStateChange) onCallStateChange('rejected');
     };
 
-    // Call ended by other user
     const handleCallEndedAck = (data) => {
       console.log("📞 useCallManager: handleCallEndedAck() - Call ended by remote user");
       console.log("  -> data:", data);
-      
-      if (webrtcManager) {
+
+      const wrtc = webrtcManagerRef.current;
+      if (wrtc) {
         console.log("📞 useCallManager: Cleaning up WebRTC...");
-        webrtcManager.cleanup();
+        wrtc.cleanup();
       }
 
+      const ctx = callContextRef.current;
       console.log("📞 useCallManager: Ending call in context...");
-      callContext.endCall();
-      callContext.setCallStatusMessage('Call ended');
-
-      console.log("📞 useCallManager: Scheduling call clear in 2 seconds...");
-      setTimeout(() => {
-        callContext.clearCall();
-      }, 2000);
-      
-      // Notify state change
-      if (onCallStateChange) {
-        onCallStateChange('ended');
-      }
+      ctx.endCall();
+      ctx.setCallStatusMessage('Call ended');
+      setTimeout(() => ctx.clearCall(), 2000);
+      if (onCallStateChange) onCallStateChange('ended');
     };
 
-    // WebRTC: Incoming offer from peer
     const handleWebrtcOffer = async (data) => {
       console.log("📞 useCallManager: handleWebrtcOffer() - Received WebRTC offer");
       console.log("  -> callId:", data.callId);
-      if (webrtcManager && webrtcManager.handleOffer) {
+      const wrtc = webrtcManagerRef.current;
+      if (wrtc?.handleOffer) {
         try {
           console.log("📞 useCallManager: Handling WebRTC offer...");
-          await webrtcManager.handleOffer(data.sdp);
+          await wrtc.handleOffer(data.sdp);
           console.log("📞 useCallManager: WebRTC offer handled successfully");
         } catch (error) {
           console.error("📞 useCallManager: Error handling offer:", error);
-          callContext.setError("Connection error - please try again");
-          endCall();
+          callContextRef.current?.setError("Connection error - please try again");
+          endCallRef.current?.();
         }
       } else {
         console.warn("📞 useCallManager: webrtcManager.handleOffer not available");
       }
     };
 
-    // WebRTC: Incoming answer from peer
     const handleWebrtcAnswer = async (data) => {
       console.log("📞 useCallManager: handleWebrtcAnswer() - Received WebRTC answer");
       console.log("  -> callId:", data.callId);
-      if (webrtcManager && webrtcManager.handleAnswer) {
+      const wrtc = webrtcManagerRef.current;
+      if (wrtc?.handleAnswer) {
         try {
           console.log("📞 useCallManager: Handling WebRTC answer...");
-          await webrtcManager.handleAnswer(data.sdp);
+          await wrtc.handleAnswer(data.sdp);
           console.log("📞 useCallManager: WebRTC answer handled successfully");
         } catch (error) {
           console.error("📞 useCallManager: Error handling answer:", error);
-          callContext.setError("Connection error - please try again");
-          endCall();
+          // ✅ Do NOT end call on duplicate answer — just log it
+          console.warn("📞 useCallManager: Answer error ignored (likely duplicate)");
         }
       } else {
         console.warn("📞 useCallManager: webrtcManager.handleAnswer not available");
       }
     };
 
-    // WebRTC: Incoming ICE candidate
     const handleWebrtcIceCandidate = (data) => {
       console.log("📞 useCallManager: handleWebrtcIceCandidate() - Received ICE candidate");
-      if (webrtcManager && webrtcManager.handleIceCandidate) {
-        webrtcManager.handleIceCandidate(data.candidate);
+      const wrtc = webrtcManagerRef.current;
+      if (wrtc?.handleIceCandidate) {
+        wrtc.handleIceCandidate(data.candidate);
       } else {
         console.warn("📞 useCallManager: webrtcManager.handleIceCandidate not available");
       }
     };
 
-    // Register listeners
+    const handleJoinCallRoom = ({ callId, room }) => {
+      console.log("📞 useCallManager: Joining call room:", room);
+      socket.emit('joinCallSignalRoom', { callId });
+    };
+
     console.log("📞 useCallManager: Registering socket event listeners...");
     socket.on("incomingCall", handleIncomingCall);
     socket.on("callAcceptedAck", handleCallAcceptedAck);
@@ -489,14 +489,9 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
     socket.on("webrtcOffer", handleWebrtcOffer);
     socket.on("webrtcAnswer", handleWebrtcAnswer);
     socket.on("webrtcIceCandidate", handleWebrtcIceCandidate);
-    socket.on('joinCallRoom', ({ callId, room }) => {
-    console.log("📞 useCallManager: Joining call room:", room);
-    // The socket needs to join the call room for WebRTC signaling to work
-    socket.emit('joinCallSignalRoom', { callId }); // reuse existing joinRoom which does socket.join
-});
+    socket.on("joinCallRoom", handleJoinCallRoom);
     console.log("📞 useCallManager: Socket event listeners registered successfully");
 
-    // Cleanup
     return () => {
       console.log("📞 useCallManager: Cleaning up socket event listeners...");
       socket.off("incomingCall", handleIncomingCall);
@@ -506,9 +501,10 @@ const useCallManager = ({ socket, user, webrtcManager, onCallStateChange }) => {
       socket.off("webrtcOffer", handleWebrtcOffer);
       socket.off("webrtcAnswer", handleWebrtcAnswer);
       socket.off("webrtcIceCandidate", handleWebrtcIceCandidate);
+      socket.off("joinCallRoom", handleJoinCallRoom);
       console.log("📞 useCallManager: Socket event listeners cleaned up");
     };
-  }, [socket, user, callContext, webrtcManager, endCall, rejectCall]);
+  }, [socket]); // ✅ ONLY socket — prevents duplicate listener registration
 
   return {
     initiateCall,
