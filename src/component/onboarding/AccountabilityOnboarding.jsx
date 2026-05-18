@@ -116,29 +116,31 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
   return (
     <div className="ob-backdrop">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={{ opacity: 0, scale: 0.96, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        exit={{ opacity: 0, scale: 0.96, y: 20 }}
+        transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
         className="ob-modal"
       >
         {/* ── Header ── */}
         <div className="ob-header">
-          <div className="ob-header-top">
-            <div>
-              <div className="ob-header-meta">
-                <span className="ob-header-badge">✦ SpringsCircle</span>
+          <div className="ob-header-inner">
+            <div className="ob-header-top">
+              <div>
+                <div className="ob-header-meta">
+                  <span className="ob-header-badge">✦ SpringsCircle</span>
+                </div>
+                <h2 className="ob-title">Build Your Accountability Plan</h2>
+                <span className="ob-step-label">
+                  {currentStep === 'niche-selection' && 'Step 1 of 3 — Choose your focus areas'}
+                  {currentStep === 'quick-interview' && `Step 2 of 3 — Area ${nicheIndex + 1} of ${selectedNiches.length}`}
+                  {currentStep === 'summary' && 'Step 3 of 3 — Review your plan'}
+                </span>
               </div>
-              <h2 className="ob-title">Build Your Accountability Plan</h2>
-              <span className="ob-step-label">
-                {currentStep === 'niche-selection' && 'Step 1 of 3 — Choose your focus areas'}
-                {currentStep === 'quick-interview' && `Step 2 of 3 — Area ${nicheIndex + 1} of ${selectedNiches.length}`}
-                {currentStep === 'summary' && 'Step 3 of 3 — Review your plan'}
-              </span>
+              <button className="ob-close-btn" onClick={() => onClose?.()}>
+                <FiX size={15} />
+              </button>
             </div>
-            <button className="ob-close-btn" onClick={() => onClose?.()}>
-              <FiX size={15} />
-            </button>
           </div>
 
           <div className="ob-progress-area">
@@ -160,7 +162,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
               <motion.div
                 className="ob-progress-fill"
                 animate={{ width: progressWidth }}
-                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] }}
               />
             </div>
           </div>
@@ -175,10 +177,10 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
               <motion.div
                 key="niche-selection"
                 className="ob-step"
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -14 }}
-                transition={{ duration: 0.22 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
               >
                 <div>
                   <p className="ob-section-title">What would you like SpringsCircle to help you achieve?</p>
@@ -191,10 +193,10 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                     return (
                       <motion.button
                         key={id}
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.2 }}
-                        whileTap={{ scale: 0.98 }}
+                        transition={{ delay: idx * 0.055, duration: 0.22, ease: [0.2, 0, 0, 1] }}
+                        whileTap={{ scale: 0.985 }}
                         onClick={() => toggleNiche(id)}
                         className={`ob-niche-card ${active ? 'ob-niche-card--active' : ''}`}
                       >
@@ -209,7 +211,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               exit={{ scale: 0, opacity: 0 }}
-                              transition={{ duration: 0.18, type: 'spring', stiffness: 300 }}
+                              transition={{ duration: 0.2, type: 'spring', stiffness: 320, damping: 18 }}
                             >
                               <FiCheck size={10} />
                             </motion.div>
@@ -224,10 +226,10 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                   {selectedNiches.length > 0 && (
                     <motion.p
                       className="ob-selection-count"
-                      initial={{ opacity: 0, y: 4 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 4 }}
-                      transition={{ duration: 0.18 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <FiCheck size={12} />
                       {selectedNiches.length} area{selectedNiches.length > 1 ? 's' : ''} selected
@@ -245,10 +247,10 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                 <motion.div
                   key={`interview-${nicheIndex}-${currentQuestionIndex}`}
                   className="ob-step"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 22 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.22 }}
+                  exit={{ opacity: 0, x: -22 }}
+                  transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
                 >
                   <div className="ob-interview-badge">
                     {NicheIcon && <NicheIcon size={12} />}
@@ -279,7 +281,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                             key={opt}
                             initial={{ opacity: 0, x: 10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.06, duration: 0.18 }}
+                            transition={{ delay: i * 0.06, duration: 0.2 }}
                             whileTap={{ scale: 0.99 }}
                             onClick={() => handleQuestionAnswer(opt)}
                             className={`ob-option-btn ${chosen ? 'ob-option-btn--active' : ''}`}
@@ -301,10 +303,10 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
               <motion.div
                 key="summary"
                 className="ob-step"
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -14 }}
-                transition={{ duration: 0.22 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
               >
                 <div>
                   <p className="ob-section-title">Your Accountability Plan</p>
@@ -333,9 +335,9 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                       return (
                         <motion.div
                           key={niche}
-                          initial={{ opacity: 0, y: 8 }}
+                          initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.07, duration: 0.2 }}
+                          transition={{ delay: i * 0.07, duration: 0.22, ease: [0.2, 0, 0, 1] }}
                           className="ob-summary-card"
                         >
                           <div className="ob-summary-card-icon">

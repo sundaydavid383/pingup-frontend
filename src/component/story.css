@@ -1,143 +1,453 @@
-.status_image{
-    width: 80%;
+/* ============================================================
+   story.css — Sophisticated Story Bar Styling
+   Uses only :root variables (no external colors)
+   ============================================================ */
+
+/* ── New root additions (append to your :root in index.css) ──
+
+   ──────────────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════
+   STORY BAR WRAPPER
+   ═══════════════════════════════════════════════ */
+.stories-bar-wrapper {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(5, 13, 58, 0.55) 0%,
+    rgba(15, 23, 42, 0.45) 50%,
+    rgba(5, 13, 58, 0.55) 100%
+  );
+  border-radius: 20px;
+  border: 0.5px solid rgba(59, 92, 203, 0.2);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04) inset,
+    0 4px 32px rgba(5, 13, 58, 0.5);
+  padding: 4px 0;
 }
 
-.rounded-full {
-    border-radius: 9999px !important;
-}
-
-.aspect-square {
-    aspect-ratio: 1 / 1 !important;
-}
-
-.story-gradient::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
-    pointer-events: none;
-}
-
-
-/* story.css */
-
-/* Force the image to cover the circle completely and stay centered */
-.story-image-fill {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    object-position: center !important;
-    display: block !important;
-}
-
-/* Ensure the circular containers are actually square before rounding */
-.story-circle-container {
-    aspect-ratio: 1 / 1 !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border-radius: 50% !important;
-}
-
-/* story.css */
-
-/* Ensure the modal is significantly higher than the sidebar's z-index */
-.fixed.inset-0.z-\[100000\] {
-    z-index: 1000000 !important; /* Above your 999999999 if needed */
-}
-
-/* Fix Fabric.js selection handles for touch */
-.canvas-container {
-    margin: 0 auto;
-    touch-action: none;
-    user-select: none;
-}
-
-/* Custom scrollbars for the editor mode */
-.max-h-\[95vh\] {
-    overflow-y: auto;
-    scrollbar-width: thin;
-}
-
-/* Fix for StoryViewer profile pic */
-.viewer-profile-circle {
-    width: 40px; /* Matching the w-10 class */
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-/* Ensure the container allows horizontal scrolling without scrollbars */
+/* ═══════════════════════════════════════════════
+   SCROLL CONTAINER
+   ═══════════════════════════════════════════════ */
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Add a pulse animation for "live" stories (optional) */
-.story-ring-active {
-    border: 2px solid #e1306c; /* Instagram-like pink/red */
-    padding: 2px;
+/* ═══════════════════════════════════════════════
+   STORY ITEM WRAPPER (grouped stories list)
+   ═══════════════════════════════════════════════ */
+.story-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 72px;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
 }
 
-/* Maintain circular aspect ratio */
-.rounded-full {
-    border-radius: 50% ;
+.story-wrapper:hover {
+  transform: translateY(-3px) scale(1.04);
 }
 
-/* 1. Fix Desktop Sidebar Overlap */
-/* Your Sidebar is z-[999999999], so the Editor must be higher */
-.image-editor-fullscreen-container {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 1000000000 !important; /* One level higher than sidebar */
-    background: #000;
+.story-wrapper:active,
+.story-wrapper.group-active\/item\:scale-90:active {
+  transform: scale(0.91);
+  transition-duration: 0.1s;
 }
 
-/* 2. Fix Mobile Display / Notches */
-.FIE_root {
-    /* Ensures the editor fills the height even with mobile browser address bars */
-    height: 100vh !important;
-    height: -webkit-fill-available !important; 
-    
-    /* Adds padding for iPhone notches and home indicators */
-    padding-top: env(safe-area-inset-top) !important;
-    padding-bottom: env(safe-area-inset-bottom) !important;
+/* ═══════════════════════════════════════════════
+   STORY IMAGE HOLDER (ring + glow effect)
+   ═══════════════════════════════════════════════ */
+.storyimage_holder {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 2.5px;
+
+  /* Animated gradient ring */
+  background: conic-gradient(
+    from 0deg,
+    var(--primary-color),
+    var(--color-3),
+    var(--color-5),
+    var(--primary),
+    var(--primary-color)
+  );
+  background-size: 300% 300%;
+  animation: storyRingRotate 4s linear infinite;
+
+  /* Glow beneath the ring */
+  box-shadow:
+    0 0 0 2px var(--bg-main),
+    0 0 14px rgba(59, 92, 203, 0.35),
+    0 2px 12px rgba(5, 13, 58, 0.6);
+
+  transition: box-shadow 0.3s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 3. Force Tool Visibility on Mobile */
-/* This prevents the tools from being cut off at the bottom */
-.FIE_tabs-container {
-    padding-bottom: 10px !important;
-    background-color: #121212 !important;
+.storyimage_holder:hover {
+  box-shadow:
+    0 0 0 2px var(--bg-main),
+    0 0 22px rgba(59, 92, 203, 0.55),
+    0 4px 20px rgba(5, 13, 58, 0.7);
 }
 
-/* 4. Ensure Sidebar doesn't intercept clicks when Editor is open */
-body:has(.image-editor-fullscreen-container) .fixed {
-    pointer-events: none;
-}
-body:has(.image-editor-fullscreen-container) .image-editor-fullscreen-container {
-    pointer-events: auto;
+/* Inner image circle */
+.storyimage_holder .story-img,
+.storyimage_holder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 50%;
+  border: 2.5px solid var(--bg-main);
 }
 
+/* ═══════════════════════════════════════════════
+   STORY IMAGE FILLS (generic helper)
+   ═══════════════════════════════════════════════ */
+.story-image-fill {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+}
+
+/* ═══════════════════════════════════════════════
+   STORY CIRCLE CONTAINER (generic)
+   ═══════════════════════════════════════════════ */
+.story-circle-container {
+  aspect-ratio: 1 / 1 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50% !important;
+}
+
+/* ═══════════════════════════════════════════════
+   YOUR STORY BUTTON (Add Story)
+   ═══════════════════════════════════════════════ */
+.your-story-btn {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  background: var(--form-bg);
+  border: 1.5px dashed rgba(59, 92, 203, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.your-story-btn:hover {
+  transform: scale(1.06);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 18px rgba(59, 92, 203, 0.3);
+  background: rgba(27, 40, 71, 0.85);
+}
+
+.your-story-btn:active {
+  transform: scale(0.94);
+}
+
+/* ═══════════════════════════════════════════════
+   STORY LABEL TEXT (username below avatar)
+   ═══════════════════════════════════════════════ */
+.story-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  letter-spacing: 0.01em;
+  transition: color 0.2s ease;
+}
+
+.story-wrapper:hover .story-label {
+  color: var(--text-main);
+}
+
+/* ═══════════════════════════════════════════════
+   RING ANIMATION
+   ═══════════════════════════════════════════════ */
+@keyframes storyRingRotate {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Seen story ring (dimmed, static) */
+.storyimage_holder.seen {
+  background: rgba(148, 163, 184, 0.35);
+  animation: none;
+  box-shadow:
+    0 0 0 2px var(--bg-main),
+    0 2px 10px rgba(5, 13, 58, 0.4);
+}
+
+/* ═══════════════════════════════════════════════
+   NAV CHEVRON BUTTONS
+   ═══════════════════════════════════════════════ */
+.story-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(27, 40, 71, 0.88);
+  border: 0.5px solid rgba(59, 92, 203, 0.3);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 12px rgba(5, 13, 58, 0.6);
+}
+
+.group:hover .story-nav-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.story-nav-btn:hover {
+  background: var(--secondary);
+  box-shadow: 0 0 16px rgba(59, 92, 203, 0.35);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.story-nav-btn:active {
+  transform: translateY(-50%) scale(0.93);
+}
+
+/* ═══════════════════════════════════════════════
+   STORY VIEWER — FULL SCREEN
+   ═══════════════════════════════════════════════ */
+
+/* Viewer profile circle */
+.viewer-profile-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgba(59, 92, 203, 0.4);
+  transition: box-shadow 0.3s ease;
+}
+
+.viewer-profile-circle:hover {
+  box-shadow: 0 0 18px rgba(59, 92, 203, 0.65);
+}
+
+/* ═══════════════════════════════════════════════
+   PROGRESS BARS (viewer)
+   ═══════════════════════════════════════════════ */
+.story-progress-track {
+  height: 2.5px;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.story-progress-fill {
+  height: 100%;
+  background: var(--white);
+  border-radius: 99px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+/* ═══════════════════════════════════════════════
+   STORY GRADIENT OVERLAY
+   ═══════════════════════════════════════════════ */
+.story-gradient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 13, 58, 0.35) 0%,
+    transparent 18%,
+    transparent 72%,
+    rgba(5, 13, 58, 0.65) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON LOADERS
+   ═══════════════════════════════════════════════ */
+@keyframes storySkeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.75; }
+}
+
+.story-skeleton-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--bg-light) 30%,
+    rgba(59, 92, 203, 0.1) 60%,
+    var(--bg-light) 90%
+  );
+  animation: storySkeletonPulse 1.6s ease-in-out infinite;
+}
+
+.story-skeleton-label {
+  height: 8px;
+  width: 44px;
+  border-radius: 99px;
+  background: var(--bg-light);
+  animation: storySkeletonPulse 1.6s ease-in-out infinite 0.2s;
+}
+
+/* ═══════════════════════════════════════════════
+   REPLY POP-IN ANIMATION
+   ═══════════════════════════════════════════════ */
 @keyframes replyPopIn {
-  0% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.96);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(-2px) scale(1.02);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
+  0%   { opacity: 0; transform: translateY(12px) scale(0.96); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
 }
 
 .reply-animate {
-  animation: replyPopIn 0.45s ease-out both;
+  animation: replyPopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ═══════════════════════════════════════════════
+   STORY MODAL
+   ═══════════════════════════════════════════════ */
+.story-modal-backdrop {
+  background: rgba(5, 13, 58, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.story-modal-card {
+  background: var(--form-bg);
+  border: 0.5px solid rgba(59, 92, 203, 0.22);
+  border-radius: 20px;
+  overflow-y: scroll;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.04) inset,
+    0 24px 80px rgba(5, 13, 58, 0.75);
+}
+
+/* ═══════════════════════════════════════════════
+   STORY ACTIVE / PULSE RING (live / new story)
+   ═══════════════════════════════════════════════ */
+.story-ring-active {
+  padding: 2.5px;
+  background: conic-gradient(
+    from 0deg,
+    var(--primary-color),
+    var(--color-5),
+    var(--primary-color)
+  );
+  animation: storyRingRotate 3s linear infinite;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(59, 92, 203, 0.4);
+}
+
+/* ═══════════════════════════════════════════════
+   MISC HELPERS
+   ═══════════════════════════════════════════════ */
+.rounded-full {
+  border-radius: 9999px !important;
+}
+
+.aspect-square {
+  aspect-ratio: 1 / 1 !important;
+}
+
+.status_image {
+  width: 80%;
+}
+
+/* Custom scrollbars for editor mode */
+.max-h-\[95vh\] {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) transparent;
+}
+
+/* ═══════════════════════════════════════════════
+   IMAGE EDITOR FULLSCREEN
+   ═══════════════════════════════════════════════ */
+.image-editor-fullscreen-container {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000000000 !important;
+  background: var(--bg-main);
+}
+
+.fixed.inset-0.z-\[100000\] {
+  z-index: 1000000 !important;
+}
+
+.canvas-container {
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.FIE_root {
+  height: 100vh !important;
+  height: -webkit-fill-available !important;
+  padding-top: env(safe-area-inset-top) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+.FIE_tabs-container {
+  padding-bottom: 10px !important;
+  background-color: var(--bg-main) !important;
+}
+
+body:has(.image-editor-fullscreen-container) .fixed {
+  pointer-events: none;
+}
+body:has(.image-editor-fullscreen-container) .image-editor-fullscreen-container {
+  pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE — mobile touch feedback
+   ═══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .storyimage_holder {
+    width: 58px;
+    height: 58px;
+  }
+
+  .story-wrapper {
+    min-width: 64px;
+  }
+
+  .story-label {
+    font-size: 10px;
+    max-width: 60px;
+  }
 }

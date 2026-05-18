@@ -79,7 +79,12 @@ input, textarea, select {
   --text-secondary: #94a3b8; /* Slate-400 */
   --text-muted: #64748b; /* Slate-500 */
   --text-accent-dark: #4338ca; /* Indigo-700 */
-
+  /* story section */
+     --story-ring-gap: rgba(15, 23, 42, 0.85);
+   --story-glow: rgba(59, 92, 203, 0.45);
+   --story-shimmer: rgba(255, 255, 255, 0.07);
+   --story-surface: rgba(27, 40, 71, 0.6);
+   --story-text-dim: rgba(148, 163, 184, 0.7);
   /* Backgrounds */
   --bg-main: #0f172a; /* Slate-900 */
   --bg-light: #1e293b; /* Slate-800 */
