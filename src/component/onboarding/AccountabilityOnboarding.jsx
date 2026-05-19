@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronRight, FiChevronLeft, FiCheck, FiX } from 'react-icons/fi';
 import { GiPrayerBeads } from 'react-icons/gi';
 import { FaBook, FaDumbbell, FaUsers, FaBullseye } from 'react-icons/fa';
-import axiosBase from '../../utils/axiosBase';
-import './onboarding.css';
+// import './onboarding.css'; ← keep your existing import
 
 const NICHES = [
   { id: 'spiritual',  label: 'Spiritual Growth',                    Icon: GiPrayerBeads },
@@ -44,14 +43,22 @@ const NICHE_QUESTIONS = {
 
 const STEP_LABELS = ['Choose Focus', 'Quick Interview', 'Review Plan'];
 
-const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
+/**
+ * AccountabilityOnboarding
+ *
+ * Props:
+ *   isOpen      – boolean
+ *   onClose     – () => void
+ *   onSuccess   – (data: { selectedNiches, nicheGoals }) => void
+ *                 ↑ no token / axios needed — dummy mode
+ */
+const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState('niche-selection');
   const [selectedNiches, setSelectedNiches] = useState([]);
   const [nicheIndex, setNicheIndex] = useState(0);
   const [nicheGoals, setNicheGoals] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const currentNiche = selectedNiches[nicheIndex];
   const currentNicheQuestions = currentNiche ? NICHE_QUESTIONS[currentNiche] : [];
@@ -89,26 +96,21 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
     setCurrentStep('summary');
   };
 
-  const handleQuestionAnswer = (answer) => { saveAnswer(answer); };
-
-  const handleSaveOnboarding = async () => {
-    try {
-      setLoading(true); setError('');
-      const payload = { selectedNiches, nicheGoals, generalDisciplineEnabled: true, onboardingCompleted: true };
-      const response = await axiosBase.post('/api/user/onboarding', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.data?.success === true) {
-        setLoading(false);
-        setTimeout(() => { if (typeof onSuccess === 'function') onSuccess(response.data); }, 100);
-      } else {
-        setError(response.data?.message || 'Failed to save onboarding data');
-        setLoading(false);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Error saving onboarding data');
+  // ── DUMMY save — no backend ───────────────────────────────────────────────
+  const handleSaveOnboarding = () => {
+    setLoading(true);
+    // Simulate a short async delay then call onSuccess with dummy payload
+    setTimeout(() => {
       setLoading(false);
-    }
+      if (typeof onSuccess === 'function') {
+        onSuccess({
+          selectedNiches,
+          nicheGoals,
+          generalDisciplineEnabled: true,
+          onboardingCompleted: true,
+        });
+      }
+    }, 800);
   };
 
   if (!isOpen) return null;
@@ -144,7 +146,6 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
           </div>
 
           <div className="ob-progress-area">
-            {/* Step indicators */}
             <div className="ob-progress-steps">
               {STEP_LABELS.map((label, i) => (
                 <React.Fragment key={label}>
@@ -283,7 +284,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.06, duration: 0.2 }}
                             whileTap={{ scale: 0.99 }}
-                            onClick={() => handleQuestionAnswer(opt)}
+                            onClick={() => saveAnswer(opt)}
                             className={`ob-option-btn ${chosen ? 'ob-option-btn--active' : ''}`}
                           >
                             <span className={`ob-option-dot ${chosen ? 'ob-option-dot--active' : ''}`} />
@@ -313,7 +314,6 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                   <p className="ob-section-sub">Here's what we'll work on together. You can always refine this later.</p>
                 </div>
 
-                {/* Always-on discipline card */}
                 <div className="ob-summary-card ob-summary-card--blue">
                   <div className="ob-summary-card-icon ob-summary-card-icon--blue">
                     <FaBullseye size={15} />
@@ -361,13 +361,6 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                     })}
                   </>
                 )}
-
-                {error && (
-                  <div className="ob-error">
-                    <FiX size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                    {error}
-                  </div>
-                )}
               </motion.div>
             )}
 
@@ -403,13 +396,11 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                 Skip for now
               </button>
             )}
-
             {currentStep === 'niche-selection' && (
               <button className="ob-btn ob-btn--primary" onClick={handleNicheSelectContinue}>
                 Continue <FiChevronRight size={15} />
               </button>
             )}
-
             {currentStep === 'quick-interview' && (
               <button
                 className="ob-btn ob-btn--primary"
@@ -419,7 +410,6 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
                 Next <FiChevronRight size={15} />
               </button>
             )}
-
             {currentStep === 'summary' && (
               <button
                 className="ob-btn ob-btn--success"

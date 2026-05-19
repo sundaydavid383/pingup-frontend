@@ -4,7 +4,7 @@ import { BsPlayFill, BsPauseFill, BsFillVolumeMuteFill, BsFillVolumeUpFill } fro
 import { MdFullscreen } from "react-icons/md";
 import { videoManager, videoState } from "../../utils/videoManager";
 import { useGlobalVideo } from "../../context/GlobalVideoContext";
-
+import { forwardRef } from 'react';
 
 /**
  * Props:
@@ -14,8 +14,7 @@ import { useGlobalVideo } from "../../context/GlobalVideoContext";
  * - primaryColor: CSS color for highlights (optional, defaults to #1f6feb)
  * - autoPlayOnView: boolean (default true) -> play when 50% visible unless user paused manually
  */
-
-export default function VideoPlayer({
+const VideoPlayer = forwardRef(({
   src,
   poster,
   maxHeight = "480px",
@@ -23,13 +22,12 @@ export default function VideoPlayer({
   unmuteOnView = false,
   onEnded,
   sectionId = "default"
-}) {
+}, ref) => {
   const { videoState: globalVideoState, updateVideoState } = useGlobalVideo();
 
   const containerRef = useRef(null);
-  const videoRef = useRef(null);
+  const videoRef = ref || useRef(null);
   const controlsRef = useRef(null);
-
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [current, setCurrent] = useState(0);
@@ -627,4 +625,8 @@ export default function VideoPlayer({
   );
 
 
-}
+});
+
+export default VideoPlayer
+
+//
