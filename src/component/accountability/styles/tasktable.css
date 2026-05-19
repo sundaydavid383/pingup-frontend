@@ -1,0 +1,618 @@
+
+          /* ── OVERLAY & DRAWER ── */
+        .tt-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 7777;
+          background: var(--deeper-opaque-secondary);
+          backdrop-filter: var(--backdrop-blur);
+          display: flex;
+          justify-content: flex-end;
+        }
+        .tt-drawer {
+          width: 100%;
+          max-width: 540px;
+          height: 100%;
+          background: var(--ob-surface);
+          display: flex;
+          flex-direction: column;
+          box-shadow: -12px 0 48px rgba(0,0,0,0.22);
+        }
+
+
+        /* ── HEADER ── */
+        .tt-header {
+          background: var(--white);
+          border-bottom: 1px solid var(--ob-mesh-1);
+          padding: 1.25rem 1.25rem 0;
+          flex-shrink: 0;
+        }
+        .tt-header-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          margin-bottom: 1rem;
+          gap: 12px;
+        }
+        .tt-header-eyebrow {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          color: var(--primary-color);
+          margin: 0 0 3px;
+        }
+        .tt-header-title {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--ob-header-h1);
+          margin: 0;
+        }
+        .tt-header-right {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          flex-wrap: nowrap;   /* ADD */
+          flex-shrink: 0; 
+        }
+        .tt-clock {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+        .tt-clock-time {
+          font-size: 20px;
+          font-weight: 800;
+          color: var(--ob-header-h1);
+          letter-spacing: .02em;
+          font-variant-numeric: tabular-nums;
+        }
+        .tt-clock-date {
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+
+        /* ── VIEW TOGGLE ── */
+        .tt-view-toggle {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          background: var(--ob-surface2, #edf0fb);
+          border: 1px solid var(--ob-mesh-1);
+          border-radius: 10px;
+          padding: 3px;
+          cursor: pointer;
+         
+          flex-shrink: 0;
+          min-width: 58px;        
+          align-self: flex-start;
+        }
+        .tt-vt-opt {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 7px;
+          color: var(--text-muted);
+          transition: var(--transition-default);
+        }
+        .tt-vt-opt--active {
+          background: var(--primary-color);
+          color: var(--white);
+          box-shadow: 0 2px 8px rgba(var(--primary-rgb),.35);
+        }
+
+        .tt-close {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--ob-surface2, #edf0fb);
+          border: 1px solid var(--ob-mesh-1);
+          border-radius: 9px;
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: var(--transition-default);
+          flex-shrink: 0;
+        }
+        .tt-close:hover { background: var(--hover-light); color: var(--ob-header-h1); }
+
+        /* ── PROGRESS ── */
+        .tt-progress { margin-bottom: 1rem; }
+        .tt-prog-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-bottom: 5px;
+        }
+        .tt-prog-pct { font-weight: 700; color: var(--primary-color); }
+        .tt-prog-track {
+          height: 5px;
+          background: var(--ob-surface2, #edf0fb);
+          border-radius: 99px;
+          overflow: hidden;
+        }
+        .tt-prog-fill {
+          height: 100%;
+          background: linear-gradient(90deg, var(--primary-color), var(--hover-dark));
+          border-radius: 99px;
+        }
+
+        /* ── FILTER TABS ── */
+        .tt-filter-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 0;
+        }
+        .tt-filter-row::-webkit-scrollbar { display: none; }
+        .tt-filter-icon { color: var(--text-secondary); flex-shrink: 0; }
+        .tt-filter-tabs {
+          display: flex;
+          gap: 4px;
+          overflow-x: auto;
+          padding-bottom: 1px;
+        }
+        .tt-filter-tabs::-webkit-scrollbar { display: none; }
+        .tt-filter-tab {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: .4rem .75rem;
+          border-radius: 8px 8px 0 0;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--text-muted);
+          background: transparent;
+          border: none;
+          border-bottom: 2px solid transparent;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: var(--transition-default);
+        }
+        .tt-filter-tab:hover { color: var(--primary-color); }
+        .tt-filter-tab--active {
+          color: var(--primary-color);
+          border-bottom-color: var(--primary-color);
+          background: var(--very-light-opaque-primary);
+        }
+        .tt-filter-count {
+          font-size: 9px;
+          font-weight: 700;
+          background: var(--very-light-opaque-primary);
+          color: var(--primary-color);
+          padding: 1px 5px;
+          border-radius: 99px;
+        }
+
+        /* ── BODY ── */
+        .tt-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: .9rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .tt-body::-webkit-scrollbar { width: 3px; }
+        .tt-body::-webkit-scrollbar-thumb {
+          background: var(--ob-niche-glow);
+          border-radius: 99px;
+        }
+
+        /* ── TIME MARKERS ── */
+        .tt-time-marker {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: .15rem 0;
+          margin-top: 6px;
+        }
+        .tt-tm-label {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: .06em;
+          text-transform: uppercase;
+          color: var(--primary-color);
+          background: var(--ob-surface);
+          padding-right: 4px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .tt-tm-line {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, rgba(var(--primary-rgb),.3), rgba(var(--primary-rgb),0));
+        }
+        .tt-time-marker.tt-tm--now .tt-tm-label { color: var(--red); }
+        .tt-time-marker.tt-tm--now .tt-tm-line {
+          background: linear-gradient(90deg, rgba(239,68,68,.5), rgba(239,68,68,0));
+        }
+        .tt-time-marker.tt-tm--past .tt-tm-label { color: var(--text-secondary); }
+        .tt-time-marker.tt-tm--past .tt-tm-line {
+          background: linear-gradient(90deg, rgba(148,163,184,.3), rgba(148,163,184,0));
+        }
+
+        /* ── TASK ROW (expanded) ── */
+        .tt-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          background: var(--white);
+          border: 1px solid var(--ob-mesh-1);
+          border-radius: 14px;
+          padding: .8rem .95rem;
+          transition: box-shadow .18s, opacity .18s;
+        }
+        .tt-row:hover { box-shadow: 0 2px 14px var(--ob-niche-glow); }
+        .tt-row--done { opacity: .55; }
+        .tt-row--overdue {
+          border-color: rgba(239,68,68,.22);
+          background: rgba(239,68,68,.025);
+        }
+
+        /* ── COMPACT CARD ── */
+        .tt-compact-card {
+          background: var(--white);
+          border: 1px solid var(--ob-mesh-1);
+          border-radius: 10px;
+          overflow: hidden;
+          transition: box-shadow .2s, border-color .2s;
+          cursor: default;
+        }
+        .tt-compact-card:hover {
+          box-shadow: 0 4px 18px var(--ob-niche-glow);
+          border-color: rgba(var(--primary-rgb), .22);
+        }
+        .tt-compact--done { opacity: .5; }
+        .tt-compact--overdue {
+          border-color: rgba(239,68,68,.22);
+          background: rgba(239,68,68,.025);
+        }
+
+        .tt-compact-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: .52rem .75rem;
+          min-height: 36px;
+        }
+        .tt-cat-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .tt-compact-title {
+          flex: 1;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--ob-header-h1);
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.4;
+        }
+        .tt-compact-meta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+        .tt-compact-time {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: 500;
+          white-space: nowrap;
+        }
+        .tt-compact-overdue-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--red);
+          flex-shrink: 0;
+        }
+        .tt-compact-cd {
+          font-size: 10px;
+          font-weight: 700;
+          color: var(--primary-color);
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+
+        /* ── COMPACT EXPANDED DETAIL ── */
+        .tt-compact-detail {
+          overflow: hidden;
+        }
+        .tt-compact-detail-inner {
+          padding: .5rem .75rem .65rem;
+          border-top: 1px solid var(--ob-mesh-1);
+          background: var(--ob-surface);
+        }
+
+        /* ── STATUS BUTTON / DOT ── */
+        .tt-status-btn {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid;
+          background: transparent;
+          cursor: pointer;
+          flex-shrink: 0;
+          margin-top: 2px;
+          transition: transform .15s;
+          padding: 0;
+        }
+        .tt-status-btn:hover { transform: scale(1.25); }
+        .tt-dot-inner {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          display: block;
+        }
+
+        /* ── ROW CONTENT ── */
+        .tt-row-main { flex: 1; min-width: 0; }
+        .tt-row-top {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 4px;
+          flex-wrap: wrap;
+        }
+        .tt-cat-badge {
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: .05em;
+          text-transform: uppercase;
+          padding: 2px 7px;
+          border-radius: 99px;
+        }
+        .tt-time-tag {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+        .tt-overdue-tag {
+          font-size: 9px;
+          font-weight: 700;
+          color: var(--red);
+          background: rgba(239,68,68,.09);
+          border-radius: 99px;
+          padding: 2px 7px;
+        }
+        .tt-task-title {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--ob-header-h1);
+          margin: 0 0 3px;
+          line-height: 1.4;
+        }
+        .tt-task-title--done {
+          text-decoration: line-through;
+          color: var(--text-secondary);
+        }
+        .tt-task-desc {
+          font-size: 11px;
+          color: var(--text-muted);
+          margin: 0 0 5px;
+          line-height: 1.5;
+        }
+        .tt-linked-goal {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+        .tt-row-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+          margin-top: 6px;
+        }
+        .tt-action-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: .3rem .6rem;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid;
+          white-space: nowrap;
+          transition: var(--transition-default);
+        }
+        .tt-action-btn--reflect {
+          background: rgba(139,92,246,.06);
+          border-color: rgba(139,92,246,.2);
+          color: #8b5cf6;
+        }
+        .tt-action-btn--reflect:hover { background: rgba(139,92,246,.13); }
+        .tt-action-btn--checkin {
+          background: rgba(239,68,68,.06);
+          border-color: rgba(239,68,68,.2);
+          color: var(--red);
+        }
+        .tt-action-btn--checkin:hover { background: rgba(239,68,68,.12); }
+
+        /* ── COUNTDOWN ── */
+        .tt-countdown {
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 3px;
+          min-width: 64px;
+        }
+        .tt-cd-label {
+          font-size: 9px;
+          color: var(--text-secondary);
+          font-weight: 600;
+          letter-spacing: .04em;
+          text-transform: uppercase;
+          text-align: right;
+        }
+        .tt-cd-value {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--primary-color);
+          text-align: right;
+          font-variant-numeric: tabular-nums;
+        }
+        .tt-cd--late  { color: var(--red); }
+        .tt-cd--soon  { color: var(--warning); }
+
+        /* ── EMPTY ── */
+        .tt-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 3rem;
+          color: var(--text-secondary);
+          text-align: center;
+        }
+        .tt-empty p { font-size: 13px; margin: 0; }
+
+        /* ── SUMMARY BAR ── */
+        .tt-summary {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0;
+          background: var(--white);
+          border-top: 1px solid var(--ob-mesh-1);
+          flex-shrink: 0;
+        }
+        .tt-stat {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: .7rem 1rem;
+          gap: 2px;
+          border-right: 1px solid var(--ob-mesh-1);
+        }
+        .tt-stat:last-child { border-right: none; }
+        .tt-stat-val {
+          font-size: 18px;
+          font-weight: 800;
+          color: var(--ob-header-h1);
+        }
+        .tt-stat-val--green { color: var(--success); }
+        .tt-stat-val--amber { color: var(--warning); }
+        .tt-stat-val--red   { color: var(--red); }
+        .tt-stat-lbl {
+          font-size: 10px;
+          color: var(--text-secondary);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+        }
+
+        /* ── COMPACT WRAPPER & GRID ── */
+.tt-compact-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.tt-compact-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.tt-compact-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Each compact card becomes a pill-sized box */
+.tt-compact-card {
+  /* Override the column-stretch behavior */
+  flex: 0 1 auto;
+  min-width: 140px;
+  max-width: calc(50% - 3px);
+  width: auto;
+}
+
+@media (max-width: 400px) {
+  .tt-compact-card {
+    max-width: 100%;
+    min-width: 120px;
+  }
+}
+      /* ═══════════════════════════════════════════════════════════
+   COMPACT VIEW — complete override
+   Append this block at the very bottom of tasktable.css
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── wrapper that holds all hour-sections ── */
+.tt-compact-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 0;
+}
+
+/* ── one hour block: label + grid of cards ── */
+.tt-compact-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+/* ── the wrapping grid of pill cards ── */
+.tt-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+/* ── reset the old tt-compact-card box model ── */
+/* These rules FULLY override the ones in the original block above */
+.tt-compact-card,
+.tt-compact--done,
+.tt-compact--overdue {
+  /* Unset old styles that conflict */
+  background:    unset !important;
+  border:        unset !important;
+  border-radius: unset !important;
+  overflow:      unset !important;
+  opacity:       unset !important;
+  cursor:        unset !important;
+  transition:    unset !important;
+}
+
+/* ── compact body: no gap since sections handle spacing ── */
+.tt-body--compact {
+  gap: 0 !important;
+}

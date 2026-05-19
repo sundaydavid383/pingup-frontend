@@ -17,6 +17,7 @@ import { GlobalVideoProvider } from "./context/GlobalVideoContext";
 import { TTSProvider } from "./context/TTSContext";
 import { CallProvider } from "./context/CallContext";
 import { PipModalProvider } from "./context/PipModalContext";
+import { TaskTableProvider } from './context/TaskTableContext';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -39,7 +40,9 @@ createRoot(document.getElementById('root')).render(
                         <AudioPlayerProvider>
                           <GlobalVideoProvider>
                             <PipModalProvider>
-                              <App />
+                              <TaskTableProvider>
+                                <App />
+                              </TaskTableProvider>
                             </PipModalProvider>
                           </GlobalVideoProvider>
                         </AudioPlayerProvider>

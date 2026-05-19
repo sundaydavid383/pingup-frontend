@@ -13,9 +13,14 @@ const initialPipState = {
 export const PipModalProvider = ({ children }) => {
   const [pipState, setPipState] = useState(initialPipState);
 
-  const setActiveChatHistory = useCallback((history) => {
-    setPipState((prev) => ({ ...prev, activeChatHistory: history }));
-  }, []);
+ const setActiveChatHistory = useCallback((historyOrUpdater) => {
+  setPipState((prev) => ({
+    ...prev,
+    activeChatHistory: typeof historyOrUpdater === 'function'
+      ? historyOrUpdater(Array.isArray(prev.activeChatHistory) ? prev.activeChatHistory : [])
+      : (Array.isArray(historyOrUpdater) ? historyOrUpdater : []),
+  }));
+}, []);
 
   const setChatId = useCallback((id) => {
     setPipState((prev) => ({ ...prev, chatId: id }));

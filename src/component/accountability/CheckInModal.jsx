@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiCheck, FiAlertTriangle } from 'react-icons/fi';
+import './styles/checkinmodal.css';
+import { useTaskTable } from '../../context/TaskTableContext';
 
 const RESPONSES = {
   yes: { label: 'Yes, doing it', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
@@ -24,6 +26,11 @@ const CheckInModal = ({ task, onClose, onComplete }) => {
   const [done, setDone] = useState(false);
 
   const handleSelect = (key) => setSelected(key);
+  const { setTaskTableOpen } = useTaskTable();
+  useEffect(() => {
+    setTaskTableOpen(true);
+    return () => setTaskTableOpen(false); // hide navbar when CheckInModal unmounts
+  }, [])
 
   const handleNext = () => {
     const updated = [...responses, { prompt: prompts[step], answer: selected }];
@@ -144,165 +151,7 @@ const CheckInModal = ({ task, onClose, onComplete }) => {
         </div>
       </motion.div>
 
-      <style>{`
-        .ci-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 8888;
-          background: rgba(5,8,20,0.7);
-          backdrop-filter: blur(8px);
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          padding: 1rem;
-        }
-        @media (min-width: 600px) {
-          .ci-backdrop { align-items: center; }
-        }
-        .ci-panel {
-          width: 100%;
-          max-width: 480px;
-          background: #0d1529;
-          border: 1px solid rgba(59,92,203,0.2);
-          border-radius: 20px 20px 16px 16px;
-          overflow: hidden;
-          box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-        }
-        @media (min-width: 600px) {
-          .ci-panel { border-radius: 20px; }
-        }
-        .ci-header {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 1.1rem 1.25rem 1rem;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .ci-header-icon {
-          width: 36px; height: 36px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(239,68,68,0.12);
-          border-radius: 10px;
-          color: #ef4444;
-          flex-shrink: 0;
-        }
-        .ci-header-title {
-          font-size: 13px;
-          font-weight: 700;
-          color: #e2e8f0;
-          margin: 0 0 2px;
-        }
-        .ci-header-sub {
-          font-size: 11px;
-          color: #64748b;
-          margin: 0;
-        }
-        .ci-close {
-          margin-left: auto;
-          width: 28px; height: 28px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 7px;
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .ci-close:hover { color: #e2e8f0; background: rgba(255,255,255,0.09); }
-        .ci-progress-track {
-          height: 2px;
-          background: rgba(255,255,255,0.05);
-          overflow: hidden;
-        }
-        .ci-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #ef4444, #f97316);
-        }
-        .ci-body { padding: 1.5rem 1.25rem; min-height: 220px; }
-        .ci-step { display: flex; flex-direction: column; gap: 1rem; }
-        .ci-step-counter {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
-          color: rgba(148,163,184,0.5);
-        }
-        .ci-prompt {
-          font-size: 16px;
-          font-weight: 600;
-          color: #e2e8f0;
-          line-height: 1.5;
-          margin: 0;
-        }
-        .ci-options { display: flex; flex-direction: column; gap: 8px; }
-        .ci-option {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 0.7rem 1rem;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.18s;
-          text-align: left;
-        }
-        .ci-option:hover { background: rgba(255,255,255,0.06); }
-        .ci-option-dot {
-          width: 10px; height: 10px;
-          border-radius: 50%;
-          background: rgba(148,163,184,0.25);
-          flex-shrink: 0;
-          transition: background 0.18s;
-        }
-        .ci-option-label {
-          font-size: 13px;
-          font-weight: 500;
-          color: #94a3b8;
-          transition: color 0.18s;
-        }
-        .ci-submit-btn {
-          background: var(--primary-color, #3b5ccb);
-          color: #fff;
-          border: none;
-          border-radius: 10px;
-          padding: 0.7rem 1.4rem;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          align-self: flex-end;
-          transition: all 0.18s;
-        }
-        .ci-submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-        .ci-submit-btn:not(:disabled):hover { background: #2a4ab8; }
-        .ci-done {
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 0.75rem; text-align: center;
-          padding: 1rem 0;
-        }
-        .ci-done-icon {
-          width: 56px; height: 56px;
-          display: flex; align-items: center; justify-content: center;
-          background: rgba(16,185,129,0.12);
-          border-radius: 50%;
-          color: #10b981;
-        }
-        .ci-done-title { font-size: 18px; font-weight: 700; color: #e2e8f0; margin: 0; }
-        .ci-done-sub { font-size: 13px; color: #64748b; margin: 0; }
-        .ci-nudge {
-          display: flex; align-items: flex-start; gap: 8px;
-          background: rgba(239,68,68,0.08);
-          border: 1px solid rgba(239,68,68,0.2);
-          border-radius: 10px;
-          padding: 0.7rem 0.9rem;
-          color: #ef4444;
-          font-size: 12px;
-          line-height: 1.5;
-          text-align: left;
-          margin-top: 0.5rem;
-          width: 100%;
-        }
-      `}</style>
+  
     </motion.div>
   );
 };

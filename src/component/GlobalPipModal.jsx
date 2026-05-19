@@ -419,7 +419,9 @@ return (
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8f9fa]"
             >
-                {chatLoading ? <ChatMessagesSkeleton /> : activeChatHistory?.map((msg, i) => (
+                {chatLoading ? <ChatMessagesSkeleton /> 
+                : 
+                (Array.isArray(activeChatHistory) ? activeChatHistory : []).map((msg, i) => (
                     <div key={msg._id || i} className={`flex flex-col ${msg.from_user_id === user?._id ? "items-end" : "items-start"}`}>
                         <div className={`${msg.message_type === "image" || msg.message_type === "audio" ? "px-1 py-1" : "px-3 py-2"} rounded-2xl text-sm max-w-[85%] ${msg.from_user_id === user?._id ? "bg-black text-white rounded-tr-none" : "bg-white border rounded-tl-none"}`}>
                             {msg.message_type === "text" && (

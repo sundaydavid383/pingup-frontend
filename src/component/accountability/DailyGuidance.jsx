@@ -9,7 +9,7 @@ import {
   FiCalendar, FiInfo, FiGrid, FiUserCheck,
   FiChevronRight,
 } from 'react-icons/fi';
-import './daily-guidance.css';
+import './styles/daily-guidance.css';
 
 import TaskTable from './TaskTable';
 import ReflectionMode from './ReflectionMode';
