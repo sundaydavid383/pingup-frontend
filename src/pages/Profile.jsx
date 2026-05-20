@@ -99,7 +99,7 @@ const Profile = () => {
         userPosts = Array.isArray(res.data.posts) ? res.data.posts : [];
       } else if (profileId) {
         // Viewing someone else's profile
-        const res = await axiosBase.get(`/api/user/${profileId}`, headers);
+        const res = await axiosBase.get(`/api/user/${profileId}?context=profile`, headers);
         userData = res.data.user || {};
         userPosts = Array.isArray(res.data.posts) ? res.data.posts : [];
 
