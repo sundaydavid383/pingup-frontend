@@ -634,6 +634,8 @@ const CreatePost = () => {
 
   const [visibility, setVisibility] = useState("public");
   const [loading, setLoading] = useState(false);
+  const [toxicityLoading, setToxicityLoading] = useState(false);
+  const [toxicityWarning, setToxicityWarning] = useState(null);
   const [alert, setAlert] = useState(null);
   const abortControllerRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -709,6 +711,46 @@ const CreatePost = () => {
   const MAX_VIDEO_DURATION = 1040;
 
   const showAlert = (message, type = "info") => setAlert({ message, type });
+  
+  // Words too common to flag — even if the model weights them
+const IGNORE_WORDS = new Set([
+  "you","are","is","he","she","they","we","i","it","a","an","the",
+  "this","that","was","be","been","being","do","does","did","have",
+  "has","had","will","would","could","should","may","might","shall",
+  "your","my","our","his","her","its","their","guys","people","person",
+  "one","all","some","any","here","there","where","what","who","how",
+  "not","no","yes","just","so","very","really","like","get","go",
+  "come","know","think","want","make","see","look","use","good","well"
+]);
+
+const filterBadWords = (bad_words = []) =>
+  bad_words.filter(
+    (w) =>
+      w.weight >= 3.5 &&
+      !IGNORE_WORDS.has(w.word.toLowerCase()) &&
+      !w.word.includes(" ") === false ? true : w.weight >= 5
+  );
+
+const checkToxicity = async (text) => {
+  if (!text || text.trim().length < 3) return { clean: true };
+  try {
+    setToxicityLoading(true);
+    const res = await axios.post("https://detoxify-7my5.onrender.com/process/", {
+      text: text.trim(),
+    });
+    const { toxicity, score, bad_words } = res.data;
+    const filtered = filterBadWords(bad_words);
+    if (toxicity) {
+      return { clean: false, score, bad_words: filtered };
+    }
+    return { clean: true };
+  } catch (err) {
+    console.warn("Toxicity check failed, proceeding:", err);
+    return { clean: true };
+  } finally {
+    setToxicityLoading(false);
+  }
+};
 
   const autoResizeTextarea = () => {
     const textarea = textareaRef.current;
@@ -723,6 +765,7 @@ const CreatePost = () => {
   useEffect(() => { autoResizeTextarea(); }, [content]);
 
   const handleTextChange = (e) => {
+    setToxicityWarning(null);
     let value = e.target.value.replace(/\n{2,}/g, "\n").trimStart().replace(/\n+$/g, "");
     if (value.length > MAX_TEXT_LENGTH) return showAlert(`Text cannot exceed ${MAX_TEXT_LENGTH} characters.`, "warning");
     setContent(value);
@@ -766,9 +809,18 @@ const CreatePost = () => {
   };
 
   const handleSubmit = async () => {
-    if (!content && images.length === 0 && videos.length === 0 && !audio && !youtubePreview)
-      return showAlert("Please add content, images, videos, audio, or a YouTube video", "warning");
-    setLoading(true);
+      if (!content && images.length === 0 && videos.length === 0 && !audio && !youtubePreview)
+    return showAlert("Please add content, images, videos, audio, or a YouTube video", "warning");
+
+  if (content && content.trim().length > 2) {
+    const result = await checkToxicity(content);
+    if (!result.clean) {
+      setToxicityWarning({ score: result.score, bad_words: result.bad_words });
+      return;
+    }
+  }
+  setToxicityWarning(null);
+  setLoading(true);
     abortControllerRef.current = new AbortController();
     const isDev = import.meta.env.MODE === "development";
     try {
@@ -1067,19 +1119,192 @@ const CreatePost = () => {
                   </button>
                 )}
                 {!recording && (
-                  <button onClick={handleSubmit} disabled={loading} className="cp-publish-btn">
-                    {loading ? (
-                      <><span className="cp-publish-dot" /> Publishing…</>
-                    ) : (
-                      <>Publish Post</>
-                    )}
-                  </button>
-                )}
+  <button
+    onClick={handleSubmit}
+    disabled={loading || toxicityLoading}
+    className="cp-publish-btn"
+  >
+    {toxicityLoading ? (
+      <><span className="cp-publish-dot" /> Checking…</>
+    ) : loading ? (
+      <><span className="cp-publish-dot" /> Publishing…</>
+    ) : (
+      <>Publish Post</>
+    )}
+  </button>
+)}
               </div>
             </div>
 
-            {/* Upload progress */}
-            {uploadProgress > 0 && (
+            {/* ── Toxicity warning ───────────────────────────────────── */}
+{toxicityWarning && (
+  <div style={{
+    background: "linear-gradient(135deg, rgba(220,38,38,0.04) 0%, rgba(239,68,68,0.07) 100%)",
+    border: "1.5px solid rgba(220,38,38,0.22)",
+    borderRadius: 16,
+    padding: "18px 18px 14px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    position: "relative",
+    overflow: "hidden",
+  }}>
+
+    {/* Top glow line */}
+    <div style={{
+      position: "absolute", top: 0, left: 0, right: 0, height: 1,
+      background: "linear-gradient(90deg, transparent, rgba(220,38,38,0.35), transparent)",
+      pointerEvents: "none",
+    }} />
+
+    {/* Header row */}
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+      <div style={{
+        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+        background: "rgba(220,38,38,0.1)",
+        border: "1.5px solid rgba(220,38,38,0.2)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <AlertCircle size={17} color="#dc2626" />
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: "0 0 3px", fontSize: 13.5, fontWeight: 700, color: "#dc2626", fontFamily: "'Sora', sans-serif", letterSpacing: "-0.01em" }}>
+          Let's keep it kind ✦
+        </p>
+        <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
+          Our community thrives on respect. We spotted some language that might come across the wrong way — take a quick look before posting.
+        </p>
+      </div>
+    </div>
+
+    {/* Toxicity score bar */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+          Tone score
+        </span>
+        <span style={{
+          fontSize: 12, fontWeight: 700,
+          color: toxicityWarning.score > 0.85 ? "#dc2626" : "#f59e0b",
+          fontVariantNumeric: "tabular-nums",
+          background: toxicityWarning.score > 0.85 ? "rgba(220,38,38,0.1)" : "rgba(245,158,11,0.1)",
+          padding: "2px 8px", borderRadius: 99,
+        }}>
+          {Math.round(toxicityWarning.score * 100)}% flagged
+        </span>
+      </div>
+      <div style={{ width: "100%", height: 6, background: "rgba(220,38,38,0.1)", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{
+          height: "100%",
+          width: `${Math.round(toxicityWarning.score * 100)}%`,
+          background: toxicityWarning.score > 0.85
+            ? "linear-gradient(90deg, #f87171, #dc2626)"
+            : "linear-gradient(90deg, #fcd34d, #f59e0b)",
+          borderRadius: 99,
+          transition: "width 0.5s cubic-bezier(.4,0,.2,1)",
+        }} />
+      </div>
+    </div>
+
+    {/* Highlighted text preview — shows toxic words in context */}
+    {toxicityWarning.bad_words?.length > 0 && (() => {
+      const words = toxicityWarning.bad_words.map((w) => w.word.toLowerCase());
+      const parts = content.split(/(\s+)/);
+      return (
+        <div style={{
+          background: "rgba(255,255,255,0.7)",
+          border: "1px solid rgba(220,38,38,0.15)",
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontSize: 14,
+          lineHeight: 1.7,
+          color: "var(--text-dark)",
+          backdropFilter: "blur(6px)",
+        }}>
+          <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Your text — flagged words highlighted
+          </p>
+          <p style={{ margin: 0 }}>
+            {parts.map((part, i) => {
+              const isMatch = words.some((w) =>
+                part.toLowerCase() === w ||
+                part.toLowerCase().replace(/[^a-z]/g, "") === w
+              );
+              return isMatch ? (
+                <mark key={i} style={{
+                  background: "rgba(220,38,38,0.15)",
+                  color: "#dc2626",
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  padding: "1px 3px",
+                  border: "1px solid rgba(220,38,38,0.25)",
+                  textDecoration: "underline",
+                  textDecorationStyle: "wavy",
+                  textDecorationColor: "rgba(220,38,38,0.5)",
+                }}>
+                  {part}
+                </mark>
+              ) : (
+                <span key={i}>{part}</span>
+              );
+            })}
+          </p>
+        </div>
+      );
+    })()}
+
+    {/* Flagged word chips — only real toxic ones */}
+    {toxicityWarning.bad_words?.length > 0 && (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        <span style={{ fontSize: 11.5, color: "var(--text-muted)", fontWeight: 600 }}>Flagged:</span>
+        {toxicityWarning.bad_words.map((w, i) => (
+          <span key={i} style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            background: "rgba(220,38,38,0.08)",
+            border: "1px solid rgba(220,38,38,0.22)",
+            color: "#dc2626",
+            fontSize: 12, fontWeight: 700,
+            padding: "3px 10px", borderRadius: 99,
+            fontFamily: "monospace",
+          }}>
+            {w.word}
+            <span style={{ fontSize: 10, opacity: 0.7, fontFamily: "inherit" }}>
+              ×{w.weight.toFixed(1)}
+            </span>
+          </span>
+        ))}
+      </div>
+    )}
+
+    {/* Footer hint */}
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      paddingTop: 10, borderTop: "1px solid rgba(220,38,38,0.1)",
+      flexWrap: "wrap", gap: 8,
+    }}>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+        Edit your text above, then tap <strong style={{ color: "var(--primary-color)" }}>Publish</strong> again — or post anyway if you feel it's fine.
+      </p>
+      <button
+        onClick={() => { setToxicityWarning(null); handleSubmit(); }}
+        style={{
+          background: "none", border: "1.5px solid rgba(220,38,38,0.3)",
+          color: "#dc2626", borderRadius: 8, padding: "5px 14px",
+          fontSize: 12, fontWeight: 700, cursor: "pointer",
+          fontFamily: "inherit", whiteSpace: "nowrap",
+          transition: "all 0.18s",
+        }}
+        onMouseEnter={(e) => { e.target.style.background = "rgba(220,38,38,0.08)"; }}
+        onMouseLeave={(e) => { e.target.style.background = "none"; }}
+      >
+        Post anyway
+      </button>
+    </div>
+  </div>
+)}
+
+{/* Upload progress */}
+{uploadProgress > 0 && (
               <div className="cp-progress-wrap">
                 <div className="cp-progress-label">
                   <span>
