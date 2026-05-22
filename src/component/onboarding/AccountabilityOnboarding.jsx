@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronRight, FiChevronLeft, FiCheck, FiX } from 'react-icons/fi';
 import { GiPrayerBeads } from 'react-icons/gi';
 import { FaBook, FaDumbbell, FaUsers, FaBullseye } from 'react-icons/fa';
-// import './onboarding.css'; ← keep your existing import
+ import './onboarding.css';
 
 const NICHES = [
   { id: 'spiritual',  label: 'Spiritual Growth',                    Icon: GiPrayerBeads },
