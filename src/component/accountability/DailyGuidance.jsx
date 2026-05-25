@@ -14,7 +14,7 @@ import './styles/daily-guidance.css';
 import TaskTable from './TaskTable';
 import ReflectionMode from './ReflectionMode';
 import CheckInModal from './CheckInModal';
-import TaskReminderModal, { TRUSTED_CONNECTIONS } from './TaskReminderModal';
+import TaskReminderModal, { TRUSTED_CONNECTIONS } from "./TaskReminderModal";
 import { DUMMY_TASKS, CATEGORY_META } from '../../data/dummyData';
 
 // ─── Static data ──────────────────────────────────────────────────────────────
