@@ -236,9 +236,16 @@ const useWebRTC = ({
     }
   }, [callId, remoteUserId, socket, onError, processIceCandidateQueue]);
 
-  const handleAnswer = useCallback(async (answer) => {
+const handleAnswer = useCallback(async (answer) => {
     try {
       if (!_peerConnection) throw new Error("Peer connection not initialized");
+      
+      // ✅ If already stable, the answer was already applied — ignore duplicate
+      if (_peerConnection.signalingState === "stable") {
+        console.warn("📞 useWebRTC: Ignoring duplicate answer — already in stable state");
+        return;
+      }
+
       console.log("📞 useWebRTC: Handling incoming answer");
       await _peerConnection.setRemoteDescription(
         new RTCSessionDescription({ type: "answer", sdp: answer })
@@ -247,6 +254,11 @@ const useWebRTC = ({
       remoteDescriptionSetRef.current = true;
       await processIceCandidateQueue();
     } catch (error) {
+      // ✅ Don't crash the call for a duplicate answer error
+      if (error.name === "InvalidStateError") {
+        console.warn("📞 useWebRTC: Ignoring answer in wrong state (likely duplicate):", error.message);
+        return;
+      }
       console.error("📞 useWebRTC: Error handling answer:", error);
       onError?.({ code: "ANSWER_HANDLE_ERROR", message: "Failed to handle WebRTC answer", originalError: error });
       throw error;
