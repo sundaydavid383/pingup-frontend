@@ -65,64 +65,54 @@ const AudioCallUI = ({
     }
   }, [remoteStream]);
 
-  useEffect(() => {
-    if (
-      call &&
-      call.status ===
-        (callContext &&
-          callContext.CALL_STATES &&
-          callContext.CALL_STATES.CONNECTED)
-    ) {
-      console.log("📞 AudioCallUI: Call connected, starting timer");
+ const timerStartedRef = useRef(false);
+  const callStartTimeRef = useRef(null);
 
-      if (callContext && !callStatusMessage) {
+  useEffect(() => {
+    const status = call?.status;
+    const CONNECTED = callContext?.CALL_STATES?.CONNECTED;
+    const CONNECTING = callContext?.CALL_STATES?.CONNECTING;
+
+    if (status === CONNECTED && !timerStartedRef.current) {
+      console.log("📞 AudioCallUI: Call connected, starting timer");
+      timerStartedRef.current = true;
+      callStartTimeRef.current = Date.now();
+
+      if (!callStatusMessage) {
         callContext.setCallStatusMessage("✅ Connected");
       }
 
       timerIntervalRef.current = setInterval(() => {
-        callContext.updateDuration();
-        const duration = call.duration || 0;
-        const hours = Math.floor(duration / 3600);
-        const minutes = Math.floor((duration % 3600) / 60);
-        const seconds = duration % 60;
+        const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
 
         if (hours > 0) {
           setCallTimer(
-            `${hours.toString().padStart(2, "0")}:${minutes
-              .toString()
-              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+            `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
           );
         } else {
           setCallTimer(
-            `${minutes.toString().padStart(2, "0")}:${seconds
-              .toString()
-              .padStart(2, "0")}`
+            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
           );
         }
       }, 1000);
-    } else if (
-      call &&
-      call.status ===
-        (callContext &&
-          callContext.CALL_STATES &&
-          callContext.CALL_STATES.CONNECTING)
-    ) {
-      console.log(
-        "📞 AudioCallUI: Call is connecting, showing connecting status"
-      );
-      if (callContext && !callStatusMessage) {
-        callContext.setCallStatusMessage(
-          "🔗 Connecting to " + call.receiverName + "..."
-        );
+
+    } else if (status === CONNECTING) {
+      console.log("📞 AudioCallUI: Call is connecting, showing connecting status");
+      if (!callStatusMessage) {
+        callContext.setCallStatusMessage("🔗 Connecting to " + call.receiverName + "...");
       }
     }
 
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+        timerStartedRef.current = false;
       }
     };
-  }, [call, callContext]);
+  }, [call?.status]);
 
   if (!call) {
     return null;

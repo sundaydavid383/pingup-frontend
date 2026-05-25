@@ -75,47 +75,54 @@ const VideoCallUI = ({
   }, [remoteStream]);
 
   // Update call timer and status
-  useEffect(() => {
-    if (call && call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.CONNECTED)) {
+  const timerStartedRef = useRef(false);
+const callStartTimeRef = useRef(null);
+
+useEffect(() => {
+    const status = call?.status;
+    const CONNECTED = callContext?.CALL_STATES?.CONNECTED;
+    const CONNECTING = callContext?.CALL_STATES?.CONNECTING;
+
+    if (status === CONNECTED && !timerStartedRef.current) {
       console.log("📞 VideoCallUI: Call connected, starting timer");
-      
-      // Update status message to show connected
-      if (callContext && !callStatusMessage) {
-        callContext.setCallStatusMessage('✅ Connected');
+      timerStartedRef.current = true;
+      callStartTimeRef.current = Date.now();
+
+      if (!callStatusMessage) {
+        callContext.setCallStatusMessage("✅ Connected");
       }
-      
+
       timerIntervalRef.current = setInterval(() => {
-        callContext.updateDuration();
-        const duration = call.duration || 0;
-        const hours = Math.floor(duration / 3600);
-        const minutes = Math.floor((duration % 3600) / 60);
-        const seconds = duration % 60;
+        const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
 
         if (hours > 0) {
           setCallTimer(
-            `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
-              .toString()
-              .padStart(2, "0")}`
+            `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
           );
         } else {
           setCallTimer(
-            `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
           );
         }
       }, 1000);
-    } else if (call && call.status === (callContext && callContext.CALL_STATES && callContext.CALL_STATES.CONNECTING)) {
+
+    } else if (status === CONNECTING) {
       console.log("📞 VideoCallUI: Call is connecting, showing connecting status");
-      if (callContext && !callStatusMessage) {
-        callContext.setCallStatusMessage('🔗 Connecting to ' + call.receiverName + '...');
+      if (!callStatusMessage) {
+        callContext.setCallStatusMessage("🔗 Connecting to " + call.receiverName + "...");
       }
     }
 
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+        timerStartedRef.current = false;
       }
     };
-  }, [call, callContext]);
+  }, [call?.status]);
 
   const handlePiP = async () => {
     try {

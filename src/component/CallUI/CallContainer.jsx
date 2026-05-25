@@ -286,11 +286,11 @@ const CallContainer = ({ user, children }) => {
       )}
 
       {/* Video Call UI */}
-      {isCallActive && isVideoCall && (
-        <VideoCallUI
-          localStream={webrtcInstance.localStreamRef.current}
-          remoteStream={webrtcInstance.remoteStreamRef.current}
-          onEndCall={() => {
+{isCallActive && isVideoCall && (
+  <VideoCallUI
+    localStream={webrtcInstance.localStream}
+    remoteStream={webrtcInstance.remoteStream}
+    onEndCall={() => {
             if (callManager) {
               callManager.endCall();
             }
@@ -325,8 +325,8 @@ const CallContainer = ({ user, children }) => {
       {/* Audio Call UI */}
       {isCallActive && isAudioCall && (
         <AudioCallUI
-          localStream={webrtcInstance.localStreamRef.current}
-          remoteStream={webrtcInstance.remoteStreamRef.current}
+    localStream={webrtcInstance.localStream}
+    remoteStream={webrtcInstance.remoteStream}
           onEndCall={() => {
             if (callManager) {
               callManager.endCall();
