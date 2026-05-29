@@ -570,6 +570,273 @@ const styles = `
     .cp-footer { gap: 8px; }
     .cp-publish-btn { flex: 1; justify-content: center; }
   }
+    /* ── Toxicity inline banner ─────────────────────────── */
+.cp-tox {
+  border-radius: 12px;
+  border: 1.5px solid rgba(220, 38, 38, 0.18);
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.03) 0%,
+    rgba(246, 248, 255, 0.96) 100%
+  );
+  position: relative;
+  box-shadow: 0 2px 12px rgba(220, 38, 38, 0.07);
+}
+
+/* Left accent stripe */
+.cp-tox::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--danger) 0%, #f87171 100%);
+  border-radius: 12px 0 0 12px;
+  pointer-events: none;
+}
+
+/* ── Header row (always visible) ─── */
+.cp-tox-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 9px 15px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  min-height: 42px;
+}
+.cp-tox-header:hover {
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.cp-tox-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.cp-tox-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+  font-family: 'Sora', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: -0.01em;
+}
+
+.cp-tox-dot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: rgba(220,38,38,0.3);
+  flex-shrink: 0;
+}
+
+.cp-tox-score-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.cp-tox-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.cp-tox-chip-sm {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  color: var(--danger);
+  font-family: monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cp-tox-more-count {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cp-tox-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: rgba(59, 92, 203, 0.07);
+  border: 1px solid rgba(59, 92, 203, 0.14);
+  border-radius: 7px;
+  padding: 3px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cp-tox-toggle-btn:hover {
+  background: rgba(59, 92, 203, 0.13);
+  border-color: var(--primary-color);
+}
+
+.cp-tox-chevron {
+  display: inline-block;
+  transition: transform 0.28s cubic-bezier(.4, 0, .2, 1);
+}
+.cp-tox-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* ── Expandable body ─── */
+.cp-tox-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(.4, 0, .2, 1);
+}
+.cp-tox-body.open {
+  grid-template-rows: 1fr;
+}
+.cp-tox-body-inner {
+  overflow: hidden;
+}
+.cp-tox-body-content {
+  padding: 12px 15px 14px;
+  border-top: 1px solid rgba(220, 38, 38, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+/* Score bar */
+.cp-tox-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cp-tox-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.cp-tox-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s cubic-bezier(.4, 0, .2, 1);
+}
+.cp-tox-bar-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Text preview */
+.cp-tox-preview {
+  background: var(--off-white);
+  border: 1px solid rgba(220, 38, 38, 0.1);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-dark);
+}
+.cp-tox-preview-eyebrow {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cp-tox-preview-eyebrow::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(220,38,38,0.1);
+}
+
+/* All chips row */
+.cp-tox-all-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.cp-tox-chip-full {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(220, 38, 38, 0.07);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  color: var(--danger);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-family: monospace;
+}
+.cp-tox-chip-weight {
+  font-size: 9.5px;
+  opacity: 0.6;
+}
+
+/* Footer row */
+.cp-tox-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(220, 38, 38, 0.08);
+  flex-wrap: wrap;
+}
+.cp-tox-hint-text {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex: 1;
+  min-width: 120px;
+}
+.cp-tox-post-anyway {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.06);
+  border: 1.5px solid rgba(220, 38, 38, 0.2);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.17s;
+  flex-shrink: 0;
+}
+.cp-tox-post-anyway:hover {
+  background: rgba(220, 38, 38, 0.13);
+  border-color: var(--danger);
+  transform: translateY(-1px);
+}
 `;
 
 const CreatePost = () => {
@@ -583,7 +850,8 @@ const CreatePost = () => {
   const [youtubeError, setYoutubeError] = useState("");
   const [youtubePreview, setYoutubePreview] = useState(null);
   const [youtubeType, setYoutubeType] = useState(null);
-
+   const [toxicityExpanded, setToxicityExpanded] = useState(false);
+const skipToxicityRef = useRef(false);
   const DRAFT_KEY = "createPost_draft";
   const MAX_DRAFT_IMAGE_SIZE = 2 * 1024 * 1024;
 
@@ -735,17 +1003,32 @@ const checkToxicity = async (text) => {
   if (!text || text.trim().length < 3) return { clean: true };
   try {
     setToxicityLoading(true);
-    const res = await axios.post("https://detoxify-7my5.onrender.com/process/", {
-      text: text.trim(),
-    });
+
+    const controller = new AbortController();
+    // Give the server 8 seconds — if it's cold-starting it will miss this
+    // and we just let the post through silently
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const res = await axios.post(
+      "https://detoxify-7my5.onrender.com/process/",
+      { text: text.trim() },
+      { signal: controller.signal }
+    );
+
+    clearTimeout(timeoutId);
+
     const { toxicity, score, bad_words } = res.data;
     const filtered = filterBadWords(bad_words);
-    if (toxicity) {
-      return { clean: false, score, bad_words: filtered };
-    }
+    if (toxicity) return { clean: false, score, bad_words: filtered };
     return { clean: true };
+
   } catch (err) {
-    console.warn("Toxicity check failed, proceeding:", err);
+    // Timeout (AbortError), CORS failure, or network error → let post through
+    if (axios.isCancel(err) || err.name === "AbortError" || err.code === "ERR_CANCELED") {
+      console.warn("Toxicity check timed out — posting anyway.");
+    } else {
+      console.warn("Toxicity check failed, proceeding:", err);
+    }
     return { clean: true };
   } finally {
     setToxicityLoading(false);
@@ -812,13 +1095,14 @@ const checkToxicity = async (text) => {
       if (!content && images.length === 0 && videos.length === 0 && !audio && !youtubePreview)
     return showAlert("Please add content, images, videos, audio, or a YouTube video", "warning");
 
-  if (content && content.trim().length > 2) {
-    const result = await checkToxicity(content);
-    if (!result.clean) {
-      setToxicityWarning({ score: result.score, bad_words: result.bad_words });
-      return;
-    }
+ if (content && content.trim().length > 2 && !skipToxicityRef.current) {
+  const result = await checkToxicity(content);
+  if (!result.clean) {
+    setToxicityWarning({ score: result.score, bad_words: result.bad_words });
+    return;
   }
+}
+skipToxicityRef.current = false;
   setToxicityWarning(null);
   setLoading(true);
     abortControllerRef.current = new AbortController();
@@ -1136,172 +1420,158 @@ const checkToxicity = async (text) => {
               </div>
             </div>
 
-            {/* ── Toxicity warning ───────────────────────────────────── */}
-{toxicityWarning && (
-  <div style={{
-    background: "linear-gradient(135deg, rgba(220,38,38,0.04) 0%, rgba(239,68,68,0.07) 100%)",
-    border: "1.5px solid rgba(220,38,38,0.22)",
-    borderRadius: 16,
-    padding: "18px 18px 14px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-    position: "relative",
-    overflow: "hidden",
-  }}>
+{/* ── Toxicity inline banner ───────────────────────── */}
+{toxicityWarning && (() => {
+  const words = toxicityWarning.bad_words?.map((w) => w.word.toLowerCase()) || [];
+  const parts = content.split(/(\s+)/);
+  const pct = Math.round(toxicityWarning.score * 100);
+  const isHigh = toxicityWarning.score > 0.85;
+  const scoreColor = isHigh ? "var(--danger)" : "var(--warning)";
+  const scoreBg    = isHigh ? "rgba(220,38,38,0.1)" : "rgba(245,158,11,0.1)";
+  const scoreBorder= isHigh ? "rgba(220,38,38,0.2)" : "rgba(245,158,11,0.2)";
+  const scoreGrad  = isHigh
+    ? "linear-gradient(90deg, #f87171, #dc2626)"
+    : "linear-gradient(90deg, #fcd34d, #f59e0b)";
 
-    {/* Top glow line */}
-    <div style={{
-      position: "absolute", top: 0, left: 0, right: 0, height: 1,
-      background: "linear-gradient(90deg, transparent, rgba(220,38,38,0.35), transparent)",
-      pointerEvents: "none",
-    }} />
+  const allChips    = toxicityWarning.bad_words || [];
+  const previewChips = allChips.slice(0, 2);
+  const extraCount   = allChips.length - previewChips.length;
 
-    {/* Header row */}
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-        background: "rgba(220,38,38,0.1)",
-        border: "1.5px solid rgba(220,38,38,0.2)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <AlertCircle size={17} color="#dc2626" />
-      </div>
-      <div style={{ flex: 1 }}>
-        <p style={{ margin: "0 0 3px", fontSize: 13.5, fontWeight: 700, color: "#dc2626", fontFamily: "'Sora', sans-serif", letterSpacing: "-0.01em" }}>
-          Let's keep it kind ✦
-        </p>
-        <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.5 }}>
-          Our community thrives on respect. We spotted some language that might come across the wrong way — take a quick look before posting.
-        </p>
-      </div>
-    </div>
+  return (
+    <div className="cp-tox">
 
-    {/* Toxicity score bar */}
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-          Tone score
-        </span>
-        <span style={{
-          fontSize: 12, fontWeight: 700,
-          color: toxicityWarning.score > 0.85 ? "#dc2626" : "#f59e0b",
-          fontVariantNumeric: "tabular-nums",
-          background: toxicityWarning.score > 0.85 ? "rgba(220,38,38,0.1)" : "rgba(245,158,11,0.1)",
-          padding: "2px 8px", borderRadius: 99,
-        }}>
-          {Math.round(toxicityWarning.score * 100)}% flagged
-        </span>
-      </div>
-      <div style={{ width: "100%", height: 6, background: "rgba(220,38,38,0.1)", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{
-          height: "100%",
-          width: `${Math.round(toxicityWarning.score * 100)}%`,
-          background: toxicityWarning.score > 0.85
-            ? "linear-gradient(90deg, #f87171, #dc2626)"
-            : "linear-gradient(90deg, #fcd34d, #f59e0b)",
-          borderRadius: 99,
-          transition: "width 0.5s cubic-bezier(.4,0,.2,1)",
-        }} />
-      </div>
-    </div>
-
-    {/* Highlighted text preview — shows toxic words in context */}
-    {toxicityWarning.bad_words?.length > 0 && (() => {
-      const words = toxicityWarning.bad_words.map((w) => w.word.toLowerCase());
-      const parts = content.split(/(\s+)/);
-      return (
-        <div style={{
-          background: "rgba(255,255,255,0.7)",
-          border: "1px solid rgba(220,38,38,0.15)",
-          borderRadius: 10,
-          padding: "10px 12px",
-          fontSize: 14,
-          lineHeight: 1.7,
-          color: "var(--text-dark)",
-          backdropFilter: "blur(6px)",
-        }}>
-          <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Your text — flagged words highlighted
-          </p>
-          <p style={{ margin: 0 }}>
-            {parts.map((part, i) => {
-              const isMatch = words.some((w) =>
-                part.toLowerCase() === w ||
-                part.toLowerCase().replace(/[^a-z]/g, "") === w
-              );
-              return isMatch ? (
-                <mark key={i} style={{
-                  background: "rgba(220,38,38,0.15)",
-                  color: "#dc2626",
-                  fontWeight: 700,
-                  borderRadius: 4,
-                  padding: "1px 3px",
-                  border: "1px solid rgba(220,38,38,0.25)",
-                  textDecoration: "underline",
-                  textDecorationStyle: "wavy",
-                  textDecorationColor: "rgba(220,38,38,0.5)",
-                }}>
-                  {part}
-                </mark>
-              ) : (
-                <span key={i}>{part}</span>
-              );
-            })}
-          </p>
-        </div>
-      );
-    })()}
-
-    {/* Flagged word chips — only real toxic ones */}
-    {toxicityWarning.bad_words?.length > 0 && (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-        <span style={{ fontSize: 11.5, color: "var(--text-muted)", fontWeight: 600 }}>Flagged:</span>
-        {toxicityWarning.bad_words.map((w, i) => (
-          <span key={i} style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "rgba(220,38,38,0.08)",
-            border: "1px solid rgba(220,38,38,0.22)",
-            color: "#dc2626",
-            fontSize: 12, fontWeight: 700,
-            padding: "3px 10px", borderRadius: 99,
-            fontFamily: "monospace",
-          }}>
-            {w.word}
-            <span style={{ fontSize: 10, opacity: 0.7, fontFamily: "inherit" }}>
-              ×{w.weight.toFixed(1)}
-            </span>
-          </span>
-        ))}
-      </div>
-    )}
-
-    {/* Footer hint */}
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      paddingTop: 10, borderTop: "1px solid rgba(220,38,38,0.1)",
-      flexWrap: "wrap", gap: 8,
-    }}>
-      <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
-        Edit your text above, then tap <strong style={{ color: "var(--primary-color)" }}>Publish</strong> again — or post anyway if you feel it's fine.
-      </p>
-      <button
-        onClick={() => { setToxicityWarning(null); handleSubmit(); }}
-        style={{
-          background: "none", border: "1.5px solid rgba(220,38,38,0.3)",
-          color: "#dc2626", borderRadius: 8, padding: "5px 14px",
-          fontSize: 12, fontWeight: 700, cursor: "pointer",
-          fontFamily: "inherit", whiteSpace: "nowrap",
-          transition: "all 0.18s",
-        }}
-        onMouseEnter={(e) => { e.target.style.background = "rgba(220,38,38,0.08)"; }}
-        onMouseLeave={(e) => { e.target.style.background = "none"; }}
+      {/* ── Collapsed header — always visible ── */}
+      <div
+        className="cp-tox-header"
+        onClick={() => setToxicityExpanded((v) => !v)}
+        role="button"
+        aria-expanded={toxicityExpanded}
       >
-        Post anyway
-      </button>
+        <span className="cp-tox-icon">⚠️</span>
+        <span className="cp-tox-label">Flagged</span>
+        <span className="cp-tox-dot" />
+
+        {/* Score badge */}
+        <span
+          className="cp-tox-score-badge"
+          style={{ color: scoreColor, background: scoreBg, borderColor: scoreBorder }}
+        >
+          {pct}%
+        </span>
+
+        {/* Inline word chips preview */}
+        <div className="cp-tox-chips-row">
+          {previewChips.map((w, i) => (
+            <span key={i} className="cp-tox-chip-sm">{w.word}</span>
+          ))}
+          {extraCount > 0 && (
+            <span className="cp-tox-more-count">+{extraCount} more</span>
+          )}
+        </div>
+
+        {/* Toggle */}
+        <button className="cp-tox-toggle-btn" tabIndex={-1}>
+          {toxicityExpanded ? "Collapse" : "Review"}
+          <svg
+            className={`cp-tox-chevron${toxicityExpanded ? " open" : ""}`}
+            width="11" height="11" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ── Expandable body ── */}
+      <div className={`cp-tox-body${toxicityExpanded ? " open" : ""}`}>
+        <div className="cp-tox-body-inner">
+          <div className="cp-tox-body-content">
+
+            {/* Score bar */}
+            <div className="cp-tox-bar-row">
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                Tone
+              </span>
+              <div className="cp-tox-bar-track">
+                <div className="cp-tox-bar-fill" style={{ width: `${pct}%`, background: scoreGrad }} />
+              </div>
+              <span className="cp-tox-bar-label" style={{ color: scoreColor }}>
+                {pct}%
+              </span>
+            </div>
+
+            {/* Text preview with highlights */}
+            {words.length > 0 && (
+              <div className="cp-tox-preview">
+                <div className="cp-tox-preview-eyebrow">Flagged words in your text</div>
+                <p style={{ margin: 0 }}>
+                  {parts.map((part, i) => {
+                    const clean = part.toLowerCase().replace(/[^a-z]/g, "");
+                    const isMatch = words.some((w) =>
+                      part.toLowerCase() === w || clean === w
+                    );
+                    return isMatch ? (
+                      <mark key={i} style={{
+                        background: "rgba(220,38,38,0.12)",
+                        color: "var(--danger)",
+                        fontWeight: 700,
+                        borderRadius: 3,
+                        padding: "1px 2px",
+                        border: "1px solid rgba(220,38,38,0.2)",
+                        textDecoration: "underline",
+                        textDecorationStyle: "wavy",
+                        textDecorationColor: "rgba(220,38,38,0.35)",
+                      }}>
+                        {part}
+                      </mark>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    );
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* All flagged chips */}
+            {allChips.length > 0 && (
+              <div className="cp-tox-all-chips">
+                <span style={{ fontSize: 10.5, color: "var(--text-muted)", fontWeight: 600 }}>
+                  Flagged:
+                </span>
+                {allChips.map((w, i) => (
+                  <span key={i} className="cp-tox-chip-full">
+                    {w.word}
+                    <span className="cp-tox-chip-weight">×{w.weight.toFixed(1)}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="cp-tox-footer">
+              <p className="cp-tox-hint-text">
+                Edit above, then tap{" "}
+                <strong style={{ color: "var(--primary-color)" }}>Publish</strong> again.
+              </p>
+              <button
+                className="cp-tox-post-anyway"
+                onClick={() => {
+                  skipToxicityRef.current = true;
+                  setToxicityWarning(null);
+                  setToxicityExpanded(false);
+                  handleSubmit();
+                }}
+              >
+                Post anyway →
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-)}
+  );
+})()}
 
 {/* Upload progress */}
 {uploadProgress > 0 && (

@@ -153,6 +153,7 @@ export const CallProvider = ({ children }) => {
       if (!prev) return prev;
       return { ...prev, status: CALL_STATES.CONNECTING };
     });
+  
     
     // Emit acceptance to backend via socket
     if (socket && currentCall) {
@@ -165,6 +166,12 @@ export const CallProvider = ({ children }) => {
     }
   }, [socket, currentCall, user]);
 
+    const setCallConnecting = useCallback(() => {
+    setCurrentCall(prev => {
+        if (!prev) return prev;
+        return { ...prev, status: CALL_STATES.CONNECTING };
+    });
+}, []);
   /**
    * Reject the current incoming call
    */
@@ -331,6 +338,7 @@ export const CallProvider = ({ children }) => {
     handleIncomingCall,
     acceptCall,
     answerCall: acceptCall, // Alias for acceptCall
+    setCallConnecting,
     rejectCall,
     setCallConnected,
     endCall,

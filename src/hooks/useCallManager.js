@@ -349,46 +349,50 @@ useEffect(() => {
       }, 30000);
     };
 
-    const handleCallAcceptedAck = async (data) => {
-      console.log("📞 useCallManager: handleCallAcceptedAck() - Call was accepted by remote user");
-      console.log("  -> data:", data);
+const handleCallAcceptedAck = async (data) => {
+    console.log("📞 useCallManager: handleCallAcceptedAck() - Call was accepted by remote user");
+    console.log("  -> data:", data);
 
-      const ctx = callContextRef.current;
+    const ctx = callContextRef.current;
 
-      // ✅ Guard against duplicates
-      if (!ctx?.currentCall) {
+    // Guard against duplicates
+    if (!ctx?.currentCall) {
         console.log("📞 useCallManager: Ignoring callAcceptedAck — no active call");
         return;
-      }
-      if (
+    }
+    if (
         ctx.currentCall.status === ctx.CALL_STATES.CONNECTED ||
         ctx.currentCall.status === ctx.CALL_STATES.CONNECTING
-      ) {
+    ) {
         console.log("📞 useCallManager: Ignoring duplicate callAcceptedAck — already connecting/connected");
         return;
-      }
+    }
 
-      clearTimeout(callRejectionTimeoutRef.current);
-      console.log("📞 useCallManager: Clearing rejection timeout");
+    clearTimeout(callRejectionTimeoutRef.current);
 
-      console.log("📞 useCallManager: Accepting call in context (setting to CONNECTING)...");
-      ctx.acceptCall();
-      ctx.setCallStatusMessage('🔗 Connecting...');
+    // Use setCallConnecting instead of acceptCall to avoid double-emitting
+    // callAccepted socket event (CallContext.acceptCall emits it, but we
+    // already emitted it from the receiver side — we just need the state update)
+    ctx.setCallConnecting();
+    ctx.setCallStatusMessage('🔗 Connecting...');
 
-      const wrtc = webrtcManagerRef.current;
-      if (wrtc) {
-        console.log("📞 useCallManager: Initializing WebRTC after call accepted...");
+    const wrtc = webrtcManagerRef.current;
+    if (wrtc) {
+        console.log("📞 useCallManager: Initializing WebRTC — initiator creates offer");
+        // Small delay to ensure the socket room join (done server-side) has
+        // propagated before we send the offer through the signal room
+        await new Promise(resolve => setTimeout(resolve, 150));
         wrtc.initialize().catch(error => {
-          console.error("📞 useCallManager: WebRTC init failed:", error);
-          ctx.setError("Failed to establish connection");
-          endCallRef.current?.();
+            console.error("📞 useCallManager: WebRTC init failed:", error);
+            ctx.setError("Failed to establish connection");
+            endCallRef.current?.();
         });
-      } else {
-        console.warn("📞 useCallManager: webrtcManager not available for WebRTC initialization");
-      }
+    } else {
+        console.warn("📞 useCallManager: webrtcManager not available");
+    }
 
-      if (onCallStateChange) onCallStateChange('accepted');
-    };
+    if (onCallStateChange) onCallStateChange('accepted');
+};
 
     const handleCallRejectedAck = (data) => {
       console.log("📞 useCallManager: handleCallRejectedAck() - Call was rejected by remote user");
@@ -476,10 +480,7 @@ useEffect(() => {
       }
     };
 
-    const handleJoinCallRoom = ({ callId, room }) => {
-      console.log("📞 useCallManager: Joining call room:", room);
-      socket.emit('joinCallSignalRoom', { callId });
-    };
+
 
     console.log("📞 useCallManager: Registering socket event listeners...");
     socket.on("incomingCall", handleIncomingCall);
@@ -489,7 +490,6 @@ useEffect(() => {
     socket.on("webrtcOffer", handleWebrtcOffer);
     socket.on("webrtcAnswer", handleWebrtcAnswer);
     socket.on("webrtcIceCandidate", handleWebrtcIceCandidate);
-    socket.on("joinCallRoom", handleJoinCallRoom);
     console.log("📞 useCallManager: Socket event listeners registered successfully");
 
     return () => {
@@ -501,7 +501,6 @@ useEffect(() => {
       socket.off("webrtcOffer", handleWebrtcOffer);
       socket.off("webrtcAnswer", handleWebrtcAnswer);
       socket.off("webrtcIceCandidate", handleWebrtcIceCandidate);
-      socket.off("joinCallRoom", handleJoinCallRoom);
       console.log("📞 useCallManager: Socket event listeners cleaned up");
     };
   }, [socket]); // ✅ ONLY socket — prevents duplicate listener registration

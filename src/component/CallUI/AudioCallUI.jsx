@@ -107,11 +107,11 @@ const AudioCallUI = ({
     }
 
     return () => {
-      if (timerIntervalRef.current) {
+    if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
-        timerStartedRef.current = false;
-      }
-    };
+        timerIntervalRef.current = null;
+    }
+};
   }, [call?.status]);
 
   if (!call) {

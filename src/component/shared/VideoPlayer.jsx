@@ -4,7 +4,7 @@ import { BsPlayFill, BsPauseFill, BsFillVolumeMuteFill, BsFillVolumeUpFill } fro
 import { MdFullscreen } from "react-icons/md";
 import { videoManager, videoState } from "../../utils/videoManager";
 import { useGlobalVideo } from "../../context/GlobalVideoContext";
-import { forwardRef } from 'react';
+import { forwardRef, useImperativeHandle } from 'react';
 
 /**
  * Props:
@@ -26,7 +26,9 @@ const VideoPlayer = forwardRef(({
   const { videoState: globalVideoState, updateVideoState } = useGlobalVideo();
 
   const containerRef = useRef(null);
-  const videoRef = ref || useRef(null);
+const internalVideoRef = useRef(null);
+useImperativeHandle(ref, () => ({ videoRef: internalVideoRef }));
+const videoRef = internalVideoRef;
   const controlsRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -83,13 +85,14 @@ const VideoPlayer = forwardRef(({
     const vid = videoRef.current;
     if (!vid) return;
 
-    const onGlobalPlay = (e) => {
-      if (e.detail !== vid) {
-        vid.pause();
-        vid.muted = false;     // 🔥 FORCE MUTE
-        setMuted(false);
-      }
-    };
+   // PASTE THIS instead
+const onGlobalPlay = (e) => {
+  if (e.detail !== vid) {
+    vid.pause();
+    vid.muted = true;
+    setMuted(true);
+  }
+};
 
     videoManager.addEventListener("video-play", onGlobalPlay);
     return () => videoManager.removeEventListener("video-play", onGlobalPlay);
@@ -416,11 +419,16 @@ const VideoPlayer = forwardRef(({
     resetHideTimer(); // ✅ ensures controls stay visible after tap
   }
 
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    vid.load(); // starts buffering
-  }, [src]);
+  // PASTE THIS instead
+const prevSrcRef = useRef(null);
+useEffect(() => {
+  const vid = videoRef.current;
+  if (!vid) return;
+  if (prevSrcRef.current !== null && prevSrcRef.current !== src) {
+    vid.load();
+  }
+  prevSrcRef.current = src;
+}, [src]);
 
 
   // IMPORTANT: stop propagation on the container so clicks inside player don't bubble to parent wrappers
@@ -445,7 +453,14 @@ const VideoPlayer = forwardRef(({
       videoManager.removeEventListener("video-play", onOtherVideoPlay);
     };
   }, []);
-  useEffect(() => {
+
+  // PASTE THIS instead
+const playingRef = useRef(false);
+useEffect(() => {
+  playingRef.current = playing;
+}, [playing]);
+
+useEffect(() => {
   const vid = videoRef.current;
   const container = containerRef.current;
   if (!vid || !container) return;
@@ -454,15 +469,13 @@ const VideoPlayer = forwardRef(({
     ([entry]) => {
       const currentVid = videoRef.current;
       if (!currentVid) return;
-      if (!entry.isIntersecting && playing) {
-        // 👋 inline disappeared → detach
+      if (!entry.isIntersecting && playingRef.current) {
         updateVideoState({
           isDetached: true,
           currentTime: currentVid.currentTime,
           playing: true,
         });
-
-        currentVid.pause(); // stop inline
+        currentVid.pause();
       }
     },
     { threshold: 0.1 }
@@ -470,7 +483,7 @@ const VideoPlayer = forwardRef(({
 
   observer.observe(container);
   return () => observer.disconnect();
-}, [playing]);
+}, []); 
 
 
   return (

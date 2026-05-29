@@ -116,12 +116,12 @@ useEffect(() => {
       }
     }
 
-    return () => {
-      if (timerIntervalRef.current) {
+return () => {
+    if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
-        timerStartedRef.current = false;
-      }
-    };
+        timerIntervalRef.current = null;
+    }
+};
   }, [call?.status]);
 
   const handlePiP = async () => {
