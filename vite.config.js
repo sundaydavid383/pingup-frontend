@@ -2,12 +2,18 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
 
 // Backend API and images
 const API_URL_PATTERN = /^https:\/\/pingup-zwit\.onrender\.com\/api\/.*$/;
 const IMAGE_URL_PATTERN = /^https:\/\/pingup-zwit\.onrender\.com\/images\/.*$/;
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
