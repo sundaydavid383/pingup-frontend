@@ -65,7 +65,6 @@ const PostCard = ({ post,
   })();
 
   const [liked, setLiked] = useState(initialLiked);
-  const { setVideoState } = useGlobalVideo();
   const [likesCount, setLikesCount] = useState(post.likesCount ?? post.recentReactions?.length ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
   const [showCommentsSection, setShowCommentsSection] = useState(false);
@@ -332,6 +331,8 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
     }
   };
 
+  console.log("POST ATTACHMENTS:", JSON.stringify(post.attachments, null, 2));
+
 
 
   const handleFollow = async () => {
@@ -520,50 +521,26 @@ return (
                       primaryColor="#FF4D4F"
                       autoPlayOnView={true}
                       sectionId={`feed-${post._id}`}
-                      ref={(ref) => {
-                        if (ref?.videoRef?.current) {
-                          setVideoState({
-                            src: file.url,
-                            poster: file.poster || "",
-                            inlineRef: ref.videoRef.current,
-                            playing: !ref.videoRef.current.paused,
-                            currentTime: ref.videoRef.current.currentTime,
-                          });
-                        }
-                      }}
+                      
                     />
                   </div>
                 )}
 
                 {isYouTube && (
-                  <div className="w-full h-full flex items-center justify-center bg-black">
-                    <iframe
-                      src={file.url}
-                      title={`YouTube video ${index}`}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full"
-                      style={{ aspectRatio: "16/9" }}
-                    />
-                  </div>
-                )}
-
-                {isYouTube && (
-                  <div className="w-full h-full absolute inset-0 flex items-center justify-center bg-black">
-                    <div className="w-full h-full max-w-full" style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
-                      <iframe
-                        src={`https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
-                        title={`youtube-${index}`}
-                        className="absolute top-0 left-0 w-full h-full rounded-md"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        style={{ borderRadius: "8px" }}
-                      />
-                    </div>
-                  </div>
-                )}
+  <div className="w-full flex items-center justify-center bg-black">
+    <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", height: 0 }}>
+      <iframe
+        src={file.embedUrl || file.url || `https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
+        title={`youtube-${index}`}
+        className="rounded-md"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "8px" }}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      />
+    </div>
+  </div>
+)}
               </div>
             );
           })}

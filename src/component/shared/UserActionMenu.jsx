@@ -64,7 +64,7 @@ const UserActionMenu = ({
       bg-white/90 backdrop-blur-xl
       border border-gray-200/60
       shadow-[0_10px_30px_rgba(0,0,0,0.12)]
-      animate-scaleFade
+      animate-scaleFade z-999
     "
   >
     {/* Follow / Unfollow */}
