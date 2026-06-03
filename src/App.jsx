@@ -51,6 +51,19 @@ import SidebarTooltipPortal from './component/shared/SidebarTooltipPortal';
 import { MoodProvider } from './store/MoodStore';
 import { ScriptureProvider } from './context/ScriptureContext';
 import GlobalScriptureModal from './component/shared/GlobalScriptureModal';
+// Admin Dashboard Imports
+import AdminLayout from '@/component/Admin/Layout';
+import AdminDashboard from '@/pages/Admin/Dashboard';
+import Members from '@/pages/Admin/Members';
+import Posts from '@/pages/Admin/Posts';
+import Flagged from '@/pages/Admin/Flagged';
+import Groups from '@/pages/Admin/Groups';
+import Prayers from '@/pages/Admin/Prayers';
+import Devotionals from '@/pages/Admin/Devotionals';
+import Announcements from '@/pages/Admin/Announcements';
+import Reports from '@/pages/Admin/Reports';
+import Notifications from '@/pages/Admin/Notifications';
+import AdminSettings from '@/pages/Admin/Settings';
 const App = () => {
   const { user, setUser, token, modalOpen, setModalOpen, showPasswordModal, setShowPasswordModal, showOnboarding, setShowOnboarding } = useAuth();
   const location = useLocation();
@@ -300,6 +313,44 @@ const App = () => {
 
           {/* Auth page - for login/signup */}
           <Route path="/auth" element={!user ? <AuthContainer initialError={oauthError} /> : <Navigate to="/" />} />
+
+          {/* Admin Dashboard Routes */}
+          {user && (
+            <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/dashboard" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/members" element={<AdminLayout><Members /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/posts" element={<AdminLayout><Posts /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/flagged" element={<AdminLayout><Flagged /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/groups" element={<AdminLayout><Groups /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/prayers" element={<AdminLayout><Prayers /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/devotionals" element={<AdminLayout><Devotionals /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/announcements" element={<AdminLayout><Announcements /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/reports" element={<AdminLayout><Reports /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/notifications" element={<AdminLayout><Notifications /></AdminLayout>} />
+          )}
+          {user && (
+            <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
+          )}
 
           {/* 3D Sphere Demo */}
           <Route path="/sphere" element={<Spinning3DSphere />} />
