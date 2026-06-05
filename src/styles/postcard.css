@@ -79,7 +79,7 @@
 
 .pc-root:hover {
   border-color: var(--pc-border-hover);
-  box-shadow: var(--pc-shadow-hover);
+  /* box-shadow: var(--pc-shadow-hover); */
   transform: translateY(-2px);
 }
 
@@ -187,7 +187,7 @@
   color: #334155;
   white-space: pre-line;
   position: relative;
-  z-index: 2;
+  z-index: 0;
   margin-bottom: 14px;
   letter-spacing: 0.005em;
 }

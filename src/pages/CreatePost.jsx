@@ -1142,6 +1142,11 @@ skipToxicityRef.current = false;
         clearDraft();
         setContent(""); setImages([]); setVideos([]); setVisibility("public");
         setYoutubeInput(""); setYoutubePreview(null); setYoutubeError(""); setYoutubeType(null);
+        sessionStorage.setItem('just_posted', JSON.stringify({
+            post: res.data.post,
+            timestamp: Date.now()
+          }));
+          console.log("returned post data", res.data.post);
         setTimeout(() => navigate("/"), 3000);
         setUploadProgress(0); setUploadState("");
       } else {

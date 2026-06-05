@@ -374,10 +374,10 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
     (file) => file.type === "video" || file.type === "youtube"
   )
 
-
+  console.log("ATTACHMENTS FOR POST", post._id, ":", post.attachments?.map(a => a.type));
 
 return (
-    <div className="pc-root space-y-0">
+    <div className="pc-root space-y-0" style={{ overflow: "visible", position: "relative" }}>
 
       {/* Header */}
       <div className="pc-header">
@@ -453,13 +453,14 @@ return (
       {/* Non-audio Attachments */}
       {nonAudioAttachments?.length > 0 && (
         <div
-          className={`w-full grid gap-2 ${hasVideoAttachment ? "bg-black" : ""}
-            ${post.attachments.length === 1 && "flex justify-center"}
-            ${post.attachments.length === 2 && "grid-cols-2 max-w-[900px] mx-auto"}
-            ${post.attachments.length === 3 && "grid-cols-2"}
-            ${post.attachments.length >= 4 && "grid-cols-2"}
-          `}
-        >
+  className={`w-full gap-2
+    ${hasVideoAttachment ? "bg-black" : ""}
+    ${nonAudioAttachments.length === 1 ? "block" : ""}
+    ${nonAudioAttachments.length === 2 ? "grid grid-cols-2 max-w-[900px] mx-auto" : ""}
+    ${nonAudioAttachments.length === 3 ? "grid grid-cols-2" : ""}
+    ${nonAudioAttachments.length >= 4 ? "grid grid-cols-2" : ""}
+  `}
+>
           {nonAudioAttachments.map((file, index) => {
             const count = nonAudioAttachments.length;
             const single = count === 1;
@@ -491,16 +492,18 @@ return (
 
             return (
               <div
-                key={index}
-                onClick={(e) => { e.stopPropagation(); if (isImage) onImageClick(index); }}
-                className={`relative overflow-hidden cursor-pointer
-                  ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
-                  ${single ? "rounded-xl" : "rounded-md"}
-                  ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
-                  ${portraitWidthClass}
-                `}
-                style={isYouTube ? { aspectRatio: "16/9" } : {}}
-              >
+  key={index}
+  onClick={(e) => { e.stopPropagation(); if (isImage) onImageClick(index); }}
+  className={`relative cursor-pointer
+    ${isVideo ? "overflow-hidden" : ""}
+    ${isYouTube ? "" : "overflow-hidden"}
+    ${isVideo || isYouTube ? "bg-black" : "bg-gray-100"}
+    ${single ? "rounded-xl" : "rounded-md"}
+    ${isLastOfThree ? "col-span-2 mx-auto max-w-[70%]" : ""}
+    ${portraitWidthClass}
+  `}
+  style={{}}
+>
                 {isImage && (
                   <img
                     src={file.url}
@@ -526,19 +529,15 @@ return (
                   </div>
                 )}
 
-                {isYouTube && (
-  <div className="w-full flex items-center justify-center bg-black">
-    <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", height: 0 }}>
-      <iframe
-        src={file.embedUrl || file.url || `https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
-        title={`youtube-${index}`}
-        className="rounded-md"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "8px" }}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-      />
-    </div>
+{isYouTube && (
+  <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", height: 0, borderRadius: "8px", overflow: "hidden" }}>
+    <iframe
+      src={file.embedUrl || file.url || `https://www.youtube.com/embed/${file.youtubeId}?rel=0&modestbranding=1`}
+      title={`youtube-${index}`}
+      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+    />
   </div>
 )}
               </div>

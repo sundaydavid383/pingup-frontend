@@ -536,10 +536,12 @@ const Connections = () => {
     setAlertData({ message, type });
   };
 
-  const CONN_SCROLL_KEY = "connections_scroll_position";
+const CONN_SCROLL_KEY = "connections_scroll_position";
   const CONN_DATA_KEY = "connections_cached_data";
+  const CONN_TIMESTAMP_KEY = "connections_cached_timestamp";
+  const CACHE_TTL = 5 * 60 * 1000;
 
-  const fetchConnections = async () => {
+    const fetchConnections = async () => {
     setLoading(true);
     try {
       const userId = user?._id;
@@ -574,12 +576,15 @@ const Connections = () => {
   };
 
   useEffect(() => {
-    const savedScroll = localStorage.getItem(CONN_SCROLL_KEY);
+    const savedScroll = sessionStorage.getItem(CONN_SCROLL_KEY);
     if (savedScroll) {
       setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
     }
-    const cached = localStorage.getItem(CONN_DATA_KEY);
-    if (cached) {
+    const cached = sessionStorage.getItem(CONN_DATA_KEY);
+    const cachedTime = sessionStorage.getItem(CONN_TIMESTAMP_KEY);
+    const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
+
+    if (cached && !isStale) {
       try {
         setData(JSON.parse(cached));
         setLoading(false);
@@ -589,12 +594,11 @@ const Connections = () => {
     } else {
       fetchConnections();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const handleScroll = () => {
-      localStorage.setItem(CONN_SCROLL_KEY, window.scrollY.toString());
+      sessionStorage.setItem(CONN_SCROLL_KEY, window.scrollY.toString());
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -602,9 +606,12 @@ const Connections = () => {
 
   useEffect(() => {
     if (data.followers.length > 0 || data.following.length > 0) {
-      localStorage.setItem(CONN_DATA_KEY, JSON.stringify(data));
+      sessionStorage.setItem(CONN_DATA_KEY, JSON.stringify(data));
+      sessionStorage.setItem(CONN_TIMESTAMP_KEY, Date.now().toString());
     }
   }, [data]);
+  
+
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -677,11 +684,11 @@ const Connections = () => {
                 <h1 className="conn-title">Connections</h1>
                 <p className="conn-subtitle">Manage your followers, friends, and pending requests.</p>
               </div>
-              <RefreshButton
-                onRefresh={handleRefresh}
-                isRefreshing={isRefreshing}
-                label="Refresh"
-              />
+              <RefreshButton 
+                            onRefresh={handleRefresh} 
+                            isRefreshing={isRefreshing}
+                            scrollTargetRef={window.scrollY}  // ← Feed uses a div ref, not window
+                          />
             </div>
           </div>
 

@@ -33,17 +33,21 @@ const UserActionMenu = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleAction = async (type) => {
-    try {
-      setLoadingAction(type);
-      if (type === "follow") await handleFollow();
-      else if (type === "block") await handleBlock();
-      else if (type === "delete" && handleDeletePost) await handleDeletePost();
-    } finally {
-      setLoadingAction(null);
-      setShowActionBar(false);
+const handleAction = async (type) => {
+  try {
+    setLoadingAction(type);
+    if (type === "follow") await handleFollow();
+    else if (type === "block") await handleBlock();
+    else if (type === "delete" && handleDeletePost) {
+      setShowActionBar(false); // close menu first
+      await handleDeletePost(); // then trigger confirm dialog
+      return; // skip the finally setShowActionBar
     }
-  };
+  } finally {
+    setLoadingAction(null);
+    setShowActionBar(false);
+  }
+};
 
   return (
     <div ref={menuRef} className="relative mt-1">
@@ -59,13 +63,14 @@ const UserActionMenu = ({
       {showActionBar && (
   <div
     className="
-      absolute right-0 mt-3 w-48 z-50 overflow-hidden
-      rounded-2xl px-2 py-1
-      bg-white/90 backdrop-blur-xl
-      border border-gray-200/60
-      shadow-[0_10px_30px_rgba(0,0,0,0.12)]
-      animate-scaleFade z-999
-    "
+  absolute right-0 mt-3 w-48 overflow-hidden
+  rounded-2xl px-2 py-1
+  bg-white/90 backdrop-blur-xl
+  border border-gray-200/60
+  shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+  animate-scaleFade
+"
+style={{ zIndex: 9999 }}
   >
     {/* Follow / Unfollow */}
     {!isOwnPost && (

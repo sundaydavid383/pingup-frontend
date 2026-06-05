@@ -143,16 +143,21 @@ export default function Discover() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const DISCOVER_SCROLL_KEY = "discover_scroll_position";
+ const DISCOVER_SCROLL_KEY = "discover_scroll_position";
   const DISCOVER_DATA_KEY = "discover_cached_data";
+  const DISCOVER_TIMESTAMP_KEY = "discover_cached_timestamp";
+  const CACHE_TTL = 5 * 60 * 1000;
 
   useEffect(() => {
-    const savedScroll = localStorage.getItem(DISCOVER_SCROLL_KEY);
+    const savedScroll = sessionStorage.getItem(DISCOVER_SCROLL_KEY);
     if (savedScroll) {
       setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
     }
-    const cached = localStorage.getItem(DISCOVER_DATA_KEY);
-    if (cached) {
+    const cached = sessionStorage.getItem(DISCOVER_DATA_KEY);
+    const cachedTime = sessionStorage.getItem(DISCOVER_TIMESTAMP_KEY);
+    const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
+
+    if (cached && !isStale) {
       try {
         setUsers(JSON.parse(cached));
         setLoadingInitial(false);
@@ -166,7 +171,7 @@ export default function Discover() {
 
   useEffect(() => {
     const handleScroll = () => {
-      localStorage.setItem(DISCOVER_SCROLL_KEY, window.scrollY.toString());
+      sessionStorage.setItem(DISCOVER_SCROLL_KEY, window.scrollY.toString());
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -174,7 +179,8 @@ export default function Discover() {
 
   useEffect(() => {
     if (users.length > 0) {
-      localStorage.setItem(DISCOVER_DATA_KEY, JSON.stringify(users));
+      sessionStorage.setItem(DISCOVER_DATA_KEY, JSON.stringify(users));
+      sessionStorage.setItem(DISCOVER_TIMESTAMP_KEY, Date.now().toString());
     }
   }, [users]);
 
@@ -341,10 +347,10 @@ export default function Discover() {
 
           {/* Refresh row */}
           <div className="discover-refresh-row">
-            <RefreshButton
-              onRefresh={handleRefresh}
+                    <RefreshButton 
+              onRefresh={handleRefresh} 
               isRefreshing={isRefreshing}
-              label="Refresh"
+              scrollTargetRef={window.scrollY}  // ← Feed uses a div ref, not window
             />
           </div>
         </div>

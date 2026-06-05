@@ -137,39 +137,83 @@ const Feed = () => {
     );
   };
 
-  // Scroll position persistence keys
-  const FEED_SCROLL_KEY = 'feed_scroll_position';
+const FEED_SCROLL_KEY = 'feed_scroll_position';
   const FEED_DATA_KEY = 'feed_cached_data';
+  const FEED_TIMESTAMP_KEY = 'feed_cached_timestamp';
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  // Manual refresh handler
+  const [newPostsBanner, setNewPostsBanner] = useState(false);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
+    setNewPostsBanner(false);
     fetchFeeds(true);
   };
 
-  // Reset refreshing state after loading completes
   useEffect(() => {
     if (!loadingInitial && isRefreshing) {
       setTimeout(() => setIsRefreshing(false), 500);
     }
   }, [loadingInitial, isRefreshing]);
 
+  // Background poll every 2 minutes — show banner instead of auto-refresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNewPostsBanner(true);
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
+
+
+const JUST_POSTED_KEY = 'just_posted';
+const JUST_POSTED_TTL = 60 * 1000; // 1 minute
 
 useEffect(() => {
   const initializeFeed = async () => {
     if (!user?._id) return;
 
-    const savedScroll = localStorage.getItem(FEED_SCROLL_KEY);
-    const cachedData = localStorage.getItem(FEED_DATA_KEY);
+    // ✅ Check if user just made a post (within last 1 minute)
+    const justPostedRaw = sessionStorage.getItem(JUST_POSTED_KEY);
+    if (justPostedRaw) {
+      try {
+        const { post: newPost, timestamp } = JSON.parse(justPostedRaw);
+        const isRecent = Date.now() - timestamp < JUST_POSTED_TTL;
 
-    if (cachedData) {
+        if (isRecent && newPost) {
+          // Force a fresh fetch (bypass cache)
+          sessionStorage.removeItem(JUST_POSTED_KEY);
+          sessionStorage.removeItem(FEED_DATA_KEY);
+          sessionStorage.removeItem(FEED_TIMESTAMP_KEY);
+
+          await fetchFeeds(true); // fresh fetch
+
+          // Pin the new post to top
+          setFeeds(prev => {
+            const withoutNew = prev.filter(p => p._id !== newPost._id);
+            return dedupePosts([newPost, ...withoutNew]);
+          });
+
+          await getLocation(user._id);
+          return;
+        }
+      } catch (e) {
+        sessionStorage.removeItem(JUST_POSTED_KEY);
+      }
+    }
+
+    // Normal cache logic
+    const savedScroll = sessionStorage.getItem(FEED_SCROLL_KEY);
+    const cachedData = sessionStorage.getItem(FEED_DATA_KEY);
+    const cachedTime = sessionStorage.getItem(FEED_TIMESTAMP_KEY);
+    const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
+
+    if (cachedData && !isStale) {
       try {
         const parsed = JSON.parse(cachedData);
         setFeeds(dedupePosts(parsed));
         setLoadingInitial(false);
       } catch (e) {
-        console.warn('Failed to load cached feed:', e);
         await fetchFeeds(true);
       }
     } else {
@@ -186,23 +230,20 @@ useEffect(() => {
   initializeFeed();
 }, [fetchFeeds, getLocation, user?._id]);
 
-// Save scroll position on the actual feed scroll container
 useEffect(() => {
   const container = mainRef.current;
   if (!container) return;
-
   const handleScroll = () => {
-    localStorage.setItem(FEED_SCROLL_KEY, container.scrollTop.toString());
+    sessionStorage.setItem(FEED_SCROLL_KEY, container.scrollTop.toString());
   };
-
   container.addEventListener('scroll', handleScroll, { passive: true });
   return () => container.removeEventListener('scroll', handleScroll);
 }, [mainRef]);
 
-// Save feed data to cache when it changes
 useEffect(() => {
   if (feeds?.length > 0) {
-    localStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
+    sessionStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
+    sessionStorage.setItem(FEED_TIMESTAMP_KEY, Date.now().toString());
   }
 }, [feeds]);
 
@@ -222,13 +263,25 @@ useEffect(() => {
   [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
   
         >         {/* Refresh Button */}
-          <div className="flex justify-end mb-2 px-4">
-            <RefreshButton 
-              onRefresh={handleRefresh} 
-              isRefreshing={isRefreshing}
-              label="Refresh"
-            />
-          </div>
+        <RefreshButton 
+  onRefresh={handleRefresh} 
+  isRefreshing={isRefreshing}
+  scrollTargetRef={mainRef}  // ← Feed uses a div ref, not window
+/>
+        {newPostsBanner && (
+            <div
+              onClick={handleRefresh}
+              className="sticky top-2 z-30 mx-auto w-fit cursor-pointer mb-3
+                bg-[var(--primary)] text-white text-sm font-semibold
+                px-4 py-2 rounded-full shadow-lg flex items-center gap-2
+                hover:bg-[var(--primary-dark)] transition-all animate-bounce-once"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+              New posts available — tap to refresh
+            </div>
+          )}
           
           <StoriesBar />
 

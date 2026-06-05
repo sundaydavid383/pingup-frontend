@@ -156,6 +156,14 @@ const createOffer = useCallback(async () => {
 const handleOffer = useCallback(async (offer) => {
     try {
         if (!peerConnectionRef.current) throw new Error("Peer connection not initialized");
+
+        // ✅ FIX 2: If we already answered, ignore the duplicate offer silently
+        const sigState = peerConnectionRef.current.signalingState;
+        if (sigState === "stable" || sigState === "have-local-answer") {
+            console.warn("📞 useWebRTC: Ignoring duplicate offer — already in state:", sigState);
+            return;
+        }
+
         console.log("📞 useWebRTC: Handling incoming offer");
         await peerConnectionRef.current.setRemoteDescription(
             new RTCSessionDescription({ type: "offer", sdp: offer })
@@ -169,11 +177,17 @@ const handleOffer = useCallback(async (offer) => {
         await processIceCandidateQueue();
         return answer;
     } catch (error) {
+        // ✅ FIX 2: InvalidStateError = duplicate offer, not a real error — don't crash
+        if (error.name === "InvalidStateError") {
+            console.warn("📞 useWebRTC: Ignoring offer in wrong state (duplicate):", error.message);
+            return;
+        }
         console.error("📞 useWebRTC: Error handling offer:", error);
         onError?.({ code: "OFFER_HANDLE_ERROR", message: "Failed to handle WebRTC offer", originalError: error });
         throw error;
     }
 }, [callId, remoteUserId, socket, onError, processIceCandidateQueue]);
+
 
 const handleAnswer = useCallback(async (answer) => {
     try {
