@@ -153,14 +153,21 @@ const createOffer = useCallback(async () => {
 }, [callId, callType, remoteUserId, socket, onError]);
 
 
+const pendingOfferRef = useRef(null);
+
 const handleOffer = useCallback(async (offer) => {
     try {
-        if (!peerConnectionRef.current) throw new Error("Peer connection not initialized");
+        // ✅ Peer connection not ready yet — save offer and wait
+        if (!peerConnectionRef.current) {
+            console.log("📞 useWebRTC: No peer connection yet, saving offer for after initialize");
+            pendingOfferRef.current = offer;
+            return;
+        }
 
-        // ✅ FIX 2: If we already answered, ignore the duplicate offer silently
-        const sigState = peerConnectionRef.current.signalingState;
-        if (sigState === "stable" || sigState === "have-local-answer") {
-            console.warn("📞 useWebRTC: Ignoring duplicate offer — already in state:", sigState);
+        // ✅ Only skip if we already SET a remote description (true duplicate)
+        // NOT just because signalingState is stable (that's also the initial state)
+        if (remoteDescriptionSetRef.current) {
+            console.warn("📞 useWebRTC: Ignoring duplicate offer — already processed one");
             return;
         }
 
@@ -177,7 +184,6 @@ const handleOffer = useCallback(async (offer) => {
         await processIceCandidateQueue();
         return answer;
     } catch (error) {
-        // ✅ FIX 2: InvalidStateError = duplicate offer, not a real error — don't crash
         if (error.name === "InvalidStateError") {
             console.warn("📞 useWebRTC: Ignoring offer in wrong state (duplicate):", error.message);
             return;
@@ -187,7 +193,6 @@ const handleOffer = useCallback(async (offer) => {
         throw error;
     }
 }, [callId, remoteUserId, socket, onError, processIceCandidateQueue]);
-
 
 const handleAnswer = useCallback(async (answer) => {
     try {
@@ -260,6 +265,7 @@ const cleanup = useCallback(() => {
     iceCandidateQueueRef.current = [];
     remoteDescriptionSetRef.current = false;
     isInitializedRef.current = false;
+    pendingOfferRef.current = null;
 
     setLocalStream(null);
     setRemoteStream(null);
@@ -280,14 +286,25 @@ const initialize = useCallback(async () => {
         if (isInitiator) {
             await createOffer();
         }
+       
         isInitializedRef.current = true;
         console.log("📞 useWebRTC: Initialization complete");
+
+        // ✅ If offer arrived before peer connection was ready, process it now
+        if (!isInitiator && pendingOfferRef.current) {
+            console.log("📞 useWebRTC: Processing pending offer that arrived early");
+            const saved = pendingOfferRef.current;
+            pendingOfferRef.current = null;
+            await handleOffer(saved);
+        }
     } catch (error) {
         console.error("📞 useWebRTC: Initialization failed:", error);
         cleanup();
         throw error;
     }
-}, [getLocalStream, createPeerConnection, createOffer, isInitiator, callType, callId, cleanup]);
+}, [getLocalStream, createPeerConnection, createOffer, isInitiator, callType, callId, cleanup, handleOffer]);
+
+
   const isWebRTCSupported = useCallback(() => {
     return !!(
       navigator.mediaDevices &&

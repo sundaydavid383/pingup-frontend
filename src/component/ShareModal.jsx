@@ -4,76 +4,75 @@ import { useAuth } from "../context/AuthContext";
 import axiosBase from "../utils/axiosBase";
 import { useNavigate } from "react-router-dom";
 import CustomAlert from "./shared/CustomAlert";
-import "../styles/sharemodal.css"; // import CSS
 import ProfileAvatar from "./shared/ProfileAvatar";
 
-export default function ShareModal({post, 
-  onClose, onShareSuccess }) {
+export default function ShareModal({ post, onClose, onShareSuccess }) {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
-  const [friends, setFriends] = useState([]);
-  const [loadingFriends, setLoadingFriends] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(new Set());
-  const [sending, setSending] = useState(false);
-  const [alert, setAlert] = useState(null); // { message, type }
 
-  // Fetch friends
+  const [friends,        setFriends]        = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [search,         setSearch]         = useState("");
+  const [selected,       setSelected]       = useState(new Set());
+  const [sending,        setSending]        = useState(false);
+  const [alert,          setAlert]          = useState(null); // { message, type }
+
+  // ── Fetch connections ──────────────────────
   useEffect(() => {
     if (!currentUser?._id) return;
     let canceled = false;
+    setLoadingFriends(true);
 
-    const fetchFriends = async () => {
-      setLoadingFriends(true);
-      setFriends([]);
-      try {
-        const res = await axiosBase.get(
-          `/api/user/connections?userId=${currentUser._id}`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } }
-        );
-
+    axiosBase
+      .get(`/api/user/connections?userId=${currentUser._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+      })
+      .then((res) => {
+        if (canceled) return;
         const raw = res.data?.data?.connections || [];
-        const cleaned = raw.map((conn) => ({
-          _id: conn._id || conn.id,
-          full_name: conn.name || conn.full_name || conn.username || "Unknown",
-          username: conn.username || "",
-          profilePicUrl: conn.profilePicUrl || conn.profilePic || "",
-          profilePicBackground: conn.profilePicBackground || conn.profilePicBg || "#999",
-        }));
-
-        if (!canceled) setFriends(cleaned);
-      } catch (err) {
-        console.error("❌ Error fetching friends:", err);
+        setFriends(
+          raw.map((conn) => ({
+            _id:                conn._id || conn.id,
+            name:               conn.name || conn.full_name || conn.username || "Unknown",
+            username:           conn.username || "",
+            profilePicUrl:      conn.profilePicUrl || "",
+            profilePicBackground: conn.profilePicBackground || "#999",
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error("Error fetching friends:", err);
         if (!canceled) setFriends([]);
-      } finally {
+      })
+      .finally(() => {
         if (!canceled) setLoadingFriends(false);
-      }
-    };
+      });
 
-    fetchFriends();
-    return () => (canceled = true);
-  }, [currentUser]);
+    return () => { canceled = true; };
+  }, [currentUser?._id]);
 
+  // ── Filter by search ───────────────────────
   const filtered = useMemo(() => {
-    if (!search) return friends;
+    if (!search.trim()) return friends;
     const q = search.toLowerCase();
     return friends.filter(
       (f) =>
-        (f.full_name || "").toLowerCase().includes(q) ||
+        (f.name     || "").toLowerCase().includes(q) ||
         (f.username || "").toLowerCase().includes(q)
     );
   }, [friends, search]);
 
   const toggleSelect = (id) => {
     setSelected((prev) => {
-      const copy = new Set(prev);
-      copy.has(id) ? copy.delete(id) : copy.add(id);
-      return copy;
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
   };
 
+  // ── Copy link ──────────────────────────────
   const handleCopyLink = async () => {
-    const link = `${window.location.origin}/post/${postId}`;
+    const link = `${window.location.origin}/post/${post._id}`;
     try {
       await navigator.clipboard.writeText(link);
       setAlert({ message: "🔗 Link copied!", type: "success" });
@@ -82,40 +81,49 @@ export default function ShareModal({post,
     }
   };
 
- 
+  // ── Send ───────────────────────────────────
   const handleSend = async () => {
     if (!currentUser) return navigate("/signin");
     if (selected.size === 0) {
-      setAlert({ message: "Select at least one friend to share with", type: "warning" });
+      setAlert({ message: "Select at least one person to share with", type: "warning" });
       return;
     }
 
     setSending(true);
     try {
-      const to = Array.from(selected);
       const res = await axiosBase.post(
         `/api/posts/${post._id}/share`,
-        { to },
+        { to: Array.from(selected) },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } }
       );
-      setAlert({ message: "✅ Shared successfully", type: "success" });
+
+      setAlert({ message: "✅ Shared successfully!", type: "success" });
       setSelected(new Set());
-      const updatedCount = res.data.updatedSharesCount;
-      onShareSuccess(updatedCount); // 🔥 update feed
-      onClose();
+
+      // Pass updated count back to feed
+      if (typeof onShareSuccess === "function") {
+        onShareSuccess(res.data.updatedSharesCount ?? 0);
+      }
+
+      setTimeout(onClose, 800);
     } catch (err) {
-      console.error("❌ Share failed:", err);
-      setAlert({ message: err.response.data.message || "Failed to share post", type: "error" });
+      const msg = err?.response?.data?.message || "Failed to share post";
+      setAlert({ message: msg, type: "error" });
     } finally {
       setSending(false);
     }
   };
 
+  // ── Already-shared set (string IDs) ───────
+  const alreadySharedSet = useMemo(
+    () => new Set((post?.shares || []).map(String)),
+    [post?.shares]
+  );
 
-
-
+  // ─────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-5550 flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      {/* Alert */}
       {alert && (
         <CustomAlert
           message={alert.message}
@@ -124,210 +132,149 @@ export default function ShareModal({post,
         />
       )}
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-lg w-[min(540px,95%)] p-4 z-60">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">Share post</h3>
-          <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="relative bg-[var(--bg-card,#fff)] rounded-2xl shadow-2xl w-[min(480px,95vw)] z-10 flex flex-col overflow-hidden">
 
-        {/* Search + Copy Link */}
-        <div className="mb-3 flex gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search friends..."
-            className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-          />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border,#e5e7eb)]">
+          <div className="flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-[var(--primary)]" />
+            <h3 className="font-semibold text-base text-[var(--text-main,#111)]">Share post</h3>
+          </div>
           <button
-            onClick={handleCopyLink}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
-            title="Copy post link"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-light,#f3f4f6)] transition-colors"
           >
-            <LinkIcon className="w-4 h-4" /> Copy link
-          </button>
-        </div>
-
-        {/* Friends List */}
-        <div className="max-h-80 overflow-y-auto p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {loadingFriends ? (
-              <>
-    {[...Array(8)].map((_, i) => (
-      <div
-        key={i}
-        className="animate-pulse flex flex-col items-center gap-2"
-      >
-        {/* Avatar skeleton */}
-        <div className="w-12 h-12 rounded-full bg-[var(--bg-light)]"></div>
-
-        {/* Username skeleton */}
-        <div className="w-16 h-3 rounded-md bg-[var(--bg-light)]"></div>
-      </div>
-    ))}
-  </>
-          ) : filtered.length === 0 ? (
-            <div className="col-span-full py-8 text-center text-gray-500">
-              No friends found
-            </div>
-          ) : (
-filtered.map((friend) => {
-  const isSelected = selected.has(friend._id);
-  const alreadyShared = post?.shares?.includes(friend._id);
-
- return (
-    <div className="sm-overlay">
-      {alert && (
-        <CustomAlert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert(null)}
-        />
-      )}
-
-      {/* Overlay background */}
-      <div className="sm-overlay-bg" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="sm-modal">
-
-        {/* Header */}
-        <div className="sm-header">
-          <h3 className="sm-title">
-            <span className="sm-title-dot" />
-            Share post
-          </h3>
-          <button onClick={onClose} className="sm-close-btn">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Search + Copy Link */}
-        <div className="sm-controls">
-          <div className="sm-search-wrap">
-            <svg className="sm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search friends..."
-              className="sm-search"
-            />
-          </div>
-          <button onClick={handleCopyLink} className="sm-copy-btn" title="Copy post link">
+        {/* Search + Copy */}
+        <div className="flex gap-2 px-5 pt-4 pb-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search connections…"
+            className="flex-1 border border-[var(--border,#e5e7eb)] rounded-lg px-3 py-2 text-sm bg-[var(--bg-input,#f9fafb)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-[var(--text-main,#111)]"
+          />
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-light,#f3f4f6)] rounded-lg text-sm hover:bg-[var(--border,#e5e7eb)] transition-colors text-[var(--text-main,#111)] whitespace-nowrap"
+          >
             <LinkIcon className="w-4 h-4" />
             Copy link
           </button>
         </div>
 
         {/* Section label */}
-        <div className="sm-section-label">Connections</div>
+        <div className="px-5 pb-2 text-xs font-semibold text-[var(--text-muted,#9ca3af)] uppercase tracking-wider">
+          Connections
+        </div>
 
-        {/* Friends Grid */}
-        <div className="sm-friends-grid">
+        {/* Friends list */}
+        <div className="px-5 pb-3 overflow-y-auto max-h-72">
           {loadingFriends ? (
-            [...Array(8)].map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 p-2">
-                <div className="sm-skeleton-avatar" />
-                <div className="sm-skeleton-name" />
-              </div>
-            ))
+            <div className="grid grid-cols-4 gap-3 py-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-[var(--bg-light,#f3f4f6)] animate-pulse" />
+                  <div className="w-14 h-2.5 rounded bg-[var(--bg-light,#f3f4f6)] animate-pulse" />
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="sm-empty">
-              <div className="sm-empty-icon">👥</div>
-              <p className="sm-empty-text">No friends found</p>
+            <div className="py-10 text-center text-[var(--text-muted,#9ca3af)] text-sm">
+              <div className="text-2xl mb-2">👥</div>
+              No connections found
             </div>
           ) : (
-            filtered.map((friend) => {
-              const isSelected = selected.has(friend._id);
-              const alreadyShared = post?.shares?.includes(friend._id);
+            <div className="grid grid-cols-4 gap-3 py-1">
+              {filtered.map((friend) => {
+                const isSelected    = selected.has(String(friend._id));
+                const alreadyShared = alreadySharedSet.has(String(friend._id));
 
-              return (
-                <div
-                  key={friend._id}
-                  className={`friend-card ${isSelected ? "selected" : ""} ${alreadyShared ? "opacity-50 cursor-not-allowed" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!alreadyShared) toggleSelect(friend._id);
-                  }}
-                >
-                  <div className="friend-avatar">
-                    <ProfileAvatar
-                      user={{
-                        name: friend.name,
-                        profilePicUrl: friend.profilePicUrl,
-                        profilePicBackground: friend.profilePicBackground,
-                      }}
-                      size={40}
-                    />
-                  </div>
-                  <div className="friend-info">
-                    <div className="friend-name">@{friend.username || "unknown"}</div>
-                  </div>
-                  {alreadyShared && (
-                    <div className="sm-already-badge">Shared</div>
-                  )}
-                </div>
-              );
-            })
+                return (
+                  <button
+                    key={friend._id}
+                    disabled={alreadyShared}
+                    onClick={() => { if (!alreadyShared) toggleSelect(String(friend._id)); }}
+                    className={`
+                      flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all
+                      ${alreadyShared
+                        ? "opacity-50 cursor-not-allowed border-transparent"
+                        : isSelected
+                          ? "border-[var(--primary)] bg-[var(--primary)]/10 shadow-sm"
+                          : "border-transparent hover:bg-[var(--bg-light,#f3f4f6)]"
+                      }
+                    `}
+                  >
+                    <div className="relative">
+                      <ProfileAvatar
+                        user={{
+                          name:                friend.name,
+                          profilePicUrl:       friend.profilePicUrl,
+                          profilePicBackground: friend.profilePicBackground,
+                        }}
+                        size={40}
+                      />
+                      {isSelected && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--primary)] flex items-center justify-center">
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[var(--text-main,#111)] truncate w-full text-center leading-tight">
+                      {alreadyShared ? (
+                        <span className="text-[var(--text-muted,#9ca3af)]">Shared</span>
+                      ) : (
+                        `@${friend.username || "user"}`
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
         {/* Divider */}
-        <hr className="sm-divider" />
+        <div className="border-t border-[var(--border,#e5e7eb)]" />
 
         {/* Footer */}
-        <div className="sm-footer">
-          <span className={`sm-selected-count ${selected.size > 0 ? "has-selection" : ""}`}>
-            {selected.size === 0 ? "No one selected" : `${selected.size} selected`}
+        <div className="flex items-center justify-between px-5 py-3">
+          <span className="text-sm text-[var(--text-muted,#9ca3af)]">
+            {selected.size === 0
+              ? "No one selected"
+              : `${selected.size} selected`}
           </span>
           <button
             onClick={handleSend}
             disabled={sending || selected.size === 0}
-            className="sm-send-btn"
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all
+              ${sending || selected.size === 0
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-[var(--primary)] hover:opacity-90 active:scale-95"
+              }
+            `}
           >
             {sending ? (
               <>
-                <span className="sm-spinner" />
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 Sending…
               </>
             ) : (
               <>
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-3.5 h-3.5" />
                 Send
               </>
             )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-})
-
-
-          )}
-        </div>
-
-        {/* Send Button */}
-        <div className="mt-3 text-right">
-          <button
-            onClick={handleSend}
-            disabled={sending || selected.size === 0}
-            className={`px-4 py-1.5 rounded-md text-sm text-white btn ${
-              sending || selected.size === 0
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-[var(--accent)] hover:bg-[var(--accent-dark)]"
-            }`}
-          >
-            {sending ? "Sending..." : "Send"}
           </button>
         </div>
       </div>

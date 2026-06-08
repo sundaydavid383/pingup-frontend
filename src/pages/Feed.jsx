@@ -44,6 +44,7 @@ const Feed = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const pageRef = useRef(1);
+  const sessionIdRef = useRef(null);
   const mainRef = useRef(null);
   const [ref, inView] = useInView();
   const navigate = useNavigate()
@@ -88,45 +89,59 @@ const Feed = () => {
     [BASE, token]
   );
 
-  const fetchFeeds = useCallback(
-    async (reset = false) => {
-      if (loadingMore) return;
+const fetchFeeds = useCallback(
+  async (reset = false) => {
+    if (loadingMore) return;
 
-      try {
-        if (reset) pageRef.current = 1;
-        reset ? setLoadingInitial(true) : setLoadingMore(true);
-
-        const res = await axios.get(`${BASE}api/posts/feed`, {
-          params: { page: pageRef.current, limit: 10 },
-          headers: authHeaders,
-        });
-
-        const { posts = [], hasMore: backendHasMore } = res.data;
-
-        if (reset) setFeeds(dedupePosts(posts));
-        else setFeeds((prev) => dedupePosts([...prev, ...posts]));
-
-        setHasMore(backendHasMore);
-
-        if (backendHasMore) pageRef.current += 1;
-      } catch (err) {
-        console.error("Feed fetch error:", err.message);
-        if (reset)
-          setFeeds(
-            dedupePosts(
-              localStorage.getItem("springscirclefeeds") &&
-              JSON.parse(localStorage.getItem("springscirclefeeds"))
-            )
-          );
-        setError("Failed to load live feed, showing fallback data.");
-        setHasMore(false);
-      } finally {
-        setLoadingInitial(false);
-        setLoadingMore(false);
+    try {
+      if (reset) {
+        pageRef.current = 1;
+        sessionIdRef.current = null; // clear session on refresh
       }
-    },
-    [loadingMore, authHeaders, BASE]
-  );
+
+      reset ? setLoadingInitial(true) : setLoadingMore(true);
+
+      const params = { page: pageRef.current, limit: 10 };
+
+      // Send sessionId on page 2+ so backend reuses the ranked list
+      if (!reset && sessionIdRef.current) {
+        params.sessionId = sessionIdRef.current;
+      }
+
+      const res = await axios.get(`${BASE}api/posts/feed`, {
+        params,
+        headers: authHeaders,
+      });
+
+      const { posts = [], hasMore: backendHasMore, sessionId } = res.data;
+
+      // Store sessionId from first response — send it back on subsequent pages
+      if (sessionId) sessionIdRef.current = sessionId;
+
+      if (reset) setFeeds(dedupePosts(posts));
+      else setFeeds((prev) => dedupePosts([...prev, ...posts]));
+
+      setHasMore(backendHasMore);
+
+      if (backendHasMore) pageRef.current += 1;
+    } catch (err) {
+      console.error("Feed fetch error:", err.message);
+      if (reset)
+        setFeeds(
+          dedupePosts(
+            localStorage.getItem("springscirclefeeds") &&
+            JSON.parse(localStorage.getItem("springscirclefeeds"))
+          )
+        );
+      setError("Failed to load live feed, showing fallback data.");
+      setHasMore(false);
+    } finally {
+      setLoadingInitial(false);
+      setLoadingMore(false);
+    }
+  },
+  [loadingMore, authHeaders, BASE]
+);
 
 
   const handleShareUpdate = (postId, newCount) => {

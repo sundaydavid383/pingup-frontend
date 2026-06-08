@@ -27,6 +27,8 @@ import Loading from "./shared/Loading";
 import VoiceNoteCard from "./shared/VoiceNoteCard";
 import { useGlobalVideo } from "../context/GlobalVideoContext";
 import "../styles/postcard.css";
+import SharedBanner from "./SharedBanner";
+
 
 const PostCard = ({ post,
   setFeeds,
@@ -379,6 +381,7 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
 return (
     <div className="pc-root space-y-0" style={{ overflow: "visible", position: "relative" }}>
 
+      <SharedBanner sharedBy={post.sharedForMe ? post.sharedBy : null} />
       {/* Header */}
       <div className="pc-header">
         <div className="pc-author" onDoubleClick={onHeaderClick}>

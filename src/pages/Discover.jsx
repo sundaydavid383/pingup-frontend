@@ -6,33 +6,41 @@ import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
 import CustomDropdown from "../component/shared/CustomDropdown";
 import "./discoveries.css";
 import { useAuth } from "../context/AuthContext";
-import ErrorAlert from "../component/ErrorAlert";
 import SkeletonUserCard from "../component/skeleton/SkeletonUserCard";
 import RefreshButton from "../component/shared/RefreshButton";
 
+const DISCOVER_SCROLL_KEY     = "discover_scroll_position";
+const DISCOVER_DATA_KEY       = "discover_cached_data";
+const DISCOVER_TIMESTAMP_KEY  = "discover_cached_timestamp";
+// Relationship state (isFollowing, connectionStatus) is volatile — cache it
+// for only 60 seconds so stale buttons don't linger after actions.
+const CACHE_TTL = 60 * 1000;
+
 export default function Discover() {
   const BASE = (import.meta.env.VITE_SERVER || "").replace(/\/$/, "");
-
-  const [input, setInput] = useState("");
-  const [users, setUsers] = useState([]);
-  const [page, setPage] = useState(1);
   const { user } = useAuth();
-  const pageRef = useRef(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingInitial, setLoadingInitial] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [fetchError, setFetchError] = useState(false);
-  const [error, setError] = useState("");
-  const [openDropdownId, setOpenDropdownId] = useState(null);
-  const [filters, setFilters] = useState({ city: "", country: "", occupation: "" });
-  const hasFetched = useRef(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [isSticky, setIsSticky] = useState(false);
+  const [input,            setInput]            = useState("");
+  const [users,            setUsers]            = useState([]);
+  const [hasMore,          setHasMore]          = useState(true);
+  const [loadingInitial,   setLoadingInitial]   = useState(false);
+  const [loadingMore,      setLoadingMore]      = useState(false);
+  const [fetchError,       setFetchError]       = useState(false);
+  const [error,            setError]            = useState("");
+  const [openDropdownId,   setOpenDropdownId]   = useState(null);
+  const [filters,          setFilters]          = useState({ city: "", country: "", occupation: "" });
+  const [isRefreshing,     setIsRefreshing]     = useState(false);
+  const [isSticky,         setIsSticky]         = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-  const readToken = () => localStorage.getItem("token");
-  const authHeaders = () => {
+  const pageRef      = useRef(1);
+  // isFetching ref prevents double-fetches from React strict mode / fast nav
+  const isFetching   = useRef(false);
+  // isSearchMode: true when user is actively searching/filtering
+  const isSearchMode = useRef(false);
+
+  const readToken    = () => localStorage.getItem("token");
+  const authHeaders  = () => {
     const t = readToken();
     return t ? { Authorization: `Bearer ${t}` } : {};
   };
@@ -43,220 +51,271 @@ export default function Discover() {
     return data.suggestions || data.users || data.results || data.data || [];
   };
 
-  const fetchSuggestions = async () => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
+  // ── Cache helpers ─────────────────────────────────────────────────────────
+  const writeCache = (data) => {
+    try {
+      sessionStorage.setItem(DISCOVER_DATA_KEY,      JSON.stringify(data));
+      sessionStorage.setItem(DISCOVER_TIMESTAMP_KEY, String(Date.now()));
+    } catch (_) { /* storage full — ignore */ }
+  };
+
+  const readCache = () => {
+    try {
+      const raw  = sessionStorage.getItem(DISCOVER_DATA_KEY);
+      const time = sessionStorage.getItem(DISCOVER_TIMESTAMP_KEY);
+      if (!raw || !time) return null;
+      // Relationship state is volatile — short TTL
+      if (Date.now() - parseInt(time, 10) > CACHE_TTL) return null;
+      return JSON.parse(raw);
+    } catch (_) { return null; }
+  };
+
+  const clearCache = () => {
+    sessionStorage.removeItem(DISCOVER_DATA_KEY);
+    sessionStorage.removeItem(DISCOVER_TIMESTAMP_KEY);
+  };
+
+  // ── Fetch suggestions (non-search mode) ──────────────────────────────────
+  const fetchSuggestions = useCallback(async (forceRefresh = false) => {
+    if (isFetching.current) return;
+
+    // Try cache first (only on first page load, not on forced refresh)
+    if (!forceRefresh) {
+      const cached = readCache();
+      if (cached && cached.length > 0) {
+        setUsers(cached);
+        setLoadingInitial(false);
+        pageRef.current = Math.ceil(cached.length / 20);
+        setHasMore(true);
+        return;
+      }
+    }
+
+    isFetching.current = true;
     setLoadingInitial(true);
+    setFetchError(false);
     setError("");
 
     try {
-      const res = await axios.get(`${BASE}/api/user/suggestions`, {
+      const res     = await axios.get(`${BASE}/api/user/suggestions`, {
         headers: authHeaders(),
-        params: { page: 1, limit: 20 },
+        params:  { page: 1, limit: 20 },
       });
       const fetched = normalizeArray(res.data);
-      localStorage.setItem("springsCircleDiscoveredSuggestedUsers", fetched);
-      setUsers(fetched || localStorage.getItem("springsCircleDiscoveredSuggestedUsers") || []);
+      setUsers(fetched);
+      writeCache(fetched);
       setHasMore(fetched.length === 20);
-      setPage(1);
       pageRef.current = 1;
     } catch (err) {
       setError("Failed to load suggested users.");
+      setFetchError(true);
     } finally {
       setLoadingInitial(false);
+      isFetching.current = false;
     }
-  };
+  }, [BASE]);
 
-  const searchUsers = async (isNewSearch = false) => {
+  // ── Search ────────────────────────────────────────────────────────────────
+  const searchUsers = useCallback(async (isNewSearch = false) => {
+    if (isFetching.current) return;
+
+    const currentPage = isNewSearch ? 1 : pageRef.current;
+
     if (isNewSearch) {
-      setPage(1);
       pageRef.current = 1;
       setHasMore(true);
       setUsers([]);
     }
 
-    const currentPage = pageRef.current;
     const params = new URLSearchParams({
-      q: input,
-      city: filters.city,
-      country: filters.country,
+      q:          input,
+      city:       filters.city,
+      country:    filters.country,
       occupation: filters.occupation,
-      page: currentPage,
-      limit: 20,
+      page:       currentPage,
+      limit:      20,
     });
 
+    isFetching.current = true;
+    if (currentPage === 1) setLoadingInitial(true);
+    else                   setLoadingMore(true);
+
     try {
-      if (currentPage === 1) setLoadingInitial(true);
-      else setLoadingMore(true);
-      const res = await axios.get(`${BASE}/api/user/search?${params}`, {
+      const res     = await axios.get(`${BASE}/api/user/search?${params}`, {
         headers: authHeaders(),
       });
       const fetched = normalizeArray(res.data);
       if (currentPage === 1) setUsers(fetched);
-      else setUsers((prev) => [...prev, ...fetched]);
+      else                   setUsers((prev) => [...prev, ...fetched]);
       setHasMore(fetched.length > 0);
       if (fetched.length > 0) {
         pageRef.current = currentPage + 1;
-        setPage(pageRef.current);
       }
-    } catch (err) {
+    } catch (_) {
       setFetchError(true);
     } finally {
       setLoadingInitial(false);
       setLoadingMore(false);
+      isFetching.current = false;
     }
+  }, [BASE, input, filters]);
+
+  const applySearch = () => {
+    isSearchMode.current = true;
+    searchUsers(true);
   };
 
-  const applySearch = () => searchUsers(true);
-
+  // ── Infinite scroll load-more ─────────────────────────────────────────────
   const fetchMore = useCallback(async () => {
-    if (!hasMore || loadingMore || loadingInitial) return;
-    if (input || filters.city || filters.country || filters.occupation) {
-      await searchUsers();
+    if (!hasMore || loadingMore || loadingInitial || isFetching.current) return;
+
+    if (isSearchMode.current) {
+      await searchUsers(false);
       return;
     }
+
+    isFetching.current = true;
     setLoadingMore(true);
     try {
-      const res = await axios.get(`${BASE}/api/user/suggestions`, {
+      const nextPage = pageRef.current + 1;
+      const res      = await axios.get(`${BASE}/api/user/suggestions`, {
         headers: authHeaders(),
-        params: { page: pageRef.current + 1, limit: 20 },
+        params:  { page: nextPage, limit: 20 },
       });
       const more = normalizeArray(res.data);
       if (more.length === 0) {
         setHasMore(false);
         return;
       }
-      setUsers((prev) => [...prev, ...more]);
-      pageRef.current += 1;
-      setPage(pageRef.current);
+      setUsers((prev) => {
+        const updated = [...prev, ...more];
+        writeCache(updated);
+        return updated;
+      });
+      pageRef.current = nextPage;
       setHasMore(more.length === 20);
-    } catch (err) {
+    } catch (_) {
       setFetchError(true);
     } finally {
       setLoadingMore(false);
+      isFetching.current = false;
     }
-  }, [hasMore, loadingMore, loadingInitial, input, filters]);
+  }, [hasMore, loadingMore, loadingInitial, BASE, searchUsers]);
 
+  // ── Sticky header ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const handleScroll = () => setIsSticky(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setIsSticky(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
- const DISCOVER_SCROLL_KEY = "discover_scroll_position";
-  const DISCOVER_DATA_KEY = "discover_cached_data";
-  const DISCOVER_TIMESTAMP_KEY = "discover_cached_timestamp";
-  const CACHE_TTL = 5 * 60 * 1000;
-
+  // ── Persist scroll position ───────────────────────────────────────────────
   useEffect(() => {
     const savedScroll = sessionStorage.getItem(DISCOVER_SCROLL_KEY);
     if (savedScroll) {
-      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 100);
-    }
-    const cached = sessionStorage.getItem(DISCOVER_DATA_KEY);
-    const cachedTime = sessionStorage.getItem(DISCOVER_TIMESTAMP_KEY);
-    const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
-
-    if (cached && !isStale) {
-      try {
-        setUsers(JSON.parse(cached));
-        setLoadingInitial(false);
-      } catch (e) {
-        fetchSuggestions();
-      }
-    } else {
-      fetchSuggestions();
+      setTimeout(() => window.scrollTo(0, parseInt(savedScroll, 10)), 120);
     }
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      sessionStorage.setItem(DISCOVER_SCROLL_KEY, window.scrollY.toString());
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () =>
+      sessionStorage.setItem(DISCOVER_SCROLL_KEY, String(window.scrollY));
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (users.length > 0) {
-      sessionStorage.setItem(DISCOVER_DATA_KEY, JSON.stringify(users));
-      sessionStorage.setItem(DISCOVER_TIMESTAMP_KEY, Date.now().toString());
-    }
-  }, [users]);
+    isSearchMode.current = false;
+    fetchSuggestions(false);
+  }, []);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    hasFetched.current = false;
-    fetchSuggestions();
-  };
-
-  React.useEffect(() => {
-    if (!loadingInitial && isRefreshing) {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  }, [loadingInitial, isRefreshing]);
-
+  // ── Filter change → re-search ─────────────────────────────────────────────
   useEffect(() => {
-    if (filters.city || filters.country || filters.occupation) {
+    const hasFilter = filters.city || filters.country || filters.occupation;
+    if (hasFilter) {
+      isSearchMode.current = true;
       searchUsers(true);
     }
   }, [filters]);
 
-  const handleUserUpdate = (updatedUser) => {
-    setUsers((prev) =>
-      prev.map((u) => (u._id === updatedUser._id ? updatedUser : u))
-    );
+  // ── Refresh ───────────────────────────────────────────────────────────────
+  const handleRefresh = () => {
+    clearCache();                  // bust the cache so fresh data loads
+    isSearchMode.current = false;
+    setIsRefreshing(true);
+    isFetching.current = false;    // allow the fetch to run
+    fetchSuggestions(true).finally(() => {
+      setTimeout(() => setIsRefreshing(false), 500);
+    });
   };
 
-  const hasActiveFilter =
-    input || filters.city || filters.country || filters.occupation;
+  // ── Clear filters ─────────────────────────────────────────────────────────
+  const clearAll = () => {
+    setInput("");
+    setFilters({ city: "", country: "", occupation: "" });
+    isSearchMode.current = false;
+    isFetching.current   = false;
+    setIsFilterExpanded(false);
+    fetchSuggestions(true);
+  };
+
+  // ── Optimistic update from UserCard ──────────────────────────────────────
+  // When a user follows/unfollows or sends/accepts a connection inside a card,
+  // the card calls onUserUpdate with the updated user object.
+  // We patch it in state AND in the cache so the button reflects immediately.
+  const handleUserUpdate = useCallback((updatedUser) => {
+    setUsers((prev) => {
+      const next = prev.map((u) =>
+        String(u._id) === String(updatedUser._id) ? { ...u, ...updatedUser } : u
+      );
+      writeCache(next);   // keep cache in sync
+      return next;
+    });
+  }, []);
+
+  const hasActiveFilter = input || filters.city || filters.country || filters.occupation;
 
   return (
     <div className="discover-page min-h-screen pb-10">
       {/* ── STICKY SEARCH HEADER ── */}
       <div
         id="discover-search-wrapper"
-        className={`discover_search_wrapper fixed left-0 right-0 top-0 md:sticky md:top-0 z-30 transition-all duration-300 ${isSticky ? "py-1" : "py-2"}`}
+        className={`discover_search_wrapper fixed left-0 right-0 top-0 md:sticky md:top-0 z-30 transition-all duration-300 ${
+          isSticky ? "py-1" : "py-2"
+        }`}
       >
         <div className="max-w-6xl mx-auto px-5 flex flex-col justify-center items-center">
           <div className="discover_search_bar w-[90%]">
             <div className="flex flex-col gap-3">
               {/* Search input row */}
-  
-                <div className="max-h-10 relative flex ">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Search name, location, or occupation…"
-                    className="discoveries_iput w-[80%]"
-                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                  />
-                  <button
-                    onClick={applySearch}
-                    aria-label="Search"
-                    className="discoveries_btn "
-                  >
-                    <Search size={16} />
-                  </button>
-            
+              <div className="max-h-10 relative flex">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Search name, location, or occupation…"
+                  className="discoveries_iput w-[80%]"
+                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                />
+                <button
+                  onClick={applySearch}
+                  aria-label="Search"
+                  className="discoveries_btn"
+                >
+                  <Search size={16} />
+                </button>
 
-                {/* Desktop clear */}
                 {hasActiveFilter && (
                   <button
-                    onClick={() => {
-                      setInput("");
-                      setFilters({ city: "", country: "", occupation: "" });
-                      hasFetched.current = false;
-                      fetchSuggestions();
-                    }}
+                    onClick={clearAll}
                     className="discoveries_clear_btn hidden md:flex items-center gap-2 text-sm font-medium transition-colors"
                   >
                     <X size={15} />
                     <span>Clear</span>
                   </button>
                 )}
-          </div>
+              </div>
 
               {/* Mobile filter toggle */}
               <button
@@ -281,16 +340,14 @@ export default function Discover() {
                     </span>
                   )}
                 </span>
-                {isFilterExpanded ? (
-                  <ChevronUp size={17} />
-                ) : (
-                  <ChevronDown size={17} />
-                )}
+                {isFilterExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
               </button>
 
               {/* Filter dropdowns */}
               <div
-                className={`flex-wrap gap-2 overflow-visible ${isFilterExpanded ? "flex" : "hidden md:flex"}`}
+                className={`flex-wrap gap-2 overflow-visible ${
+                  isFilterExpanded ? "flex" : "hidden md:flex"
+                }`}
               >
                 <CustomDropdown
                   id="city"
@@ -317,24 +374,15 @@ export default function Discover() {
                   label="Occupation"
                   options={["Developer", "Designer", "Engineer"]}
                   value={filters.occupation}
-                  onChange={(val) =>
-                    setFilters((p) => ({ ...p, occupation: val }))
-                  }
+                  onChange={(val) => setFilters((p) => ({ ...p, occupation: val }))}
                   openDropdownId={openDropdownId}
                   setOpenDropdownId={setOpenDropdownId}
                   setInput={setInput}
                 />
 
-                {/* Mobile clear all */}
                 {hasActiveFilter && (
                   <button
-                    onClick={() => {
-                      setInput("");
-                      setFilters({ city: "", country: "", occupation: "" });
-                      hasFetched.current = false;
-                      fetchSuggestions();
-                      setIsFilterExpanded(false);
-                    }}
+                    onClick={clearAll}
                     className="discover_clear_all_btn md:hidden w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
                   >
                     <X size={15} />
@@ -345,12 +393,10 @@ export default function Discover() {
             </div>
           </div>
 
-          {/* Refresh row */}
           <div className="discover-refresh-row">
-                    <RefreshButton 
-              onRefresh={handleRefresh} 
+            <RefreshButton
+              onRefresh={handleRefresh}
               isRefreshing={isRefreshing}
-              scrollTargetRef={window.scrollY}  // ← Feed uses a div ref, not window
             />
           </div>
         </div>
@@ -358,7 +404,6 @@ export default function Discover() {
 
       {/* ── MAIN CONTENT ── */}
       <div className="max-w-6xl mx-auto px-5 discover_content_container">
-        {/* Page title */}
         <div className="discover-page-head">
           <div className="discover-eyebrow">
             <span>✦</span> People
@@ -371,7 +416,6 @@ export default function Discover() {
           </p>
         </div>
 
-        {/* Result meta */}
         {!loadingInitial && users.length > 0 && (
           <div className="discover-meta-bar">
             <p className="discover-result-count">
@@ -381,7 +425,6 @@ export default function Discover() {
           </div>
         )}
 
-        {/* ── Skeleton loaders ── */}
         {loadingInitial && (
           <div className="grid discoveries_grid">
             {Array.from({ length: 9 }).map((_, idx) => (
@@ -390,12 +433,11 @@ export default function Discover() {
           </div>
         )}
 
-        {/* ── Users grid ── */}
         {!loadingInitial && users.length > 0 && (
           <div className="discoveries_grid pb-20">
             {users.map((userItem) => (
               <UserCard
-                key={userItem._id}
+                key={String(userItem._id)}
                 user={userItem}
                 onUserUpdate={handleUserUpdate}
               />
@@ -403,8 +445,7 @@ export default function Discover() {
           </div>
         )}
 
-        {/* ── Empty state ── */}
-        {!loadingInitial && users.length === 0 && (
+        {!loadingInitial && users.length === 0 && !error && (
           <div className="disc-empty">
             <div className="disc-empty-orbit">
               <Users size={26} />
@@ -416,7 +457,12 @@ export default function Discover() {
           </div>
         )}
 
-        {/* ── Loading more ── */}
+        {error && !loadingInitial && (
+          <div className="disc-empty">
+            <p className="disc-empty-title">{error}</p>
+          </div>
+        )}
+
         {loadingMore && (
           <div className="disc-loading-more">
             <span className="disc-loading-dot" />
@@ -426,11 +472,12 @@ export default function Discover() {
           </div>
         )}
 
-        {/* ── Fetch error retry ── */}
-        {fetchError && (
+        {fetchError && !loadingMore && (
           <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
             <button
-              onClick={() => searchUsers()}
+              onClick={() =>
+                isSearchMode.current ? searchUsers(false) : fetchMore()
+              }
               style={{
                 padding: "10px 28px",
                 background: "var(--primary-color)",
@@ -455,14 +502,10 @@ export default function Discover() {
         enabled={hasMore && !loadingInitial}
       />
 
-      {/* ── Footer flourish ── */}
       <div className="disc-footer">
         <div className="disc-footer-rule" />
         <div className="disc-footer-badge">
-          <Sprout
-            size={13}
-            style={{ color: "#16a34a", opacity: 0.8 }}
-          />
+          <Sprout size={13} style={{ color: "#16a34a", opacity: 0.8 }} />
           Connect &amp; Grow
         </div>
       </div>
