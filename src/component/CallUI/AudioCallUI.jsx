@@ -31,7 +31,6 @@ const AudioCallUI = ({
 }) => {
   const callContext = useContext(CallContext);
   const remoteAudioRef = useRef(null);
-  const localAudioRef = useRef(null);
   const [callTimer, setCallTimer] = useState("00:00");
   const timerIntervalRef = useRef(null);
 
@@ -51,16 +50,14 @@ const AudioCallUI = ({
     });
   }, [call, localStream, remoteStream, isMuted, isSpeakerOn, callStatusMessage]);
 
-  useEffect(() => {
-    if (localAudioRef.current && localStream) {
-      localAudioRef.current.srcObject = localStream;
-      console.log("📞 AudioCallUI: Local audio stream attached");
-    }
-  }, [localStream]);
 
   useEffect(() => {
     if (remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.play().catch(e => 
+        console.warn("📞 AudioCallUI: Remote audio play failed:", e)
+      );
       console.log("📞 AudioCallUI: Remote audio stream attached");
     }
   }, [remoteStream]);
@@ -169,8 +166,7 @@ const AudioCallUI = ({
       `}</style>
 
       {/* Hidden audio elements */}
-      <audio ref={remoteAudioRef} autoPlay />
-      <audio ref={localAudioRef} muted autoPlay />
+     <audio ref={remoteAudioRef} autoPlay playsInline />
 
       {/* Full-screen container */}
       <div

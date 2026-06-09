@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Megaphone, X, Globe, PenLine} from "lucide-react";
+import { Megaphone, X, Globe, PenLine } from "lucide-react";
 import axios from "axios";
 import Loading from "../component/shared/Loading";
 import StoriesBar from "../component/StoriesBar";
@@ -7,16 +7,13 @@ import { useNavigate } from "react-router-dom";
 import PostCard from "../component/PostCard";
 import location from "../utils/location";
 import { useAuth } from "../context/AuthContext";
-import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
 import PostViewer from "../component/PostViewer";
-import useInView from "../hooks/useInView"; // ⬅️ Add this at top
 import PostWrapper from "../component/shared/PostWrapper";
 import MediaViewer from "../component/shared/MediaViewer";
 import ShareModal from "../component/ShareModal";
 import LiveMapModal from "../component/LiveMapModal";
 import PostCardSkeleton from "../component/shared/PostCardSkeleton";
 import RightSidebar from "../component/RightSidebar";
-import { runOncePerSession } from "../utils/runOncePerSession";
 import assets from "../assets/assets";
 import MediumSidebarToggle from "../component/shared/MediumSidebarToggle";
 import RefreshButton from "../component/shared/RefreshButton";
@@ -24,7 +21,13 @@ import CustomAlert from "../component/shared/CustomAlert";
 import { EmptyFeed } from "../component/staterep/EmptyFeed";
 import CreatePostTrigger from "../component/shared/CreatePostTrigger";
 import DailyGuidance from "../component/accountability/DailyGuidance";
+// ✅ Use your existing socket from SocketContext
+import { useSocket } from "../context/SocketContext";
 
+// ─── Remove InfiniteScrollTrigger import — we no longer use it ───
+// import InfiniteScrollTrigger from "../component/InfiniteScrollTrigger";
+// ─── Remove useInView import — replaced by a manual IntersectionObserver ───
+// import useInView from "../hooks/useInView";
 
 const Feed = () => {
   const { user, token, sponsors } = useAuth();
@@ -39,28 +42,33 @@ const Feed = () => {
 
   const [showSidebar, setShowSidebar] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
-  const [selectedPostIndex, setSelectedPostIndex] = useState(null); // 
+  const [selectedPostIndex, setSelectedPostIndex] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const pageRef = useRef(1);
-  const sessionIdRef = useRef(null);
-  const mainRef = useRef(null);
-  const [ref, inView] = useInView();
-  const navigate = useNavigate()
-  const [currentPost, setCurrentPost] = useState(null)
+  const [currentPost, setCurrentPost] = useState(null);
   const [showLiveMap, setShowLiveMap] = useState(false);
   const [sharesCount, setSharesCount] = useState(0);
   const [alert, setAlert] = useState({ show: false, message: "", type: "info" });
+  const [newPostsBanner, setNewPostsBanner] = useState(false);
+
+  const pageRef = useRef(1);
+  const sessionIdRef = useRef(null);
+  const mainRef = useRef(null);
+  // ✅ FIX 1 & 2: loadingMoreRef lives here at the top — one stable ref, never recreated
+  const loadingMoreRef = useRef(false);
+  // ✅ FIX 5: One sentinel ref for the IntersectionObserver — replaces both
+  //    InfiniteScrollTrigger and useInView so only one trigger fires
+  const sentinelRef = useRef(null);
+
+  const navigate = useNavigate();
   const showAlert = (message, type = "info") => setAlert({ show: true, message, type });
-
-
 
   const authHeaders = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
     [token]
   );
-
+  const { socket } = useSocket();
   const dedupePosts = (posts = []) => {
     const seen = new Set();
     return Array.isArray(posts)
@@ -89,75 +97,126 @@ const Feed = () => {
     [BASE, token]
   );
 
-const fetchFeeds = useCallback(
-  async (reset = false) => {
-    if (loadingMore) return;
+  // ✅ FIX 1: setLoadingMoreBoth is gone. We update ref AND state inline inside
+  //    fetchFeeds itself, so there's no stale-function problem at all.
 
-    try {
-      if (reset) {
-        pageRef.current = 1;
-        sessionIdRef.current = null; // clear session on refresh
+  const fetchFeeds = useCallback(
+    async (reset = false) => {
+      // ✅ FIX 2 (part a): Guard uses the ref — never stale
+      if (loadingMoreRef.current) return;
+
+      try {
+        if (reset) {
+          pageRef.current = 1;
+          sessionIdRef.current = null;
+        }
+
+        // ✅ FIX 1 & 2 (part b): Update BOTH ref and state right here — no helper needed
+        if (reset) {
+          setLoadingInitial(true);
+        } else {
+          loadingMoreRef.current = true;  // block re-entry immediately (sync)
+          setLoadingMore(true);           // update UI (async)
+        }
+
+        const params = { page: pageRef.current, limit: 10 };
+        if (!reset && sessionIdRef.current) {
+          params.sessionId = sessionIdRef.current;
+        }
+
+        const res = await axios.get(`${BASE}api/posts/feed`, {
+          params,
+          headers: authHeaders,
+        });
+
+        const { posts = [], hasMore: backendHasMore, sessionId } = res.data;
+
+        if (sessionId) sessionIdRef.current = sessionId;
+
+        if (reset) {
+          setFeeds(dedupePosts(posts));
+        } else {
+          setFeeds((prev) => dedupePosts([...prev, ...posts]));
+        }
+
+        setHasMore(backendHasMore ?? false);
+        if (backendHasMore) pageRef.current += 1;
+
+      } catch (err) {
+        console.error("Feed fetch error:", err.message);
+        if (reset) {
+          const cached = localStorage.getItem("springscirclefeeds");
+          if (cached) setFeeds(dedupePosts(JSON.parse(cached)));
+        }
+        setError("Failed to load live feed, showing fallback data.");
+        setHasMore(false);
+      } finally {
+        // ✅ FIX 2 (part c): ALWAYS reset BOTH ref and state in finally
+        loadingMoreRef.current = false;
+        setLoadingInitial(false);
+        setLoadingMore(false);
       }
+    },
+    [authHeaders, BASE]
+    // ✅ loadingMoreRef intentionally NOT in deps — refs are stable and never need to be
+  );
 
-      reset ? setLoadingInitial(true) : setLoadingMore(true);
+  // ✅ FIX 5: Single IntersectionObserver — replaces InfiniteScrollTrigger + useInView.
+  //    Observes a tiny invisible div at the bottom of the feed list.
+  //    Only one thing watches the sentinel, so only one fetch fires per scroll event.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
 
-      const params = { page: pageRef.current, limit: 10 };
-
-      // Send sessionId on page 2+ so backend reuses the ranked list
-      if (!reset && sessionIdRef.current) {
-        params.sessionId = sessionIdRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMore && !loadingMoreRef.current && !loadingInitial) {
+          console.log("👁️ Sentinel visible — fetching more");
+          fetchFeeds(false);
+        }
+      },
+      {
+        // ✅ Use mainRef.current as root so it watches scroll inside the feed div,
+        //    not the window. Without this, the observer fires based on window viewport
+        //    and may never trigger inside a scrollable div.
+        root: mainRef.current,
+        rootMargin: "0px",
+        threshold: 0.1,
       }
+    );
 
-      const res = await axios.get(`${BASE}api/posts/feed`, {
-        params,
-        headers: authHeaders,
-      });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+    // Re-run when hasMore or loadingInitial change so the callback has fresh values
+  }, [hasMore, loadingInitial, fetchFeeds]);
 
-      const { posts = [], hasMore: backendHasMore, sessionId } = res.data;
+  // ✅ FIX 3: Socket effect — getSocket now imported correctly at the top of the file
+useEffect(() => {
+  if (!socket || !user?._id) return;
 
-      // Store sessionId from first response — send it back on subsequent pages
-      if (sessionId) sessionIdRef.current = sessionId;
+  const handleNewPost = (data) => {
+    if (data?.authorId === user._id?.toString()) return;
+    console.log("📡 New post detected:", data);
+    setNewPostsBanner(true);
+  };
 
-      if (reset) setFeeds(dedupePosts(posts));
-      else setFeeds((prev) => dedupePosts([...prev, ...posts]));
-
-      setHasMore(backendHasMore);
-
-      if (backendHasMore) pageRef.current += 1;
-    } catch (err) {
-      console.error("Feed fetch error:", err.message);
-      if (reset)
-        setFeeds(
-          dedupePosts(
-            localStorage.getItem("springscirclefeeds") &&
-            JSON.parse(localStorage.getItem("springscirclefeeds"))
-          )
-        );
-      setError("Failed to load live feed, showing fallback data.");
-      setHasMore(false);
-    } finally {
-      setLoadingInitial(false);
-      setLoadingMore(false);
-    }
-  },
-  [loadingMore, authHeaders, BASE]
-);
-
+  socket.on("newPostCreated", handleNewPost);
+  return () => socket.off("newPostCreated", handleNewPost);
+}, [socket, user?._id]);
 
   const handleShareUpdate = (postId, newCount) => {
-    setFeeds(prev =>
-      prev.map(p =>
-        p._id === postId ? { ...p, sharesCount: newCount } : p
-      )
+    setFeeds((prev) =>
+      prev.map((p) => (p._id === postId ? { ...p, sharesCount: newCount } : p))
     );
   };
 
-const FEED_SCROLL_KEY = 'feed_scroll_position';
-  const FEED_DATA_KEY = 'feed_cached_data';
-  const FEED_TIMESTAMP_KEY = 'feed_cached_timestamp';
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-  const [newPostsBanner, setNewPostsBanner] = useState(false);
+  const FEED_SCROLL_KEY = "feed_scroll_position";
+  const FEED_DATA_KEY = "feed_cached_data";
+  const FEED_TIMESTAMP_KEY = "feed_cached_timestamp";
+  const CACHE_TTL = 5 * 60 * 1000;
+  const JUST_POSTED_KEY = "just_posted";
+  const JUST_POSTED_TTL = 60 * 1000;
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -171,119 +230,95 @@ const FEED_SCROLL_KEY = 'feed_scroll_position';
     }
   }, [loadingInitial, isRefreshing]);
 
-  // Background poll every 2 minutes — show banner instead of auto-refresh
+  // ✅ FIX 4: initializeFeed — fetchFeeds and getLocation added to the ref so the
+  //    effect always calls the current version, but we still only re-run on user change.
+  //    We do this with a ref trick: store latest callbacks in a ref, call via ref inside
+  //    the effect. This avoids stale closures without adding them to the dep array
+  //    (which would cause infinite re-runs since fetchFeeds is a new function on each render).
+  const fetchFeedsRef = useRef(fetchFeeds);
+  const getLocationRef = useRef(getLocation);
+  useEffect(() => { fetchFeedsRef.current = fetchFeeds; }, [fetchFeeds]);
+  useEffect(() => { getLocationRef.current = getLocation; }, [getLocation]);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNewPostsBanner(true);
-    }, 2 * 60 * 1000);
-    return () => clearInterval(interval);
+    const initializeFeed = async () => {
+      if (!user?._id) return;
+
+      const justPostedRaw = sessionStorage.getItem(JUST_POSTED_KEY);
+      if (justPostedRaw) {
+        // ✅ Clear BEFORE any async work so re-mounts don't re-pin
+        sessionStorage.removeItem(JUST_POSTED_KEY);
+        try {
+          const { post: newPost, timestamp } = JSON.parse(justPostedRaw);
+          if (newPost && Date.now() - timestamp < JUST_POSTED_TTL) {
+            await fetchFeedsRef.current(true);
+            await getLocationRef.current(user._id);
+            return;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      const cachedData = sessionStorage.getItem(FEED_DATA_KEY);
+      const cachedTime = sessionStorage.getItem(FEED_TIMESTAMP_KEY);
+      const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
+      const savedScroll = sessionStorage.getItem(FEED_SCROLL_KEY);
+
+      if (cachedData && !isStale) {
+        try {
+          const parsed = JSON.parse(cachedData);
+          setFeeds(dedupePosts(parsed));
+          setLoadingInitial(false);
+          if (savedScroll && mainRef.current) {
+            mainRef.current.scrollTo({ top: parseInt(savedScroll, 10), behavior: "auto" });
+          }
+        } catch (e) {
+          await fetchFeedsRef.current(true);
+        }
+      } else {
+        await fetchFeedsRef.current(true);
+        if (savedScroll && mainRef.current) {
+          mainRef.current.scrollTo({ top: parseInt(savedScroll, 10), behavior: "auto" });
+        }
+      }
+
+      await getLocationRef.current(user._id);
+    };
+
+    initializeFeed();
+  }, [user?._id]); // ✅ Only user._id — fetchFeeds/getLocation accessed via stable refs
+
+  useEffect(() => {
+    const container = mainRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      sessionStorage.setItem(FEED_SCROLL_KEY, container.scrollTop.toString());
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-
-
-const JUST_POSTED_KEY = 'just_posted';
-const JUST_POSTED_TTL = 60 * 1000; // 1 minute
-
-useEffect(() => {
-  const initializeFeed = async () => {
-    if (!user?._id) return;
-
-    // ✅ Check if user just made a post (within last 1 minute)
-    const justPostedRaw = sessionStorage.getItem(JUST_POSTED_KEY);
-    if (justPostedRaw) {
-      try {
-        const { post: newPost, timestamp } = JSON.parse(justPostedRaw);
-        const isRecent = Date.now() - timestamp < JUST_POSTED_TTL;
-
-        if (isRecent && newPost) {
-          // Force a fresh fetch (bypass cache)
-          sessionStorage.removeItem(JUST_POSTED_KEY);
-          sessionStorage.removeItem(FEED_DATA_KEY);
-          sessionStorage.removeItem(FEED_TIMESTAMP_KEY);
-
-          await fetchFeeds(true); // fresh fetch
-
-          // Pin the new post to top
-          setFeeds(prev => {
-            const withoutNew = prev.filter(p => p._id !== newPost._id);
-            return dedupePosts([newPost, ...withoutNew]);
-          });
-
-          await getLocation(user._id);
-          return;
-        }
-      } catch (e) {
-        sessionStorage.removeItem(JUST_POSTED_KEY);
-      }
-    }
-
-    // Normal cache logic
-    const savedScroll = sessionStorage.getItem(FEED_SCROLL_KEY);
-    const cachedData = sessionStorage.getItem(FEED_DATA_KEY);
-    const cachedTime = sessionStorage.getItem(FEED_TIMESTAMP_KEY);
-    const isStale = !cachedTime || Date.now() - parseInt(cachedTime) > CACHE_TTL;
-
-    if (cachedData && !isStale) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        setFeeds(dedupePosts(parsed));
-        setLoadingInitial(false);
-      } catch (e) {
-        await fetchFeeds(true);
-      }
-    } else {
-      await fetchFeeds(true);
-    }
-
-    if (savedScroll && mainRef.current) {
-      mainRef.current.scrollTo({ top: parseInt(savedScroll, 10), behavior: 'auto' });
-    }
-
-    await getLocation(user._id);
-  };
-
-  initializeFeed();
-}, [fetchFeeds, getLocation, user?._id]);
-
-useEffect(() => {
-  const container = mainRef.current;
-  if (!container) return;
-  const handleScroll = () => {
-    sessionStorage.setItem(FEED_SCROLL_KEY, container.scrollTop.toString());
-  };
-  container.addEventListener('scroll', handleScroll, { passive: true });
-  return () => container.removeEventListener('scroll', handleScroll);
-}, [mainRef]);
-
-useEffect(() => {
-  if (feeds?.length > 0) {
-    sessionStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
-    sessionStorage.setItem(FEED_TIMESTAMP_KEY, Date.now().toString());
-  }
-}, [feeds]);
-
   useEffect(() => {
-    console.log("FEED IDS:", feeds?.map((f) => f._id));
+    if (feeds?.length > 0) {
+      sessionStorage.setItem(FEED_DATA_KEY, JSON.stringify(feeds));
+      sessionStorage.setItem(FEED_TIMESTAMP_KEY, Date.now().toString());
+    }
   }, [feeds]);
-
-
 
   return (
     <div className="w-full min-h-screen no-scrollbar bg-[var(--off-white)] flex justify-center relative overflow-x-hidden">
       <div className="w-full max-w-[100vw] no-scrollbar flex flex-wrap gap-0 px-0 sm:px-0">
-        {/* Main Feed */}
         <main
           ref={mainRef}
-           className="page-container flex-1 h-screen overflow-y-scroll py-8 mx-auto box-border overflow-x-hidden
-  [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
-  
-        >         {/* Refresh Button */}
-        <RefreshButton 
-  onRefresh={handleRefresh} 
-  isRefreshing={isRefreshing}
-  scrollTargetRef={mainRef}  // ← Feed uses a div ref, not window
-/>
-        {newPostsBanner && (
+          className="page-container flex-1 h-screen overflow-y-scroll py-8 mx-auto box-border overflow-x-hidden
+            [&::-webkit-scrollbar]:hidden no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          <RefreshButton
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            scrollTargetRef={mainRef}
+          />
+
+          {newPostsBanner && (
             <div
               onClick={handleRefresh}
               className="sticky top-2 z-30 mx-auto w-fit cursor-pointer mb-3
@@ -297,7 +332,7 @@ useEffect(() => {
               New posts available — tap to refresh
             </div>
           )}
-          
+
           <StoriesBar />
 
           {error && (
@@ -306,92 +341,69 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Daily Accountability Guidance */}
           {user && (
             <div className="max-w-[500px] mx-auto px-4">
               <DailyGuidance user={user} />
             </div>
           )}
 
- {/* <p
-  className="
-    inline-block
-    btn
-    text-white font-semibold 
-    text-sm sm:text-base 
-    px-4 py-2 rounded-lg 
-    shadow-lg shadow-cyan-200/50
-    cursor-pointer
-    transform transition-all duration-300
-    hover:scale-105 hover:shadow-xl hover:brightness-110
-    active:scale-95
-    mb-3
-    ml-6
-    border-2 border-blue-300
-  "
-  onClick={() => setShowLiveMap(true)}
->
-  Live Location <Globe className="ml-4"/>
-</p>  */}
-<CreatePostTrigger />
+          <CreatePostTrigger />
 
-          {/* Live Map Floating Button */}
           <button
             onClick={() => setShowLiveMap(true)}
-            className="fixed bottom-6 right-6 z-40 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-lg shadow-[var(--primary-color)]/30 hover:shadow-xl hover:shadow-[var(--primary-color)]/40 hover:scale-105 transition-all duration-300 flex items-center gap-2 group"
+            className="fixed bottom-6 right-6 z-40 bg-[var(--primary-color)] text-white p-4 rounded-full shadow-lg"
             title="View Live Map"
           >
-            <Globe className="w-5 h-5 group-hover:animate-spin-slow" />
-            <span className="hidden md:inline text-sm font-medium">Live Map</span>
+            <Globe className="w-5 h-5" />
           </button>
-
 
           <div className="space-y-6 py-5 no-scrollbar pb-25 relative max-w-[500px] mx-auto">
             {loadingInitial ? (
-      <PostCardSkeleton />
-    ) :    feeds?.length === 0 ? (
-  <EmptyFeed />
-): feeds?.map((post, i) => (
-  <PostWrapper
-  key={post._id}
-  index={i}
-  post={post}
-  onOpenPost={(i) => setSelectedPostIndex(i)}
-  onOpenMedia={(mediaIndex) => {
-    setCurrentPost(post);
-    setViewerOpen(true);
-    setViewerIndex(mediaIndex);
-    setSelectedMediaIndex(mediaIndex);
-  }}
->
-  {({ handleClick }) => (
-    <PostCard
-      post={post}
-      setFeeds={setFeeds}
-      onShare={() => {
-        setCurrentPost(post);
-        setShowShareModal(true);
-      }}
-      // single click on image
-      onImageClick={(index) => handleClick("image", index)}
-      // double click on header
-      onHeaderClick={() => handleClick("header")}
-      sharedBy={post.sharedForMe ? post.sharedBy : null}
-      sharedMessage={post.sharedForMe ? post.sharedMessage : null}
-      showAlert={showAlert}
-    />
-  )}
-</PostWrapper>
+              <PostCardSkeleton />
+            ) : feeds?.length === 0 ? (
+              <EmptyFeed />
+            ) : (
+              feeds?.map((post, i) => (
+                <PostWrapper
+                  key={post._id}
+                  index={i}
+                  post={post}
+                  onOpenPost={(i) => setSelectedPostIndex(i)}
+                  onOpenMedia={(mediaIndex) => {
+                    setCurrentPost(post);
+                    setViewerOpen(true);
+                    setViewerIndex(mediaIndex);
+                    setSelectedMediaIndex(mediaIndex);
+                  }}
+                >
+                  {({ handleClick }) => (
+                    <PostCard
+                      post={post}
+                      setFeeds={setFeeds}
+                      onShare={() => {
+                        setCurrentPost(post);
+                        setShowShareModal(true);
+                      }}
+                      onImageClick={(index) => handleClick("image", index)}
+                      onHeaderClick={() => handleClick("header")}
+                      sharedBy={post.sharedForMe ? post.sharedBy : null}
+                      sharedMessage={post.sharedForMe ? post.sharedMessage : null}
+                      showAlert={showAlert}
+                    />
+                  )}
+                </PostWrapper>
+              ))
+            )}
 
-            ))}
-
-
-
+            {/* ✅ FIX 5: Single sentinel div — the IntersectionObserver above watches this.
+                Remove <InfiniteScrollTrigger> entirely. This div is invisible (h-1)
+                and sits at the bottom of the list. When it scrolls into view inside
+                mainRef, the observer fires fetchFeeds(false). */}
+            <div ref={sentinelRef} style={{ height: "1px" }} aria-hidden="true" />
           </div>
 
-          {hasMore && (
-            <InfiniteScrollTrigger root={mainRef.current} onReachBottom={() => fetchFeeds(false)} />
-          )}
+          {/* ✅ Remove <InfiniteScrollTrigger> — sentinel above replaces it */}
+
           {loadingMore && (
             <div className="loading-dots">
               <div className="dot"></div>
@@ -401,13 +413,9 @@ useEffect(() => {
           )}
         </main>
 
-        {/* Sidebar */}
-      <RightSidebar sponsors={sponsors} loading={!sponsors} />
+        <RightSidebar sponsors={sponsors} loading={!sponsors} />
+        <MediumSidebarToggle sponsors={sponsors} />
 
-        {/* Sidebar toggle (medium screens) */}
-  <MediumSidebarToggle sponsors={sponsors} />
-
-        {/* MEDIA VIEWER */}
         {viewerOpen && (
           <MediaViewer
             post={currentPost}
@@ -415,14 +423,15 @@ useEffect(() => {
             onClose={() => setViewerOpen(false)}
           />
         )}
+
         {alert.show && (
-  <CustomAlert
-    message={alert.message}
-    type={alert.type}
-    onClose={() => setAlert({ ...alert, show: false })}
-  />
-)}
-        {/* POST VIEWER */}
+          <CustomAlert
+            message={alert.message}
+            type={alert.type}
+            onClose={() => setAlert({ ...alert, show: false })}
+          />
+        )}
+
         {selectedPostIndex !== null && (
           <PostViewer
             feed={feeds}
@@ -434,18 +443,13 @@ useEffect(() => {
 
         <LiveMapModal open={showLiveMap} onClose={() => setShowLiveMap(false)} />
 
-
         {showShareModal && currentPost && (
           <ShareModal
             post={currentPost}
             onClose={() => setShowShareModal(false)}
-            onShareSuccess={(newCount) =>
-              handleShareUpdate(currentPost._id, newCount)
-            }
+            onShareSuccess={(newCount) => handleShareUpdate(currentPost._id, newCount)}
           />
         )}
-
-
       </div>
     </div>
   );

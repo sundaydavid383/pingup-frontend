@@ -1,4 +1,7 @@
+import { Share2 } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react"; 
+import { useNavigate } from "react-router-dom";
+
 
 export default function SharedBanner({ sharedBy }){
   const navigate = useNavigate();
