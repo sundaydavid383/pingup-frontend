@@ -1,82 +1,502 @@
-.voice-card {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--glassy-white);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--input-border);
+/* ═══════════════════════════════════════════════════════════════
+   VOICE NOTE — Party / Groove Edition
+   All colors pull from your :root variables.
+   Canvas gradient stops use hex because the Canvas API needs it
+   (those hex values ARE your --primary-color, --primary, --color-5).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shared keyframes ─────────────────────────────────────────── */
+
+@keyframes vn-spin {
+  to { transform: rotate(360deg); }
 }
 
+/* Play button pulse — ripple ring spreads outward */
+@keyframes vn-pulse-ring {
+  0% {
+    box-shadow:
+      0 0 0 0   rgba(var(--primary-rgb), .55),
+      0 4px 14px rgba(var(--primary-rgb), .4);
+  }
+  70% {
+    box-shadow:
+      0 0 0 12px rgba(var(--primary-rgb), 0),
+      0 4px 14px rgba(var(--primary-rgb), .4);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0   rgba(var(--primary-rgb), 0),
+      0 4px 14px rgba(var(--primary-rgb), .4);
+  }
+}
+
+/* Label breathes — letter-spacing opens and closes */
+@keyframes vn-label-breathe {
+  0%, 100% { opacity: .55; letter-spacing: 1.5px; }
+  50%       { opacity: 1;   letter-spacing: 3px;   color: var(--primary); }
+}
+
+/* Top bar gradient sweeps left to right */
+@keyframes vn-bar-sweep {
+  0%   { background-position: 0%   50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Modal floats in from below */
+@keyframes vn-float-in {
+  from { opacity: 0; transform: translateY(14px) scale(.94); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);  }
+}
+
+/* Thumb pops on grab */
+@keyframes vn-thumb-pop {
+  0%   { transform: scale(1);   }
+  40%  { transform: scale(1.45); }
+  100% { transform: scale(1.2); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   INLINE CARD  (.voice-card)
+   ══════════════════════════════════════════════════════════════ */
+
+.voice-card {
+  position: relative;
+  width: 100%;
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+
+  background: var(--glassy-white);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(var(--primary-rgb), .16);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .55) inset,
+    0 6px 24px rgba(var(--primary-rgb), .1);
+
+  transition: border-color .35s ease, box-shadow .35s ease;
+}
+
+.voice-card.active {
+  border-color: rgba(var(--primary-rgb), .38);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .6) inset,
+    0 8px 36px rgba(var(--primary-rgb), .22);
+}
+
+/* ── Conic shimmer layer ─────────────────────────────────────── */
+/* Hidden at rest, spins when .active                             */
+.voice-card__conic {
+  position: absolute;
+  inset: -70%;
+  background: conic-gradient(
+    from 0deg,
+    transparent                        0%,
+    rgba(var(--primary-rgb), .07)     15%,
+    rgba(131, 109, 240, .055)         30%,
+    rgba(143, 211, 244, .045)         45%,
+    transparent                       58%,
+    rgba(var(--primary-rgb), .05)     78%,
+    transparent                       94%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  animation: vn-spin 7s linear infinite;
+  animation-play-state: paused;
+  transition: opacity .5s ease;
+  z-index: 0;
+}
+
+.voice-card.active .voice-card__conic {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+/* ── Top shimmer bar ─────────────────────────────────────────── */
+/* Slides in from left when .active, then continuously sweeps    */
+.voice-card__bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2.5px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-color)       0%,
+    var(--color-5)             38%,
+    rgba(131, 109, 240, 1)    68%,
+    var(--primary-color)      100%
+  );
+  background-size: 200% 100%;
+  border-radius: 18px 18px 0 0;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+  z-index: 1;
+}
+
+.voice-card.active .voice-card__bar {
+  transform: scaleX(1);
+  animation: vn-bar-sweep 2.6s linear infinite;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+
 .voice-top {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
+  z-index: 2;
 }
 
+/* ── Play button ─────────────────────────────────────────────── */
+
 .voice-play {
-  background: var(--primary);
-  color: var(--white);
-  border: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary) 100%);
+  box-shadow: 0 4px 14px rgba(var(--primary-rgb), .38);
+  transition: transform .2s ease;
+  z-index: 3;
 }
+
+.voice-card.active .voice-play {
+  animation: vn-pulse-ring 1.85s ease-out infinite;
+}
+
+.voice-play:active {
+  transform: scale(.88);
+}
+
+/* ── Body: label + canvas ────────────────────────────────────── */
 
 .voice-body {
   flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .voice-label {
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  color: var(--primary-color);
   margin-bottom: 6px;
+  display: block;
+  transition: letter-spacing .3s ease, color .3s ease;
+}
+
+.voice-card.active .voice-label {
+  animation: vn-label-breathe 2.5s ease-in-out infinite;
 }
 
 .voice-canvas {
   width: 100%;
-  height: 50px;
+  height: 48px;
+  border-radius: 8px;
+  display: block;
 }
 
+/* ── Timer ───────────────────────────────────────────────────── */
+
+.voice-timer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 8px;
+  padding: 0 2px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Range scrubber ──────────────────────────────────────────── */
+
 .voice-range {
+  position: relative;
+  display: block;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
   appearance: none;
+  -webkit-appearance: none;
   height: 4px;
-  background: var(--hover-light);
   border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  z-index: 2;
+  transition: height .2s ease;
+}
+
+.voice-range:hover {
+  height: 6px;
 }
 
 .voice-range::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 6px var(--opaque-primary);
-}
-.voice-range::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 6px var(--opaque-primary);
-}
-.loader-simple {
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 2px solid transparent;      /* thin and light */
-  border-top: 2px solid white;        /* spinning part */
   border-radius: 50%;
-  animation: spin-simple 0.8s linear infinite;
+  background: linear-gradient(135deg, var(--primary-color), var(--color-5));
+  box-shadow:
+    0 0 0 3px rgba(var(--primary-rgb), .2),
+    0 2px 8px rgba(var(--primary-rgb), .38);
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
 
-@keyframes spin-simple {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.voice-range::-webkit-slider-thumb:hover {
+  transform: scale(1.38);
+  box-shadow:
+    0 0 0 5px rgba(var(--primary-rgb), .25),
+    0 4px 14px rgba(var(--primary-rgb), .5);
+  animation: vn-thumb-pop .3s ease forwards;
+}
+
+.voice-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--color-5));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .2);
+  cursor: pointer;
+}
+
+/* ── Loader spinner ──────────────────────────────────────────── */
+
+.loader-simple {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, .3);
+  border-top-color: var(--white);
+  border-radius: 50%;
+  animation: vn-spin .75s linear infinite;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL FLOATING MODAL  (.vn-global)
+   ══════════════════════════════════════════════════════════════ */
+
+.vn-global {
+  /* position: fixed is set via inline style in JSX (left/top from drag state) */
+  width: 300px;
+  border-radius: 22px;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: grab;
+  user-select: none;
+  animation: vn-float-in .38s cubic-bezier(.22, 1, .36, 1) both;
+
+  background: var(--white-glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(var(--primary-rgb), .22);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .62) inset,
+    0 10px 44px rgba(var(--primary-rgb), .24),
+    0 2px 10px rgba(0, 0, 0, .08);
+  z-index: 1000;
+}
+
+.vn-global:active {
+  cursor: grabbing;
+}
+
+/* ── Rotating conic ring ─────────────────────────────────────── */
+.vn-global__conic {
+  position: absolute;
+  inset: -80%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--primary-rgb), .1)    0%,
+    rgba(131, 109, 240, .075)      20%,
+    rgba(143, 211, 244, .065)      40%,
+    transparent                    55%,
+    rgba(var(--primary-rgb), .07)  75%,
+    transparent                    92%
+  );
+  border-radius: 50%;
+  animation: vn-spin 8s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Animated top glow bar — always running on global modal ──── */
+.vn-global__bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-color)       0%,
+    var(--color-5)             38%,
+    rgba(131, 109, 240, 1)    68%,
+    var(--primary-color)      100%
+  );
+  background-size: 200% 100%;
+  animation: vn-bar-sweep 2.2s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Inner content row ───────────────────────────────────────── */
+.vn-global__inner {
+  position: relative;
+  z-index: 3;
+  padding: 14px 14px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Close button ────────────────────────────────────────────── */
+.vn-global__close {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--red);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, .45);
+  transition: transform .15s ease, background .15s ease;
+  z-index: 10;
+}
+
+.vn-global__close:hover {
+  transform: scale(1.2);
+  background: #c0392b;
+}
+
+/* ── Play button ─────────────────────────────────────────────── */
+.vn-global__play {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary));
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), .5);
+  transition: transform .2s ease;
+  animation: vn-pulse-ring 1.85s ease-out infinite;
+  z-index: 4;
+}
+
+.vn-global__play:active {
+  transform: scale(.88);
+}
+
+/* ── Body: label + canvas ────────────────────────────────────── */
+.vn-global__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vn-global__label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--primary-color);
+  display: block;
+  margin-bottom: 4px;
+  animation: vn-label-breathe 2.5s ease-in-out infinite;
+}
+
+.vn-global__canvas {
+  width: 100%;
+  height: 38px;
+  border-radius: 6px;
+  display: block;
+}
+
+/* ── Timer ───────────────────────────────────────────────────── */
+.vn-global__timer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 14px;
+  position: relative;
+  z-index: 3;
+}
+
+/* ── Range scrubber ──────────────────────────────────────────── */
+.vn-global__range {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 6px 14px 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 3;
+  transition: height .2s ease;
+}
+
+.vn-global__range:hover {
+  height: 6px;
+}
+
+.vn-global__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--color-5));
+  box-shadow:
+    0 0 0 3px rgba(var(--primary-rgb), .25),
+    0 2px 6px rgba(var(--primary-rgb), .4);
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.vn-global__range::-webkit-slider-thumb:hover {
+  transform: scale(1.35);
+  box-shadow:
+    0 0 0 5px rgba(var(--primary-rgb), .3),
+    0 4px 12px rgba(var(--primary-rgb), .52);
+}
+
+.vn-global__range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--color-5));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .22);
+  cursor: pointer;
 }

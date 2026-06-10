@@ -18,27 +18,22 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     duration,
   } = useAudioPlayer();
 
-  // Local state for independent timer per audio player
+  // ── Local state for independent timer per card ─────────────────
   const [localCurrentTime, setLocalCurrentTime] = useState(0);
-  const [localDuration, setLocalDuration] = useState(0);
+  const [localDuration,    setLocalDuration]     = useState(0);
 
-  // Internal audio ref for local playback tracking
-  const localAudioRef = useRef(null);
-
-  // Use external ref if provided, otherwise use internal ref
+  // ── Refs ───────────────────────────────────────────────────────
+  const localAudioRef  = useRef(null);
   const activeAudioRef = audioRef || localAudioRef;
+  const canvasRef      = useRef(null);
+  const rafRef         = useRef(null);
+  const cardRef        = useRef(null);
 
-  const canvasRef = useRef(null);
-  const rafRef = useRef(null);
-
-  // Use the forwarded ref, fallback to internal if not provided
-  const cardRef = useRef(null);
-
-  // Determine if this card is currently active
+  // ── Derived state ──────────────────────────────────────────────
   const isThisPlaying = currentUrl === audioUrl && isPlaying;
-  const isActive = isThisPlaying;
+  const isActive      = isThisPlaying;
 
-  // Sync local state when global state changes
+  // ── Sync local timer when this card is active ──────────────────
   useEffect(() => {
     if (isThisPlaying) {
       setLocalCurrentTime(currentTime);
@@ -46,7 +41,7 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     }
   }, [isThisPlaying, currentTime, duration]);
 
-  // Format time function (local)
+  // ── Local formatTime ───────────────────────────────────────────
   const formatTime = (seconds) => {
     if (!seconds || isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
@@ -54,18 +49,14 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  // ── Forward ref ────────────────────────────────────────────────
   useEffect(() => {
-  if (!forwardedRef) return;
+    if (!forwardedRef) return;
+    if (typeof forwardedRef === "function") forwardedRef(cardRef.current);
+    else forwardedRef.current = cardRef.current;
+  }, [forwardedRef]);
 
-  if (typeof forwardedRef === "function") {
-    forwardedRef(cardRef.current);
-  } else {
-    forwardedRef.current = cardRef.current;
-  }
-}, [forwardedRef]);
-
-
-  /* ------------------ VISUALIZER ------------------ */
+  /* ── Visualizer ─────────────────────────────────────────────── */
   useEffect(() => {
     if (!isActive) {
       cancelAnimationFrame(rafRef.current);
@@ -73,103 +64,120 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
     }
 
     const analyser = analyserRef.current;
-    const canvas = canvasRef.current;
+    const canvas   = canvasRef.current;
     if (!analyser || !canvas) return;
 
     const ctx = canvas.getContext("2d");
 
-    canvas.width = 240;
-    canvas.height = 40;
+    canvas.width  = canvas.offsetWidth  || 240;
+    canvas.height = canvas.offsetHeight || 48;
 
     analyser.fftSize = 64;
     const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    gradient.addColorStop(0, "#1e40af");
-    gradient.addColorStop(0.5, "#3b82f6");
-    gradient.addColorStop(1, "#8fd3f4");
+    const dataArray    = new Uint8Array(bufferLength);
 
     const draw = () => {
       rafRef.current = requestAnimationFrame(draw);
-
       analyser.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = canvas.width / bufferLength;
+      // Party gradient: primary-color → primary → color-5 → purple accent
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      grad.addColorStop(0,    "#3b5ccb");  // --primary-color
+      grad.addColorStop(0.4,  "#3055d1");  // --primary
+      grad.addColorStop(0.75, "#8fd3f4");  // --color-5
+      grad.addColorStop(1,    "#836df0");  // purple accent
 
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = dataArray[i] / 3;
-        ctx.fillStyle = gradient;
-        ctx.fillRect(
-          i * barWidth,
-          canvas.height - barHeight,
-          barWidth - 2,
-          barHeight
+      const barCount = Math.floor(bufferLength / 2); // lower half = more musical
+      const barW     = canvas.width / barCount;
+      const midY     = canvas.height / 2;
+
+      for (let i = 0; i < barCount; i++) {
+        const half = (dataArray[i] / 255) * midY;
+        ctx.fillStyle = grad;
+        // Mirrored bars grow from the centre outward
+        ctx.beginPath();
+        ctx.roundRect(
+          i * barW + 1,
+          midY - half,
+          Math.max(barW - 2.5, 1),
+          half * 2,
+          2
         );
+        ctx.fill();
       }
     };
 
     draw();
-
     return () => cancelAnimationFrame(rafRef.current);
   }, [isActive, analyserRef]);
 
-  /* ------------------ INTERSECTION OBSERVER ------------------ */
+  /* ── Intersection observer — UNCHANGED ─────────────────────── */
   useEffect(() => {
     if (!isActive) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setActiveInView(entry.isIntersecting);
-      },
+      ([entry]) => setActiveInView(entry.isIntersecting),
       { threshold: 0.4 }
     );
 
     if (cardRef.current) observer.observe(cardRef.current);
-
     return () => observer.disconnect();
   }, [isActive]);
 
-  // Use local time when this card is not playing, global time when it is
-  const displayTime = isThisPlaying ? currentTime : localCurrentTime;
+  // ── Display values ─────────────────────────────────────────────
+  const displayTime     = isThisPlaying ? currentTime    : localCurrentTime;
   const displayDuration = localDuration || duration;
+  const pct             = displayDuration ? (displayTime / displayDuration) * 100 : 0;
 
-  /* ------------------ RENDER ------------------ */
+  /* ── Render ─────────────────────────────────────────────────── */
   return (
     <div ref={cardRef} className={`voice-card ${isActive ? "active" : ""}`}>
+
+      {/* Rotating conic shimmer — CSS shows it only when .active */}
+      <div className="voice-card__conic" aria-hidden="true" />
+
+      {/* Top gradient bar — slides in when .active */}
+      <div className="voice-card__bar" aria-hidden="true" />
+
+      {/* ── Top row: play + visualiser ── */}
       <div className="voice-top">
-<button
-  className="voice-play"
-  onClick={() => togglePlay(audioUrl)}
->
-  {isLoading && currentUrl === audioUrl ? (
-    <div className="loader-simple"></div>
-  ) : isActive ? (
-    <Pause size={16} />
-  ) : (
-    <Play size={16} />
-  )}
-</button>
+
+        <button
+          className="voice-play"
+          onClick={() => togglePlay(audioUrl)}
+          aria-label={isActive ? "Pause voice note" : "Play voice note"}
+        >
+          {isLoading && currentUrl === audioUrl ? (
+            <div className="loader-simple" />
+          ) : isActive ? (
+            <Pause size={16} />
+          ) : (
+            <Play size={16} />
+          )}
+        </button>
 
         <div className="voice-body">
           <p className="voice-label">Voice Note</p>
           <canvas ref={canvasRef} className="voice-canvas" />
         </div>
       </div>
-      <div className="voice-timer flex justify-between text-sm text-gray-400 mt-1">
-  <span>{formatTime(displayTime)}</span>
-  <span>{formatTime(displayDuration)}</span>
-</div>
 
+      {/* ── Timer ── */}
+      <div className="voice-timer">
+        <span>{formatTime(displayTime)}</span>
+        <span>{formatTime(displayDuration)}</span>
+      </div>
+
+      {/* ── Scrubber ── */}
       <input
         type="range"
         min={0}
         max={100}
-        value={displayDuration ? (displayTime / displayDuration) * 100 : 0}
+        value={pct}
         onChange={(e) => {
           if (!activeAudioRef?.current) return;
-          const dur = displayDuration;
+          const dur     = displayDuration;
           const newTime = (Number(e.target.value) / 100) * dur;
           activeAudioRef.current.currentTime = newTime;
           setLocalCurrentTime(newTime);
@@ -178,9 +186,9 @@ const VoiceNoteCard = forwardRef(({ audioUrl }, forwardedRef) => {
         className="voice-range"
         style={{
           background: `linear-gradient(
-      to right,
-      var(--primary) ${displayDuration ? (displayTime / displayDuration) * 100 : 0}%,
-      var(--hover-light) ${displayDuration ? (displayTime / displayDuration) * 100 : 0}%
+            to right,
+            var(--primary-color) ${pct}%,
+            var(--hover-light)   ${pct}%
           )`,
         }}
       />

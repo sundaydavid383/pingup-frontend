@@ -55,6 +55,7 @@ const AudioCallUI = ({
     if (remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
       remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.jitterBufferTarget = 80;
       remoteAudioRef.current.play().catch(e => 
         console.warn("📞 AudioCallUI: Remote audio play failed:", e)
       );

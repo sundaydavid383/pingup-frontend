@@ -30,8 +30,8 @@ const isInitializedRef = useRef(false);
  const getLocalStream = useCallback(async () => {
     try {
         const mediaConstraints = callType === "audio"
-            ? { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }
-            : constraints || { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } };
+            ? { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, sampleSize: 16, channelCount: 1 }, video: false }
+            : constraints || { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000, sampleSize: 16, channelCount: 1 }, video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } };
 
         console.log("📞 useWebRTC: Requesting media:", mediaConstraints);
         const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
@@ -75,6 +75,9 @@ const createPeerConnection = useCallback(async () => {
                 { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
             ],
             iceCandidatePoolSize: 10,
+            sdpSemantics: "unified-plan",
+            bundlePolicy: "max-bundle",
+            rtcpMuxPolicy: "require",
         });
 
         if (localStreamRef.current) {
