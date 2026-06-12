@@ -34,19 +34,29 @@ async function subscribeUserToPush(token) {
         setTimeout(() => reject(new Error('SW ready timeout')), 10_000)
       ),
     ]);
+          // ✅ Replace just the subscribe block inside subscribeUserToPush
+      let subscription = await registration.pushManager.getSubscription();
 
-    // Check for existing subscription first
-    let subscription = await registration.pushManager.getSubscription();
-
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
-      });
-      console.log('🔔 New push subscription created');
-    } else {
-      console.log('🔔 Existing push subscription found');
-    }
+      if (!subscription) {
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
+          });
+          console.log('🔔 New push subscription created');
+        } catch (firstErr) {
+          console.warn('⚠️ First subscription attempt failed, retrying after 2s...', firstErr.message);
+          // ✅ Wait for SW to fully activate then retry once
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
+          });
+          console.log('🔔 Push subscription created on retry');
+        }
+      } else {
+        console.log('🔔 Existing push subscription found');
+      }
 
     // ✅ Send to backend WITH auth header
     const SERVER = (import.meta.env.VITE_SERVER || '').replace(/\/$/, '');

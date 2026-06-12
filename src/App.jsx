@@ -84,68 +84,48 @@ const App = () => {
     return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
   }
 
-  useEffect(() => {
+useEffect(() => {
+    // ✅ OAuth loading check runs unconditionally regardless of SW support
     const loading = sessionStorage.getItem("oauth_loading");
     const text = sessionStorage.getItem("oauth_text");
-
-    // Check if service worker is supported
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
-        .then(registration => {
-          log('✅ Service Worker registered:', registration.scope);
-        })
-        .catch(err => {
-          console.error('❌ Service Worker registration failed:', err);
-        });
-
-      // Listen for messages from service worker (notification deep linking)
-      // Create a named function to allow cleanup
-      const messageHandler = (event) => {
-        log('📬 App received message from SW:', event.data);
-        
-        if (event.data && event.data.type) {
-          switch (event.data.type) {
-            case 'SCROLL_TO_MESSAGE':
-              // Handle scroll to message from notification click
-              log('📬 Need to scroll to message:', event.data.messageId);
-              // Store the message ID to scroll to after chat loads
-              sessionStorage.setItem('scrollToMessage', event.data.messageId);
-              if (event.data.chatId) {
-                sessionStorage.setItem('scrollToChatId', event.data.chatId);
-              }
-              break;
-            case 'REPLY_TO_MESSAGE':
-              // Handle reply intent
-              log('📬 Need to reply to message:', event.data.messageId);
-              sessionStorage.setItem('replyToMessage', event.data.messageId);
-              if (event.data.chatId) {
-                sessionStorage.setItem('replyToChatId', event.data.chatId);
-              }
-              break;
-            case 'MARK_READ':
-              // Handle mark read
-              log('📬 Need to mark as read:', event.data.messageId);
-              break;
-            default:
-              log('📬 Unknown message type:', event.data.type);
-          }
-        }
-      };
-
-      navigator.serviceWorker.addEventListener('message', messageHandler);
-
-      // Cleanup function to prevent multiple listeners
-      return () => {
-        navigator.serviceWorker.removeEventListener('message', messageHandler);
-      };
-    }
-
     if (loading === "true") {
       setOauthLoading(true);
       setOauthText(text || "Loading…");
     }
-  }, []); // Empty dependency array - runs once on mount
+
+    if (!('serviceWorker' in navigator)) return;
+
+    // ✅ Register SW separately — not mixed with the message listener
+    navigator.serviceWorker
+      .register('/sw.js', { scope: '/' })
+      .then(registration => {
+        log('✅ Service Worker registered:', registration.scope);
+      })
+      .catch(err => {
+        console.error('❌ Service Worker registration failed:', err);
+      });
+
+    const messageHandler = (event) => {
+      log('📬 App received message from SW:', event.data);
+      if (!event.data?.type) return;
+
+      switch (event.data.type) {
+        case 'SCROLL_TO_MESSAGE':
+          sessionStorage.setItem('scrollToMessage', event.data.messageId);
+          if (event.data.chatId) sessionStorage.setItem('scrollToChatId', event.data.chatId);
+          break;
+        case 'REPLY_TO_MESSAGE':
+          sessionStorage.setItem('replyToMessage', event.data.messageId);
+          if (event.data.chatId) sessionStorage.setItem('replyToChatId', event.data.chatId);
+          break;
+        default:
+          log('📬 Unknown message type:', event.data.type);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', messageHandler);
+    return () => navigator.serviceWorker.removeEventListener('message', messageHandler);
+  }, []);
 
   // open app if launched from notification and not already open
   useEffect(() => {
@@ -155,9 +135,19 @@ const App = () => {
 
 
   const PUBLIC_VAPID_KEY = import.meta.env.VITE_PUBLIC_VAPID_KEY
-  useEffect(() => {
+useEffect(() => {
   if (!user || !token) return;
-  requestNotificationPermission(token);
+  if (!('serviceWorker' in navigator)) return;
+
+  // ✅ Wait for SW to be fully active before attempting to subscribe
+  // Without this, pushManager.subscribe silently fails on first load
+  navigator.serviceWorker.ready
+    .then(() => {
+      requestNotificationPermission(token);
+    })
+    .catch(err => {
+      console.error('❌ SW not ready, skipping push subscription:', err);
+    });
 }, [user, token]);
 
   const toTitleCase = (str) => {
