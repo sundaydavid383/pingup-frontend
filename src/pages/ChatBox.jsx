@@ -69,7 +69,7 @@ const ChatBox = ({ userId: propUserId }) => {
 /*   const [loading, setLoading] = useState(messages.length === 0);
  */  const [sending, setSending] = useState(false);
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(false); // loading now only affects empty fetch, not initial display
+  const [loading, setLoading] = useState(true); // loading now only affects empty fetch, not initial display
   const dropdownRef = useRef(null);
   // ... other states (image, audio, etc.)
 
@@ -437,7 +437,10 @@ if (chatRes.data?.room) {
         // clearUnread(userId);
       } catch (err) {
         console.error("❌ Error fetching chat:", err);
-      }
+      }finally {
+    // ✅ Always set loading to false when done — success OR failure
+    setLoading(false);
+  }
     };
 
     fetchData();
@@ -1047,25 +1050,35 @@ const startRecording = async () => {
   }, [loading, sortedMessages.length]);
 
   // Auto-scroll to bottom when new messages are added
-useEffect(() => {
-  if (containerRef.current && sortedMessages.length > 0) {
-    // Only auto-scroll if user is NOT actively scrolling - prevents bounce
-    if (isUserScrollingRef.current) {
-      return;
-    }
-    
-    const container = containerRef.current;
-    const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
-    
-    if (isNearBottom) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: "smooth"
-      });
-    }
-  }
-}, [sortedMessages]);
+      const initialScrollDoneRef = useRef(false);
 
+      useEffect(() => {
+        if (!containerRef.current || sortedMessages.length === 0) return;
+
+        // ✅ On first load, always jump to bottom instantly — no smooth scroll
+        // This ensures the user sees latest messages immediately on mount
+        if (!initialScrollDoneRef.current) {
+          initialScrollDoneRef.current = true;
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+          return;
+        }
+
+        // ✅ After first load, only auto-scroll if user is near bottom and not actively scrolling
+        if (isUserScrollingRef.current) return;
+
+        const container = containerRef.current;
+        const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+        if (isNearBottom) {
+          containerRef.current.scrollTo({
+            top: containerRef.current.scrollHeight,
+            behavior: "smooth"
+          });
+        }
+      }, [sortedMessages]);
+// ✅ Reset scroll state when switching chats
+useEffect(() => {
+  initialScrollDoneRef.current = false;
+}, [userId]);
 
   // //================disconnect user================
   // useEffect(() => {
@@ -1109,14 +1122,6 @@ useEffect(() => {
       return `Last seen ${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
     }
   };
-
-
-  // Scroll to bottom on initial load
-  useEffect(() => {
-    if (containerRef.current && sortedMessages.length > 0) {
-
-    }
-  }, [sortedMessages]);
 
   //========================================RETURN HEADER
   //===========================================
@@ -1751,104 +1756,148 @@ useEffect(() => {
   </div>
 ) 
               :
-                loading ?
-          (
-            <div className="flex flex-col min-h-screen bg-multi-gradient select-none animate-fadeIn overflow-hidden">
-              {/* Top bar shimmer */}
-              {/* Messages shimmer */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-5 max-w-4xl mx-auto px-4">
-                  {[...Array(10)].map((_, idx) => {
-                    const isSender = idx % 2 === 0;
-                    const type = ["text", "image", "audio"][Math.floor(Math.random() * 3)];
+           loading ? (
+  <div
+    className="flex flex-col w-full h-full select-none overflow-hidden"
+    style={{ background: 'var(--color-6, #e6ebfa)' }}
+  >
+    {/* Messages skeleton area */}
+    <div className="flex-1 overflow-hidden p-4">
+      <div className="space-y-4 max-w-4xl mx-auto px-2">
 
-                    let content;
-                    const senderBg = "var(--input-bubble-sender, #ffffff)";
-                    const receiverBg = "var(--input-bubble-receiver, #7c3aed)";
+        {/* Date separator skeleton */}
+        <div className="flex justify-center my-3">
+          <div
+            className="chat-skeleton-pulse"
+            style={{ width: 80, height: 22, borderRadius: 12 }}
+          />
+        </div>
 
-                    // Bubble content
-                    if (type === "text") {
-                      const bubbleWidth = [100, 160, 240, 120][Math.floor(Math.random() * 4)];
-                      const bubbleHeight = [16, 24, 36][Math.floor(Math.random() * 3)];
-                      content = (
-                        <div
-                          className={`shockwave rounded-xl ${isSender ? "rounded-br-none" : "rounded-bl-none"}`}
-                          style={{ width: bubbleWidth + "px", height: bubbleHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
-                        />
-                      );
-                    } else if (type === "image") {
-                      const imgWidth = [160, 200, 250][Math.floor(Math.random() * 3)];
-                      const imgHeight = [120, 160][Math.floor(Math.random() * 2)];
-                      content = (
-                        <div
-                          className="shockwave rounded-2xl"
-                          style={{ width: imgWidth + "px", height: imgHeight + "px", backgroundColor: isSender ? senderBg : receiverBg }}
-                        />
-                      );
-                    } else if (type === "audio") {
-                      content = (
-                        <div
-                          className="flex items-center gap-2 px-4 py-2 rounded-full shockwave"
-                          style={{ width: 180, height: 44, backgroundColor: isSender ? senderBg : receiverBg }}
-                        >
-                          <div className="w-5 h-5 rounded-full shimmer" />
-                          <div className="flex-1 h-2 shimmer rounded" />
-                          <div className="w-3 h-3 rounded-full shimmer" />
-                        </div>
-                      );
-                    }
+        {[
+          { side: 'end',   widths: [180, 120] },
+          { side: 'start', widths: [240, 160] },
+          { side: 'start', widths: [140] },
+          { side: 'end',   widths: [200] },
+          { side: 'end',   widths: [260, 100] },
+          { side: 'start', widths: [180, 220, 120] },
+          { side: 'end',   widths: [150] },
+          { side: 'start', widths: [200, 160] },
+          { side: 'end',   widths: [120, 80] },
+          { side: 'start', widths: [240] },
+        ].map((row, idx) => (
+          <div
+            key={idx}
+            className={`flex flex-col gap-1 items-${row.side} mb-4`}
+          >
+            {row.widths.map((w, i) => (
+              <div
+                key={i}
+                className="chat-skeleton-bubble"
+                style={{
+                  width: w,
+                  height: i === 0 && row.widths.length > 1 ? 36 : 28,
+                  borderRadius: row.side === 'end'
+                    ? '18px 18px 4px 18px'
+                    : '18px 18px 18px 4px',
+                  background: row.side === 'end'
+                    ? 'rgba(48, 85, 209, 0.15)'   /* matches var(--primary) tint */
+                    : 'rgba(255, 255, 255, 0.85)', /* matches var(--white) bubbles */
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                }}
+              />
+            ))}
+            {/* Timestamp skeleton */}
+            <div
+              className="chat-skeleton-pulse"
+              style={{
+                width: 42,
+                height: 10,
+                borderRadius: 6,
+                marginTop: 2,
+                alignSelf: row.side === 'end' ? 'flex-end' : 'flex-start',
+              }}
+            />
+          </div>
+        ))}
 
-                    // Return the message bubble with Reply button
-                    return (
-                      <div key={idx} className={`flex ${isSender ? "justify-end" : "justify-start"} group relative`}>
-                        {content}
+        {/* A fake image bubble */}
+        <div className="flex justify-end mb-4">
+          <div
+            className="chat-skeleton-bubble"
+            style={{
+              width: 180,
+              height: 140,
+              borderRadius: '14px 14px 4px 14px',
+              background: 'rgba(48, 85, 209, 0.12)',
+            }}
+          />
+        </div>
 
-                        {/* Reply button */}
-                        <button
-                          onClick={() => setReplyTo({ id: idx, text: type === "text" ? "Text message" : type === "image" ? "Image" : "Audio" })}
-                          className="absolute -top-3 right-0 hidden group-hover:flex text-xs px-2 py-1 bg-white shadow rounded-full text-gray-600 hover:text-black"
-                        >
-                          Reply
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+        {/* A fake audio bubble */}
+        <div className="flex justify-start mb-4">
+          <div
+            className="chat-skeleton-bubble"
+            style={{
+              width: 200,
+              height: 44,
+              borderRadius: '22px 22px 22px 4px',
+              background: 'rgba(255,255,255,0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '0 14px',
+            }}
+          >
+            <div className="chat-skeleton-pulse" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
+            <div className="chat-skeleton-pulse" style={{ flex: 1, height: 6, borderRadius: 4 }} />
+            <div className="chat-skeleton-pulse" style={{ width: 28, height: 10, borderRadius: 4 }} />
+          </div>
+        </div>
 
-              {/* Input bar shimmer */}
-              <div className="p-3 border-t shadow-inner fixed bottom-0 left-0 right-0"
-                style={{ backgroundColor: "var(--input-bg-color, #ffffff)" }} >
-                <div className="max-w-4xl mx-auto px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-11 shockwave rounded-full" />
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-10 h-10 shockwave rounded-full" />
-                    ))} </div> </div> </div>
-              {/* Shimmer styles */}
-              <style>
-                {`
-  .shockwave, .shimmer {
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  .shockwave {
-    background: linear-gradient(100deg, rgba(255,255,255,0.2) 25%, rgba(255,255,255,0.35) 37%, rgba(255,255,255,0.2) 63%);
-    background-size: 400% 100%;
-    animation: shockwaveMove 1.4s ease infinite;
-    position: relative;
-  }
-  @keyframes shockwaveMove {
-    0% { background-position: 100% 0; }
-    100% { background-position: 0 0; }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.4s ease-in-out;
-  }
-`}
-              </style>
+      </div>
+    </div>
 
-            </div >)
+    {/* Input bar skeleton — matches your actual input bar */}
+    <div
+      style={{
+        padding: '12px 16px',
+        borderTop: '1px solid rgba(0,0,0,0.06)',
+        background: 'var(--white, #ffffff)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+      <div className="chat-skeleton-pulse" style={{ flex: 1, height: 42, borderRadius: 22 }} />
+      <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+      <div className="chat-skeleton-pulse" style={{ width: 42, height: 42, borderRadius: '50%' }} />
+    </div>
+
+    <style>{`
+      .chat-skeleton-pulse {
+        background: linear-gradient(
+          90deg,
+          rgba(180, 195, 230, 0.4) 25%,
+          rgba(210, 220, 245, 0.7) 50%,
+          rgba(180, 195, 230, 0.4) 75%
+        );
+        background-size: 300% 100%;
+        animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      .chat-skeleton-bubble {
+        background-size: 300% 100%;
+        animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      @keyframes chat-skeleton-sweep {
+        0%   { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
+      }
+    `}</style>
+  </div>
+)
           : receiver && sortedMessages.length === 0 ?
             (
               <>
@@ -1927,7 +1976,7 @@ useEffect(() => {
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
-      {!showMediaViewer && 
+      {!showMediaViewer && !loading  ?  
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
           <div className="reply-bar">
@@ -2174,7 +2223,7 @@ useEffect(() => {
   sendMessage={sendMessage}
 />
         </div>
-      </ChatboxInput>
+      </ChatboxInput>:null
      }
 
     </div>

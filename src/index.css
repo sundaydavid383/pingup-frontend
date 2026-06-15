@@ -112,6 +112,9 @@ input, textarea, select {
   --input-border: #99b7e0;
   --input-shadow: 0 0 2px rgba(255, 255, 255, 0.6) !important;
 
+  --sf-glow: rgba(59, 92, 203, 0.55);
+  --sf-chip-bg-on: linear-gradient(135deg, #3055d1 0%, #6d4fd4 100%);
+  --sf-chip-border-on: rgba(59, 92, 203, 0.6);
 
   /* Effects */
   --backdrop-blur: blur(10px);

@@ -1,44 +1,43 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import AuthContainer from '../../pages/AuthContainer';
+import '../../styles/authModal.css';
 
 const AuthModal = ({ mode, onClose }) => {
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
-  // Prevent body scroll when modal is open — preserve original style
   React.useEffect(() => {
     const original = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = original;
-    };
+    return () => { document.body.style.overflow = original; };
   }, []);
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
-      onClick={handleBackdropClick}
-    >
-      {/* Modal Container */}
-      <div className="relative w-full max-w-md bg-[var(--bg-main)] rounded-2xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
-        {/* Close Button */}
-        <div className="sticky top-0 z-10 flex justify-end p-2">
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
-            title="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
+  React.useEffect(() => {
+    const handleKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
-        {/* Auth Container in Modal Mode */}
-        <div className="px-6 pb-6">
+  return (
+    <div className="auth-modal-backdrop" onMouseDown={handleBackdropClick}>
+      {/* Ambient orbs in backdrop */}
+      <div className="auth-modal-orb auth-modal-orb-1" />
+      <div className="auth-modal-orb auth-modal-orb-2" />
+
+      <div className="auth-modal-sheet" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="auth-modal-sheet-inner"> 
+        {/* Glass border shimmer line at top */}
+        <div className="auth-modal-shimmer-top" />
+
+        <button className="auth-modal-close" onClick={onClose} title="Close">
+          <X size={18} />
+        </button>
+
+        <div className="auth-modal-body">
           <AuthContainer initialTab={mode} onClose={onClose} isModal={true} />
+        </div>
         </div>
       </div>
     </div>

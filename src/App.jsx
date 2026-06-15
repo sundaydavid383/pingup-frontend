@@ -43,7 +43,7 @@ import Spinning3DSphere from './component/Spinning3DSphere';
 import LandingPage from './pages/LandingPage';
 import CommunityPage from './pages/CommunityPage';
 import AboutPage from './pages/AboutPage';
-import { requestNotificationPermission } from './utils/pushNotifications';
+import  serviceWorkerHelper from './utils/serviceWorkerHelper';
 import { openInstalledApp } from './utils/openInstalledApp';
 import CallContainer from './component/CallUI/CallContainer';
 import GlobalPipModal from './component/GlobalPipModal';
@@ -69,20 +69,12 @@ const App = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const oauthError = searchParams.get('error');
-
+  const {
+  requestNotificationPermission 
+} = serviceWorkerHelper;
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthText, setOauthText] = useState("Loading…");
 
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-  }
 
 useEffect(() => {
     // ✅ OAuth loading check runs unconditionally regardless of SW support

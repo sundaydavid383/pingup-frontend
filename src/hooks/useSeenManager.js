@@ -555,8 +555,63 @@ if (setMessages) {
             observer.disconnect();
             if (batchTimeout) clearTimeout(batchTimeout);
         };
-    }, [enabled, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend]);
+    }, [enabled, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend, messages.length]);
 
+// EFFECT - Initial visibility check (no-scroll case)
+// ==========================================
+// Handles the case where the chat is short enough that everything
+// is already visible and the user never scrolls — IntersectionObserver
+// change-events and scroll-stop events never fire, so the last message
+// from the other user never gets marked seen.
+useEffect(() => {
+    if (!enabled) return;
+    if (!hasInitialized) return;
+    if (!socket?.connected || !userId || !chatId) return;
+    if (!containerRef?.current || messages.length === 0) return;
+
+    // Run after layout settles
+    const timeoutId = setTimeout(() => {
+        const lastVisible = getLastVisibleMessage();
+        if (!lastVisible) return;
+        if (typeof lastVisible._id === 'string' && lastVisible._id.startsWith('temp_')) return;
+        if (lastVisible.from_user_id === userId) return;
+
+        // Already marked? skip
+        if (
+            lastSeenMessageRef.current &&
+            new Date(lastVisible.createdAt) <= new Date(lastSeenMessageRef.current.createdAt)
+        ) {
+            return;
+        }
+
+        setLastSeenMessage(lastVisible);
+        updateLastSeenOnBackend(lastVisible._id);
+        calculateUnseenBelowCount(lastVisible);
+
+        // Optimistically tick our own perspective too (mirrors observer batch logic)
+        if (setMessages) {
+            setMessages(prev => prev.map(msg =>
+                msg._id?.toString() === lastVisible._id?.toString()
+                    ? { ...msg, status: 'seen', seenAt: new Date() }
+                    : msg
+            ));
+        }
+    }, 500); // small delay so layout/images settle before measuring visibility
+
+    return () => clearTimeout(timeoutId);
+}, [
+    enabled,
+    hasInitialized,
+    socket,
+    userId,
+    chatId,
+    containerRef,
+    messages,
+    getLastVisibleMessage,
+    updateLastSeenOnBackend,
+    calculateUnseenBelowCount,
+    setMessages,
+]);
     // ==========================================
     // EFFECTS - Socket Listeners
     // ==========================================

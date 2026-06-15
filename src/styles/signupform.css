@@ -1,0 +1,593 @@
+/* ═══════════════════════════════════════════
+   SIGNUP FORM — Sophisticated Dark Glass Design
+   New root variables added:
+     --sf-glow: rgba(59,92,203,0.55)
+     --sf-chip-bg-on: linear-gradient(135deg, #3055d1, #6d4fd4)
+     --sf-chip-border-on: rgba(59,92,203,0.6)
+   ═══════════════════════════════════════════ */
+
+
+/* ── Root ── */
+.sf-root {
+  position: relative;
+  width: 100%;
+  padding-top: 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ── Progress spine ── */
+.sf-spine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 6px;
+}
+
+.sf-spine-node {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  position: relative;
+  z-index: 2;
+}
+
+.sf-spine-pending {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.sf-spine-active {
+  background: linear-gradient(135deg, var(--primary) 0%, #6d4fd4 100%);
+  border: none;
+  color: #fff;
+  box-shadow:
+    0 0 0 4px rgba(59, 92, 203, 0.18),
+    0 0 20px var(--sf-glow),
+    0 0 40px rgba(59, 92, 203, 0.2);
+  animation: spine-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes spine-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(59,92,203,0.18), 0 0 20px var(--sf-glow); }
+  50%       { box-shadow: 0 0 0 7px rgba(59,92,203,0.08), 0 0 32px rgba(59,92,203,0.45); }
+}
+
+.sf-spine-done {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.35);
+}
+
+.sf-spine-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  max-width: 40px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.4s;
+}
+.sf-spine-bar-done {
+  background: linear-gradient(90deg, #22c55e, #3055d1);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+}
+
+/* ── Step label ── */
+.sf-step-label {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  margin-bottom: 20px;
+  margin-top: 8px;
+}
+
+/* ── Form ── */
+.sf-form { width: 100%; }
+
+.sf-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sf-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sf-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.9);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sf-optional {
+  font-weight: 400;
+  color: rgba(148, 163, 184, 0.5);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+
+/* ── Glass input ── */
+.sf-input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.sf-input::placeholder { color: rgba(255, 255, 255, 0.28); }
+.sf-input:focus {
+  border-color: rgba(59, 92, 203, 0.6);
+  background: rgba(59, 92, 203, 0.06);
+  box-shadow:
+    0 0 0 3px rgba(59, 92, 203, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.sf-input-date {
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sf-textarea {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: 1.55;
+}
+.sf-textarea::placeholder { color: rgba(255, 255, 255, 0.28); }
+.sf-textarea:focus {
+  border-color: rgba(59, 92, 203, 0.6);
+  background: rgba(59, 92, 203, 0.06);
+  box-shadow: 0 0 0 3px rgba(59, 92, 203, 0.12);
+}
+
+.sf-char-count {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.5);
+  text-align: right;
+  margin-top: 2px;
+}
+
+.sf-field-hint {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.5);
+  margin-top: 2px;
+}
+
+/* ── Password ── */
+.sf-pw-wrap { position: relative; }
+.sf-input-pw { padding-right: 48px; }
+.sf-pw-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+  padding: 0;
+}
+.sf-pw-toggle:hover { color: rgba(255, 255, 255, 0.8); }
+
+.sf-pw-checks {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sf-val-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+.sf-val-valid { color: #4ade80; }
+.sf-val-invalid { color: rgba(248, 113, 113, 0.75); }
+.sf-val-icon { font-size: 11px; width: 14px; text-align: center; }
+
+/* ── Username ── */
+.sf-username-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.sf-username-prefix {
+  position: absolute;
+  left: 16px;
+  font-size: 14px;
+  color: rgba(59, 92, 203, 0.8);
+  font-weight: 600;
+  z-index: 1;
+  pointer-events: none;
+}
+.sf-input-username { padding-left: 30px; }
+
+/* ── Profile picture upload ── */
+.sf-upload-zone {
+  position: relative;
+  width: 100%;
+  border: 1.5px dashed rgba(59, 92, 203, 0.35);
+  border-radius: 16px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  background: rgba(59, 92, 203, 0.03);
+  transition: background 0.2s, border-color 0.2s;
+}
+.sf-upload-zone:hover {
+  background: rgba(59, 92, 203, 0.07);
+  border-color: rgba(59, 92, 203, 0.55);
+}
+.sf-upload-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(59, 92, 203, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+.sf-upload-icon svg { width: 22px; height: 22px; }
+.sf-upload-label { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.7); }
+.sf-upload-sub { font-size: 11px; color: rgba(148,163,184,0.5); }
+.sf-upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.sf-avatar-preview {
+  position: relative;
+  width: 80px;
+  margin: 0 auto;
+}
+.sf-avatar-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(239,68,68,0.4);
+  transition: transform 0.12s;
+}
+.sf-avatar-remove:hover { transform: scale(1.1); }
+
+/* ── Location / custom dropdown ── */
+.sf-loc-wrap, .sf-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.sf-loc-input-row, .sf-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: text;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.sf-select-btn { cursor: pointer; }
+
+.sf-loc-input-row:focus-within,
+.sf-select-wrap:focus-within .sf-select-btn {
+  border-color: rgba(59, 92, 203, 0.6);
+  background: rgba(59, 92, 203, 0.06);
+  box-shadow: 0 0 0 3px rgba(59, 92, 203, 0.12);
+}
+
+.sf-loc-icon { color: rgba(59, 92, 203, 0.7); flex-shrink: 0; }
+
+.sf-loc-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 0;
+}
+.sf-loc-input::placeholder { color: rgba(255, 255, 255, 0.28); }
+
+.sf-select-value { color: #fff; font-size: 14px; flex: 1; text-align: left; }
+.sf-select-placeholder { color: rgba(255, 255, 255, 0.28); font-size: 14px; flex: 1; text-align: left; }
+
+.sf-loc-chevron {
+  color: rgba(148, 163, 184, 0.5);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.sf-loc-chevron-open { transform: rotate(180deg); }
+
+/* Dropdown panel */
+.sf-loc-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(14, 22, 58, 0.98);
+  border: 1px solid rgba(59, 92, 203, 0.25);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255,255,255,0.04) inset;
+  animation: dd-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59,92,203,0.3) transparent;
+}
+@keyframes dd-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sf-loc-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+}
+.sf-loc-option:hover {
+  background: rgba(59, 92, 203, 0.15);
+  color: #fff;
+}
+.sf-loc-option-selected {
+  background: rgba(59, 92, 203, 0.1);
+  color: #fff;
+}
+.sf-loc-option-icon { color: rgba(59, 92, 203, 0.6); flex-shrink: 0; }
+.sf-loc-check { color: #4ade80; margin-left: auto; flex-shrink: 0; }
+
+/* ── Interest chips ── */
+.sf-chips-wrap { display: flex; flex-direction: column; gap: 12px; }
+
+.sf-chips-hint {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.6);
+  line-height: 1.5;
+}
+
+.sf-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sf-chip-off {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+.sf-chip-off:hover {
+  background: rgba(59, 92, 203, 0.1);
+  border-color: rgba(59, 92, 203, 0.3);
+  color: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+}
+
+.sf-chip-on {
+  background: var(--sf-chip-bg-on);
+  border-color: var(--sf-chip-border-on);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(59, 92, 203, 0.35), 0 0 0 1px rgba(255,255,255,0.08) inset;
+  transform: translateY(-1px);
+}
+
+.sf-chip-emoji { font-size: 14px; }
+.sf-chip-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  margin-left: 2px;
+}
+
+/* ── OTP section ── */
+.sf-otp-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 4px;
+  text-align: center;
+}
+.sf-otp-icon { font-size: 40px; margin-bottom: 4px; }
+.sf-otp-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.2px;
+}
+.sf-otp-sub { font-size: 13px; color: rgba(148, 163, 184, 0.8); line-height: 1.5; }
+.sf-otp-sub strong { color: rgba(255,255,255,0.85); }
+
+.sf-otp-inputs { width: 100%; margin: 8px 0 4px; }
+.sf-input-otp {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+}
+
+.sf-resend-btn {
+  background: none;
+  border: none;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+  font-family: inherit;
+  margin-top: 4px;
+}
+.sf-resend-btn:hover { color: rgba(255, 255, 255, 0.9); }
+
+/* ── Navigation buttons ── */
+.sf-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sf-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.34, 1.2, 0.64, 1);
+  font-family: inherit;
+  letter-spacing: 0.01em;
+}
+
+.sf-btn-full { width: 100%; flex: none; }
+
+.sf-btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #6d4fd4 100%);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(59, 92, 203, 0.4), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.sf-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(59, 92, 203, 0.5), inset 0 1px 0 rgba(255,255,255,0.14);
+}
+.sf-btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.sf-btn-back {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex: 0 0 auto;
+  min-width: 90px;
+}
+.sf-btn-back:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ── Switch link ── */
+.sf-switch {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.65);
+}
+.sf-switch-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+.sf-switch-btn:hover { color: #fff; }

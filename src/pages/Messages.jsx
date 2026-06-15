@@ -17,7 +17,7 @@ const Messages = () => {
   const [activeChatId, setActiveChatId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const { user } = useAuth();
-  const { socket } = useSocket();
+  const { socket, onlineUsers } = useSocket();
   const navigate = useNavigate();
 
   const {
@@ -203,7 +203,7 @@ const Messages = () => {
                     <div key={otherUser._id}
                       onClick={() => handleOpenChat(otherUser._id)}
                       className={rowClass}>
-                      <div className="msg-avatar-wrap">
+                      <div className="msg-avatar-wrap" style={{ position: "relative" }}>
                         <div className="msg-avatar-ring">
                           <div className="msg-avatar-inner">
                             <ProfileAvatar
@@ -216,6 +216,12 @@ const Messages = () => {
                             />
                           </div>
                         </div>
+                        {onlineUsers.has(otherUser._id) && (
+                          <span
+                            className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                            style={{ zIndex: 2 }}
+                          />
+                        )}
                       </div>
 
                       <div className="msg-text">

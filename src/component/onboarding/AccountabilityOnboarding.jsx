@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronRight, FiChevronLeft, FiCheck, FiX } from 'react-icons/fi';
+import { FiChevronRight, FiChevronLeft, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
 import { GiPrayerBeads } from 'react-icons/gi';
 import { FaBook, FaDumbbell, FaUsers, FaBullseye } from 'react-icons/fa';
- import './onboarding.css';
+import axiosBase from '../../utils/axiosBase';
+import './onboarding.css';
 
 const NICHES = [
   { id: 'spiritual',  label: 'Spiritual Growth',                    Icon: GiPrayerBeads },
@@ -49,16 +50,17 @@ const STEP_LABELS = ['Choose Focus', 'Quick Interview', 'Review Plan'];
  * Props:
  *   isOpen      – boolean
  *   onClose     – () => void
- *   onSuccess   – (data: { selectedNiches, nicheGoals }) => void
- *                 ↑ no token / axios needed — dummy mode
+ *   token       – string (JWT, required for saving onboarding)
+ *   onSuccess   – (data: { success, message, user }) => void
  */
-const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess }) => {
+const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess, token }) => {
   const [currentStep, setCurrentStep] = useState('niche-selection');
   const [selectedNiches, setSelectedNiches] = useState([]);
   const [nicheIndex, setNicheIndex] = useState(0);
   const [nicheGoals, setNicheGoals] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const currentNiche = selectedNiches[nicheIndex];
   const currentNicheQuestions = currentNiche ? NICHE_QUESTIONS[currentNiche] : [];
@@ -96,21 +98,45 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess }) => {
     setCurrentStep('summary');
   };
 
-  // ── DUMMY save — no backend ───────────────────────────────────────────────
-  const handleSaveOnboarding = () => {
+  // ── REAL save — calls backend /api/user/onboarding ─────────────────────────
+  const handleSaveOnboarding = async () => {
     setLoading(true);
-    // Simulate a short async delay then call onSuccess with dummy payload
-    setTimeout(() => {
-      setLoading(false);
-      if (typeof onSuccess === 'function') {
-        onSuccess({
+    setError(null);
+
+    try {
+      const res = await axiosBase.post(
+        '/api/user/onboarding',
+        {
           selectedNiches,
           nicheGoals,
           generalDisciplineEnabled: true,
           onboardingCompleted: true,
-        });
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setLoading(false);
+
+      if (res.data?.success && res.data?.user) {
+        if (typeof onSuccess === 'function') {
+          onSuccess(res.data);
+        }
+      } else {
+        setError(res.data?.message || 'Unexpected response from server. Please try again.');
       }
-    }, 800);
+    } catch (err) {
+      console.error('❌ Error saving onboarding:', err);
+      setLoading(false);
+      setError(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to save your plan. Please check your connection and try again.'
+      );
+    }
   };
 
   if (!isOpen) return null;
@@ -361,6 +387,34 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess }) => {
                     })}
                   </>
                 )}
+
+                {/* ── Error banner ── */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      className="ob-error-banner"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        background: 'rgba(239,68,68,0.08)',
+                        border: '1px solid rgba(239,68,68,0.25)',
+                        color: '#b91c1c',
+                        fontSize: '13px',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <FiAlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span>{error}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
 
@@ -374,6 +428,7 @@ const AccountabilityOnboarding = ({ isOpen, onClose, onSuccess }) => {
               className="ob-btn ob-btn--ghost"
               onClick={() => {
                 if (currentStep === 'summary') {
+                  setError(null);
                   setCurrentStep(selectedNiches.length > 0 ? 'quick-interview' : 'niche-selection');
                   return;
                 }

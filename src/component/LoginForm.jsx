@@ -1,19 +1,13 @@
 import React, { useState } from "react";
-import CustomAlert from "./shared/CustomAlert";
 import Loading from "./shared/Loading";
 import { useAuth } from "../context/AuthContext";
-import location from "../utils/location"
+import location from "../utils/location";
 import { Eye, EyeOff } from 'lucide-react';
 
-const LoginForm = ({ onSwitchToSignUp }) => {
+const LoginForm = ({ onSwitchToSignUp, showAlert }) => {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
-  const [alert, setAlert] = useState({ show: false, message: "", type: "error" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -32,36 +26,29 @@ const LoginForm = ({ onSwitchToSignUp }) => {
     e.preventDefault();
     const error = validate();
     if (error) {
-      setAlert({ show: true, message: error, type: "error" });
+      showAlert(error, "error");
       return;
     }
-
     setLoading(true);
-
     try {
       const locationData = await location();
-      const body = {...locationData, ...formData}
+      const body = { ...locationData, ...formData };
       const res = await fetch(`${import.meta.env.VITE_SERVER}api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
       const data = await res.json();
       setLoading(false);
-
       if (!res.ok) {
-        setAlert({ show: true, message: data.message || "Login failed wrong email or password", type: "error" });
+        showAlert(data.message || "Login failed — wrong email or password", "error");
         return;
       }
-
-      // Login user into context and localStorage
       login(data.user, data.token);
-
-      setAlert({ show: true, message: "Login successful!", type: "success" });
+      showAlert("Login successful!", "success");
     } catch (err) {
       setLoading(false);
-      setAlert({ show: true, message: "Server error. Try again later.", type: "error" });
+      showAlert("Server error. Try again later.", "error");
     }
   };
 
@@ -70,20 +57,11 @@ const LoginForm = ({ onSwitchToSignUp }) => {
       <div
         className="absolute inset-0 backdrop-blur-2xl rounded-3xl shadow-2xl"
         style={{ backgroundColor: "var(--form-bg)" }}
-      ></div>
-
+      />
       {loading && <Loading />}
-      {alert.show && (
-        <CustomAlert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert({ ...alert, show: false })}
-        />
-      )}
-
       <form
         onSubmit={handleSubmit}
-        className=" relative z-10 p-2 sm:p-4 text-[var(--text-main)] space-y-6"
+        className="relative z-10 p-2 sm:p-4 text-[var(--text-main)] space-y-6"
       >
         <h2 className="text-2xl font-bold text-center" style={{ color: "var(--color-text)" }}>
           Log In
@@ -109,14 +87,13 @@ const LoginForm = ({ onSwitchToSignUp }) => {
             className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
           />
           <button
-  type="button"
-  onClick={() => setShowPassword((prev) => !prev)}
-  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
->
-  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-</button>
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
         </div>
-
 
         <button
           type="submit"
@@ -125,8 +102,8 @@ const LoginForm = ({ onSwitchToSignUp }) => {
           Login
         </button>
 
-         <p className="text-center text-sm text-white/70">
-          Don’t have an account?{" "}
+        <p className="text-center text-sm text-white/70">
+          Don't have an account?{" "}
           <button
             type="button"
             className="text-[var(--text-main)] font-medium underline"
@@ -134,7 +111,7 @@ const LoginForm = ({ onSwitchToSignUp }) => {
           >
             Sign up here
           </button>
-        </p> 
+        </p>
       </form>
     </div>
   );

@@ -376,7 +376,6 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
     (file) => file.type === "video" || file.type === "youtube"
   )
 
-  console.log("ATTACHMENTS FOR POST", post._id, ":", post.attachments?.map(a => a.type));
 
 return (
     <div className="pc-root space-y-0" style={{ overflow: "visible", position: "relative" }}>

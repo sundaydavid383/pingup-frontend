@@ -1,774 +1,462 @@
-// SignUpForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import CustomAlert from './shared/CustomAlert';
 import Loading from './shared/Loading';
 import '../styles/ui.css';
-import './signUpForm.css';
+import '../styles/signupform.css';
 import axios from 'axios';
 import { useAuth } from "../context/AuthContext";
-import location from "../utils/location"
-import { Eye, EyeOff } from "lucide-react";
+import location from "../utils/location";
+import { Eye, EyeOff, MapPin, ChevronDown, Check } from "lucide-react";
 import ProfileAvatar from './shared/ProfileAvatar';
+import LocationDropdown from './shared/LocationDropdown';
 
-const steps = [
-  'Basic Info',
-  'Profile Details',
-  // 'Spiritual Info',
-  'Interests',
-  'Bio',
-];
+const steps = ['Basic Info', 'Profile Details', 'Interests', 'Bio'];
 
 const ValidationItem = ({ isValid, label }) => (
-  <div style={{ color: isValid ? '#2fdf2f' : '#f14b4b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-    <span>{isValid ? '✔️' : '❌'}</span>
+  <div className={`sf-val-item ${isValid ? 'sf-val-valid' : 'sf-val-invalid'}`}>
+    <span className="sf-val-icon">{isValid ? '✓' : '✗'}</span>
     <span>{label}</span>
   </div>
 );
 
-const SignUpForm = ({ onSwitchToLogin }) => {
+<LocationDropdown/>
+
+const GenderSelect = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const options = ['Male', 'Female', 'Prefer not to say'];
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="sf-select-wrap" ref={ref}>
+      <button type="button" className="sf-select-btn" onClick={() => setOpen(!open)}>
+        <span className={value ? 'sf-select-value' : 'sf-select-placeholder'}>
+          {value || 'Gender'}
+        </span>
+        <ChevronDown size={15} className={`sf-loc-chevron ${open ? 'sf-loc-chevron-open' : ''}`} />
+      </button>
+      {open && (
+        <div className="sf-loc-dropdown">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              className={`sf-loc-option ${value === opt ? 'sf-loc-option-selected' : ''}`}
+              onMouseDown={(e) => { e.preventDefault(); onChange(opt); setOpen(false); }}
+            >
+              <span>{opt}</span>
+              {value === opt && <Check size={12} className="sf-loc-check" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const INTERESTS = [
+  { id: 'music', label: 'Music', emoji: '🎵' },
+  { id: 'sports', label: 'Sports', emoji: '⚽' },
+  { id: 'tech', label: 'Tech & Innovation', emoji: '💻' },
+  { id: 'art', label: 'Art & Design', emoji: '🎨' },
+  { id: 'fitness', label: 'Fitness & Health', emoji: '🏋️' },
+  { id: 'travel', label: 'Travel', emoji: '✈️' },
+  { id: 'reading', label: 'Books & Reading', emoji: '📚' },
+  { id: 'cooking', label: 'Cooking & Food', emoji: '🍳' },
+  { id: 'photography', label: 'Photography', emoji: '📷' },
+  { id: 'gaming', label: 'Gaming', emoji: '🎮' },
+  { id: 'volunteering', label: 'Volunteering', emoji: '🤝' },
+  { id: 'entrepreneurship', label: 'Entrepreneurship', emoji: '🚀' },
+  { id: 'nature', label: 'Nature & Outdoors', emoji: '🌿' },
+  { id: 'mental_health', label: 'Mental Wellness', emoji: '🧘' },
+  { id: 'movies', label: 'Movies & TV', emoji: '🎬' },
+  { id: 'fashion', label: 'Fashion & Style', emoji: '👗' },
+];
+
+const InterestChips = ({ value, onChange }) => {
+  const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const toggle = (id) => {
+    const current = new Set(selected);
+    if (current.has(id)) current.delete(id);
+    else current.add(id);
+    onChange([...current].join(', '));
+  };
+
+  return (
+    <div className="sf-chips-wrap">
+      <p className="sf-chips-hint">Pick what excites you — connect with people who share your passions</p>
+      <div className="sf-chips-grid">
+        {INTERESTS.map((interest) => {
+          const isOn = selected.includes(interest.id);
+          return (
+            <button
+              key={interest.id}
+              type="button"
+              onClick={() => toggle(interest.id)}
+              className={`sf-chip ${isOn ? 'sf-chip-on' : 'sf-chip-off'}`}
+            >
+              <span className="sf-chip-emoji">{interest.emoji}</span>
+              <span>{interest.label}</span>
+              {isOn && <span className="sf-chip-check"><Check size={10} /></span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const SignUpForm = ({ onSwitchToLogin, showAlert }) => {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("")
-  const [alert, setAlert] = useState({ show: false, message: '', type: 'error' });
+  const [loadingText, setLoadingText] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [userId, setUserId] = useState(null);
   const [otp, setOtp] = useState('');
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    username:'',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    occupation: '',
-    dob: '',
-    gender: '',
-    location: '',
-    churchName: '',
-    prayerRequest: '',
-    interests: '',
-    bio: '',
-    profilePicUrl: '',
+    name: '', username: '', email: '', password: '', confirmPassword: '',
+    occupation: '', dob: '', gender: '', location: '',
+    churchName: '', prayerRequest: '', interests: '', bio: '', profilePicUrl: '',
   });
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleBack = () => {
-    if (step > 0) {
-      setDirection(-1);
-      setStep(step - 1);
-    }
+    if (step > 0) { setDirection(-1); setStep(step - 1); }
   };
 
-const checkIfUserNameExist = async (username) => {
-  try {
-    setLoading(true);
-    setLoadingText("Verifing if username has not been used...");
-    const response = await axios.get(`${import.meta.env.VITE_SERVER}api/auth/check-username/${username}`);
-    return response.data.exists; // true if taken, false if available
-  } catch (error) {
-    console.error("Error checking username:", error);
-    return true; // assume taken if error, to be safe
-  }
-  finally{
-    setLoading(false)
-  }
-};
+  const checkIfUserNameExist = async (username) => {
+    try {
+      setLoading(true); setLoadingText("Checking username…");
+      const response = await axios.get(`${import.meta.env.VITE_SERVER}api/auth/check-username/${username}`);
+      return response.data.exists;
+    } catch { return true; }
+    finally { setLoading(false); }
+  };
 
-const checkIfEmailExists = async (email) => {
-  try {
-    setLoading(true);
-    setLoadingText("Verifying email...");
+  const checkIfEmailExists = async (email) => {
+    try {
+      setLoading(true); setLoadingText("Verifying email…");
+      const response = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/check-email`, { email: email.trim().toLowerCase() });
+      return !response.data.success;
+    } catch { return true; }
+    finally { setLoading(false); }
+  };
 
-    const response = await axios.post(
-      `${import.meta.env.VITE_SERVER}api/auth/check-email`,
-      { email: email.trim().toLowerCase() }
-    );
-
-    // Backend returns success: false when email EXISTS
-    const emailExists = !response.data.success;
-
-    return emailExists;
-  } catch (error) {
-    console.error("Email check error:", error.response?.data || error);
-    return true; // treat as exists if error
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-   
   const handleImageUpload = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const form = new FormData();
-            form.append('profilePic', file);
-
-            try {
-              setLoading(true);
-              setLoadingText('Uploading image...');
-              const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/upload-image`, form, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-              });
-
-              setFormData(prev => ({
-                ...prev,
-                profilePicUrl: res.data.url
-              }));
-
-              setAlert({
-                show: true,
-                message: 'Profile picture uploaded successfully!',
-                type: 'success'
-              });
-            } catch (err) {
-              console.error(err);
-              setAlert({
-                show: true,
-                message: 'Failed to upload image.',
-                type: 'error'
-              });
-            } finally {
-              setLoading(false);
-            }
-          };
+    const file = e.target.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('profilePic', file);
+    try {
+      setLoading(true); setLoadingText('Uploading image…');
+      const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/upload-image`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData(prev => ({ ...prev, profilePicUrl: res.data.url }));
+      showAlert('Profile picture uploaded!', 'success');
+    } catch {
+      showAlert('Failed to upload image.', 'error');
+    } finally { setLoading(false); }
+  };
 
   const validateStep = async () => {
-    const {
-      name,
-      username,
-      email,
-      password,
-      confirmPassword,
-      dob,
-      gender,
-      occupation,
-      location,
-      churchName,
-      interests,
-      bio,
-      prayerRequest,
-      
-    } = formData;
-
-    // STEP 0: BASIC INFO
+    const { name, username, email, password, confirmPassword, dob, gender, occupation, interests, bio } = formData;
     if (step === 0) {
-     if (!/^[A-Za-z\s]+$/.test(name.trim()))
-        return 'Name must contain only letters and spaces';
-
-      if (!name.trim().includes(' ') || name.trim().split(/\s+/).length < 2)
-        return 'Please enter both first and last name';
-
-      if (name.trim().length < 3 || name.trim().length > 50)
-        return 'Name must be 3–50 characters long';
-            if (!email.trim()) return 'Email is required';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-        return 'Enter a valid email address';
-
+      if (!/^[A-Za-z\s]+$/.test(name.trim())) return 'Name must contain only letters and spaces';
+      if (!name.trim().includes(' ') || name.trim().split(/\s+/).length < 2) return 'Please enter both first and last name';
+      if (name.trim().length < 3 || name.trim().length > 50) return 'Name must be 3–50 characters long';
+      if (!email.trim()) return 'Email is required';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Enter a valid email address';
       const emailTaken = await checkIfEmailExists(email);
-      if (emailTaken) return "This email is already registered. Try another.";
-
-
-
-   
-    
+      if (emailTaken) return "This email is already registered.";
       if (!password) return 'Password is required';
-      if (password.length < 6)
-        return 'Password must be at least 6 characters';
-      if (password.length > 30)
-        return 'Password must be 6–30 characters long';
-      if (!/[a-zA-Z]/.test(password))
-        return 'Password must contain at least one letter';
-      if (!/[0-9]/.test(password))
-        return 'Password must contain at least one number';
-      if (password !== confirmPassword)
-        return 'Passwords do not match';
+      if (password.length < 6) return 'Password must be at least 6 characters';
+      if (!/[a-zA-Z]/.test(password)) return 'Password must contain at least one letter';
+      if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+      if (password !== confirmPassword) return 'Passwords do not match';
     }
-
-    // STEP 1: PROFILE DETAILS
-if (step === 1) {
-  if (!dob.trim()) return 'Date of Birth is required';
-
-  const birthDate = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-
-  if (isNaN(age)) return 'Date of Birth must be a valid date';
-  
-  // ✅ Enforce minimum age
-  const MIN_AGE = 13; // standard minimum age to use websites
-  if (age < MIN_AGE) return `You must be at least ${MIN_AGE} years old to register`;
-
-  if (!gender) return 'Please select a gender';
-  const validGenders = ['Male', 'Female', 'Prefer not to say'];
-  if (!validGenders.includes(gender)) return 'Invalid gender selected';
-
- if (occupation && occupation.trim()) { 
-  const occ = occupation.trim();
-
-  if (occ.length < 2 || occ.length > 50)
-    return 'Occupation must be 2–50 characters';
-  if (!/^[a-zA-Z][a-zA-Z\s.'-]*$/.test(occ))
-    return 'Occupation contains invalid characters';
-}
-
-
- if (location && location.trim()) {
-  const loc = location.trim();
-
-  if (loc.length < 3 || loc.length > 100)
-    return 'Location must be 3–100 characters long';
-
-  // Same idea: must start with a letter
-  if (!/^[a-zA-Z][a-zA-Z\s.'-]*$/.test(loc))
-    return 'Location contains invalid characters';
-}
-
-}
-
-
-    // STEP 2: SPIRITUAL INFO
-    // if (step === 2) {
-    //   if (churchName && churchName.trim()) {
-    //     if (!/^[A-Za-z\s]+$/.test(churchName.trim()) || churchName.trim().length < 2)
-    //       return 'Church name must be at least 2 letters and only contain letters and spaces';
-    //   }
-
-    //   if ( && .trim()) {
-    //     if (!/^[a-zA-Z\s]{2,30}$/.test(churchRole.trim()))
-    //       return 'Church role must be 2–30 characters and only letters/spaces';
-    //   }
-
-    //   if (prayerRequest && prayerRequest.trim()) {
-    //     if (prayerRequest.trim().length < 5)
-    //       return 'Prayer request must be at least 5 characters';
-    //     if (prayerRequest.trim().length > 300)
-    //       return 'Prayer request must be less than 300 characters';
-    //   }
-    // }
-
-    // STEP 3: INTERESTS
+    if (step === 1) {
+      if (!dob.trim()) return 'Date of Birth is required';
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+      if (isNaN(age)) return 'Date of Birth must be a valid date';
+      if (age < 13) return 'You must be at least 13 years old';
+      if (!gender) return 'Please select a gender';
+      if (occupation?.trim()) {
+        if (occupation.trim().length < 2 || occupation.trim().length > 50) return 'Occupation must be 2–50 characters';
+      }
+    }
     if (step === 2) {
-      if (interests && interests.trim()) {
-        if (interests.trim().length < 3)
-          return 'Please share more about your interests';
-        if (interests.trim().length > 300)
-          return 'Interests must be less than 300 characters';
-      }
+      if (interests?.trim() && interests.trim().length < 3) return 'Please share more about your interests';
     }
-
-    // STEP 4: BIO
     if (step === 3) {
-     if(!username || username.length < 3 || username.length > 15) return "Please enter a valid user name of more than 3 characters and less than 15 characters" 
-    const isTaken = await checkIfUserNameExist(formData.username);
-    if (isTaken) return "Username already exists. Please choose another.";
-    
-      if (bio && bio.trim()) {
-        if (bio.trim().length < 10)
-          return 'Bio must be at least 10 characters';
-        if (bio.trim().length > 500)
-          return 'Bio must be under 500 characters';
-      }
+      if (!username || username.length < 3 || username.length > 15) return "Username must be 3–15 characters";
+      const isTaken = await checkIfUserNameExist(formData.username);
+      if (isTaken) return "Username already taken. Please choose another.";
+      if (bio?.trim() && bio.trim().length < 10) return 'Bio must be at least 10 characters';
+      if (bio?.trim() && bio.trim().length > 500) return 'Bio must be under 500 characters';
     }
-
     return null;
   };
-
 
   const handleNext = async () => {
     const error = await validateStep();
     if (error) {
-      setAlert({ show: true, message: error, type: 'error' });
+      showAlert(error, 'error');
       return;
     }
-
     if (step < steps.length - 1) {
-      setDirection(1);
-      setStep(step + 1);
-    }
-    else {
-      setLoading(true);
-      setLoadingText("registering user...")
-
+      setDirection(1); setStep(step + 1);
+    } else {
+      setLoading(true); setLoadingText("Creating your account…");
       try {
-        const {latitude, longitude, city, country} = await location();
+        const { latitude, longitude, city, country } = await location();
         const response = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/register`, {
-          name: formData.name,
-          email: formData.email,
-          username: formData.username,   
-          password: formData.password,
-          dob: formData.dob,
-          gender: formData.gender,
-          occupation: formData.occupation,
-          location: formData.location,
-          churchName: formData.churchName,
-          interests: formData.interests,
-          bio: formData.bio,
-          prayerRequest: formData.prayerRequest,
-          profilePicUrl: formData.profilePicUrl,
-          currentCity: city,
-          country: country,
-          latitude,
-          longitude
+          ...formData, currentCity: city, country, latitude, longitude
         });
-
-
         setLoading(false);
-        setAlert({
-          show: true,
-          message: response.data.message || "Registration successful! Please check your email for the OTP.",
-          type: 'success',
-        });
+        showAlert(response.data.message || "Registration successful! Check your email for the OTP.", 'success');
         setUserId(response.data.userId);
         setShowOtpInput(true);
-        // Optional: reset form or redirect
-        console.log("✅ Registered:", response.data.user);
       } catch (err) {
         setLoading(false);
-
-        // Check if we got specific validation errors from the server
         const serverErrors = err.response?.data?.errors;
-
-        if (serverErrors && typeof serverErrors === 'object') {
-          const messages = Object.values(serverErrors).join('\n');
-
-          setAlert({
-            show: true,
-            message: messages || "Validation failed.",
-            type: 'error',
-          });
-
-          console.log("❌ Validation errors from server:", serverErrors);
-        } else {
-          setAlert({
-            show: true,
-            message: err.response?.data?.message || "Something went wrong",
-            type: 'error',
-          });
-
-          console.log("❌ General error from server:", err.response?.data || err.message);
-        }
+        showAlert(
+          serverErrors ? Object.values(serverErrors).join('\n') : err.response?.data?.message || "Something went wrong",
+          'error'
+        );
       }
     }
   };
 
-  return (
-    <div className="relative w-full  mx-auto mt-8">
-      <div
-        className="absolute inset-0 backdrop-blur-2xl rounded-3xl shadow-2xl"
-        style={{ backgroundColor: 'var(--form-bg)' }}
-      ></div>
+  const pwChecks = [
+    { isValid: formData.password.length >= 8, label: "Minimum 8 characters" },
+    { isValid: /[A-Z]/.test(formData.password), label: "At least 1 uppercase" },
+    { isValid: /[a-z]/.test(formData.password), label: "At least 1 lowercase" },
+    { isValid: /\d/.test(formData.password), label: "At least 1 number" },
+    { isValid: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), label: "At least 1 special character" },
+  ];
 
+  return (
+    <div className="sf-root">
       {loading && <Loading text={loadingText} />}
-      {alert.show && (
-        <CustomAlert
-          message={alert.message}
-          type={alert.type}
-          onClose={() => setAlert({ ...alert, show: false })}
-        />
-      )}
+
+      <div className="sf-spine">
+        {steps.map((s, i) => (
+          <React.Fragment key={i}>
+            <div className={`sf-spine-node ${i < step ? 'sf-spine-done' : i === step ? 'sf-spine-active' : 'sf-spine-pending'}`}>
+              {i < step ? <Check size={11} /> : <span>{i + 1}</span>}
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`sf-spine-bar ${i < step ? 'sf-spine-bar-done' : ''}`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="sf-step-label">{steps[step]}</div>
 
       <AnimatePresence mode="wait" custom={direction}>
         <motion.form
           key={step}
           custom={direction}
-          initial={{ x: direction > 0 ? 100 : -100, opacity: 0 }}
+          initial={{ x: direction > 0 ? 60 : -60, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: direction > 0 ? -100 : 100, opacity: 0 }}
-          transition={{ duration: 0.4 }}
+          exit={{ x: direction > 0 ? -60 : 60, opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           onSubmit={(e) => e.preventDefault()}
-          className="relative z-10 w-full p-2 sm:p-3 text-[var(--text-main)] space-y-2"
+          className="sf-form"
         >
-          <h2 className="text-2xl font-bold mt[-6] text-center" style={{ color: 'var(--color-text)' }}>
-            {steps[step]}
-          </h2>
-
-          {/* Step 1: Basic Info */}
           {step === 0 && (
-            <>
-              <input
-                type="text"
-                name="name"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-              <input
-                autoComplete="email"
-                type="email"
-                name="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-          
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  autoComplete="off"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-                />
-                <button
-  type="button"
-  onClick={() => setShowPassword((prev) => !prev)}
-  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-white/70 hover:text-white transition-colors"
-  aria-label={showPassword ? "Hide password" : "Show password"}
->
-  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-</button>
+            <div className="sf-fields">
+              <div className="sf-field-group">
+                <label className="sf-label">Full Name</label>
+                <input type="text" name="name" placeholder="e.g. Amara Johnson"
+                  value={formData.name} onChange={handleChange} className="sf-input" required />
               </div>
-             {/* Only show validation when the user has started typing */}
-{formData.password.length > 0 && (
-  <div className="password-validation" style={{ marginTop: '10px' }}>
-    <ValidationItem
-      isValid={formData.password.length >= 8}
-      label="Minimum 8 characters"
-    />
-    <ValidationItem
-      isValid={/[A-Z]/.test(formData.password)}
-      label="At least 1 uppercase letter"
-    />
-    <ValidationItem
-      isValid={/[a-z]/.test(formData.password)}
-      label="At least 1 lowercase letter"
-    />
-    <ValidationItem
-      isValid={/\d/.test(formData.password)}
-      label="At least 1 number"
-    />
-    <ValidationItem
-      isValid={/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)}
-      label="At least 1 special character"
-    />
-  </div>
-)}
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-            </>
+              <div className="sf-field-group">
+                <label className="sf-label">Email Address</label>
+                <input type="email" name="email" placeholder="you@example.com"
+                  value={formData.email} onChange={handleChange} className="sf-input" autoComplete="email" required />
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Password</label>
+                <div className="sf-pw-wrap">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password" placeholder="Create a strong password"
+                    value={formData.password} onChange={handleChange}
+                    className="sf-input sf-input-pw" autoComplete="off"
+                  />
+                  <button type="button" onClick={() => setShowPassword(p => !p)} className="sf-pw-toggle">
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+                {formData.password.length > 0 && (
+                  <div className="sf-pw-checks">
+                    {pwChecks.map((c, i) => <ValidationItem key={i} isValid={c.isValid} label={c.label} />)}
+                  </div>
+                )}
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Confirm Password</label>
+                <input type="password" name="confirmPassword" placeholder="Repeat your password"
+                  value={formData.confirmPassword} onChange={handleChange} className="sf-input" required />
+              </div>
+            </div>
           )}
 
-          {/* Step 2: Profile Details */}
           {step === 1 && (
-            <>
-{/* ---------- Google-style File Upload with Reset ---------- */}
-<div className="w-full mt-4">
-  <label className="block mb-2 text-white/80 font-medium">
-    Upload Profile Picture (optional)
-  </label>
-
-  {!formData.profilePicUrl ? (
-    <div
-      className="relative w-full cursor-pointer border-2 border-dashed border-white/50 rounded-xl
-                 p-4 flex flex-col items-center justify-center
-                 hover:border-blue-500 hover:bg-white/5 transition-colors duration-300"
-      onClick={() => document.getElementById('profilePicInput').click()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-10 w-10 text-blue-500 mb-2"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12v6m0-6l-3 3m3-3l3 3" />
-      </svg>
-      <span className="text-white/70 text-sm">Click to upload</span>
-      <span className="text-white/50 text-xs mt-1">PNG, JPG, GIF (max 5MB)</span>
-
-      <input
-        id="profilePicInput"
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-    </div>
-  ) : (
-    <div className="relative w-24 h-24 mx-auto mt-4">
-      <ProfileAvatar
-        user={{ profilePicUrl: formData.profilePicUrl }}
-        size={96}
-      />
-      <button
-        type="button"
-        onClick={() => setFormData(prev => ({ ...prev, profilePicUrl: '' }))}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600 transition"
-        title="Remove Image"
-      >
-        ×
-      </button>
-    </div>
-  )}
-</div>
-
-              <input
-                name="occupation"
-                placeholder="Occupation (optional)"
-                value={formData.occupation}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-<input
-  name="dob"
-  type="date"
-  value={formData.dob}
-  onChange={handleChange}
-  required
-  style={{
-    color: '#fff',            // text color visible on dark bg
-    backgroundColor: '#0c112b', // solid background to avoid transparency issues
-    padding: '0.75rem 1rem',
-    borderRadius: '1rem',
-    border: '1px solid #555',
-    boxShadow: 'inset 0 0 4px rgba(0,0,0,0.3)',
-    fontSize: '1rem',
-    width: '100%',
-    WebkitAppearance: 'menulist-button', // forces proper dropdown rendering on Android
-    appearance: 'auto',
-  }}
-/>
-
-
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-white text-black shadow-[var(--input-shadow)] placeholder-gray-400 focus:outline-none"
-              >
-                <option value="">Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
-              <input
-                name="location"
-                placeholder="Location (optional)"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-            </>
+            <div className="sf-fields">
+              <div className="sf-field-group">
+                <label className="sf-label">Profile Picture <span className="sf-optional">(optional)</span></label>
+                {!formData.profilePicUrl ? (
+                  <div className="sf-upload-zone" onClick={() => document.getElementById('profilePicInput').click()}>
+                    <div className="sf-upload-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <span className="sf-upload-label">Tap to upload</span>
+                    <span className="sf-upload-sub">PNG, JPG, GIF — max 5MB</span>
+                    <input id="profilePicInput" type="file" accept="image/*" onChange={handleImageUpload} className="sf-upload-input" />
+                  </div>
+                ) : (
+                  <div className="sf-avatar-preview">
+                    <ProfileAvatar user={{ profilePicUrl: formData.profilePicUrl }} size={80} />
+                    <button type="button" onClick={() => setFormData(p => ({ ...p, profilePicUrl: '' }))} className="sf-avatar-remove">×</button>
+                  </div>
+                )}
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Date of Birth</label>
+                <input name="dob" type="date" value={formData.dob}
+                  onChange={handleChange} required className="sf-input sf-input-date" />
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Gender</label>
+                <GenderSelect value={formData.gender} onChange={(val) => setFormData(p => ({ ...p, gender: val }))} />
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Occupation <span className="sf-optional">(optional)</span></label>
+                <input name="occupation" placeholder="e.g. Software Engineer"
+                  value={formData.occupation} onChange={handleChange} className="sf-input" />
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Location <span className="sf-optional">(optional)</span></label>
+                <LocationDropdown value={formData.location} onChange={(val) => setFormData(p => ({ ...p, location: val }))} />
+              </div>
+            </div>
           )}
-
-          {/* Step 3: Spiritual Info */}
-          {/* {step === 2 && (
-            <>
-              <input
-                name="churchName"
-                placeholder="Church Name (optional)"
-                value={formData.churchName}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-              <input
-                name="churchRole"
-                placeholder="Role in Church (optional)"
-                value={formData.churchRole}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-              <textarea
-                name="prayerRequest"
-                placeholder="Prayer Requests (optional)"
-                value={formData.prayerRequest}
-                onChange={handleChange}
-                rows={3}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-              />
-            </>
-          )} */}
-
 
           {step === 2 && (
-            <div className="w-full">
-              <label htmlFor="interests" className="block mb-2 text-white/80">
-                Select your interests (optional)
-              </label>
-              <select
-                name="interests"
-                id="interests"
-                value={formData.interests}
-                onChange={handleChange}
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] text-[var(--input-text)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none appearance-none"
-              >
-                <option value="" className="text-black">Choose one</option>
-                <option value="Music" className="text-black">Music</option>
-                <option value="Volunteering" className="text-black">Volunteering</option>
-                <option value="Bible Study" className="text-black">Bible Study</option>
-                <option value="Tech & Media" className="text-black">Tech & Media</option>
-                <option value="Sports" className="text-black">Sports</option>
-                <option value="Youth Programs" className="text-black">Youth Programs</option>
-                <option value="Prayer & Counseling" className="text-black">Prayer & Counseling</option>
-                <option value="I'm just exploring" className="text-black">I'm just exploring</option>
-              </select>
-                
+            <div className="sf-fields">
+              <div className="sf-field-group">
+                <label className="sf-label">Your Interests <span className="sf-optional">(optional)</span></label>
+                <InterestChips value={formData.interests} onChange={(val) => setFormData(p => ({ ...p, interests: val }))} />
+              </div>
             </div>
           )}
 
-          {step === 3 && (<>
-            <textarea
-              name="bio"
-              placeholder="Short bio or testimony (optional)"
-              value={formData.bio}
-              onChange={handleChange}
-              rows={4}
-              className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-            />
-            <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            className="w-full p-3 rounded-xl bg-[var(--input-bg)] shadow-[var(--input-shadow)] placeholder-white/70 focus:outline-none"
-          />
-          </>)}
-          {step === 3 && showOtpInput ? (
-            <div className="mt-6 space-y-3">
-              <input
-                type="text"
-                name="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter OTP"
-                className="w-full p-3 rounded-xl bg-[var(--input-bg)] placeholder-white/70 focus:outline-none"
-              />
-              <button
-                onClick={async () => {
-                  try {
-                    setLoading(true)
-                    setLoadingText("verifing OTP..")
-                    const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/verify-otp`, {
-                      userId,
-                      otp
-                    });
-                    if (res.data.success) {
-                      setAlert({
-                        show: true,
-                        message: res.data.message,
-                        type: 'success',
-                      });
-
-                      // Login user into context and localStorage
-                      login(res.data.user, res.data.token);
-
-                    } else {
-                      setAlert({
-                        show: true,
-                        message: res.data.message || 'OTP verification failed',
-                        type: 'error',
-                      });
-                    }
-
-                  } catch (err) {
-                    setAlert({
-                      show: true,
-                      message: err.response?.data?.message || 'OTP verification failed',
-                      type: 'error',
-                    });
-                  }
-                  finally {
-                    setLoading(false)
-                  }
-                }}
-                className="btn w-full rounded-xl"
-              >
-                Verify OTP
-              </button>
-              <button
-                type="button"
-                className="w-full text-sm text-[var(--text-main)] underline hover:text-white transition"
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    setLoadingText("Resending OTP...");
-
-                    const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/resend-otp`, {
-                      userId,
-                    });
-
-                    setAlert({
-                      show: true,
-                      message: res.data.message || "OTP resent successfully.",
-                      type: 'success',
-                    });
-                  } catch (err) {
-                    setAlert({
-                      show: true,
-                      message: err.response?.data?.message || "Failed to resend OTP.",
-                      type: 'error',
-                    });
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Didn’t receive OTP? Resend it
-              </button>
-
+          {step === 3 && !showOtpInput && (
+            <div className="sf-fields">
+              <div className="sf-field-group">
+                <label className="sf-label">Username</label>
+                <div className="sf-username-wrap">
+                  <span className="sf-username-prefix">@</span>
+                  <input type="text" name="username" placeholder="yourhandle"
+                    value={formData.username} onChange={handleChange}
+                    className="sf-input sf-input-username" required />
+                </div>
+                <p className="sf-field-hint">3–15 characters, no spaces</p>
+              </div>
+              <div className="sf-field-group">
+                <label className="sf-label">Bio <span className="sf-optional">(optional)</span></label>
+                <textarea name="bio" placeholder="Tell people a little about yourself…"
+                  value={formData.bio} onChange={handleChange} rows={4} className="sf-textarea" />
+                <p className="sf-char-count">{formData.bio.length}/500</p>
+              </div>
             </div>
-          ) :
+          )}
 
-            <div className="flex justify-between items-center gap-4 mt-4">
+          {step === 3 && showOtpInput && (
+            <div className="sf-otp-section">
+              <div className="sf-otp-icon">✉️</div>
+              <p className="sf-otp-title">Check your email</p>
+              <p className="sf-otp-sub">We sent a 6-digit code to <strong>{formData.email}</strong></p>
+              <div className="sf-otp-inputs">
+                <input type="text" name="otp" value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter OTP" className="sf-input sf-input-otp" maxLength={6} />
+              </div>
+              <button
+                type="button" className="sf-btn sf-btn-primary"
+                onClick={async () => {
+                  try {
+                    setLoading(true); setLoadingText("Verifying OTP…");
+                    const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/verify-otp`, { userId, otp });
+                    if (res.data.success) {
+                      showAlert(res.data.message, 'success');
+                      login(res.data.user, res.data.token);
+                    } else {
+                      showAlert(res.data.message || 'OTP verification failed', 'error');
+                    }
+                  } catch (err) {
+                    showAlert(err.response?.data?.message || 'OTP verification failed', 'error');
+                  } finally { setLoading(false); }
+                }}
+              >
+                Verify & Continue
+              </button>
+              <button
+                type="button" className="sf-resend-btn"
+                onClick={async () => {
+                  try {
+                    setLoading(true); setLoadingText("Resending OTP…");
+                    const res = await axios.post(`${import.meta.env.VITE_SERVER}api/auth/resend-otp`, { userId });
+                    showAlert(res.data.message || "OTP resent.", 'success');
+                  } catch (err) {
+                    showAlert(err.response?.data?.message || "Failed to resend OTP.", 'error');
+                  } finally { setLoading(false); }
+                }}
+              >
+                Didn't receive it? Resend OTP
+              </button>
+            </div>
+          )}
+
+          {!(step === 3 && showOtpInput) && (
+            <div className="sf-nav">
               {step > 0 && (
-                <button
-                  onClick={handleBack}
-                  type="button"
-                  className="w-1/2 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl transition"
-                >
-                  Back
-                </button>
+                <button type="button" onClick={handleBack} className="sf-btn sf-btn-back">← Back</button>
               )}
               <button
-                onClick={handleNext}
-                type="button"
-                className={`btn ${step > 0 ? 'w-1/2' : 'w-full'}`}
+                type="button" onClick={handleNext}
+                className={`sf-btn sf-btn-primary ${step === 0 ? 'sf-btn-full' : ''}`}
               >
-                {step < steps.length - 1 ? 'Next' : 'Finish'}
+                {step < steps.length - 1 ? 'Continue →' : 'Create Account'}
               </button>
             </div>
-          }
+          )}
 
-          <p className="text-sm text-center text-white/60">
-            Step {step + 1} of {steps.length}
-          </p>
-           <p className="text-center text-sm text-white/70">
+          <p className="sf-switch">
             Already have an account?{" "}
-            <button
-              type="button"
-              className="text-[var(--text-main)] font-medium underline"
-              onClick={onSwitchToLogin}
-            >
-              Log in here
-            </button>
-          </p> 
+            <button type="button" className="sf-switch-btn" onClick={onSwitchToLogin}>Log in</button>
+          </p>
         </motion.form>
       </AnimatePresence>
     </div>

@@ -25,7 +25,7 @@ const RecentMessages = () => {
 
 const { conversations, unreadCountsMap, clearUnreadForChat } = useMessageSeen();
   const { user } = useAuth();
-  const { socket } = useSocket();
+  const { socket, onlineUsers } = useSocket();
 
   // Helper function to get conversation ID from userId
   const getConversationId = (userId) => {
@@ -234,11 +234,16 @@ return (
                     className={`rm-row ${isFirstUnread ? "rm-row--unread" : ""}`}
                   >
                     {/* Avatar */}
-                    <div className="rm-avatar-wrap">
+                    <div className="rm-avatar-wrap" style={{ position: "relative" }}>
                       <ProfileAvatar user={usr} size={40} />
+                      {onlineUsers.has(usr._id) && (
+                        <span
+                          className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                          style={{ zIndex: 2 }}
+                        />
+                      )}
                     </div>
-
-                    {/* Content */}
+                                        {/* Content */}
                     <div className="rm-content">
 
                       {/* Top: username + time */}
