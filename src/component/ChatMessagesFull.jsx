@@ -38,13 +38,6 @@ const ChatMessagesFull = ({
   const { socket, connected, onlineUsers } = useSocket();
 
 
-const [observerReady, setObserverReady] = useState(false);
-
-useEffect(() => {
-  const timer = setTimeout(() => setObserverReady(true), 1000);
-  return () => clearTimeout(timer);
-}, []);
-
 const seenManager = useSeenManager({
   messages,
   setMessages,
@@ -54,7 +47,7 @@ const seenManager = useSeenManager({
   containerRef,
   scrollStopped,
   scrollStopDebounce: 1200,
-  enabled: observerReady, // ✅ NEW PROP — gate the observer
+  enabled: true,
 });
 
   // State for message options dropdown
@@ -174,7 +167,7 @@ const LONG_PRESS_DELAY = 500;
   return () => {
     container.removeEventListener("scroll", checkIfNearBottom);
   };
-}, [containerRef]);
+}, [containerRef, messages.length]);
 
   // Scroll to a specific message by ID and highlight it briefly
 const scrollToMessageAndHighlight = useCallback((messageId) => {
@@ -731,7 +724,7 @@ useEffect(() => {
     className="text-[var(--secondary)] drop-shadow-md" 
   />
 
-      {observerReady && seenManager.unseenBelowCount > 0 && (
+      {seenManager.unseenBelowCount > 0 && (
           <span
             className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold text-white animate-pulse"
             style={{ 

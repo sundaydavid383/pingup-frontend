@@ -1080,17 +1080,6 @@ useEffect(() => {
   initialScrollDoneRef.current = false;
 }, [userId]);
 
-  // //================disconnect user================
-  // useEffect(() => {
-  //   if (!socket || !user) return;
-
-  //   socket.emit("userOnline", user._id);
-
-  //   return () => {
-  //     socket.emit("userOffline", user._id);
-  //   };
-  // }, [socket, user]);
-
 
   // ========================= LAST SEEN & ONLINE STATUS =========================
   // Format last seen properly - fix "Active a few seconds ago" bug

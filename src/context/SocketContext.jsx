@@ -37,6 +37,8 @@ export const SocketProvider = ({ children }) => {
     s.on("connect", () => {
       console.log("🟢 Global socket connected:", s.id);
       setConnected(true);
+
+      s.emit("requestOnlineUsers");
       
       // Send activity heartbeat every 30 seconds to keep lastActiveAt fresh
       const activityInterval = setInterval(() => {
@@ -71,27 +73,22 @@ s.on("connect_error", (err) => {
       console.warn("⚠️ Socket connection error:", err.message);
     });
 
-  s.on("userOnline", (userId) => {
-    setOnlineUsers(prev => new Set([...prev, userId]));
+ s.on("userOnline", ({ userId }) => {
+  setOnlineUsers(prev => {
+    const next = new Set(prev);
+    next.add(userId);
+    return next;
   });
+});
 
-  s.on("userOffline", (userId) => {
-    setOnlineUsers((prev) => {
-      const s = new Set(prev);
-      s.delete(userId);
-      return s;
-    });
+s.on("userOffline", ({ userId }) => {
+  setOnlineUsers(prev => {
+    const next = new Set(prev);
+    next.delete(userId);
+    return next;
   });
+});
 
-
-
-//         s.on("userOffline", (userId) => {
-//       setOnlineUsers((prev) => {
-//         const s = new Set(prev);
-//         s.delete(userId);
-//         return s;
-//       });
-//     });
 
        
 

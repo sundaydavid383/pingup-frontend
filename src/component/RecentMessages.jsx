@@ -27,15 +27,6 @@ const { conversations, unreadCountsMap, clearUnreadForChat } = useMessageSeen();
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
 
-  // Helper function to get conversation ID from userId
-  const getConversationId = (userId) => {
-    const convo = conversations.find(
-      c => c.otherUser?._id?.toString() === userId?.toString()
-    );
-    return convo?._id;
-  };
-
-
   // Read-more state for recent messages
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const CHARACTER_THRESHOLD = 100;
@@ -225,12 +216,7 @@ return (
                   )}
 
                   <div
-                    onClick={() => {
-                      openPipModal(usr._id);
-                      fetchChatHistory(usr._id);
-                      handleUserClick(usr);
-                      if (convoId) clearUnreadForChat(convoId);
-                    }}
+                    onClick={() => handleUserClick(usr)}
                     className={`rm-row ${isFirstUnread ? "rm-row--unread" : ""}`}
                   >
                     {/* Avatar */}

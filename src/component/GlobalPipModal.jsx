@@ -17,7 +17,7 @@ import { useMessageSeen } from "../../MessageSeenContext";
 const GlobalPipModal = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { socket } = useSocket();
+    const { socket, onlineUsers } = useSocket();
 
     const {
         pipOpen, activeChatId, activeChatHistory, setActiveChatHistory,
@@ -388,8 +388,14 @@ return (
 >
             {/* HEADER */}
             <div className="modal-glass-header">
-                <div className="relative">
+                <div className="relative" >
                     <ProfileAvatar user={activeUser} size={42} />
+                     {activeUser?._id && onlineUsers.has(activeUser._id) && (
+                                    <span
+                                      className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                                      style={{ zIndex: 2 }}
+                                    />
+                                  )}
                 </div>
                 <p className="text-sm font-bold truncate">{activeUser?.username}</p>
 

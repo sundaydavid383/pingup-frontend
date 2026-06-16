@@ -106,13 +106,9 @@ export const MessageSeenProvider = ({ children }) => {
        // Don't increment for our own messages
        if (from_user_id?.toString() === user._id?.toString()) return;
 
-       // Get the conversation to find the other user ID
-       const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
-       const otherUserId = convo?.otherUser?._id?.toString();
-       
-       // Don't increment if we're currently viewing this chat (compare with other user)
-       if (otherUserId && activeChatIdRef.current?.toString() === otherUserId) return;
-
+       // Always increment optimistically. The authoritative count comes from
+       // "unreadCountUpdated", which only zeroes once the message has actually
+       // been seen in the viewport — opening the chat alone no longer suppresses this.
        updateConversationLastMessage(chatId, message);
        incrementUnread(chatId);
      };
@@ -120,17 +116,6 @@ export const MessageSeenProvider = ({ children }) => {
 
      const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
        setUnreadCountsMap((prev) => {
-         // Get the conversation to find the other user ID
-         const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
-         const otherUserId = convo?.otherUser?._id?.toString();
-         
-         // If active chat, always keep count at 0
-         if (otherUserId && activeChatIdRef.current?.toString() === otherUserId) {
-           const updated = { ...prev, [chatId]: 0 };
-           setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
-           return updated;
-         }
-         
          const updated = { ...prev, [chatId]: unreadCount };
          setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
          return updated;
@@ -143,42 +128,7 @@ export const MessageSeenProvider = ({ children }) => {
        socket.off("newMessageAlert", handleNewMessageAlert);
        socket.off("unreadCountUpdated", handleUnreadCountUpdated);
    };
-   }, [socket, user?._id, incrementUnread, updateConversationLastMessage, conversations]);
-
-//   // ─── Socket: listen for unread count updates from server ──────────────────
-// // Replace the unreadCountUpdated handler:
-// useEffect(() => {
-//   if (!socket) return;
-
-//   const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
-//     // ✅ Only trust server count if the chat is NOT the currently active one
-//     // For the active chat, we manage count locally (always 0)
-//     setUnreadCountsMap((prev) => {
-//       // If active chat, always keep at 0
-//       const convo = Object.values(prev).find((_, id) => id === chatId);
-//       const isActiveChat = activeChatIdRef.current !== null && 
-//         conversations.find(c => c._id?.toString() === chatId?.toString())
-//           ?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
-      
-//       if (isActiveChat) {
-//         const updated = { ...prev, [chatId]: 0 };
-//         setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
-//         return updated;
-//       }
-      
-//       // For non-active chats, trust server count only if it's higher
-//       // (prevents resetting a count we already incremented)
-//       const currentLocal = prev[chatId] || 0;
-//       const finalCount = Math.max(currentLocal, unreadCount);
-//       const updated = { ...prev, [chatId]: finalCount };
-//       setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
-//       return updated;
-//     });
-//   };
-
-//   socket.on("unreadCountUpdated", handleUnreadCountUpdated);
-//   return () => socket.off("unreadCountUpdated", handleUnreadCountUpdated);
-// }, [socket, conversations]); // add conversations to deps
+   }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
 
   // ─── When activeChatId changes, clear unread for that conversation ─────────
   useEffect(() => {
