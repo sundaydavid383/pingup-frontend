@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import AuthContainer from '../../pages/AuthContainer';
-import '../../styles/authModal.css';
+import '../../styles/authmodal.css';
 
 const AuthModal = ({ mode, onClose }) => {
   const handleBackdropClick = (e) => {
