@@ -8,6 +8,7 @@ import { useSocket } from "../context/SocketContext";
 import MessageOptionsDropdown from "./MessageOptionsDropdown";
 import useSeenManager from "../hooks/useSeenManager";
 import "./../styles/chatmessagesfull.css"
+import { useMessageSeen } from "../../MessageSeenContext";
 
 const ChatMessagesFull = ({
   messages,
@@ -50,6 +51,8 @@ const seenManager = useSeenManager({
   enabled: true,
 });
 
+const { setUnreadForChat } = useMessageSeen();
+
 // Id of the earliest message that was unread at the moment this chat was
 // opened — drives the "Unread Messages" separator. Pinned to the snapshot,
 // not the live lastSeenMessage, so it doesn't move mid-visit.
@@ -73,18 +76,16 @@ const firstUnreadMessageId = useMemo(() => {
     message: null,
     position: { x: 0, y: 0 },
   });
+useEffect(() => {
+  if (!chatId) return;
+  setUnreadForChat(chatId, seenManager.unseenBelowCount);
+}, [chatId, seenManager.unseenBelowCount, setUnreadForChat]);
 
   // State for read-more functionality
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showUnreadSeparator, setShowUnreadSeparator] = useState(true);
-  useEffect(() => {
-    if (isNearBottom) {
-      setTimeout(() => {
-        setShowUnreadSeparator(false);
-      }, 2000);
-    }
-  }, [isNearBottom]);
+  const initialScrollDoneRef = useRef(false);
   // WhatsApp-style character threshold (around 100 chars like WhatsApp)
   const CHARACTER_THRESHOLD = 100;
 
@@ -196,15 +197,26 @@ container.addEventListener("scroll", checkIfNearBottom);
 // (if one exists) gets shown again for the new conversation.
 useEffect(() => {
   setShowUnreadSeparator(true);
+  initialScrollDoneRef.current = false;
 }, [chatId]);
 
-// Auto-hide the separator ~2s after the user has settled at the bottom —
-// mirrors WhatsApp: once you've caught up, the marker doesn't linger.
+// Only start the hide-timer after the initial scroll has landed.
+// This prevents the separator from vanishing before the user even sees it.
+useEffect(() => {
+  if (!seenManager.hasInitialized) return;
+  // Give the scroll-to-last-seen animation time to complete (~800ms)
+  const readyTimer = setTimeout(() => {
+    initialScrollDoneRef.current = true;
+  }, 800);
+  return () => clearTimeout(readyTimer);
+}, [seenManager.hasInitialized, chatId]);
+
 useEffect(() => {
   if (!isNearBottom) return;
+  if (!initialScrollDoneRef.current) return; // not ready yet — ignore
   const timer = setTimeout(() => {
     setShowUnreadSeparator(false);
-  }, 2000);
+  }, 4000);
   return () => clearTimeout(timer);
 }, [isNearBottom]);
 

@@ -85,6 +85,17 @@ export const MessageSeenProvider = ({ children }) => {
     });
   }, []);
 
+  // ─── Set unread to an exact count (driven by seenManager) ─────────────────
+  const setUnreadForChat = useCallback((chatId, count) => {
+    setUnreadCountsMap((prev) => {
+      const clamped = Math.max(0, count);
+      if (prev[chatId] === clamped) return prev; // no-op if unchanged
+      const updated = { ...prev, [chatId]: clamped };
+      setTotalUnreadCount(Object.values(updated).reduce((a, b) => a + b, 0));
+      return updated;
+    });
+  }, []);
+
   // ─── Update last message preview for a conversation ───────────────────────
   const updateConversationLastMessage = useCallback((chatId, message) => {
     setConversations((prev) =>
@@ -121,10 +132,17 @@ export const MessageSeenProvider = ({ children }) => {
      };
 
      const handleNewMessageAlert = (data) => {
-       const { from_user_id, chatId, message } = data;
-       if (from_user_id?.toString() === user._id?.toString()) return;
-       registerIncoming(chatId, message);
-     };
+      const { from_user_id, chatId, message } = data;
+      if (from_user_id?.toString() === user._id?.toString()) return;
+      // If the user is currently in this chat, skip — seenManager owns the count
+      const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
+      const isActiveChat = convo?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
+      if (isActiveChat) {
+        updateConversationLastMessage(chatId, message);
+        return; // don't increment; seenManager will report the real count
+      }
+      registerIncoming(chatId, message);
+    };
      socket.on("newMessageAlert", handleNewMessageAlert);
 
      // ✅ FIX: "newMessageAlert" is withheld by the server when the socket has
@@ -132,10 +150,16 @@ export const MessageSeenProvider = ({ children }) => {
      // whole room regardless of membership, so it's the only reliable signal
      // for "chat open but message not yet seen."
      const handleReceiveMessage = (msg) => {
-       if (!msg?._id) return;
-       if (msg.from_user_id?.toString() === user._id?.toString()) return;
-       registerIncoming(msg.chatId, msg);
-     };
+      if (!msg?._id) return;
+      if (msg.from_user_id?.toString() === user._id?.toString()) return;
+      const convo = conversations.find(c => c._id?.toString() === msg.chatId?.toString());
+      const isActiveChat = convo?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
+      if (isActiveChat) {
+        updateConversationLastMessage(msg.chatId, msg);
+        return; // seenManager owns this count
+      }
+      registerIncoming(msg.chatId, msg);
+    };
      socket.on("receiveMessage", handleReceiveMessage);
 
      const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
@@ -154,15 +178,7 @@ export const MessageSeenProvider = ({ children }) => {
        socket.off("unreadCountUpdated", handleUnreadCountUpdated);
    };
    }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
-   
-  // ─── When activeChatId changes, clear unread for that conversation ─────────
-  useEffect(() => {
-    if (!activeChatId) return;
-    const convo = getConvoByOtherUser(activeChatId);
-    if (convo?._id) {
-      clearUnreadForChat(convo._id);
-    }
-  }, [activeChatId, getConvoByOtherUser, clearUnreadForChat]);
+
 
   return (
     <MessageSeenContext.Provider
@@ -178,6 +194,7 @@ export const MessageSeenProvider = ({ children }) => {
         setActiveChatId,
         incrementUnread,
         clearUnreadForChat,
+        setUnreadForChat,
         updateConversationLastMessage,
         getConvoByChatId,
         getConvoByOtherUser,

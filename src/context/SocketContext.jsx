@@ -271,25 +271,7 @@ useEffect(() => {
     return () => socket.off("message-delivered", handleMessageDelivered);
   }, [socket, user]);
 
-  // // 👁️ Listen for message-seen status updates
-  // useEffect(() => {
-  //   if (!socket || !user) return;
 
-  //   const handleMessageSeen = ({ messageId, chatId, seenAt, seenBy }) => {
-  //     console.log("👁️ Message seen:", messageId, "by:", seenBy);
-      
-  //     // Dispatch event for ChatBox to update checkmarks to blue
-  //     window.dispatchEvent(
-  //       new CustomEvent("message-seen", {
-  //         detail: { messageId, chatId, seenAt, seenBy },
-  //       })
-  //     );
-  //   };
-
-  //   socket.on("message-seen", handleMessageSeen);
-
-  //   return () => socket.off("message-seen", handleMessageSeen);
-  // }, [socket, user]);
 
   // 🟢 Join personal room for notifications
 useEffect(() => {

@@ -86,7 +86,6 @@ const Messages = () => {
     const convo = conversations.find(
       (c) => c.otherUser?._id?.toString() === userId?.toString()
     );
-    if (convo?._id) clearUnreadForChat(convo._id);
     if (window.innerWidth < 768) navigate(`/chatbox/${userId}`);
   };
 

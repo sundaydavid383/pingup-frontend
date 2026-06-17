@@ -114,9 +114,7 @@ const MessageOptionsDropdown = ({
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", margin: 0 }}>
               Message options
             </p>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", margin: "3px 0 0" }}>
-              What would you like to do?
-            </p>
+            
           </div>
         </div>
 

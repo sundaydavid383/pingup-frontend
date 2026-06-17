@@ -43,7 +43,7 @@ const ChatBox = ({ userId: propUserId }) => {
     clearUnreadForChat, 
     getConvoByOtherUser, 
     setActiveChatId, 
-    refetchConversations   
+    refetchConversations  
   } = useMessageSeen();
 
 
@@ -406,7 +406,6 @@ useEffect(() => {
         const cachedChatId = localStorage.getItem(`chatId_${userId}`);
         if (cachedChatId) {
           setChatId(cachedChatId);
-          clearUnreadForChat(cachedChatId);
         }
 
         const [receiverRes, chatRes] = await Promise.all([
@@ -422,7 +421,6 @@ if (chatRes.data?.room) {
   const roomId = chatRes.data.room._id;
   setChatId(roomId);
   localStorage.setItem(`chatId_${userId}`, roomId);
-  clearUnreadForChat(roomId);
   refetchConversations(); // ✅ re-sync sidebar counts from backend
 }
 
@@ -1079,6 +1077,7 @@ const startRecording = async () => {
 useEffect(() => {
   initialScrollDoneRef.current = false;
 }, [userId]);
+
 
 
   // ========================= LAST SEEN & ONLINE STATUS =========================
@@ -1744,149 +1743,291 @@ useEffect(() => {
     </div>
   </div>
 ) 
-              :
-           loading ? (
-  <div
-    className="flex flex-col w-full h-full select-none overflow-hidden"
-    style={{ background: 'var(--color-6, #e6ebfa)' }}
-  >
-    {/* Messages skeleton area */}
-    <div className="flex-1 overflow-hidden p-4">
-      <div className="space-y-4 max-w-4xl mx-auto px-2">
+//               :
+//            loading ? (
+//   <div
+//     className="flex flex-col w-full h-full select-none overflow-hidden"
+//     style={{ background: 'var(--color-6, #e6ebfa)' }}
+//   >
+//     {/* Messages skeleton area */}
+//     <div className="flex-1 overflow-hidden p-4">
+//       <div className="space-y-4 max-w-4xl mx-auto px-2">
 
-        {/* Date separator skeleton */}
-        <div className="flex justify-center my-3">
-          <div
-            className="chat-skeleton-pulse"
-            style={{ width: 80, height: 22, borderRadius: 12 }}
-          />
-        </div>
+//         {/* Date separator skeleton */}
+//         <div className="flex justify-center my-3">
+//           <div
+//             className="chat-skeleton-pulse"
+//             style={{ width: 80, height: 22, borderRadius: 12 }}
+//           />
+//         </div>
 
-        {[
-          { side: 'end',   widths: [180, 120] },
-          { side: 'start', widths: [240, 160] },
-          { side: 'start', widths: [140] },
-          { side: 'end',   widths: [200] },
-          { side: 'end',   widths: [260, 100] },
-          { side: 'start', widths: [180, 220, 120] },
-          { side: 'end',   widths: [150] },
-          { side: 'start', widths: [200, 160] },
-          { side: 'end',   widths: [120, 80] },
-          { side: 'start', widths: [240] },
-        ].map((row, idx) => (
-          <div
-            key={idx}
-            className={`flex flex-col gap-1 items-${row.side} mb-4`}
-          >
-            {row.widths.map((w, i) => (
-              <div
-                key={i}
-                className="chat-skeleton-bubble"
-                style={{
-                  width: w,
-                  height: i === 0 && row.widths.length > 1 ? 36 : 28,
-                  borderRadius: row.side === 'end'
-                    ? '18px 18px 4px 18px'
-                    : '18px 18px 18px 4px',
-                  background: row.side === 'end'
-                    ? 'rgba(48, 85, 209, 0.15)'   /* matches var(--primary) tint */
-                    : 'rgba(255, 255, 255, 0.85)', /* matches var(--white) bubbles */
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                }}
-              />
-            ))}
-            {/* Timestamp skeleton */}
-            <div
-              className="chat-skeleton-pulse"
-              style={{
-                width: 42,
-                height: 10,
-                borderRadius: 6,
-                marginTop: 2,
-                alignSelf: row.side === 'end' ? 'flex-end' : 'flex-start',
-              }}
-            />
-          </div>
-        ))}
+//         {[
+//           { side: 'end',   widths: [180, 120] },
+//           { side: 'start', widths: [240, 160] },
+//           { side: 'start', widths: [140] },
+//           { side: 'end',   widths: [200] },
+//           { side: 'end',   widths: [260, 100] },
+//           { side: 'start', widths: [180, 220, 120] },
+//           { side: 'end',   widths: [150] },
+//           { side: 'start', widths: [200, 160] },
+//           { side: 'end',   widths: [120, 80] },
+//           { side: 'start', widths: [240] },
+//         ].map((row, idx) => (
+//           <div
+//             key={idx}
+//             className={`flex flex-col gap-1 items-${row.side} mb-4`}
+//           >
+//             {row.widths.map((w, i) => (
+//               <div
+//                 key={i}
+//                 className="chat-skeleton-bubble"
+//                 style={{
+//                   width: w,
+//                   height: i === 0 && row.widths.length > 1 ? 36 : 28,
+//                   borderRadius: row.side === 'end'
+//                     ? '18px 18px 4px 18px'
+//                     : '18px 18px 18px 4px',
+//                   background: row.side === 'end'
+//                     ? 'rgba(48, 85, 209, 0.15)'   /* matches var(--primary) tint */
+//                     : 'rgba(255, 255, 255, 0.85)', /* matches var(--white) bubbles */
+//                   boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+//                 }}
+//               />
+//             ))}
+//             {/* Timestamp skeleton */}
+//             <div
+//               className="chat-skeleton-pulse"
+//               style={{
+//                 width: 42,
+//                 height: 10,
+//                 borderRadius: 6,
+//                 marginTop: 2,
+//                 alignSelf: row.side === 'end' ? 'flex-end' : 'flex-start',
+//               }}
+//             />
+//           </div>
+//         ))}
 
-        {/* A fake image bubble */}
-        <div className="flex justify-end mb-4">
-          <div
-            className="chat-skeleton-bubble"
-            style={{
-              width: 180,
-              height: 140,
-              borderRadius: '14px 14px 4px 14px',
-              background: 'rgba(48, 85, 209, 0.12)',
-            }}
-          />
-        </div>
+//         {/* A fake image bubble */}
+//         <div className="flex justify-end mb-4">
+//           <div
+//             className="chat-skeleton-bubble"
+//             style={{
+//               width: 180,
+//               height: 140,
+//               borderRadius: '14px 14px 4px 14px',
+//               background: 'rgba(48, 85, 209, 0.12)',
+//             }}
+//           />
+//         </div>
 
-        {/* A fake audio bubble */}
-        <div className="flex justify-start mb-4">
-          <div
-            className="chat-skeleton-bubble"
-            style={{
-              width: 200,
-              height: 44,
-              borderRadius: '22px 22px 22px 4px',
-              background: 'rgba(255,255,255,0.85)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '0 14px',
-            }}
-          >
-            <div className="chat-skeleton-pulse" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
-            <div className="chat-skeleton-pulse" style={{ flex: 1, height: 6, borderRadius: 4 }} />
-            <div className="chat-skeleton-pulse" style={{ width: 28, height: 10, borderRadius: 4 }} />
-          </div>
-        </div>
+//         {/* A fake audio bubble */}
+//         <div className="flex justify-start mb-4">
+//           <div
+//             className="chat-skeleton-bubble"
+//             style={{
+//               width: 200,
+//               height: 44,
+//               borderRadius: '22px 22px 22px 4px',
+//               background: 'rgba(255,255,255,0.85)',
+//               display: 'flex',
+//               alignItems: 'center',
+//               gap: 10,
+//               padding: '0 14px',
+//             }}
+//           >
+//             <div className="chat-skeleton-pulse" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
+//             <div className="chat-skeleton-pulse" style={{ flex: 1, height: 6, borderRadius: 4 }} />
+//             <div className="chat-skeleton-pulse" style={{ width: 28, height: 10, borderRadius: 4 }} />
+//           </div>
+//         </div>
 
-      </div>
-    </div>
+//       </div>
+//     </div>
 
-    {/* Input bar skeleton — matches your actual input bar */}
-    <div
-      style={{
-        padding: '12px 16px',
-        borderTop: '1px solid rgba(0,0,0,0.06)',
-        background: 'var(--white, #ffffff)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}
-    >
-      <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
-      <div className="chat-skeleton-pulse" style={{ flex: 1, height: 42, borderRadius: 22 }} />
-      <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
-      <div className="chat-skeleton-pulse" style={{ width: 42, height: 42, borderRadius: '50%' }} />
-    </div>
+//     {/* Input bar skeleton — matches your actual input bar */}
+//     <div
+//       style={{
+//         padding: '12px 16px',
+//         borderTop: '1px solid rgba(0,0,0,0.06)',
+//         background: 'var(--white, #ffffff)',
+//         display: 'flex',
+//         alignItems: 'center',
+//         gap: 10,
+//       }}
+//     >
+//       <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+//       <div className="chat-skeleton-pulse" style={{ flex: 1, height: 42, borderRadius: 22 }} />
+//       <div className="chat-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: '50%' }} />
+//       <div className="chat-skeleton-pulse" style={{ width: 42, height: 42, borderRadius: '50%' }} />
+//     </div>
 
-    <style>{`
-      .chat-skeleton-pulse {
-        background: linear-gradient(
-          90deg,
-          rgba(180, 195, 230, 0.4) 25%,
-          rgba(210, 220, 245, 0.7) 50%,
-          rgba(180, 195, 230, 0.4) 75%
-        );
-        background-size: 300% 100%;
-        animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
-        flex-shrink: 0;
-      }
-      .chat-skeleton-bubble {
-        background-size: 300% 100%;
-        animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
-        flex-shrink: 0;
-      }
-      @keyframes chat-skeleton-sweep {
-        0%   { background-position: 100% 0; }
-        100% { background-position: -100% 0; }
-      }
-    `}</style>
-  </div>
-)
+//     <style>{`
+//       .chat-skeleton-pulse {
+//         background: linear-gradient(
+//           90deg,
+//           rgba(180, 195, 230, 0.4) 25%,
+//           rgba(210, 220, 245, 0.7) 50%,
+//           rgba(180, 195, 230, 0.4) 75%
+//         );
+//         background-size: 300% 100%;
+//         animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
+//         flex-shrink: 0;
+//       }
+//       .chat-skeleton-bubble {
+//         background-size: 300% 100%;
+//         animation: chat-skeleton-sweep 1.6s ease-in-out infinite;
+//         flex-shrink: 0;
+//       }
+//       @keyframes chat-skeleton-sweep {
+//         0%   { background-position: 100% 0; }
+//         100% { background-position: -100% 0; }
+//       }
+//     `}</style>
+//   {loading ? (
+//   <div
+//     className="flex flex-col w-full h-full select-none overflow-hidden"
+//     style={{ background: 'var(--color-6, #e6ebfa)' }}
+//   >
+//     {/* Messages area */}
+//     <div className="flex-1 overflow-hidden p-4">
+//       <div className="space-y-6 max-w-4xl mx-auto px-2">
+
+//         {/* Date separator */}
+//         <div className="flex justify-center my-4">
+//           <div className="skeleton-date" />
+//         </div>
+
+//         {[
+//           { side: 'end',   widths: [180, 120], hasTail: true },
+//           { side: 'start', widths: [240, 160] },
+//           { side: 'start', widths: [140] },
+//           { side: 'end',   widths: [200] },
+//           { side: 'end',   widths: [260, 100], hasTail: true },
+//           { side: 'start', widths: [180, 220, 120] },
+//           { side: 'end',   widths: [150] },
+//           { side: 'start', widths: [200, 160] },
+//           { side: 'end',   widths: [120, 80] },
+//           { side: 'start', widths: [240] },
+//         ].map((row, idx) => (
+//           <div
+//             key={idx}
+//             className={`flex ${row.side === 'start' ? 'justify-start' : 'justify-end'} group`}
+//           >
+//             <div className={`flex flex-col gap-1 items-${row.side === 'start' ? 'start' : 'end'} max-w-[75%]`}>
+//               {/* Avatar for received messages */}
+//               {row.side === 'start' && (
+//                 <div className="skeleton-avatar mb-1" />
+//               )}
+
+//               {row.widths.map((w, i) => (
+//                 <div
+//                   key={i}
+//                   className={`skeleton-bubble ${row.side}`}
+//                   style={{
+//                     width: w,
+//                     height: i === 0 && row.widths.length > 1 ? 38 : 30,
+//                     borderRadius: row.side === 'end'
+//                       ? '18px 18px 4px 18px'
+//                       : '18px 18px 18px 4px',
+//                   }}
+//                 />
+//               ))}
+
+//               {/* Timestamp */}
+//               <div className="skeleton-timestamp" />
+//             </div>
+//           </div>
+//         ))}
+
+//         {/* Image bubble */}
+//         <div className="flex justify-end">
+//           <div className="skeleton-bubble end" style={{ width: 190, height: 160, borderRadius: '14px 14px 4px 14px' }} />
+//         </div>
+
+//         {/* Audio bubble */}
+//         <div className="flex justify-start">
+//           <div className="skeleton-bubble start flex items-center gap-3" style={{ width: 220, height: 52, borderRadius: '22px 22px 22px 4px', padding: '0 16px' }}>
+//             <div className="skeleton-avatar" style={{ width: 32, height: 32 }} />
+//             <div className="flex-1 space-y-1.5">
+//               <div className="skeleton-pulse h-1.5 rounded" style={{ width: '85%' }} />
+//               <div className="skeleton-pulse h-1.5 rounded" style={{ width: '60%' }} />
+//             </div>
+//             <div className="skeleton-pulse h-3 w-10 rounded" />
+//           </div>
+//         </div>
+
+//       </div>
+//     </div>
+
+//     {/* Input bar */}
+//     <div className="px-4 py-3 border-t border-[var(--border-color,#e5e7eb)] bg-[var(--white,#ffffff)] flex items-center gap-3">
+//       <div className="skeleton-avatar" style={{ width: 40, height: 40 }} />
+//       <div className="skeleton-pulse flex-1 h-11 rounded-full" />
+//       <div className="skeleton-avatar" style={{ width: 40, height: 40 }} />
+//       <div className="skeleton-avatar" style={{ width: 40, height: 40 }} />
+//     </div>
+
+//     <style jsx>{`
+//       .skeleton-pulse,
+//       .skeleton-bubble,
+//       .skeleton-date,
+//       .skeleton-avatar,
+//       .skeleton-timestamp {
+//         background: linear-gradient(
+//           90deg,
+//           var(--color-6, #e6ebfa) 25%,
+//           var(--color-4, #d1d9f0) 50%,
+//           var(--color-6, #e6ebfa) 75%
+//         );
+//         background-size: 300% 100%;
+//         animation: skeleton-shimmer 1.8s ease-in-out infinite;
+//         border-radius: 9999px;
+//       }
+
+//       .skeleton-bubble {
+//         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+//         animation: skeleton-shimmer 1.8s ease-in-out infinite;
+//       }
+
+//       .skeleton-bubble.start {
+//         background: var(--white, #ffffff);
+//       }
+
+//       .skeleton-bubble.end {
+//         background: var(--primary, #3055d1);
+//         opacity: 0.15;
+//       }
+
+//       .skeleton-avatar {
+//         width: 28px;
+//         height: 28px;
+//         border-radius: 50%;
+//         flex-shrink: 0;
+//       }
+
+//       .skeleton-date {
+//         width: 92px;
+//         height: 22px;
+//         border-radius: 12px;
+//       }
+
+//       .skeleton-timestamp {
+//         width: 48px;
+//         height: 11px;
+//         border-radius: 6px;
+//         margin-top: 4px;
+//         opacity: 0.6;
+//       }
+
+//       @keyframes skeleton-shimmer {
+//         0%   { background-position: 200% 0; }
+//         100% { background-position: -200% 0; }
+//       }
+//     `}</style>
+//   </div>
+// ) : null}</div>
+// )
           : receiver && sortedMessages.length === 0 ?
             (
               <>
@@ -1965,7 +2106,7 @@ useEffect(() => {
 
 
       {/* Input — aligned to messages column (max-w-4xl) and fixed to bottom */}
-      {!showMediaViewer && !loading  ?  
+      {!showMediaViewer  ?  
       <ChatboxInput sidebarOpen={sidebarOpen} sidebarWidth={225}>
         {replyTo && (
           <div className="reply-bar">
