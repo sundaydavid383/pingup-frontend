@@ -96,23 +96,47 @@ export const MessageSeenProvider = ({ children }) => {
     );
   }, []);
 
+// Dedup guard: a message must only ever increment unread once, whether it
+  // arrives via "newMessageAlert" (socket NOT in the chat room) or "receiveMessage"
+  // (socket IS in the room — e.g. chat open but not scrolled to the new message).
+  const processedIncomingIdsRef = useRef(new Set());
+
 // ─── Socket: listen for new incoming messages ─────────────────────────────
    useEffect(() => {
      if (!socket || !user?._id) return;
 
-     const handleNewMessageAlert = (data) => {
-       const { from_user_id, chatId, message } = data;
-
-       // Don't increment for our own messages
-       if (from_user_id?.toString() === user._id?.toString()) return;
-
-       // Always increment optimistically. The authoritative count comes from
-       // "unreadCountUpdated", which only zeroes once the message has actually
-       // been seen in the viewport — opening the chat alone no longer suppresses this.
+     const registerIncoming = (chatId, message) => {
+       const msgId = message?._id?.toString();
+       if (msgId) {
+         if (processedIncomingIdsRef.current.has(msgId)) return;
+         processedIncomingIdsRef.current.add(msgId);
+         if (processedIncomingIdsRef.current.size > 300) {
+           processedIncomingIdsRef.current = new Set(
+             [...processedIncomingIdsRef.current].slice(-150)
+           );
+         }
+       }
        updateConversationLastMessage(chatId, message);
        incrementUnread(chatId);
      };
+
+     const handleNewMessageAlert = (data) => {
+       const { from_user_id, chatId, message } = data;
+       if (from_user_id?.toString() === user._id?.toString()) return;
+       registerIncoming(chatId, message);
+     };
      socket.on("newMessageAlert", handleNewMessageAlert);
+
+     // ✅ FIX: "newMessageAlert" is withheld by the server when the socket has
+     // joined the chat room (chat open). "receiveMessage" is broadcast to the
+     // whole room regardless of membership, so it's the only reliable signal
+     // for "chat open but message not yet seen."
+     const handleReceiveMessage = (msg) => {
+       if (!msg?._id) return;
+       if (msg.from_user_id?.toString() === user._id?.toString()) return;
+       registerIncoming(msg.chatId, msg);
+     };
+     socket.on("receiveMessage", handleReceiveMessage);
 
      const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {
        setUnreadCountsMap((prev) => {
@@ -126,10 +150,11 @@ export const MessageSeenProvider = ({ children }) => {
 
      return () => {
        socket.off("newMessageAlert", handleNewMessageAlert);
+       socket.off("receiveMessage", handleReceiveMessage);
        socket.off("unreadCountUpdated", handleUnreadCountUpdated);
    };
    }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
-
+   
   // ─── When activeChatId changes, clear unread for that conversation ─────────
   useEffect(() => {
     if (!activeChatId) return;

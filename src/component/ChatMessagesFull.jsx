@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import AudioMessage from "./shared/AudioMessage";
 import { Check, CheckCheck, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { FaArrowDown } from "react-icons/fa";
@@ -50,6 +50,23 @@ const seenManager = useSeenManager({
   enabled: true,
 });
 
+// Id of the earliest message that was unread at the moment this chat was
+// opened — drives the "Unread Messages" separator. Pinned to the snapshot,
+// not the live lastSeenMessage, so it doesn't move mid-visit.
+const firstUnreadMessageId = useMemo(() => {
+  if (!seenManager.hasInitialized) return null;
+  const boundary = seenManager.chatOpenLastSeenMessage;
+  const candidates = messages.filter((m) =>
+    m.from_user_id !== user._id &&
+    !String(m._id).startsWith('temp_') &&
+    (!boundary || new Date(m.createdAt) > new Date(boundary.createdAt))
+  );
+  if (candidates.length === 0) return null;
+  return candidates.reduce((earliest, current) =>
+    new Date(current.createdAt) < new Date(earliest.createdAt) ? current : earliest
+  )._id;
+}, [messages, seenManager.hasInitialized, seenManager.chatOpenLastSeenMessage, user._id]);
+
   // State for message options dropdown
   const [dropdownState, setDropdownState] = useState({
     isOpen: false,
@@ -59,9 +76,15 @@ const seenManager = useSeenManager({
 
   // State for read-more functionality
   const [expandedMessages, setExpandedMessages] = useState(new Set());
-  
   const [isNearBottom, setIsNearBottom] = useState(true);
-
+  const [showUnreadSeparator, setShowUnreadSeparator] = useState(true);
+  useEffect(() => {
+    if (isNearBottom) {
+      setTimeout(() => {
+        setShowUnreadSeparator(false);
+      }, 2000);
+    }
+  }, [isNearBottom]);
   // WhatsApp-style character threshold (around 100 chars like WhatsApp)
   const CHARACTER_THRESHOLD = 100;
 
@@ -162,12 +185,28 @@ const LONG_PRESS_DELAY = 500;
   // Run initially
   checkIfNearBottom();
 
-  container.addEventListener("scroll", checkIfNearBottom);
+container.addEventListener("scroll", checkIfNearBottom);
 
   return () => {
     container.removeEventListener("scroll", checkIfNearBottom);
   };
 }, [containerRef, messages.length]);
+
+// Reset visibility whenever a new chat is opened, so a fresh unread boundary
+// (if one exists) gets shown again for the new conversation.
+useEffect(() => {
+  setShowUnreadSeparator(true);
+}, [chatId]);
+
+// Auto-hide the separator ~2s after the user has settled at the bottom —
+// mirrors WhatsApp: once you've caught up, the marker doesn't linger.
+useEffect(() => {
+  if (!isNearBottom) return;
+  const timer = setTimeout(() => {
+    setShowUnreadSeparator(false);
+  }, 2000);
+  return () => clearTimeout(timer);
+}, [isNearBottom]);
 
   // Scroll to a specific message by ID and highlight it briefly
 const scrollToMessageAndHighlight = useCallback((messageId) => {
@@ -438,6 +477,7 @@ useEffect(() => {
     swipeMsg.current = null;
   }, []);
 
+
   return (
    <div className="relative flex flex-col w-full">
   <div className="space-y-2 max-w-4xl mx-auto w-full px-2 pt-4 pb-[90px]">
@@ -465,10 +505,20 @@ useEffect(() => {
             {/* Messages for this date */}
             {groupedMessages[date].map((msg) => {
               const sentByUser = msg.from_user_id === user._id;
+              const isFirstUnreadMsg = firstUnreadMessageId && msg._id === firstUnreadMessageId;
 
               return (
+               <React.Fragment key={msg._id}>
+               {isFirstUnreadMsg && showUnreadSeparator && (
+                 <div className="flex items-center justify-center my-4 px-2">
+                   <div className="flex-1 h-px bg-red-200" />
+                   <span className="px-3 text-[11px] font-semibold text-red-500 uppercase tracking-wide whitespace-nowrap">
+                     Unread Messages
+                   </span>
+                   <div className="flex-1 h-px bg-red-200" />
+                 </div>
+               )}
                <div
-  key={msg._id}
   id={`msg_${msg._id}`}
   data-message-id={msg._id?.toString().startsWith('temp_') ? undefined : msg._id}
   data-from-user-id={msg.from_user_id}
@@ -660,6 +710,7 @@ useEffect(() => {
     )}
   </div>
 </div>
+               </React.Fragment>
               );
             })}
           </div>

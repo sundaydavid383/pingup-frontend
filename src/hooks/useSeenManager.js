@@ -14,6 +14,7 @@ export const useSeenManager = ({
     const [lastSeenMessage, setLastSeenMessage] = useState(null);
     const [receiverLastSeen, setReceiverLastSeen] = useState(null);
     const [unseenBelowCount, setUnseenBelowCount] = useState(0);
+    const [chatOpenLastSeenMessage, setChatOpenLastSeenMessage] = useState(null); 
 
     const lastEmittedMessageIdRef = useRef(null);
 const [hasInitialized, setHasInitialized] = useState(false);
@@ -35,17 +36,15 @@ const [hasInitialized, setHasInitialized] = useState(false);
     const scrollStopTimer = useRef(null); // ✅ FIX: add missing ref
 
     const debugEnabled = process.env.NODE_ENV === "development";
-    const logSeenEvent = useCallback((step, details = {}) => {
-        if (!debugEnabled) return;
-        // console.log("[SeenManager]", step, {
-        //     chatId,
-        //     userId,
-        //     lastSeenMessage: lastSeenMessage?._id,
-        //     unseenBelowCount,
-        //     hasInitialized,
-        //     ...details,
-        // });
-    }, [chatId, userId, lastSeenMessage, unseenBelowCount, hasInitialized, debugEnabled]);
+        // Stable identity on purpose: this function must NOT depend on lastSeenMessage/
+        // unseenBelowCount/hasInitialized. Those change every time a message gets marked
+        // seen, which was tearing down and rebuilding everything downstream (including
+        // updateLastSeenOnBackend and the IntersectionObserver itself), dropping the
+        // observer's "already visible, no scroll needed" notification.
+        const logSeenEvent = useCallback((step, details = {}) => {
+            if (!debugEnabled) return;
+            // console.log("[SeenManager]", step, details);
+        }, [debugEnabled]);
 // useSeenManager.jsx — add near top of hook
 
 useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -96,37 +95,36 @@ useEffect(() => {
 
         if (visibleMessages.length === 0) return null;
 
-        return visibleMessages.reduce((latest, current) =>
-            new Date(current.createdAt) > new Date(latest.createdAt)
-                ? current
-                : latest
-        );
-    }, [messages]);
+                return visibleMessages.reduce((latest, current) =>
+                    new Date(current.createdAt) > new Date(latest.createdAt)
+                        ? current
+                        : latest
+                );
+            }, []); // reads messagesRef.current internally — the messages array was never actually used here
 
     /**
      * Calculate how many unseen messages exist below the viewport
      * ✅ FIX: only counts messages from OTHER users, not your own sent messages
      */
-// useSeenManager.jsx — replace calculateUnseenBelowCount
-const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
-    const baseline = overrideLastSeen !== undefined ? overrideLastSeen : lastSeenMessage;
-    
-    if (messages.length === 0) {
-        setUnseenBelowCount(0);
-        return 0;
-    }
+    const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
+        const baseline = overrideLastSeen !== undefined ? overrideLastSeen : lastSeenMessage;
+        const currentMessages = messagesRef.current;
 
-    const count = messages.filter(
-        (msg) =>
-            msg.from_user_id !== userId &&
-            !String(msg._id).startsWith('temp_') &&
-            // If no baseline, ALL other-user messages are unseen
-            (!baseline || new Date(msg.createdAt) > new Date(baseline.createdAt))
-    ).length;
+        if (currentMessages.length === 0) {
+            setUnseenBelowCount(0);
+            return 0;
+        }
 
-    setUnseenBelowCount(count);
-    return count;
-}, [lastSeenMessage, messages, userId]);
+        const count = currentMessages.filter(
+            (msg) =>
+                msg.from_user_id !== userId &&
+                !String(msg._id).startsWith('temp_') &&
+                (!baseline || new Date(msg.createdAt) > new Date(baseline.createdAt))
+        ).length;
+
+        setUnseenBelowCount(count);
+        return count;
+    }, [lastSeenMessage, userId]); // reads messagesRef.current — no longer rebuilt on every unrelated re-render
     /**
      * Update last seen on backend and emit socket event
      * Prevents duplicate emissions using ref tracking
@@ -237,6 +235,9 @@ const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
                 });
             }
 
+            // Snapshot taken at open time, before any "seen" updates happen this visit
+            setChatOpenLastSeenMessage(response.data?.message || null);
+
             if (response.data?.receiverLastSeen) {
                 setReceiverLastSeen(response.data.receiverLastSeen);
             }
@@ -244,6 +245,7 @@ const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
             setHasInitialized(true);
         } catch (error) {
             console.warn("Failed to fetch last seen:", error);
+            setChatOpenLastSeenMessage(null);
             setHasInitialized(true);
         } finally {
             isInitializingRef.current = false;
@@ -440,6 +442,7 @@ const scrollToLastSeen = useCallback(() => {
         setLastSeenMessage(null);
         setReceiverLastSeen(null);
         setUnseenBelowCount(0);
+        setChatOpenLastSeenMessage(null);
 
         fetchLastSeenFromBackend();
     }, [chatId, fetchLastSeenFromBackend]);
@@ -555,7 +558,7 @@ if (setMessages) {
             observer.disconnect();
             if (batchTimeout) clearTimeout(batchTimeout);
         };
-    }, [enabled, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend, messages.length]);
+    }, [enabled, hasInitialized, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend, messages.length]);
 
 // EFFECT - Initial visibility check (no-scroll case)
 // ==========================================
@@ -606,7 +609,7 @@ useEffect(() => {
     userId,
     chatId,
     containerRef,
-    messages,
+    messages.length,
     getLastVisibleMessage,
     updateLastSeenOnBackend,
     calculateUnseenBelowCount,
@@ -768,6 +771,7 @@ useEffect(() => {
         receiverLastSeen,
         unseenBelowCount,
         hasUnseenMessages: unseenBelowCount > 0,
+        chatOpenLastSeenMessage,
 
         // Indicates the hook has fetched initial backend state
         hasInitialized,
