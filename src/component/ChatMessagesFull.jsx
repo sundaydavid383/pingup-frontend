@@ -102,8 +102,9 @@ useEffect(() => {
   }, []);
 
 
-  const getDisplayText = (text, messageId) => {
-    if (!text || text.length <= CHARACTER_THRESHOLD) return text;
+ const getDisplayText = (text, messageId) => {
+    if (typeof text !== "string" || !text) return "";
+    if (text.length <= CHARACTER_THRESHOLD) return text;
     if (expandedMessages.has(messageId)) return text;
     // Find the last space before threshold to avoid cutting words (WhatsApp style)
     const truncated = text.substring(0, CHARACTER_THRESHOLD);
@@ -112,7 +113,7 @@ useEffect(() => {
   };
 
   const shouldShowReadMore = (text) => {
-    return text && text.length > CHARACTER_THRESHOLD;
+    return typeof text === "string" && text.length > CHARACTER_THRESHOLD;
   };
 
   // Long press timer for mobile
@@ -550,10 +551,14 @@ useEffect(() => {
 <div
   data-id={msg._id}
   className={`
-   ${msg.message_type === "image" ? 'px-[7px] py-[7px]' : 'px-3 py-3'} relative overflow-hidden  text-sm
-    max-w-[75%] sm:max-w-[60%] md:max-w-[400px]
+    ${
+      msg.message_type === "image"
+        ? "px-[7px] py-[7px] w-[220px] sm:w-[260px]"
+        : "px-3 py-3 max-w-[75%] sm:max-w-[60%] md:max-w-[400px]"
+    }
     min-w-[120px]
-    rounded-2xl shadow-sm break-words relative transition-all duration-200
+    relative overflow-hidden text-sm
+    rounded-2xl shadow-sm break-words transition-all duration-200
     ${
       sentByUser
         ? msg.failed
@@ -620,9 +625,34 @@ useEffect(() => {
     </div>
   )}
 
-  {/* ─── TEXT ─── */}
-  {msg.message_type === "text" && (
-    <div className="flex flex-col gap-1.5">
+{/* ─── MEDIA (IMAGE + AUDIO SAME SYSTEM) ─── */}
+  {(msg.message_type === "image" || msg.message_type === "audio") &&
+    msg.media_url && (
+      <div className={msg.text ? "mb-1.5" : "mt-0"}>
+        {msg.message_type === "image" ? (
+          <ChatImage
+            src={msg.media_url}
+            onClick={() => {
+              const index = imageMessages.findIndex(
+                (img) => img.media_url === msg.media_url
+              );
+              if (index !== -1) {
+                setCurrentImageIndex(index);
+                setShowMediaViewer(true);
+              }
+            }}
+          />
+        ) : (
+          <div className="w-[200px] max-w-[200px]">
+            <AudioMessage msg={msg} />
+          </div>
+        )}
+      </div>
+    )}
+
+ {/* ─── TEXT / CAPTION ─── */}
+  {typeof msg.text === "string" && msg.text.trim() !== "" && (
+    <div className={`flex flex-col gap-1.5 ${msg.message_type === "image" ? "px-1.5 pt-1 pb-0.5" : ""}`}>
       <p className="whitespace-pre-wrap leading-relaxed text-[0.8rem]">
         {getDisplayText(msg.text, msg._id)}
       </p>
@@ -644,46 +674,6 @@ useEffect(() => {
       )}
     </div>
   )}
-
-  {/* ─── MEDIA (IMAGE + AUDIO SAME SYSTEM) ─── */}
-  {(msg.message_type === "image" || msg.message_type === "audio") &&
-    msg.media_url && (
-      <div className="mt-0">
-        {msg.message_type === "image" ? (
-          <img
-            src={msg.media_url}
-            alt="Shared"
-              className="
-    max-w-[240px]
-    max-h-[420px]
-    w-auto h-auto
-    rounded-lg
-    object-cover
-    cursor-pointer
-  "
-            onClick={() => {
-  console.log("CLICKED IMAGE");
-  console.log("imageMessages:", imageMessages);
-  
-  const index = imageMessages.findIndex(
-    (img) => img.media_url === msg.media_url
-  );
-
-  console.log("INDEX:", index);
-
-  if (index !== -1) {
-    setCurrentImageIndex(index);
-    setShowMediaViewer(true);
-  }
-}}
-          />
-        ) : (
-          <div className="w-[200px] max-w-[200px]">
-            <AudioMessage msg={msg} />
-          </div>
-        )}
-      </div>
-    )}
 </div>
 
   {/* ─── STATUS ─── */}
@@ -815,5 +805,51 @@ useEffect(() => {
     </div>
   );
 };
+
+function ChatImage({ src, onClick }) {
+  const [status, setStatus] = useState("loading"); // loading | loaded | error
+
+  return (
+    <div
+      className="relative rounded-lg overflow-hidden bg-gray-100 w-full"
+      style={{ aspectRatio: status === "loaded" ? undefined : "4 / 3" }}
+    >
+      {status === "loading" && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-gray-400">
+          <span className="text-xs">Couldn't load image</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setStatus("loading");
+              const container = e.currentTarget.closest(".relative");
+              const img = container?.querySelector("img");
+              if (img) img.src = src + (src.includes("?") ? "&" : "?") + "retry=" + Date.now();
+            }}
+            className="text-xs underline text-[var(--primary)]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <img
+        src={src}
+        alt=""
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+        onClick={onClick}
+        className={`w-full h-auto max-h-[320px] object-cover rounded-lg cursor-pointer transition-opacity duration-200 ${
+          status === "loaded" ? "opacity-100 relative" : "opacity-0 absolute inset-0"
+        }`}
+      />
+    </div>
+  );
+}
 
 export default ChatMessagesFull;

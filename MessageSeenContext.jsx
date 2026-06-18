@@ -131,35 +131,20 @@ export const MessageSeenProvider = ({ children }) => {
        incrementUnread(chatId);
      };
 
-     const handleNewMessageAlert = (data) => {
-      const { from_user_id, chatId, message } = data;
-      if (from_user_id?.toString() === user._id?.toString()) return;
-      // If the user is currently in this chat, skip — seenManager owns the count
-      const convo = conversations.find(c => c._id?.toString() === chatId?.toString());
-      const isActiveChat = convo?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
-      if (isActiveChat) {
-        updateConversationLastMessage(chatId, message);
-        return; // don't increment; seenManager will report the real count
-      }
-      registerIncoming(chatId, message);
-    };
+   
+const handleNewMessageAlert = (data) => {
+  const { from_user_id, chatId, message } = data;
+  if (from_user_id?.toString() === user._id?.toString()) return;
+  registerIncoming(chatId, message); // always increments — no active-chat exception
+};
      socket.on("newMessageAlert", handleNewMessageAlert);
 
-     // ✅ FIX: "newMessageAlert" is withheld by the server when the socket has
-     // joined the chat room (chat open). "receiveMessage" is broadcast to the
-     // whole room regardless of membership, so it's the only reliable signal
-     // for "chat open but message not yet seen."
-     const handleReceiveMessage = (msg) => {
-      if (!msg?._id) return;
-      if (msg.from_user_id?.toString() === user._id?.toString()) return;
-      const convo = conversations.find(c => c._id?.toString() === msg.chatId?.toString());
-      const isActiveChat = convo?.otherUser?._id?.toString() === activeChatIdRef.current?.toString();
-      if (isActiveChat) {
-        updateConversationLastMessage(msg.chatId, msg);
-        return; // seenManager owns this count
-      }
-      registerIncoming(msg.chatId, msg);
-    };
+     
+      const handleReceiveMessage = (msg) => {
+        if (!msg?._id) return;
+        if (msg.from_user_id?.toString() === user._id?.toString()) return;
+        registerIncoming(msg.chatId, msg); // always increments
+      };
      socket.on("receiveMessage", handleReceiveMessage);
 
      const handleUnreadCountUpdated = ({ chatId, unreadCount }) => {

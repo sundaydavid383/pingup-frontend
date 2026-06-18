@@ -2288,7 +2288,7 @@ useEffect(() => {
                 setImage={setImage}
                 caption={text}
                 setCaption={setText}
-                onSend={sendMessage}
+                onSend={() => sendMessage()}
                 sending={sending}
               />
             ) : null}
