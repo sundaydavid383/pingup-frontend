@@ -1,24 +1,6 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
-import {
-  Phone,
-  PhoneOff,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  MessageCircle,
-} from "lucide-react";
+import React, { useContext, useEffect, useRef, useState, useCallback } from "react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, MessageCircle } from "lucide-react";
 import { CallContext } from "../../context/CallContext";
-
-/**
- * AudioCallUI
- *
- * Display for audio-only calls with:
- * - Caller profile
- * - Call timer
- * - Mute/speaker controls
- * - End call button
- */
 
 const AudioCallUI = ({
   localStream,
@@ -32,48 +14,69 @@ const AudioCallUI = ({
   const callContext = useContext(CallContext);
   const remoteAudioRef = useRef(null);
   const [callTimer, setCallTimer] = useState("00:00");
-  const timerIntervalRef = useRef(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const timerIntervalRef   = useRef(null);
+  const timerStartedRef    = useRef(false);
+  const callStartTimeRef   = useRef(null);
 
-  const call =
-    callContext && callContext.currentCall ? callContext.currentCall : null;
+  const call              = callContext?.currentCall ?? null;
   const callStatusMessage = callContext?.callStatusMessage;
 
+  // ─── Attach remote stream to audio element ───────────────────────────────────
   useEffect(() => {
-    console.log("📞 AudioCallUI: Component rendered", {
-      callId: call?.callId,
-      status: call?.status,
-      hasLocalStream: !!localStream,
-      hasRemoteStream: !!remoteStream,
-      isMuted,
-      isSpeakerOn,
-      callStatusMessage,
-    });
-  }, [call, localStream, remoteStream, isMuted, isSpeakerOn, callStatusMessage]);
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl || !remoteStream) return;
 
+    console.log("📞 AudioCallUI: Attaching remote stream to audio element");
+    audioEl.srcObject = remoteStream;
+    audioEl.volume = 1.0;
+    audioEl.jitterBufferTarget = 80; // ✅ restored: reduces audio jitter/latency
 
-  useEffect(() => {
-    if (remoteAudioRef.current && remoteStream) {
-      remoteAudioRef.current.srcObject = remoteStream;
-      remoteAudioRef.current.volume = 1.0;
-      remoteAudioRef.current.jitterBufferTarget = 80;
-      remoteAudioRef.current.play().catch(e => 
-        console.warn("📞 AudioCallUI: Remote audio play failed:", e)
-      );
-      console.log("📞 AudioCallUI: Remote audio stream attached");
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log("📞 AudioCallUI: Audio playing");
+          setAutoplayBlocked(false);
+        })
+        .catch((err) => {
+          if (err.name === "NotAllowedError" || err.name === "AbortError") {
+            console.warn("📞 AudioCallUI: Autoplay blocked by browser —", err.name);
+            setAutoplayBlocked(true);
+          } else {
+            console.error("📞 AudioCallUI: Audio play error:", err);
+          }
+        });
     }
   }, [remoteStream]);
 
- const timerStartedRef = useRef(false);
-  const callStartTimeRef = useRef(null);
-
+  // ─── Speaker toggle via setSinkId (Chrome + Android; not iOS) ───────────────
   useEffect(() => {
-    const status = call?.status;
-    const CONNECTED = callContext?.CALL_STATES?.CONNECTED;
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
+
+    if (typeof audioEl.setSinkId !== "function") {
+      console.log("📞 AudioCallUI: setSinkId not supported on this browser");
+      return;
+    }
+
+    const sinkId = isSpeakerOn ? "default" : "";
+    audioEl.setSinkId(sinkId).then(() => {
+      console.log("📞 AudioCallUI: Audio output routed to:", isSpeakerOn ? "speaker" : "earpiece");
+    }).catch((err) => {
+      console.warn("📞 AudioCallUI: setSinkId error:", err.message);
+    });
+  }, [isSpeakerOn]);
+
+  // ─── Call timer + CONNECTING status message ───────────────────────────────────
+  useEffect(() => {
+    const status    = call?.status;
+    const CONNECTED  = callContext?.CALL_STATES?.CONNECTED;
     const CONNECTING = callContext?.CALL_STATES?.CONNECTING;
 
     if (status === CONNECTED && !timerStartedRef.current) {
-      console.log("📞 AudioCallUI: Call connected, starting timer");
-      timerStartedRef.current = true;
+      console.log("📞 AudioCallUI: Call connected — starting timer");
+      timerStartedRef.current  = true;
       callStartTimeRef.current = Date.now();
 
       if (!callStatusMessage) {
@@ -82,54 +85,55 @@ const AudioCallUI = ({
 
       timerIntervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
-        const hours = Math.floor(elapsed / 3600);
-        const minutes = Math.floor((elapsed % 3600) / 60);
-        const seconds = elapsed % 60;
-
-        if (hours > 0) {
-          setCallTimer(
-            `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-          );
-        } else {
-          setCallTimer(
-            `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-          );
-        }
+        const h = Math.floor(elapsed / 3600);
+        const m = Math.floor((elapsed % 3600) / 60);
+        const s = elapsed % 60;
+        setCallTimer(
+          h > 0
+            ? `${pad(h)}:${pad(m)}:${pad(s)}`
+            : `${pad(m)}:${pad(s)}`
+        );
       }, 1000);
 
     } else if (status === CONNECTING) {
-      console.log("📞 AudioCallUI: Call is connecting, showing connecting status");
+      // ✅ restored: set connecting status message
+      console.log("📞 AudioCallUI: Call is connecting");
       if (!callStatusMessage) {
         callContext.setCallStatusMessage("🔗 Connecting to " + call.receiverName + "...");
       }
     }
 
     return () => {
-    if (timerIntervalRef.current) {
+      if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
-    }
-};
+      }
+    };
   }, [call?.status]);
 
-  if (!call) {
-    return null;
-  }
+  // ─── Tap-to-play for iOS autoplay workaround ─────────────────────────────────
+  const handleTapToPlay = useCallback(() => {
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
+    audioEl.play()
+      .then(() => {
+        console.log("📞 AudioCallUI: Audio playing after user gesture");
+        setAutoplayBlocked(false);
+      })
+      .catch((err) => console.error("📞 AudioCallUI: Tap-to-play error:", err));
+  }, []);
 
-  const isConnected =
-    call.status === callContext?.CALL_STATES?.CONNECTED || !!remoteStream;
+  if (!call) return null;
+
+  const isConnected = call.status === callContext?.CALL_STATES?.CONNECTED || !!remoteStream;
 
   const statusLabel =
     callStatusMessage ||
-    (call?.status === callContext?.CALL_STATES?.CONNECTED
-      ? "Connected"
-      : call?.status === callContext?.CALL_STATES?.RINGING
-      ? "Ringing..."
-      : call?.error
-      ? `Call failed — ${call.error}`
-      : remoteStream
-      ? "Connected"
-      : "Connecting...");
+    (call.status === callContext?.CALL_STATES?.CONNECTED ? "Connected"
+    : call.status === callContext?.CALL_STATES?.RINGING  ? "Ringing..."
+    : call.error ? `Call failed — ${call.error}`
+    : remoteStream ? "Connected"
+    : "Connecting...");
 
   return (
     <>
@@ -166,8 +170,35 @@ const AudioCallUI = ({
         }
       `}</style>
 
-      {/* Hidden audio elements */}
-     <audio ref={remoteAudioRef} autoPlay playsInline />
+      {/* Hidden audio element — playsInline critical for iOS */}
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        muted={false}
+        style={{ display: "none" }}
+      />
+
+      {/* iOS autoplay fallback banner */}
+      {autoplayBlocked && (
+        <div
+          onClick={handleTapToPlay}
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0,
+            zIndex: 9999,
+            background: "rgba(239,68,68,0.92)",
+            color: "#fff",
+            textAlign: "center",
+            padding: "12px",
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          Tap here to hear the call
+        </div>
+      )}
 
       {/* Full-screen container */}
       <div
@@ -178,8 +209,7 @@ const AudioCallUI = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background:
-            "linear-gradient(180deg, #050c20 0%, #070e1c 45%, #040810 100%)",
+          background: "linear-gradient(180deg, #050c20 0%, #070e1c 45%, #040810 100%)",
           overflow: "hidden",
         }}
       >
@@ -192,8 +222,7 @@ const AudioCallUI = ({
             transform: "translateX(-50%)",
             width: 560,
             height: 320,
-            background:
-              "radial-gradient(ellipse, rgba(var(--primary-rgb, 59,92,203), 0.1) 0%, transparent 68%)",
+            background: "radial-gradient(ellipse, rgba(var(--primary-rgb, 59,92,203), 0.1) 0%, transparent 68%)",
             pointerEvents: "none",
           }}
         />
@@ -206,8 +235,7 @@ const AudioCallUI = ({
             transform: "translateX(-50%)",
             width: 400,
             height: 160,
-            background:
-              "radial-gradient(ellipse, rgba(var(--primary-rgb, 59,92,203), 0.07) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse, rgba(var(--primary-rgb, 59,92,203), 0.07) 0%, transparent 70%)",
             pointerEvents: "none",
           }}
         />
@@ -233,7 +261,6 @@ const AudioCallUI = ({
               marginBottom: 22,
             }}
           >
-            {/* Pulse rings */}
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
@@ -242,13 +269,11 @@ const AudioCallUI = ({
                   position: "absolute",
                   inset: -18,
                   borderRadius: "50%",
-                  border:
-                    "1px solid rgba(var(--primary-rgb, 59,92,203), 0.2)",
+                  border: "1px solid rgba(var(--primary-rgb, 59,92,203), 0.2)",
                 }}
               />
             ))}
 
-            {/* Avatar */}
             {call.receiverImage ? (
               <img
                 src={call.receiverImage}
@@ -260,10 +285,8 @@ const AudioCallUI = ({
                   height: 104,
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border:
-                    "1.5px solid rgba(var(--primary-rgb, 59,92,203), 0.4)",
-                  boxShadow:
-                    "0 0 0 5px rgba(var(--primary-rgb, 59,92,203), 0.07)",
+                  border: "1.5px solid rgba(var(--primary-rgb, 59,92,203), 0.4)",
+                  boxShadow: "0 0 0 5px rgba(var(--primary-rgb, 59,92,203), 0.07)",
                   display: "block",
                 }}
               />
@@ -275,18 +298,15 @@ const AudioCallUI = ({
                   width: 104,
                   height: 104,
                   borderRadius: "50%",
-                  background:
-                    "linear-gradient(135deg, var(--secondary, #1a294a) 0%, #0d1a35 100%)",
+                  background: "linear-gradient(135deg, var(--secondary, #1a294a) 0%, #0d1a35 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 36,
                   fontWeight: 600,
                   color: "rgba(var(--primary-rgb, 59,92,203), 0.85)",
-                  border:
-                    "1.5px solid rgba(var(--primary-rgb, 59,92,203), 0.35)",
-                  boxShadow:
-                    "0 0 0 5px rgba(var(--primary-rgb, 59,92,203), 0.07)",
+                  border: "1.5px solid rgba(var(--primary-rgb, 59,92,203), 0.35)",
+                  boxShadow: "0 0 0 5px rgba(var(--primary-rgb, 59,92,203), 0.07)",
                   letterSpacing: -1,
                 }}
               >
@@ -340,7 +360,7 @@ const AudioCallUI = ({
               fontSize: 26,
               fontWeight: 600,
               color: "var(--white, #ffffff)",
-              letterSpacing: "-0.4px",
+              letterSpacing: "-0.4px", // ✅ restored
               marginBottom: 4,
               textAlign: "center",
             }}
@@ -367,8 +387,7 @@ const AudioCallUI = ({
               fontVariantNumeric: "tabular-nums",
               letterSpacing: 3,
               marginBottom: 28,
-              textShadow:
-                "0 0 48px rgba(var(--primary-rgb, 59,92,203), 0.28)",
+              textShadow: "0 0 48px rgba(var(--primary-rgb, 59,92,203), 0.28)",
             }}
           >
             {callTimer}
@@ -391,8 +410,7 @@ const AudioCallUI = ({
                   className="acu-wave-bar"
                   style={{
                     width: 3,
-                    background:
-                      "rgba(var(--primary-rgb, 59,92,203), 0.65)",
+                    background: "rgba(var(--primary-rgb, 59,92,203), 0.65)",
                     borderRadius: 2,
                   }}
                 />
@@ -400,7 +418,7 @@ const AudioCallUI = ({
             </div>
           )}
 
-          {/* Connecting indicator — when not yet connected */}
+          {/* Connecting indicator */}
           {!remoteStream && (
             <div
               style={{
@@ -415,8 +433,7 @@ const AudioCallUI = ({
                   key={i}
                   style={{
                     width: 4,
-                    background:
-                      "rgba(var(--primary-rgb, 59,92,203), 0.6)",
+                    background: "rgba(var(--primary-rgb, 59,92,203), 0.6)",
                     borderRadius: 3,
                     animation: `acu-wave 1.2s ease-in-out infinite ${i * 0.2}s`,
                     height: 20,
@@ -450,9 +467,7 @@ const AudioCallUI = ({
               label={isMuted ? "Muted" : "Mute"}
               active={isMuted}
               onClick={() => {
-                console.log("📞 AudioCallUI: Mute toggle clicked", {
-                  currentlyMuted: isMuted,
-                });
+                console.log("📞 AudioCallUI: Mute toggle clicked", { currentlyMuted: isMuted });
                 onMuteToggle && onMuteToggle(!isMuted);
               }}
               title={isMuted ? "Unmute" : "Mute"}
@@ -466,15 +481,13 @@ const AudioCallUI = ({
 
             {/* Speaker */}
             <CtrlButton
-              label={isSpeakerOn ? "Speaker" : "Speaker off"}
+              label={isSpeakerOn ? "Speaker" : "Earpiece"}
               active={!isSpeakerOn}
               onClick={() => {
-                console.log("📞 AudioCallUI: Speaker toggle clicked", {
-                  currentlySpeakerOn: isSpeakerOn,
-                });
+                console.log("📞 AudioCallUI: Speaker toggle clicked", { currentlySpeakerOn: isSpeakerOn });
                 onSpeakerToggle && onSpeakerToggle(!isSpeakerOn);
               }}
-              title={isSpeakerOn ? "Turn off speaker" : "Turn on speaker"}
+              title={isSpeakerOn ? "Switch to earpiece" : "Switch to speaker"}
             >
               {isSpeakerOn ? (
                 <Volume2 size={20} strokeWidth={1.8} />
@@ -581,5 +594,7 @@ const CtrlButton = ({ label, active, onClick, title, children }) => (
     </span>
   </div>
 );
+
+function pad(n) { return String(n).padStart(2, "0"); }
 
 export default AudioCallUI;

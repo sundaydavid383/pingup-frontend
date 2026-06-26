@@ -3,7 +3,6 @@ import axiosBase from "../utils/axiosBase";
 
 const NotificationContext = createContext();
 
-// Category configuration
 const NOTIFICATION_CATEGORIES = {
   INBOX: 'inbox',
   COMMENTS: 'comments',
@@ -24,12 +23,13 @@ const CATEGORY_LABELS = {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [lastFetched, setLastFetched] = useState(null);
   const [activeCategory, setActiveCategory] = useState(NOTIFICATION_CATEGORIES.INBOX);
   const pollingIntervalRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
-  // Load deleted notifications from localStorage on mount
+  // Deleted IDs persisted in localStorage so they survive refresh
   const [deletedNotificationIds, setDeletedNotificationIds] = useState(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('deletedNotifications') || '[]'));
@@ -38,165 +38,149 @@ export const NotificationProvider = ({ children }) => {
     }
   });
 
-  // Poll for new notifications (fallback for when WebSocket fails)
-  const pollNotifications = useCallback(async () => {
+  // ─── Initial fetch — sets full state from backend ─────────────────────────
+  const fetchNotifications = useCallback(async () => {
+    if (isFetchingRef.current) return;
     const token = localStorage.getItem('token');
     if (!token) return;
 
+    isFetchingRef.current = true;
     try {
       const res = await axiosBase.get('/api/notifications', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (res.data.success && res.data.notifications) {
-        const newNotifications = res.data.notifications;
-        setNotifications(prev => {
-          // Merge new notifications with existing ones, avoiding duplicates
-          const existingIds = new Set(prev.map(n => n._id));
-          const trulyNew = newNotifications.filter(n => !existingIds.has(n._id));
-          if (trulyNew.length > 0) {
-            return [...trulyNew, ...prev];
-          }
-          return prev;
-        });
+        // Filter out locally-deleted ones
+        const fresh = res.data.notifications.filter(
+          n => !deletedNotificationIds.has(n._id)
+        );
+        // Full replace — this is the source of truth
+        setNotifications(fresh);
         setLastFetched(new Date());
       }
     } catch (err) {
-      console.error('Polling error:', err);
+      console.error('Fetch notifications error:', err);
+    } finally {
+      setLoadingNotifications(false);
+      isFetchingRef.current = false;
     }
-  }, []);
+  }, [deletedNotificationIds]);
 
-  // Start polling when component mounts (fallback mechanism)
+  // Fetch on mount
   useEffect(() => {
-    // Poll immediately
-    pollNotifications();
-    
-    // Then poll every 30 seconds as fallback
-    pollingIntervalRef.current = setInterval(pollNotifications, 30000);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, [pollNotifications]);
+  // Poll every 60 seconds as a fallback (socket should cover real-time)
+  useEffect(() => {
+    pollingIntervalRef.current = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(pollingIntervalRef.current);
+  }, [fetchNotifications]);
 
-  // Add new notification (filter out duplicates and deleted ones)
+  // ─── Add a single new notification (called by socket handler) ────────────
   const addNotification = useCallback((notif) => {
     const notifId = notif._id || notif.id || notif.notificationId;
-    
-    // Skip if already deleted
-    if (notifId && deletedNotificationIds.has(notifId)) {
-      console.log('Skipping deleted notification:', notifId);
-      return;
-    }
 
-    // Skip if already in state (prevent duplicates)
+    if (notifId && deletedNotificationIds.has(notifId)) return;
+
     setNotifications(prev => {
       const exists = prev.some(n => (n._id || n.id) === notifId);
-      if (exists) {
-        console.log('Skipping duplicate notification:', notifId);
-        return prev;
-      }
+      if (exists) return prev;
       return [notif, ...prev];
     });
   }, [deletedNotificationIds]);
 
-  // Mark all as read - syncs with backend
+  // ─── Mark all as read ─────────────────────────────────────────────────────
   const markAllRead = useCallback(async () => {
+    // Optimistic
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     try {
       const token = localStorage.getItem('token');
       await axiosBase.put('/api/notifications/read-all', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNotifications(prev =>
-        prev.map((n) => ({ ...n, isRead: true }))
-      );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
-      // Still update local state even if API fails
-      setNotifications(prev =>
-        prev.map((n) => ({ ...n, isRead: true }))
-      );
+      console.error('markAllRead error:', err);
     }
   }, []);
 
-  // Mark all in category as read
+  // ─── Mark category as read ────────────────────────────────────────────────
   const markCategoryAsRead = useCallback(async (category) => {
+    // Optimistic
+    setNotifications(prev =>
+      prev.map(n =>
+        (n.category || NOTIFICATION_CATEGORIES.INBOX) === category
+          ? { ...n, isRead: true }
+          : n
+      )
+    );
+    // Backend: mark each individually (no bulk category endpoint yet)
     try {
       const token = localStorage.getItem('token');
-      
-      // Optimistic update
-      setNotifications(prev =>
-        prev.map((n) => (n.category === category || (!n.category && category === NOTIFICATION_CATEGORIES.INBOX) ? { ...n, isRead: true } : n))
+      const toMark = notifications.filter(
+        n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category && !n.isRead
       );
-
-      // Backend sync for all notifications in the category
-      const categoryNotifications = notifications.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
-      await Promise.all(
-        categoryNotifications.map(n =>
+      await Promise.allSettled(
+        toMark.map(n =>
           axiosBase.put(`/api/notifications/${n._id}/read`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           })
         )
       );
     } catch (err) {
-      console.error(`Failed to mark ${category} notifications as read:`, err);
+      console.error('markCategoryAsRead error:', err);
     }
   }, [notifications]);
 
-  // Mark one as read - syncs with backend
+  // ─── Mark one as read ─────────────────────────────────────────────────────
   const markAsRead = useCallback(async (id) => {
-    // First update local state immediately for responsive UI
     setNotifications(prev =>
-      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+      prev.map(n => n._id === id ? { ...n, isRead: true } : n)
     );
-    
-    // Then sync with backend
     try {
       const token = localStorage.getItem('token');
       await axiosBase.put(`/api/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      console.error('markAsRead error:', err);
     }
   }, []);
 
-  // Delete notification and persist the deletion
+  // ─── Delete one notification ──────────────────────────────────────────────
   const deleteNotification = useCallback((id) => {
-    // Remove from state
-    setNotifications((prev) => prev.filter(n => n._id !== id));
-    
-    // Add to deleted set and persist
+    setNotifications(prev => prev.filter(n => n._id !== id));
+
     const newDeleted = new Set(deletedNotificationIds);
     newDeleted.add(id);
     setDeletedNotificationIds(newDeleted);
     localStorage.setItem('deletedNotifications', JSON.stringify([...newDeleted]));
   }, [deletedNotificationIds]);
 
-  // Delete all in category
+  // ─── Delete all in category ───────────────────────────────────────────────
   const deleteCategoryNotifications = useCallback((category) => {
     setNotifications(prev => {
-      const toDelete = prev.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
-      const remaining = prev.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) !== category);
-      
-      // Add all deleted IDs to localStorage
+      const toDelete = prev.filter(
+        n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category
+      );
       const newDeleted = new Set(deletedNotificationIds);
       toDelete.forEach(n => newDeleted.add(n._id));
       setDeletedNotificationIds(newDeleted);
       localStorage.setItem('deletedNotifications', JSON.stringify([...newDeleted]));
-      
-      return remaining;
+      return prev.filter(
+        n => (n.category || NOTIFICATION_CATEGORIES.INBOX) !== category
+      );
     });
   }, [deletedNotificationIds]);
 
-  // Get notifications filtered by category
+  // ─── Derived data ─────────────────────────────────────────────────────────
   const getNotificationsByCategory = useCallback((category) => {
-    return notifications.filter(n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category);
+    return notifications.filter(
+      n => (n.category || NOTIFICATION_CATEGORIES.INBOX) === category
+    );
   }, [notifications]);
 
-  // Get notifications grouped by category
   const notificationsByCategory = useMemo(() => {
     const grouped = {};
     Object.values(NOTIFICATION_CATEGORIES).forEach(cat => {
@@ -205,15 +189,13 @@ export const NotificationProvider = ({ children }) => {
     return grouped;
   }, [notifications, getNotificationsByCategory]);
 
-  // Get active category notifications
-  const activeNotifications = useMemo(() => {
-    return getNotificationsByCategory(activeCategory);
-  }, [activeCategory, getNotificationsByCategory]);
+  const activeNotifications = useMemo(
+    () => getNotificationsByCategory(activeCategory),
+    [activeCategory, getNotificationsByCategory]
+  );
 
-  // Compute unread count (total)
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  // Compute unread count by category
   const unreadCountByCategory = useMemo(() => {
     const counts = {};
     Object.values(NOTIFICATION_CATEGORIES).forEach(cat => {
@@ -225,33 +207,26 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider
       value={{
-        // All notifications
         notifications,
         addNotification,
         markAllRead,
         markAsRead,
         deleteNotification,
         unreadCount,
-        
-        // Category management
         NOTIFICATION_CATEGORIES,
         CATEGORY_LABELS,
         activeCategory,
         setActiveCategory,
-        
-        // Category-specific operations
         activeNotifications,
         notificationsByCategory,
         getNotificationsByCategory,
         markCategoryAsRead,
         deleteCategoryNotifications,
         unreadCountByCategory,
-        
-        // Loading and fetch state
         loadingNotifications,
         setLoadingNotifications,
         lastFetched,
-        pollNotifications,
+        pollNotifications: fetchNotifications,
       }}
     >
       {children}

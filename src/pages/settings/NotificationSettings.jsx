@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff } from 'lucide-react';
 import axiosBase from '../../utils/axiosBase';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NOTIFICATION_ITEMS = [
   { id: 'pushNotifications', label: 'Push Notifications', desc: 'Receive push notifications on your device' },
@@ -11,7 +12,6 @@ const NOTIFICATION_ITEMS = [
   { id: 'muteAll',           label: 'Mute All',           desc: 'Silence all notifications temporarily' },
 ];
 
-/* ── Reusable Toggle switch ── */
 const Toggle = ({ on, onToggle, disabled }) => (
   <button
     onClick={onToggle}
@@ -26,13 +26,13 @@ const Toggle = ({ on, onToggle, disabled }) => (
   </button>
 );
 
-/* ── "Saved!" badge ── */
-const Saved = () => (
-  <span className="text-green-500 text-sm">Saved!</span>
-);
+const Saved = () => <span className="text-green-500 text-sm">Saved!</span>;
 
 const NotificationSettings = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
+  const { isSupported, permission, isSubscribed, requestPermissionAndSubscribe, unsubscribe } =
+    usePushNotifications();
+
   const [notifications, setNotifications] = useState({
     pushNotifications: true,
     messageAlerts: true,
@@ -40,9 +40,17 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     emailNotifications: false,
     muteAll: false,
   });
+
+  // DND state
+  const [dndEnabled, setDndEnabled] = useState(false);
+  const [dndFrom, setDndFrom] = useState("");
+  const [dndUntil, setDndUntil] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dndSaved, setDndSaved] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
   const isMounted = useRef(false);
 
   // Load settings from backend on mount
@@ -50,6 +58,8 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     const fetchSettings = async () => {
       try {
         const token = localStorage.getItem('token');
+
+        // Fetch notification toggles
         const res = await axiosBase.get('/api/settings', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -69,6 +79,16 @@ const NotificationSettings = ({ isEmbedded = false }) => {
             muteAll:            allMuted,
           });
         }
+
+        // Fetch DND settings
+        const dndRes = await axiosBase.get('/api/notifications/settings/dnd', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (dndRes.data.success) {
+          setDndEnabled(dndRes.data.dndEnabled || false);
+          setDndFrom(dndRes.data.dndFrom || "22:00");
+          setDndUntil(dndRes.data.dndUntil || "08:00");
+        }
       } catch (err) {
         console.error('Failed to fetch notification settings:', err);
       } finally {
@@ -78,6 +98,7 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     fetchSettings();
   }, []);
 
+  // Save toggle settings
   const saveSettings = useCallback(async () => {
     setLoading(true);
     setSaved(false);
@@ -102,13 +123,29 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     }
   }, [notifications]);
 
-  // Auto-save 500 ms after any change
+  // Auto-save 500ms after any toggle change
   useEffect(() => {
     if (!initialized) return;
     if (!isMounted.current) { isMounted.current = true; return; }
     const timer = setTimeout(() => saveSettings(), 500);
     return () => clearTimeout(timer);
   }, [notifications, saveSettings, initialized]);
+
+  // Save DND settings
+  const saveDnd = useCallback(async (enabled, from, until) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axiosBase.put(
+        '/api/notifications/settings/dnd',
+        { dndEnabled: enabled, dndFrom: from, dndUntil: until },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setDndSaved(true);
+      setTimeout(() => setDndSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save DND settings:', err);
+    }
+  }, []);
 
   const toggleNotification = (id) => {
     if (id === 'muteAll') {
@@ -134,69 +171,174 @@ const NotificationSettings = ({ isEmbedded = false }) => {
     setNotifications(nextState);
   };
 
-  return (
-    <div>
-      {!isEmbedded && (
-        <div className="max-w-2xl mx-auto p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
-              style={{ backgroundColor: 'var(--form-bg)' }}
-            >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
-            </button>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
-              Notifications
-            </h1>
-            {saved && <span className="text-green-500 text-sm ml-auto">Saved!</span>}
+  // Handle push permission button
+  const handlePushToggle = async () => {
+    setPushLoading(true);
+    try {
+      if (isSubscribed) {
+        await unsubscribe();
+      } else {
+        const result = await requestPermissionAndSubscribe();
+        if (!result.success && result.reason === "denied") {
+          alert("Notification permission was denied. Please enable it in your browser settings.");
+        }
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const pushButtonLabel = () => {
+    if (pushLoading) return "Please wait...";
+    if (!isSupported) return "Not supported in this browser";
+    if (permission === "denied") return "Blocked by browser — enable in settings";
+    if (isSubscribed) return "Disable Push Notifications";
+    return "Enable Push Notifications";
+  };
+
+  const content = (
+    <>
+      {/* ── Toggle list ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}
+        className={isEmbedded ? "sr-stagger" : ""}>
+        {NOTIFICATION_ITEMS.map((item) => (
+          <div key={item.id} className={isEmbedded ? "sr-card" : "bg-white rounded-xl p-4 shadow-sm mb-2"}>
+            <div className={isEmbedded ? "sr-card-row" : "flex items-center justify-between"}>
+              <div className={isEmbedded ? "sr-card-text" : "flex flex-col"}>
+                <span className={isEmbedded ? "sr-card-label" : "font-medium text-gray-800"}>
+                  {item.label}
+                </span>
+                <span className={isEmbedded ? "sr-card-desc" : "text-sm text-gray-500"}>
+                  {item.desc}
+                </span>
+              </div>
+              <Toggle
+                on={notifications[item.id]}
+                onToggle={() => toggleNotification(item.id)}
+                disabled={loading}
+              />
+            </div>
           </div>
+        ))}
+      </div>
+
+      {/* ── Push notification permission button ── */}
+      {isSupported && (
+        <div className={isEmbedded ? "sr-card mb-6" : "bg-white rounded-xl p-4 shadow-sm mb-6"}>
+          <p className={isEmbedded ? "sr-section-heading" : "font-semibold text-gray-800 mb-2"}>
+            Browser Push Notifications
+          </p>
+          <p className="text-sm text-gray-500 mb-3">
+            {isSubscribed
+              ? "You are currently receiving push notifications on this device."
+              : "Allow this app to send you push notifications even when the tab is closed."}
+          </p>
+          <button
+            onClick={handlePushToggle}
+            disabled={pushLoading || permission === "denied" || !isSupported}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
+              ${isSubscribed
+                ? "bg-red-50 text-red-600 hover:bg-red-100"
+                : "bg-blue-50 text-blue-600 hover:bg-blue-100"}
+              disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {isSubscribed ? <BellOff size={16} /> : <Bell size={16} />}
+            {pushButtonLabel()}
+          </button>
+          {permission === "denied" && (
+            <p className="text-xs text-red-500 mt-2">
+              Notifications are blocked. Go to your browser settings → Site permissions → Notifications and allow this site.
+            </p>
+          )}
         </div>
       )}
 
-      <div className={!isEmbedded ? 'max-w-2xl mx-auto p-4 md:p-6' : 'sr-page'}>
-        {/* Heading row with inline Saved badge for embedded mode */}
-        {isEmbedded && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 8 }}>
-            <p className="sr-section-heading" style={{ margin: 0 }}>Notifications</p>
-            {saved && <Saved />}
+      {/* ── Do Not Disturb ── */}
+      <p className={isEmbedded ? "sr-section-heading" : "font-semibold text-gray-800 mb-3"}>
+        Do Not Disturb
+        {dndSaved && <span className="text-green-500 text-sm ml-3">Saved!</span>}
+      </p>
+      <div className={isEmbedded ? "sr-card" : "bg-white rounded-xl p-4 shadow-sm"}>
+        {/* DND master toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="font-medium text-gray-800 text-sm">Enable Do Not Disturb</p>
+            <p className="text-xs text-gray-500">Silence notifications during set hours</p>
           </div>
-        )}
-
-        {/* Toggle list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }} className="sr-stagger">
-          {NOTIFICATION_ITEMS.map((item) => (
-            <div key={item.id} className="sr-card">
-              <div className="sr-card-row">
-                <div className="sr-card-text">
-                  <span className="sr-card-label">{item.label}</span>
-                  <span className="sr-card-desc">{item.desc}</span>
-                </div>
-                <Toggle
-                  on={notifications[item.id]}
-                  onToggle={() => toggleNotification(item.id)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-          ))}
+          <Toggle
+            on={dndEnabled}
+            onToggle={() => {
+              const next = !dndEnabled;
+              setDndEnabled(next);
+              saveDnd(next, dndFrom, dndUntil);
+            }}
+            disabled={false}
+          />
         </div>
 
-        {/* Do Not Disturb */}
-        <p className="sr-section-heading">Do Not Disturb</p>
-        <div className="sr-card">
+        {/* Time range — only shown when DND is enabled */}
+        {dndEnabled && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label className="sr-label">From</label>
-              <input type="time" className="sr-input" />
+              <label className={isEmbedded ? "sr-label" : "block text-sm text-gray-600 mb-1"}>
+                From
+              </label>
+              <input
+                type="time"
+                value={dndUntil}
+                placeholder="Not set"
+                onChange={(e) => setDndUntil(e.target.value)}
+                onBlur={() => saveDnd(dndEnabled, dndFrom, dndUntil)}
+                className={isEmbedded ? "sr-input" : "border rounded-lg px-3 py-2 text-sm w-full"}
+              />
             </div>
             <div>
-              <label className="sr-label">Until</label>
-              <input type="time" className="sr-input" />
+              <label className={isEmbedded ? "sr-label" : "block text-sm text-gray-600 mb-1"}>
+                Until
+              </label>
+              <input
+                type="time"
+                value={dndUntil}
+                onChange={(e) => setDndUntil(e.target.value)}
+                onBlur={() => saveDnd(dndEnabled, dndFrom, dndUntil)}
+                className={isEmbedded ? "sr-input" : "border rounded-lg px-3 py-2 text-sm w-full"}
+              />
             </div>
           </div>
-        </div>
+        )}
       </div>
+    </>
+  );
+
+  if (isEmbedded) {
+    return (
+      <div className="sr-page">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 18, flexWrap: 'wrap', gap: 8 }}>
+          <p className="sr-section-heading" style={{ margin: 0 }}>Notifications</p>
+          {saved && <Saved />}
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-4 md:p-6">
+      <div className="flex items-center gap-3 mb-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-70 transition"
+          style={{ backgroundColor: 'var(--form-bg)' }}
+        >
+          <ArrowLeft className="w-5 h-5" style={{ color: 'white' }} />
+        </button>
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-main)' }}>
+          Notifications
+        </h1>
+        {saved && <span className="text-green-500 text-sm ml-auto">Saved!</span>}
+      </div>
+      {content}
     </div>
   );
 };

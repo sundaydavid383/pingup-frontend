@@ -51,6 +51,8 @@ import SidebarTooltipPortal from './component/shared/SidebarTooltipPortal';
 import { MoodProvider } from './store/MoodStore';
 import { ScriptureProvider } from './context/ScriptureContext';
 import GlobalScriptureModal from './component/shared/GlobalScriptureModal';
+import { useNotificationStatusModal } from "./hooks/useNotificationStatusModal";
+import NotificationStatusModal from './component/shared/NotificationStatusModal';
 // Admin Dashboard Imports
 import AdminLayout from '@/component/Admin/Layout';
 import AdminDashboard from '@/pages/Admin/Dashboard';
@@ -74,7 +76,7 @@ const App = () => {
 } = serviceWorkerHelper;
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthText, setOauthText] = useState("Loading…");
-
+  const { modalState, dndInfo, dismiss } = useNotificationStatusModal();
 
 useEffect(() => {
     // ✅ OAuth loading check runs unconditionally regardless of SW support
@@ -225,6 +227,12 @@ useEffect(() => {
             onClose={() => setShowPasswordModal(false)}
             token={token}
             onSuccess={() => setShowPasswordModal(false)}
+          />
+          <NotificationStatusModal
+            modalState={modalState}
+            dndInfo={dndInfo}
+            onDismiss={dismiss}
+            onGoToSettings={() => navigate("/settings/notifications")}
           />
 
           <AccountabilityOnboarding
