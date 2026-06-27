@@ -107,7 +107,7 @@ useEffect(() => {
      * ✅ FIX: only counts messages from OTHER users, not your own sent messages
      */
     const calculateUnseenBelowCount = useCallback((overrideLastSeen) => {
-        const baseline = overrideLastSeen !== undefined ? overrideLastSeen : lastSeenMessage;
+        const baseline = overrideLastSeen !== undefined ? overrideLastSeen : lastSeenMessageRef.current;
         const currentMessages = messagesRef.current;
 
         if (currentMessages.length === 0) {
@@ -124,7 +124,7 @@ useEffect(() => {
 
         setUnseenBelowCount(count);
         return count;
-    }, [lastSeenMessage, userId]); // reads messagesRef.current — no longer rebuilt on every unrelated re-render
+    }, [userId]); // reads messagesRef.current — no longer rebuilt on every unrelated re-render
     /**
      * Update last seen on backend and emit socket event
      * Prevents duplicate emissions using ref tracking
@@ -368,8 +368,9 @@ const onContainerScroll = useCallback(() => {
         });
 
         setTimeout(() => {
-            if (messages.length === 0) return;
-            // ✅ Find the latest message from the OTHER user, not just messages[-1]
+            // ✅ FIX-N: Use messagesRef not messages — removes messages from deps
+            // messages in deps gave scrollToBottom a new identity on every new message
+            if (messagesRef.current.length === 0) return;
             const otherMessages = messagesRef.current.filter(m =>
                 m.from_user_id !== userId &&
                 !String(m._id).startsWith('temp_')
@@ -380,7 +381,7 @@ const onContainerScroll = useCallback(() => {
             updateLastSeenOnBackend(latestOther._id);
             setUnseenBelowCount(0);
         }, smooth ? 300 : 100);
-    }, [messages, userId, updateLastSeenOnBackend]);
+    }, [userId, updateLastSeenOnBackend]);
 
 
 const scrollToLastSeen = useCallback(() => {
@@ -558,7 +559,7 @@ if (setMessages) {
             observer.disconnect();
             if (batchTimeout) clearTimeout(batchTimeout);
         };
-    }, [enabled, hasInitialized, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend, messages.length]);
+    }, [enabled, hasInitialized, socket, userId, chatId, containerRef, setMessages, updateLastSeenOnBackend]);
 
 // EFFECT - Initial visibility check (no-scroll case)
 // ==========================================

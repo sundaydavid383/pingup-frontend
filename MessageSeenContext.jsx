@@ -19,9 +19,7 @@ export const MessageSeenProvider = ({ children }) => {
 
   // Keep a ref of activeChatId so socket handlers always see latest value
   const activeChatIdRef = useRef(null);
-  useEffect(() => {
-    activeChatIdRef.current = activeChatId;
-  }, [activeChatId]);
+  activeChatIdRef.current = activeChatId;
 
   // ─── Fetch all conversations + unread counts ───────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -116,26 +114,29 @@ export const MessageSeenProvider = ({ children }) => {
    useEffect(() => {
      if (!socket || !user?._id) return;
 
-     const registerIncoming = (chatId, message) => {
-       const msgId = message?._id?.toString();
-       if (msgId) {
-         if (processedIncomingIdsRef.current.has(msgId)) return;
-         processedIncomingIdsRef.current.add(msgId);
-         if (processedIncomingIdsRef.current.size > 300) {
-           processedIncomingIdsRef.current = new Set(
-             [...processedIncomingIdsRef.current].slice(-150)
-           );
-         }
-       }
-       updateConversationLastMessage(chatId, message);
-       incrementUnread(chatId);
-     };
+    const registerIncoming = (chatId, message) => {
+      const msgId = message?._id?.toString();
+      if (msgId) {
+        if (processedIncomingIdsRef.current.has(msgId)) return;
+        processedIncomingIdsRef.current.add(msgId);
+        if (processedIncomingIdsRef.current.size > 300) {
+          processedIncomingIdsRef.current = new Set(
+            [...processedIncomingIdsRef.current].slice(-150)
+          );
+        }
+      }
+      updateConversationLastMessage(chatId, message);
+      // ✅ FIX-4a + FIX-F: ref is synced inline so this check is always current
+      // Do not increment unread if this conversation is the one currently open
+      if (activeChatIdRef.current?.toString() === chatId?.toString()) return;
+      incrementUnread(chatId);
+    };
 
    
 const handleNewMessageAlert = (data) => {
   const { from_user_id, chatId, message } = data;
   if (from_user_id?.toString() === user._id?.toString()) return;
-  registerIncoming(chatId, message); // always increments — no active-chat exception
+  registerIncoming(chatId, message);
 };
      socket.on("newMessageAlert", handleNewMessageAlert);
 
@@ -143,7 +144,7 @@ const handleNewMessageAlert = (data) => {
       const handleReceiveMessage = (msg) => {
         if (!msg?._id) return;
         if (msg.from_user_id?.toString() === user._id?.toString()) return;
-        registerIncoming(msg.chatId, msg); // always increments
+        registerIncoming(msg.chatId, msg);
       };
      socket.on("receiveMessage", handleReceiveMessage);
 

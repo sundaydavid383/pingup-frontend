@@ -81,11 +81,15 @@ const Messages = () => {
     [sortedConversations, searchTerm]
   );
 
-  const handleOpenChat = (userId) => {
+const handleOpenChat = (userId) => {
     setActiveChatId(userId);
+    // ✅ FIX-6: Clear unread badge immediately on click — don't wait for ChatBox to mount
     const convo = conversations.find(
       (c) => c.otherUser?._id?.toString() === userId?.toString()
     );
+    if (convo?._id) {
+      clearUnreadForChat(convo._id);
+    }
     if (window.innerWidth < 768) navigate(`/chatbox/${userId}`);
   };
 
@@ -215,7 +219,7 @@ const Messages = () => {
                             />
                           </div>
                         </div>
-                        {onlineUsers.has(otherUser._id) && (
+                        {onlineUsers.has(otherUser._id?.toString()) && (
                           <span
                             className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
                             style={{ zIndex: 2 }}

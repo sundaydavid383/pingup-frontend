@@ -178,7 +178,7 @@ const incrementUnread = useCallback((senderId, message = null) => {
     });
   }, []);
 
-  // Reset last messages (logout)
+// Reset last messages (logout)
   const resetLastMessages = useCallback(() => {
     setLastMessages({});
     try {
@@ -186,6 +186,17 @@ const incrementUnread = useCallback((senderId, message = null) => {
     } catch (err) {
       /* ignore */
     }
+  }, []);
+
+  // ✅ FIX-P: Combined reset for logout — clears both unread and lastMessages
+  // Call this from your logout handler to prevent stale counts surviving between sessions
+  const resetAll = useCallback(() => {
+    setUnreadMessages({});
+    setLastMessages({});
+    try {
+      localStorage.removeItem(LOCAL_UNREAD_KEY);
+      localStorage.removeItem(LOCAL_LAST_KEY);
+    } catch (err) { /* ignore */ }
   }, []);
 
   // Convenience: mark as read (clears unread + optionally update lastMessages if needed)
@@ -219,6 +230,7 @@ const incrementUnread = useCallback((senderId, message = null) => {
     clearLastMessage,
     resetLastMessages,
     markAsRead,
+    resetAll,
   }}
 >
   {children}

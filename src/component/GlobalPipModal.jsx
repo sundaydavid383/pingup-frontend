@@ -29,12 +29,14 @@ const GlobalPipModal = () => {
     const scrollRef = useRef(null);
     const { clearUnreadForChat, getConvoByOtherUser } = useMessageSeen();
     useEffect(() => {
-  if (!activeChatId) return;
-  const convo = getConvoByOtherUser(activeChatId);
-  if (convo?._id) {
-    clearUnreadForChat(convo._id);
-  }
-}, [activeChatId]);
+      if (!activeChatId) return;
+      const convo = getConvoByOtherUser(activeChatId);
+      if (convo?._id) {
+        clearUnreadForChat(convo._id);
+      }
+      // ✅ FIX-J: also depend on getConvoByOtherUser so this re-runs
+      // when conversations finish loading after PIP is already open
+    }, [activeChatId, getConvoByOtherUser, clearUnreadForChat]);
 
     const [activeUser, setActiveUser] = useState(null);
     const [expandedChatMessages, setExpandedChatMessages] = useState(new Set());
@@ -266,10 +268,6 @@ const handleTouchStart = useCallback((e) => {
             setImage(null);
             setAudioURL(null);
             setDraft("");
-
-            if (socket) {
-                socket.emit("sendMessage", serverMsg);
-            }
         } catch (err) {
             setActiveChatHistory(prev => prev.map(m => m._id === tempId ? { ...m, failed: true, status: "failed" } : m));
         }
@@ -390,7 +388,7 @@ return (
             <div className="modal-glass-header">
                 <div className="relative" >
                     <ProfileAvatar user={activeUser} size={42} />
-                     {activeUser?._id && onlineUsers.has(activeUser._id) && (
+                     {activeUser?._id && onlineUsers.has(activeUser._id?.toString()) && (
                                     <span
                                       className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
                                       style={{ zIndex: 2 }}

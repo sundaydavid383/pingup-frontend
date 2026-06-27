@@ -66,6 +66,7 @@ import Announcements from '@/pages/Admin/Announcements';
 import Reports from '@/pages/Admin/Reports';
 import Notifications from '@/pages/Admin/Notifications';
 import AdminSettings from '@/pages/Admin/Settings';
+import SupportChatWidget from './component/shared/SupportChatWidget';
 const App = () => {
   const { user, setUser, token, modalOpen, setModalOpen, showPasswordModal, setShowPasswordModal, showOnboarding, setShowOnboarding } = useAuth();
   const location = useLocation();
@@ -234,6 +235,7 @@ useEffect(() => {
             onDismiss={dismiss}
             onGoToSettings={() => navigate("/settings/notifications")}
           />
+          <SupportChatWidget />
 
           <AccountabilityOnboarding
             isOpen={showOnboarding}

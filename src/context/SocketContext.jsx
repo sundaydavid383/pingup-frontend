@@ -94,18 +94,24 @@ export const SocketProvider = ({ children }) => {
   }, []); // ← empty deps: socket created once on mount
 
 
-  // ─── STEP 2: Announce presence as soon as user + socket are ready ─────────
-  // This is the key fix: joinUserRoom + heartbeat happens on APP LOAD,
-  // not when a chat is opened. Your server already handles userOnline on
-  // raw connection, but joinUserRoom ensures the personal notification
-  // room is joined immediately too.
-  useEffect(() => {
+useEffect(() => {
     if (!socket || !user) return;
 
-    // Join personal room for notifications (needed even if chat never opened)
-    socket.emit("joinUserRoom", user._id.toString());
+    const doJoin = () => {
+      socket.emit("joinUserRoom", user._id.toString());
+      // Re-request snapshot in case we missed the broadcast while auth was loading
+      socket.emit("requestOnlineUsers");
+    };
 
-    // Heartbeat to keep lastActiveAt fresh in DB
+    // If socket already connected when user becomes available, join immediately
+    if (socket.connected) {
+      doJoin();
+    }
+
+    // Also fire on every (re)connect — covers the race where
+    // socket connected BEFORE the user object was ready in React state
+    socket.on("connect", doJoin);
+
     const activityInterval = setInterval(() => {
       if (socket.connected) {
         socket.emit("userActivity");
@@ -113,10 +119,10 @@ export const SocketProvider = ({ children }) => {
     }, 30000);
 
     return () => {
+      socket.off("connect", doJoin);
       clearInterval(activityInterval);
     };
-  }, [socket, user]); // ← runs when socket is ready AND user is known
-
+  }, [socket, user]);
 
   // ─── STEP 3: Global notification listener ────────────────────────────────
   useEffect(() => {
@@ -198,32 +204,38 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!socket || !user) return;
 
-    const handleReceiveMessage = (msg) => {
+     const handleReceiveMessage = (msg) => {
       if (!msg?._id) return;
+      if (msg.from_user_id === user._id) return;
       if (processed.current.has(msg._id)) return;
       processed.current.add(msg._id);
-
-      if (msg.from_user_id === user._id) return;
-
-      updateLastMessage(msg.from_user_id, msg);
-
-      window.dispatchEvent(
-        new CustomEvent("newMessageAlert", {
-          detail: {
-            from_user_id: msg.from_user_id,
-            chatId: msg.chatId,
-            message: msg,
-          },
-        })
-      );
-
       if (processed.current.size > 200) {
         processed.current = new Set([...processed.current].slice(-100));
       }
+      // ✅ FIX-2: Only update MessageContext lastMessages cache.
+      // Do NOT dispatch window event — ChatBox listens to socket directly.
+      // The window event caused ChatBox to process the same message twice.
+      updateLastMessage(msg.from_user_id, msg);
+    };
+
+    const handleNewMessageAlert = (data) => {
+      const { from_user_id, message } = data;
+      if (!message?._id) return;
+      if (from_user_id === user._id) return;
+      if (processed.current.has(message._id)) return;
+      processed.current.add(message._id);
+      if (processed.current.size > 200) {
+        processed.current = new Set([...processed.current].slice(-100));
+      }
+      updateLastMessage(from_user_id, message);
     };
 
     socket.on("receiveMessage", handleReceiveMessage);
-    return () => socket.off("receiveMessage", handleReceiveMessage);
+    socket.on("newMessageAlert", handleNewMessageAlert);
+    return () => {
+      socket.off("receiveMessage", handleReceiveMessage);
+      socket.off("newMessageAlert", handleNewMessageAlert);
+    };
   }, [socket, user, addUnread, updateLastMessage]);
 
 

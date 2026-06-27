@@ -222,7 +222,7 @@ return (
                     {/* Avatar */}
                     <div className="rm-avatar-wrap" style={{ position: "relative" }}>
                       <ProfileAvatar user={usr} size={40} />
-                      {onlineUsers.has(usr._id) && (
+                      {onlineUsers.has(usr._id?.toString()) && (
                         <span
                           className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
                           style={{ zIndex: 2 }}

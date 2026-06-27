@@ -56,8 +56,7 @@ const ChatBox = ({ userId: propUserId }) => {
 
   // Reset messages when userId changes (chat switching)
   useEffect(() => {
-    const cached = localStorage.getItem(`chat_history_${userId}`);
-    setMessages(cached ? JSON.parse(cached) : []);
+    setMessages([]);
   }, [userId]);
 
   // Input ref for focusing
@@ -297,13 +296,15 @@ useEffect(() => {
   }, []);
 
 
+
   useEffect(() => {
-  if (!userId) return;
-  setActiveChatId(userId); // tell context "this chat is open"
-  return () => {
-    setActiveChatId(null); // clear when leaving
-  };
-}, [userId, setActiveChatId]);
+    if (!chatId) return;
+    setActiveChatId(chatId);
+    clearUnreadForChat(chatId);
+    return () => {
+      setActiveChatId(null);
+    };
+  }, [chatId, setActiveChatId, clearUnreadForChat]);
 
   // ===================== NEAR BOTTOM SCROLL DETECTION =====================
   // Ref to track if user is near bottom (used for scroll button visibility)
@@ -492,41 +493,60 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
     }, 2000);
 };
 
-    // ✅ Window event (from SocketContext global handler — receiver NOT in room)
-    const handleNewMessageAlert = (e) => {
-        const msg = e.detail?.message;
-        if (!msg?._id) return;
-        if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
-        handleReceiveMessage(msg);
+  // ✅ FIX-3a: Listen to socket directly — no window event
+    // SocketContext no longer dispatches window events (fix 2) so this is the only path
+    const handleDirectReceiveMessage = (msg) => {
+      if (!msg?._id) return;
+      if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
+      if (msg.from_user_id === user._id) return;
+      handleReceiveMessage(msg);
     };
 
-    // ✅ Direct socket event (receiver IS in room — this was missing!)
-    const handleDirectReceiveMessage = (msg) => {
-        if (!msg?._id) return;
-        if (msg.chatId?.toString() !== chatIdRef.current?.toString()) return;
-        // Don't process our own sent messages (already handled optimistically)
-        if (msg.from_user_id === user._id) return;
-        handleReceiveMessage(msg);
+    // newMessageAlert fires when socket is NOT joined to the room
+    // Still need to handle it in case joinRoom hasn't fired yet on first load
+    const handleNewMessageAlertSocket = (data) => {
+      const { from_user_id, chatId: alertChatId, message } = data;
+      if (!message?._id) return;
+      if (alertChatId?.toString() !== chatIdRef.current?.toString()) return;
+      if (from_user_id === user._id) return;
+      handleReceiveMessage(message);
+    };
+
+    // ✅ FIX-3b: Real-time block/unblock from the other person
+    const handleYouWereBlocked = ({ blockedBy }) => {
+      if (blockedBy?.toString() === userId?.toString()) {
+        setIsBlocked(true);
+        setMessages([]);
+      }
+    };
+    const handleYouWereUnblocked = ({ unblockedBy }) => {
+      if (unblockedBy?.toString() === userId?.toString()) {
+        setIsBlocked(false);
+      }
     };
 
     socket.on("typing", handleTypingFrom);
     socket.on("messageRead", handleMessageRead);
-    socket.on("receiveMessage", handleDirectReceiveMessage); // ✅ ADD THIS BACK
-    window.addEventListener("newMessageAlert", handleNewMessageAlert);
+    socket.on("receiveMessage", handleDirectReceiveMessage);
+    socket.on("newMessageAlert", handleNewMessageAlertSocket);
+    socket.on("youWereBlocked", handleYouWereBlocked);
+    socket.on("youWereUnblocked", handleYouWereUnblocked);
 
     return () => {
-        socket.off("typing", handleTypingFrom);
-        socket.off("messageRead", handleMessageRead);
-        socket.off("receiveMessage", handleDirectReceiveMessage); // ✅ cleanup
-        window.removeEventListener("newMessageAlert", handleNewMessageAlert);
-    };
+      socket.off("typing", handleTypingFrom);
+      socket.off("messageRead", handleMessageRead);
+      socket.off("receiveMessage", handleDirectReceiveMessage);
+      socket.off("newMessageAlert", handleNewMessageAlertSocket);
+      socket.off("youWereBlocked", handleYouWereBlocked);
+      socket.off("youWereUnblocked", handleYouWereUnblocked);
+    };    
 }, [socket, user]);
   // FIXED: Stable Online / Last Seen Status
   const getStatusText = useMemo(() => {
     if (!receiver) return "Loading...";
 
     // Priority 1: Real-time socket online status
-    if (onlineUsers.has(receiver._id)) {
+    if (onlineUsers.has(receiver._id?.toString())) {
       return "Online";
     }
 
@@ -655,7 +675,9 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
       
       // 🔴 CRITICAL: Update the conversation's lastMessage to trigger re-sort in Messages.jsx
       // This ensures the chat jumps to top immediately and the list re-sorts
-      updateConversationLastMessage(chatId, serverMsg);
+      if (chatId) {
+        updateConversationLastMessage(chatId, serverMsg);
+      }
     }
     catch (err) {
       console.error("❌ sendMessage error:", err);
@@ -854,25 +876,36 @@ const handleBlockUser = async () => {
     const res = await axiosBase.post(`/api/user/block/${targetId}`, {});
     const wasBlocked = res.data?.blocked; // true = now blocked, false = now unblocked
 
-    if (wasBlocked) {
-      // Just blocked — clear chat, set flag
+  if (wasBlocked) {
       setMessages([]);
       localStorage.removeItem(`chat_history_${userId}`);
       localStorage.removeItem(`chatId_${userId}`);
       localStorage.setItem(`blocked_${userId}`, 'true');
       setIsBlocked(true);
+      // ✅ FIX-3b: notify the blocked user's client in real time
+      if (socket) {
+        socket.emit("userBlocked", {
+          blockedUserId: targetId,
+          blockerUserId: user._id,
+        });
+      }
       toast.success(`${receiver?.username || 'User'} has been blocked`, { id: "blockUser" });
       setShowMenu(false);
       setShowBlockConfirm(false);
       setTimeout(() => navigate(-1), 1500);
     } else {
-      // Just unblocked — remove flag, allow chat to reload
       localStorage.removeItem(`blocked_${userId}`);
       setIsBlocked(false);
+      // ✅ FIX-3b: notify the unblocked user's client in real time
+      if (socket) {
+        socket.emit("userUnblocked", {
+          unblockedUserId: targetId,
+          unblockerUserId: user._id,
+        });
+      }
       toast.success(`${receiver?.username || 'User'} has been unblocked`, { id: "blockUser" });
       setShowMenu(false);
       setShowBlockConfirm(false);
-      // Reload chat data now that user is unblocked
       window.location.reload();
     }
   } catch (err) {
@@ -1159,7 +1192,7 @@ useEffect(() => {
           <HeaderArrow sidebarOpen={sidebarOpen} navigate={navigate} />
           <div onClick={() => navigate(`/profile/${receiver._id}`)} className="cursor-pointer relative">
             <ProfileAvatar user={receiver} size={48} />
-            {onlineUsers.has(receiver._id) && (
+            {onlineUsers.has(receiver._id?.toString()) && (
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
             )}
           </div>

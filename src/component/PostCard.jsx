@@ -333,8 +333,6 @@ const youTubeUrl = getYouTubeEmbedUrl(post);
     }
   };
 
-  console.log("POST ATTACHMENTS:", JSON.stringify(post.attachments, null, 2));
-
 
 
   const handleFollow = async () => {
