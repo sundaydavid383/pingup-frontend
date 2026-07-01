@@ -455,9 +455,29 @@ useEffect(() => {
     if (!socket || !user) return;
 
     const handleMessageRead = ({ messageId, reader }) => {
-        setMessages((prev) =>
-            prev.map((m) => (m._id === messageId ? { ...m, status: "seen" } : m))
-        );
+      setMessages((prev) =>
+        prev.map((m) => (m._id === messageId ? { ...m, status: "seen" } : m))
+      );
+    };
+
+// ✅ Server now sends lastActiveAt directly in the userOffline event
+    // No API call needed — use it directly to update receiver
+    const handleUserOffline = ({ userId: offlineUserId, lastActiveAt }) => {
+      if (!receiver) return;
+      if (offlineUserId?.toString() !== receiver._id?.toString()) return;
+      setReceiver(prev =>
+        prev ? { ...prev, lastActiveAt: lastActiveAt || new Date().toISOString() } : prev
+      );
+    };
+
+    // ✅ FIX: When the person comes online, update receiver too
+    // so "Online" shows immediately without waiting for any fetch
+    const handleUserOnline = ({ userId: onlineUserId }) => {
+      if (!receiver) return;
+      if (onlineUserId?.toString() !== receiver._id?.toString()) return;
+      // onlineUsers Set is already updated by SocketContext.
+      // We just need getStatusText to re-run — it depends on onlineUsers
+      // which already changed, so this is automatic. Nothing to do here.
     };
 
     const handleReceiveMessage = (newMsg) => {
@@ -525,12 +545,13 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
       }
     };
 
-    socket.on("typing", handleTypingFrom);
+ socket.on("typing", handleTypingFrom);
     socket.on("messageRead", handleMessageRead);
     socket.on("receiveMessage", handleDirectReceiveMessage);
     socket.on("newMessageAlert", handleNewMessageAlertSocket);
     socket.on("youWereBlocked", handleYouWereBlocked);
     socket.on("youWereUnblocked", handleYouWereUnblocked);
+    socket.on("userOffline", handleUserOffline);
 
     return () => {
       socket.off("typing", handleTypingFrom);
@@ -539,18 +560,19 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
       socket.off("newMessageAlert", handleNewMessageAlertSocket);
       socket.off("youWereBlocked", handleYouWereBlocked);
       socket.off("youWereUnblocked", handleYouWereUnblocked);
-    };    
-}, [socket, user]);
+      socket.off("userOffline", handleUserOffline);
+    };
+  }, [socket, user, receiver]);
   // FIXED: Stable Online / Last Seen Status
-  const getStatusText = useMemo(() => {
-    if (!receiver) return "Loading...";
+const getStatusText = useMemo(() => {
+    if (!receiver) return "";
 
     // Priority 1: Real-time socket online status
     if (onlineUsers.has(receiver._id?.toString())) {
       return "Online";
     }
 
-    // Priority 2: Last active timestamp
+    // Priority 2: Last active timestamp — always show it, never just "Offline"
     if (!receiver.lastActiveAt) return "Offline";
 
     const lastSeen = new Date(receiver.lastActiveAt);
@@ -558,20 +580,52 @@ const handleTypingFrom = ({ from_user_id, chatId: typingChatId }) => {
     const diffMs = now - lastSeen;
     const diffSecs = Math.floor(diffMs / 1000);
     const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-    // Grace period to prevent flickering
-    if (diffSecs < 90) {
-      return "Online";
+    // Grace period — treat very recent activity as online
+    if (diffSecs < 60) {
+      return "Last seen just now";
     }
+
+    // Within the last hour — show minutes
     if (diffMins < 60) {
       return `Last seen ${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
     }
-    if (diffMins < 1440) {
-      const hours = Math.floor(diffMins / 60);
-      return `Last seen ${hours} hour${hours > 1 ? 's' : ''} ago`;
+
+    // Within today — show time as HH:MM am/pm
+    const lastSeenDate = lastSeen.toDateString();
+    const todayDate = now.toDateString();
+    const yesterdayDate = new Date(now - 86400000).toDateString();
+
+    const timeStr = lastSeen.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    if (lastSeenDate === todayDate) {
+      return `Last seen today at ${timeStr}`;
     }
 
-    return "Offline";
+    if (lastSeenDate === yesterdayDate) {
+      return `Last seen yesterday at ${timeStr}`;
+    }
+
+    // Within the last 7 days — show day name + time
+    if (diffDays < 7) {
+      const dayName = lastSeen.toLocaleDateString([], { weekday: 'long' });
+      return `Last seen ${dayName} at ${timeStr}`;
+    }
+
+    // Older than 7 days — show full date + time
+    const dateStr = lastSeen.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      year: diffDays > 365 ? 'numeric' : undefined,
+    });
+    return `Last seen ${dateStr} at ${timeStr}`;
+
   }, [receiver, onlineUsers]);
 
   // eslint-disable-line //====================FAILED MESSAGE ====================/ // 
@@ -1198,8 +1252,10 @@ useEffect(() => {
           </div>
           <div className="flex flex-col">
             <p className="font-semibold text-gray-900 text-sm">{receiver.username}</p>
-            <span className="text-xs text-gray-500">{getStatusText}</span>
-          </div>
+          {getStatusText ? (
+              <span className="text-xs text-gray-500">{getStatusText}</span>
+            ) : null}
+            </div>
         </div>
         <div className="flex items-center gap-2 relative">
           {/* Audio Call Button - WhatsApp Style */}
@@ -2116,7 +2172,13 @@ useEffect(() => {
             )
              :
                 (
-                // ❌ FETCH ERROR
+                // ✅ FIX: Only show error if loading is fully done AND no receiver found
+                // While loading=true, show nothing (skeleton/spinner handles it above)
+                loading ? (
+                  <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="loader"></div>
+                  </div>
+                ) : (
                 <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br 
               from-gray-100 to-gray-200 text-center px-6 animate-fadeIn">
                   <div className="bg-white p-8 rounded-2xl shadow-md max-w-sm w-full">
@@ -2131,6 +2193,7 @@ useEffect(() => {
                       font-medium hover:opacity-90 transition-all btn" > 🔄 Retry </button>
                   </div>
                 </div>
+                )
               )
         }
       {/* Extra padding so last message isn't hidden under input */}

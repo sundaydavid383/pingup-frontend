@@ -136,8 +136,6 @@ const handleOpenChat = (userId) => {
 
             <div className="msg-header">
               <div className="msg-eyebrow"><span>✦</span> Inbox</div>
-              <h1 className="msg-title">Your <em>messages</em></h1>
-              <p className="msg-subtitle">People you've connected with</p>
             </div>
 
             <div className="msg-search-wrap">
