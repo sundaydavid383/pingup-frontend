@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMessageSeen } from '../../MessageSeenContext';
-import { Home, Users, User, Bell, Book, MessageSquareText, Compass, BookOpen, Settings, LogOut } from 'lucide-react';
+import { Home, Users, User, Bell, Book, MessageSquareText, Compass, BookOpen, Settings, LogOut, HelpCircle  } from 'lucide-react';
 import "../styles/ui.css";
 import "../styles/sidebar-award.css"; // ← ADD THIS
 import useMediaQuery from "../hooks/useMediaQuery";
+import { useSupportChat } from '../context/SupportChatContext';
 import { useSidebarTooltip } from "./shared/SidebarTooltipPortal";
 
 const MenuItems = ({ setSidebarOpen }) => {
@@ -15,6 +16,7 @@ const MenuItems = ({ setSidebarOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showTooltip, hideTooltip } = useSidebarTooltip();
+  const { setSupportOpen } = useSupportChat();
 
   const isMessageTab   = location.pathname.startsWith('/messages');
   const isSettingsTab  = location.pathname.startsWith('/settings');
@@ -104,7 +106,16 @@ const MenuItems = ({ setSidebarOpen }) => {
           )}
         </NavLink>
       ))}
-
+      <button
+        onClick={() => setSupportOpen(true)}
+        className={['nav-item sb-delay-8', isCollapsed ? 'collapsed' : ''].join(' ')}
+        style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%' }}
+        onMouseEnter={(e) => handleMouseEnter(e, "Support")}
+        onMouseLeave={hideTooltip}
+      >
+        <div className="nav-icon"><HelpCircle /></div>
+        {!isCollapsed && <span className="nav-label">Support</span>}
+      </button>
       {/* Section sep + label */}
       <hr className="sb-section-sep" />
       {!isCollapsed && <div className="sb-section-label">Account</div>}

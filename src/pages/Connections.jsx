@@ -682,7 +682,6 @@ const CONN_SCROLL_KEY = "connections_scroll_position";
             <div className="conn-title-row">
               <div>
                 <h1 className="conn-title">Connections</h1>
-                <p className="conn-subtitle">Manage your followers, friends, and pending requests.</p>
               </div>
               <RefreshButton 
                             onRefresh={handleRefresh} 

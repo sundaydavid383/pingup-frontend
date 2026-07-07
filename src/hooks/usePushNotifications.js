@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axiosBase from "../utils/axiosBase";
 
 // Your VAPID public key from .env
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_PUBLIC_VAPID_KEY;
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -45,7 +45,7 @@ export function usePushNotifications() {
     }
 
     if (!VAPID_PUBLIC_KEY) {
-      console.error("VITE_VAPID_PUBLIC_KEY is not set in .env");
+      console.error("VITE_PUBLIC_VAPID_KEY is not set in .env");
       return { success: false, reason: "no_vapid_key" };
     }
 
