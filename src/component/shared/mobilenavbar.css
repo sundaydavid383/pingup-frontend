@@ -32,6 +32,11 @@
   align-items: stretch;
 }
 
+/* hidden while the Support slider is open so it doesn't cover the search input */
+.mobile-navbar.is-hidden {
+  display: none !important;
+}
+
 /* thin gradient shimmer along the very top */
 .mobile-navbar::before {
   content: '';

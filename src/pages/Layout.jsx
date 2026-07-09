@@ -7,13 +7,14 @@ import Loading from '../component/shared/Loading';
 import MobileNavbar from "../component/shared/MobileNavbar";
 import "../component/shared/mobilenavbar.css";
 import { useTaskTable } from '../context/TaskTableContext';
-import { SupportChatProvider } from '../context/SupportChatContext';
+import { SupportChatProvider, useSupportChat } from '../context/SupportChatContext';
 import SupportDrawer from '../component/shared/SupportDrawer';
 
 const Layout = () => {
   const { user, sidebarOpen, setSidebarOpen } = useAuth();
   const location = useLocation();
   const { taskTableOpen } = useTaskTable();
+  const { supportOpen } = useSupportChat();
 
   const isMessageTab   = location.pathname.startsWith('/messages');
   const isSettingsTab  = location.pathname.startsWith('/settings');
@@ -33,7 +34,7 @@ const Layout = () => {
 return user ? (
   <div className="w-full h-screen relative no-scrollbar overflow-hidden">
     <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-    {!hideMobileNavbar && <MobileNavbar setSidebarOpen={setSidebarOpen} />}
+    {!hideMobileNavbar && <MobileNavbar setSidebarOpen={setSidebarOpen} supportOpen={supportOpen} />}
 
     <div
       className={`absolute top-0 right-0 bottom-0 overflow-y-auto bg-slate-50

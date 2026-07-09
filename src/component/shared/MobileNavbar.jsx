@@ -7,7 +7,7 @@ import { useNotificationContext } from "../../context/NotificationContext";
 import "./mobilenavbar.css"; // CSS file
 import BackButton from "./BackButton";
 
-const MobileNavbar = ({ setSidebarOpen }) => {
+const MobileNavbar = ({ setSidebarOpen, supportOpen }) => {
   const { user } = useAuth();
   const { totalUnreadCount } = useMessageSeen();
   const { unreadCount: notificationUnreadCount } = useNotificationContext();
@@ -22,12 +22,12 @@ const MobileNavbar = ({ setSidebarOpen }) => {
   ];
 
   return (
-    <div className="mobile-navbar">
+    <div className={`mobile-navbar${supportOpen ? ' is-hidden' : ''}`}>
       {/* Sidebar Toggle */}
   {/* <BackButton className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white" top="5px" left="49px"  onClick={() => setSidebarOpen(true)} /> */}
 
       {/* Menu Icons */}
-      <div className="mobile-navbar-menu hidden">
+      <div className="mobile-navbar-menu">
         {menuItems.map(({ to, icon: Icon, badge }) => (
           <NavLink key={to} to={to} className="mobile-navbar-link">
             <Icon className="mobile-navbar-icon" />
