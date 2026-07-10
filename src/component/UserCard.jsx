@@ -147,7 +147,7 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
   const [isConnecting,      setIsConnecting]      = useState(false);
   const [isProcessing,      setIsProcessing]      = useState(false);
   const [alert,             setAlert]             = useState({ open: false, message: "", type: "info" });
-
+  const isSelf = activeUser?._id && String(activeUser._id) === String(user._id);
   // ── KEY FIX: sync state when the parent re-renders with fresh props ────────
   // This is what makes the cache-bust + refresh actually update the buttons.
   useEffect(() => {
@@ -315,7 +315,7 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
 
         <div className="uc-divider" />
 
-        <div className="uc-actions">
+        {!isSelf && <div className="uc-actions">
           {/* ── Follow / Following ── */}
           <button
             onClick={handleFollow}
@@ -368,7 +368,7 @@ export default function UserCard({ user: rawUser, onUserUpdate }) {
               {isConnecting ? <Spinner /> : <Plus size={15} />}
             </button>
           )}
-        </div>
+        </div>}
       </div>
     </>
   );
