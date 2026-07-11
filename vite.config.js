@@ -22,7 +22,9 @@ export default defineConfig({
 
       includeAssets: [
         'icons/icon-192.png',
-        'icons/icon-512.png'
+        'icons/icon-512.png',
+        'sitemap.xml',       // <-- Add this
+        'robots.txt'
       ],
 
       manifest: {
@@ -48,9 +50,14 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
 
         runtimeCaching: [
-          // SPA pages
+         // SPA pages
           {
-            urlPattern: ({ request }) => request.mode === 'navigate',
+            urlPattern: ({ request, url }) => {
+              // Only intercept navigation requests that are NOT static assets like sitemaps or robots
+              return request.mode === 'navigate' && 
+                    !url.pathname.endsWith('.xml') && 
+                    !url.pathname.endsWith('.txt');
+            },
             handler: 'NetworkFirst',
             options: { cacheName: 'pages', networkTimeoutSeconds: 5 }
           },
