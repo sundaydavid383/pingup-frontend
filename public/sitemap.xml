@@ -62,20 +62,4 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Portfolio -->
-  <url>
-    <loc>https://springscircle.vercel.app/portfolio</loc>
-    <lastmod>2026-05-18</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Sphere Demo -->
-  <url>
-    <loc>https://springscircle.vercel.app/sphere</loc>
-    <lastmod>2026-05-18</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
 </urlset>
