@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { Bell, Mail, MessageCircle, User, Phone, Home, Trash2, CheckCheck } from 'lucide-react';
-import { useNotificationContext } from '../context/NotificationContext';
+import { useNotificationContext, READ_ON_VIEW_CATEGORIES } from '../context/NotificationContext';
 
 const CategoryNotifications = () => {
   const {
@@ -15,6 +15,49 @@ const CategoryNotifications = () => {
     markCategoryAsRead,
     deleteCategoryNotifications,
   } = useNotificationContext();
+
+  const VIEW_READ_DELAY_MS = 1200; // must stay visibly in view this long before it counts
+const itemRefs = useRef(new Map());
+const visibleTimers = useRef(new Map());
+const observerRef = useRef(null);
+
+useEffect(() => {
+  if (!READ_ON_VIEW_CATEGORIES.has(activeCategory)) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const id = entry.target.dataset.notifId;
+        if (!id) return;
+
+        if (entry.isIntersecting) {
+          if (visibleTimers.current.has(id)) return;
+          const timer = setTimeout(() => {
+            markAsRead(id);
+            visibleTimers.current.delete(id);
+          }, VIEW_READ_DELAY_MS);
+          visibleTimers.current.set(id, timer);
+        } else {
+          const timer = visibleTimers.current.get(id);
+          if (timer) {
+            clearTimeout(timer);
+            visibleTimers.current.delete(id);
+          }
+        }
+      });
+    },
+    { threshold: 0.6 }
+  );
+
+  observerRef.current = observer;
+  itemRefs.current.forEach((el) => el && observer.observe(el));
+
+  return () => {
+    observer.disconnect();
+    visibleTimers.current.forEach(clearTimeout);
+    visibleTimers.current.clear();
+  };
+}, [activeCategory, sortedActiveNotifications, markAsRead]); 
 
   const categoryConfig = {
     [NOTIFICATION_CATEGORIES.INBOX]:     { icon: Home          },
@@ -394,10 +437,21 @@ const CategoryNotifications = () => {
           {sortedActiveNotifications.length > 0 ? (
             sortedActiveNotifications.map((notif) => (
               <div
-                key={notif._id}
-                className={`gn-item${!notif.isRead ? ' unread' : ''}`}
-                onClick={() => handleNotificationClick(notif)}
-              >
+  key={notif._id}
+  ref={(el) => {
+    if (el) {
+      itemRefs.current.set(notif._id, el);
+      if (READ_ON_VIEW_CATEGORIES.has(activeCategory) && !notif.isRead && observerRef.current) {
+        observerRef.current.observe(el);
+      }
+    } else {
+      itemRefs.current.delete(notif._id);
+    }
+  }}
+  data-notif-id={notif._id}
+  className={`gn-item${!notif.isRead ? ' unread' : ''}`}
+  onClick={() => handleNotificationClick(notif)}
+>
                 <div className="gn-item-row">
                   <div className="gn-icon-wrap">
                     <CatIcon cat={activeCategory} size={18} />

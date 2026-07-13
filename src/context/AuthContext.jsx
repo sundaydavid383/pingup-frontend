@@ -40,41 +40,17 @@ export const AuthProvider = ({ children }) => {
   markAsRead, 
   unreadCount, 
   loadingNotifications, 
-  setLoadingNotifications 
+  setLoadingNotifications,
+  pollNotifications, 
 } = useNotificationContext();
 
-
+const fetchNotifications = pollNotifications;
 const messageUnreadCount = Object.values(unreadMessages).reduce(
   (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 
   0
 );
 const totalUnreadCount = unreadCount + messageUnreadCount;
 
-
-const fetchNotifications = async () => {
-  if (!user?._id || !token) return;
-
-  try {
-    setLoadingNotifications(true);
-
-    const res = await axiosBase.get(
-      `api/user/notifications?userId=${user._id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    if (res.data.success) {
-      const notifs = res.data.notifications || [];
-      notifs.forEach((n) => addNotification(n)); // Add to NotificationContext
-      console.log(`🔔 Fetched ${notifs.length} notifications`);
-    } else {
-      console.warn("⚠️ Fetch failed — success was false.");
-    }
-  } catch (err) {
-    console.error("❌ Failed to fetch notifications:", err);
-  } finally {
-    setLoadingNotifications(false);
-  }
-};
 
 const handleRead = async (notificationId) => {
   if (!notificationId) return;
@@ -84,11 +60,6 @@ const handleRead = async (notificationId) => {
 
   console.log(`✅ Notification ${notificationId} marked as read`);
 };
-
-// Run once on login or token load
-useEffect(() => {
-  if (user && token) fetchNotifications();
-}, [user, token]);
 
 
   // 📌 Mark notification as read

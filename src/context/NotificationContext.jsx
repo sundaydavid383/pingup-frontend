@@ -21,6 +21,13 @@ const CATEGORY_LABELS = {
   messages: 'Messages'
 };
 
+export const READ_ON_VIEW_CATEGORIES = new Set([
+  NOTIFICATION_CATEGORIES.INBOX,
+  NOTIFICATION_CATEGORIES.COMMENTS,
+  NOTIFICATION_CATEGORIES.FOLLOWING,
+  NOTIFICATION_CATEGORIES.PROFILE,
+]);
+
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
@@ -50,15 +57,21 @@ export const NotificationProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (res.data.success && res.data.notifications) {
-        // Filter out locally-deleted ones
-        const fresh = res.data.notifications.filter(
-          n => !deletedNotificationIds.has(n._id)
-        );
-        // Full replace — this is the source of truth
-        setNotifications(fresh);
-        setLastFetched(new Date());
-      }
+     if (res.data.success && res.data.notifications) {
+  const fresh = res.data.notifications.filter(
+    n => !deletedNotificationIds.has(n._id)
+  );
+  setNotifications(prev => {
+    const prevById = new Map(prev.map(n => [n._id, n]));
+    return fresh.map(n => {
+      const prior = prevById.get(n._id);
+      // Never let a slightly-stale poll revert something we already marked read
+      if (prior?.isRead && !n.isRead) return { ...n, isRead: true };
+      return n;
+    });
+  });
+  setLastFetched(new Date());
+}
     } catch (err) {
       console.error('Fetch notifications error:', err);
     } finally {
