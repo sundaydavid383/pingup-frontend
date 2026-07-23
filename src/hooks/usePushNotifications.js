@@ -69,11 +69,8 @@ export function usePushNotifications() {
       });
 
       // 4. Send subscription to your backend
-      const subJson = subscription.toJSON();
-      await axiosBase.post("/api/notifications/push-subscribe", {
-        endpoint: subJson.endpoint,
-        keys: subJson.keys,
-      });
+     const subJson = subscription.toJSON();
+     await axiosBase.post("/api/subscribe", subJson);
 
       setIsSubscribed(true);
       console.log("✅ Push notifications subscribed successfully");

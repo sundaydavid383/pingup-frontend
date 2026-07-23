@@ -38,6 +38,7 @@ export default function Discover() {
   const isFetching   = useRef(false);
   // isSearchMode: true when user is actively searching/filtering
   const isSearchMode = useRef(false);
+  const seedRef = useRef(String(Date.now())); 
 
   const readToken    = () => localStorage.getItem("token");
   const authHeaders  = () => {
@@ -99,7 +100,7 @@ export default function Discover() {
     try {
       const res     = await axios.get(`${BASE}/api/user/suggestions`, {
         headers: authHeaders(),
-        params:  { page: 1, limit: 20 },
+        params:  { page: 1, limit: 20, seed: seedRef.current},
       });
       const fetched = normalizeArray(res.data);
       setUsers(fetched);
@@ -180,7 +181,7 @@ export default function Discover() {
       const nextPage = pageRef.current + 1;
       const res      = await axios.get(`${BASE}/api/user/suggestions`, {
         headers: authHeaders(),
-        params:  { page: nextPage, limit: 20 },
+        params:  { page: nextPage, limit: 20, seed: seedRef.current },
       });
       const more = normalizeArray(res.data);
       if (more.length === 0) {
@@ -188,7 +189,9 @@ export default function Discover() {
         return;
       }
       setUsers((prev) => {
-        const updated = [...prev, ...more];
+        const seenIds = new Set(prev.map((u) => String(u._id)));
+        const newOnes = more.filter((u) => !seenIds.has(String(u._id)));
+        const updated = [...prev, ...newOnes];
         writeCache(updated);
         return updated;
       });
@@ -241,6 +244,7 @@ export default function Discover() {
 
   // ── Refresh ───────────────────────────────────────────────────────────────
   const handleRefresh = () => {
+    seedRef.current = String(Date.now()); 
     clearCache();                  // bust the cache so fresh data loads
     isSearchMode.current = false;
     setIsRefreshing(true);
