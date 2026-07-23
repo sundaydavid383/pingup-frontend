@@ -1,79 +1,151 @@
 import React from 'react';
-import { Mic } from 'lucide-react';
+import { Mic, ArrowRight } from 'lucide-react';
 
 const VoiceSearchShowcase = ({ onAuthClick }) => {
+  const bars = [0.4, 0.7, 1, 0.55, 0.85, 0.35, 0.9, 0.5, 0.65];
 
   return (
-    <section className="py-24 bg-gradient-to-b from-[var(--bg-main)] via-blue-900/10 to-[var(--bg-main)] relative overflow-hidden">
-      {/* Background elements */}
-      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-full blur-3xl"></div>
+    <section
+      className="py-28 relative overflow-hidden"
+      style={{ background: 'var(--bg-main)' }}
+    >
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] rounded-full blur-[130px] pointer-events-none"
+        style={{ background: 'var(--ob-mesh-1)' }}
+      />
+      <div
+        className="absolute bottom-0 right-1/4 w-72 h-72 rounded-full blur-[100px] pointer-events-none"
+        style={{ background: 'var(--primary)', opacity: 0.08 }}
+      />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Header */}
-        <div className="text-center mb-16 space-y-4">
-          <div className="inline-block">
-            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 px-4 py-2 rounded-full">
-              <Mic size={18} className="text-blue-400" />
-              <span className="text-sm font-semibold text-blue-300">Our Differentiator</span>
-            </div>
+
+        <div className="text-center mb-14 space-y-5">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border"
+            style={{ background: 'rgba(var(--primary-rgb),0.08)', borderColor: 'rgba(var(--primary-rgb),0.35)' }}
+          >
+            <Mic size={14} style={{ color: 'var(--primary)' }} />
+            <span
+              className="text-[0.7rem] font-semibold tracking-[0.22em] uppercase"
+              style={{ color: 'var(--primary)' }}
+            >
+              Our differentiator
+            </span>
           </div>
 
-          <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-            Can't Remember the Verse?
+          <h2
+            className="text-4xl md:text-5xl leading-[1.1] text-white"
+            style={{ fontFamily: "'Fraunces', serif", fontWeight: 500 }}
+          >
+            Can't remember the verse?
           </h2>
-          <p className="text-2xl md:text-3xl text-gray-400 font-semibold">
-            Just Recite It. We'll Find It.
+          <p
+            className="text-2xl md:text-[1.85rem] italic"
+            style={{ fontFamily: "'Fraunces', serif", color: 'var(--primary)' }}
+          >
+            Just recite it. We'll find it.
           </p>
         </div>
 
-        {/* Voice Search Visual */}
-        <div className="flex justify-center mb-12">
-          <div className="relative w-full max-w-sm">
-            {/* Microphone animation */}
-            <div className="flex justify-center items-center">
-              <div className="relative w-32 h-32">
-                {/* Animated rings */}
-                <div className="absolute inset-0 border-2 border-blue-500/30 rounded-full animate-pulse"></div>
-                <div className="absolute inset-4 border-2 border-blue-500/20 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                <div className="absolute inset-8 border-2 border-blue-500/10 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+        <div className="flex justify-center mb-14">
+          <div className="relative w-full max-w-md flex flex-col items-center">
 
-                {/* Mic icon */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-full">
-                    <Mic size={40} className="text-white" />
-                  </div>
-                </div>
+            <div className="relative w-28 h-28 mb-2">
+              <div
+                className="absolute -inset-3 rounded-full blur-2xl opacity-50 mic-breathe"
+                style={{ background: 'var(--primary)' }}
+              />
+              <div
+                className="relative w-full h-full rounded-full flex items-center justify-center"
+                style={{
+                  background: 'var(--primary)',
+                  boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.2), 0 20px 40px -12px rgba(var(--primary-rgb),0.6)',
+                }}
+              >
+                <Mic size={34} style={{ color: 'var(--text-main)' }} strokeWidth={2.2} />
               </div>
             </div>
 
-            {/* Example text */}
-            <div className="mt-12 text-center space-y-4">
-              <div className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 rounded-lg p-6">
-                <p className="text-lg text-gray-300 italic">
-                  "For God so loved the world…"
-                </p>
-                <div className="mt-3 inline-block bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-1 rounded-full text-sm font-semibold">
-                  → John 3:16
-                </div>
+            <span
+              className="text-[0.68rem] font-semibold tracking-[0.25em] uppercase mb-4"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Listening
+            </span>
+
+            <div className="flex items-end justify-center gap-[5px] h-10 mb-10" aria-hidden="true">
+              {bars.map((h, i) => (
+                <span
+                  key={i}
+                  className="w-[3px] rounded-full eq-bar"
+                  style={{
+                    background: 'var(--primary)',
+                    height: `${h * 100}%`,
+                    animationDelay: `${i * 0.09}s`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div
+              className="w-full rounded-2xl p-6 border text-center"
+              style={{ background: 'var(--form-bg)', borderColor: 'rgba(255,255,255,0.08)' }}
+            >
+              <p
+                className="text-lg text-[var(--text-secondary)] italic mb-4"
+                style={{ fontFamily: "'Fraunces', serif" }}
+              >
+                "For God so loved the world..."
+              </p>
+              <div
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold"
+                style={{ background: 'rgba(var(--primary-rgb),0.14)', color: 'var(--hover-dark)', border: '1px solid rgba(var(--primary-rgb),0.35)' }}
+              >
+                <ArrowRight size={13} />
+                John 3:16
               </div>
             </div>
           </div>
         </div>
 
-        {/* Description */}
         <div className="text-center space-y-8">
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Our intelligent voice-powered search helps you find scripture even if you don't remember the chapter or verse. Just speak the words you remember and let our AI find the perfect passage for you.
+          <p className="text-base sm:text-lg text-[var(--text-secondary)] max-w-xl mx-auto leading-relaxed">
+            Speak the words you remember, even a fragment, and we'll find the exact passage. No chapter, no verse number, no problem.
           </p>
 
           <button
             onClick={() => onAuthClick && onAuthClick('signup')}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition transform hover:scale-105 active:scale-95 inline-block"
+            className="px-8 py-3.5 rounded-xl font-semibold transition-all duration-200 transform hover:brightness-110 hover:scale-[1.03] active:scale-95 shadow-[0_10px_30px_-8px_rgba(var(--primary-rgb),0.5)] inline-flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            style={{ background: 'var(--primary)', color: 'var(--text-main)' }}
           >
-            Try Voice Search
+            Try voice search
+            <Mic size={16} />
           </button>
         </div>
       </div>
+
+      <style>{`
+        .eq-bar {
+          animation: eq 1.1s ease-in-out infinite;
+          transform-origin: bottom;
+        }
+        @keyframes eq {
+          0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+          50% { transform: scaleY(1); opacity: 1; }
+        }
+        .mic-breathe {
+          animation: breathe 2.4s ease-in-out infinite;
+        }
+        @keyframes breathe {
+          0%, 100% { opacity: 0.35; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.08); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .eq-bar, .mic-breathe { animation: none; }
+          .eq-bar { transform: scaleY(0.7); opacity: 0.8; }
+        }
+      `}</style>
     </section>
   );
 };

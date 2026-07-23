@@ -129,57 +129,45 @@ useEffect(() => {
      * Update last seen on backend and emit socket event
      * Prevents duplicate emissions using ref tracking
      */
-    const updateLastSeenOnBackend = useCallback(
+   const updateLastSeenOnBackend = useCallback(
         async (messageId) => {
-            // ✅ FIX: guard temp IDs — never mark optimistic messages as seen
             if (!messageId) return;
             if (typeof messageId === 'string' && messageId.startsWith('temp_')) {
                 console.warn("⚠️ Skipping temp ID:", messageId);
                 return;
             }
 
-            if (!socket?.connected) {
-                console.warn("❌ Socket not connected - cannot update last seen");
+            // DEDUPLICATION CHECK — only skip if we already CONFIRMED this one
+            if (lastEmittedMessageIdRef.current === messageId) {
                 return;
             }
 
+            let persistedViaRest = false;
 
-            // DEDUPLICATION CHECK
-            if (lastEmittedMessageIdRef.current === messageId) {
-              return;
+            // =========================
+            // 1️⃣ Persist via REST API
+            // =========================
+            if (chatId) {
+                try {
+                    await axiosBase.post(`/api/chat/${chatId}/last-seen`, { messageId });
+                    persistedViaRest = true;
+                } catch (err) {
+                    // ✅ FIX: don't silently swallow this — if REST fails and the
+                    // socket path also fails/gets rate-limited, this message's
+                    // seen-state is lost until a LATER message covers it. If this
+                    // was the last message in the session, it's lost for good
+                    // until the user manually re-triggers a scroll event.
+                    console.warn("⚠️ last-seen REST persistence failed:", err?.message);
+                }
+            } else {
+                console.warn("⚠️ chatId missing - REST call skipped");
             }
 
-            try {
-                console.log("✅ Passed deduplication check");
-                lastEmittedMessageIdRef.current = messageId;
-
-                // =========================
-                // 1️⃣ Persist via REST API
-                // =========================
-                if (chatId) {
-                    console.log("📡 Sending REST request to persist last seen...");
-                    console.log("POST URL:", `/api/chat/${chatId}/last-seen`);
-                    console.log("Payload:", { messageId });
-
-                    try {
-                        const response = await axiosBase.post(
-                            `/api/chat/${chatId}/last-seen`,
-                            { messageId }
-                        );
-                        // console.log("✅ REST persistence success");
-                        // console.log("Response:", response?.data);
-                    } catch (err) {
-                        // console.warn("⚠️ REST persistence failed:");
-                        // console.warn(err);
-                        // console.warn("Continuing to socket emit anyway...");
-                    }
-                } else {
-                    console.warn("⚠️ chatId missing - REST call skipped");
-                }
-
-                // =========================
-                // 2️⃣ Emit via Socket
-                // =========================
+            // =========================
+            // 2️⃣ Emit via Socket
+            // =========================
+            let emittedViaSocket = false;
+            if (socket?.connected) {
                 const socketPayload = {
                     chatId,
                     messageId,
@@ -193,17 +181,19 @@ useEffect(() => {
                     messageId,
                 });
 
-                // console.log("📡 Emitting socket event: updateLastSeen");
-                // console.log("Socket payload:", socketPayload);
-
                 socket.emit("updateLastSeen", socketPayload);
+                emittedViaSocket = true;
+            } else {
+                console.warn("❌ Socket not connected - relying on REST only");
+            }
 
-                console.log("✅ Socket emit completed");
-            } catch (error) {
-                // console.error("🔥 Error inside updateLastSeenOnBackend:");
-                // console.error(error);
-                lastEmittedMessageIdRef.current = null;
-                console.warn("Reset lastEmittedMessageIdRef due to error");
+            // ✅ FIX: only mark this messageId as "handled" once at least ONE path
+            // actually went out. Previously this ref was set unconditionally BEFORE
+            // either call resolved, so a failed REST call + a rate-limited socket
+            // emit (server drops anything within 300ms of the last one, silently)
+            // meant the write was lost with no retry, and the client had no idea.
+            if (persistedViaRest || emittedViaSocket) {
+                lastEmittedMessageIdRef.current = messageId;
             }
         },
         [socket, chatId, userId, logSeenEvent]
@@ -448,6 +438,32 @@ const scrollToLastSeen = useCallback(() => {
         fetchLastSeenFromBackend();
     }, [chatId, fetchLastSeenFromBackend]);
 
+    const updateLastSeenOnBackendRef = useRef(updateLastSeenOnBackend);
+    useEffect(() => {
+        updateLastSeenOnBackendRef.current = updateLastSeenOnBackend;
+    }, [updateLastSeenOnBackend]);
+
+    useEffect(() => {
+        return () => {
+            const msgs = messagesRef.current;
+            if (!chatId || !msgs || msgs.length === 0) return;
+
+            const others = msgs.filter(
+                (m) => m.from_user_id !== userId && !String(m._id).startsWith('temp_')
+            );
+            if (others.length === 0) return;
+
+            const latest = others[others.length - 1];
+            if (
+                lastSeenMessageRef.current &&
+                new Date(latest.createdAt) <= new Date(lastSeenMessageRef.current.createdAt)
+            ) {
+                return; // already covered
+            }
+
+            updateLastSeenOnBackendRef.current?.(latest._id);
+        };
+    }, [chatId, userId]);
     /**
      * Recalculate unseen count when messages or lastSeen changes
      */

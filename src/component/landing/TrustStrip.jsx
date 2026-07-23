@@ -1,26 +1,34 @@
 import React from 'react';
 import { BookOpen, Mic, MessageCircle, Heart } from 'lucide-react';
 
-const TrustStrip = () => {
-  const features = [
-    { icon: BookOpen, label: 'Read Scripture', color: 'from-blue-500 to-blue-600' },
-    { icon: Mic, label: 'Voice Verse Search', color: 'from-blue-500 to-blue-600' },
-    { icon: MessageCircle, label: 'Faith Community', color: 'from-blue-600 to-blue-700' },
-    { icon: Heart, label: 'Prayer Support', color: 'from-red-500 to-red-600' },
-  ];
+const FEATURES = [
+  { icon: BookOpen, label: 'Read scripture' },
+  { icon: Mic, label: 'Voice verse search' },
+  { icon: MessageCircle, label: 'Faith community' },
+  { icon: Heart, label: 'Prayer support' },
+];
 
+const TrustStrip = () => {
   return (
-    <section className="py-12 bg-gradient-to-r from-white/5 via-white/10 to-white/5 border-y border-white/10">
+    <section
+      className="py-10 border-y"
+      style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(var(--primary-rgb),0.18)' }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {features.map((feature, idx) => {
+        <div className="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-white/10">
+          {FEATURES.map((feature, idx) => {
             const Icon = feature.icon;
             return (
-              <div key={idx} className="flex flex-col items-center gap-2 text-center">
-                <div className={`bg-gradient-to-br ${feature.color} p-3 rounded-lg`}>
-                  <Icon size={20} className="text-white" />
+              <div key={idx} className="flex items-center justify-center gap-3 py-3 md:py-0">
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))' }}
+                >
+                  <Icon size={16} style={{ color: 'var(--white)' }} />
                 </div>
-                <span className="text-sm md:text-base font-semibold text-gray-200">{feature.label}</span>
+                <span className="text-xs sm:text-sm font-medium tracking-wide text-[var(--text-secondary)]">
+                  {feature.label}
+                </span>
               </div>
             );
           })}

@@ -3,38 +3,73 @@ import { APP_NAME } from '../../constants/appConfig';
 
 const ScriptureImpact = ({ onAuthClick }) => {
   return (
-    <section id="bible" className="relative py-24 bg-gradient-to-b from-[var(--bg-main)] via-blue-900/20 to-[var(--bg-main)] overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-blue-600/5 to-blue-500/5"></div>
+    <section
+      id="bible"
+      className="relative py-28 overflow-hidden scroll-mt-20"
+      style={{ background: 'var(--bg-main)' }}
+    >
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[44rem] h-[44rem] rounded-full blur-[140px] pointer-events-none"
+        style={{ background: 'var(--ob-mesh-1)' }}
+      />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Quoted Scripture */}
-        <div className="text-center space-y-8">
-          <blockquote className="space-y-4">
-            <p className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-white">
-              "For where two or three gather in My name, there am I with them."
+
+        <div
+          aria-hidden="true"
+          className="absolute -top-6 left-1/2 -translate-x-1/2 select-none pointer-events-none"
+          style={{
+            fontFamily: "'Fraunces', serif",
+            fontSize: '14rem',
+            lineHeight: 1,
+            color: 'var(--primary)',
+            opacity: 0.1,
+          }}
+        >
+          "
+        </div>
+
+        <div className="text-center space-y-10 relative">
+
+          <div className="flex items-center justify-center gap-3">
+            <span className="w-10 h-px" style={{ background: 'rgba(var(--primary-rgb),0.45)' }} />
+            <span className="text-[var(--primary)] text-xs">✦</span>
+            <span className="w-10 h-px" style={{ background: 'rgba(var(--primary-rgb),0.45)' }} />
+          </div>
+
+          <blockquote className="space-y-5">
+            <p
+              className="text-3xl md:text-4xl lg:text-[3.25rem] leading-[1.2] text-white"
+              style={{ fontFamily: "'Fraunces', serif", fontWeight: 500 }}
+            >
+              For where two or three gather in my name, there am I with them.
             </p>
-            <p className="text-xl text-blue-400 font-semibold">
-              — Matthew 18:20
-            </p>
+            <footer
+              className="text-sm font-semibold tracking-[0.18em] uppercase"
+              style={{ color: 'var(--primary)' }}
+            >
+              Matthew 18:20
+            </footer>
           </blockquote>
 
-          {/* Impact text */}
-          <div className="space-y-4">
-            <p className="text-xl md:text-2xl text-gray-300">
+          <div className="space-y-4 pt-2">
+            <p
+              className="text-xl md:text-2xl text-white"
+              style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic' }}
+            >
               Now imagine thousands gathering daily.
             </p>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-[var(--text-secondary)] max-w-2xl mx-auto leading-relaxed">
               On {APP_NAME}, believers from around the world connect, pray, and grow together. Every shared scripture, every encouraging comment, and every prayer request builds our global faith community.
             </p>
           </div>
 
-          {/* CTA Button */}
           <button
             onClick={() => onAuthClick && onAuthClick('signup')}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-4 rounded-lg font-semibold transition transform hover:scale-105 active:scale-95 inline-block mt-8"
+            className="px-10 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:brightness-110 hover:scale-[1.03] active:scale-95 shadow-[0_10px_30px_-8px_rgba(var(--primary-rgb),0.5)] inline-block mt-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            style={{ background: 'var(--primary)', color: 'var(--text-main)' }}
           >
-            Join the Gathering
+            Join the gathering
           </button>
         </div>
       </div>
