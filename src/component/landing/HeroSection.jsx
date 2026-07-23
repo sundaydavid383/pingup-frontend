@@ -123,18 +123,18 @@ const HeroSection = ({ onAuthClick }) => {
 
             <div className="hero-in hero-in-4 flex items-center divide-x divide-white/10 mb-9 text-[var(--text-secondary)]">
               <div className="pr-5 sm:pr-6 flex items-center gap-2">
-                <Users size={17} style={{ color: 'var(--primary)' }} />
+                <Users size={17} style={{ color: 'var(--gold)' }} />
                 <UserStats />
               </div>
               <div className="px-5 sm:px-6 flex items-center gap-2 text-sm">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: 'var(--primary)' }} />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--primary)' }} />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--gold)' }} />
                 </span>
                 Live updates
               </div>
               <div className="pl-5 sm:pl-6 flex items-center gap-2 text-sm">
-                <Clock size={15} style={{ color: 'var(--primary)' }} />
+                <Clock size={15} style={{ color: 'var(--gold)' }} />
                 Instant notifications
               </div>
             </div>
@@ -153,7 +153,7 @@ const HeroSection = ({ onAuthClick }) => {
               </button>
 
               <button
-                className="border border-white/25 hover:border-[var(--primary)]/50 text-white px-7 py-3.5 sm:py-4 rounded-xl font-semibold flex items-center justify-center gap-2.5 transition-all duration-200 backdrop-blur-sm w-full sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                className="border border-white/25 hover:border-[var(--primary)]/50 text-[white] px-7 py-3.5 sm:py-4 rounded-xl font-semibold flex items-center justify-center gap-2.5 transition-all duration-200 backdrop-blur-sm w-full sm:w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                 style={{ background: 'rgba(255,255,255,0.03)' }}
               >
                 <Play size={18} />
