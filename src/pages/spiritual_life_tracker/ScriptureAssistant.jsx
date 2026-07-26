@@ -628,90 +628,91 @@ export default function ScriptureAssistant({ currentUser }) {
       )}
 
       <div className="flex flex-col items-center w-full gap-5 mt-4">
-        {/* Typing Mode Toggle */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleTypingMode}
-            className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
-              transition-all duration-200
-              ${isManualTypingMode 
-                ? 'bg-amber-100 text-amber-800 border border-amber-300' 
-                : 'bg-slate-100 text-slate-600 border border-slate-200'
+
+        <div
+          className="w-full max-w-[650px] rounded-2xl p-5 flex flex-col items-center gap-5"
+          style={{
+            background: 'linear-gradient(160deg, var(--form-bg), var(--bg-light))',
+            border: '1px solid rgba(var(--primary-rgb), 0.14)',
+            boxShadow: '0 20px 45px -20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}
+        >
+          {/* Typing Mode Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTypingMode}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+              style={
+                isManualTypingMode
+                  ? { background: 'rgba(var(--primary-rgb),0.12)', color: 'var(--primary)', border: '1px solid rgba(var(--primary-rgb),0.35)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }
               }
-              hover:scale-105 active:scale-95
-            `}
-            title={isManualTypingMode ? "Switch to live search" : "Switch to manual typing mode"}
-          >
-            {isManualTypingMode ? <Keyboard className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
-            {isManualTypingMode ? "Manual" : "Live"}
-          </button>
-          
+              title={isManualTypingMode ? "Switch to live search" : "Switch to manual typing mode"}
+            >
+              {isManualTypingMode ? <Keyboard className="w-3.5 h-3.5" /> : <Search className="w-3.5 h-3.5" />}
+              {isManualTypingMode ? "Manual" : "Live"}
+            </button>
+
+            {isManualTypingMode && (
+              <span className="text-xs flex items-center gap-1" style={{ color: 'var(--primary)' }}>
+                <ArrowRight className="w-3 h-3" /> Press Enter to search
+              </span>
+            )}
+          </div>
+
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={!isManualTypingMode
+              ? "🎤 Speak now — voice mode is active"
+              : "Type your scripture search..."
+            }
+            disabled={!currentUser || !isManualTypingMode}
+            rows={1}
+            className="w-full rounded-xl border p-4 text-sm transition-all duration-200 focus:outline-none resize-none overflow-hidden placeholder:text-[var(--text-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
+            style={
+              !isManualTypingMode
+                ? { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-main)', cursor: 'not-allowed' }
+                : { borderColor: 'rgba(var(--primary-rgb),0.4)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)' }
+            }
+            onFocus={(e) => {
+              if (isManualTypingMode) {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--primary-rgb),0.18)';
+              }
+            }}
+            onBlur={(e) => {
+              if (isManualTypingMode) {
+                e.currentTarget.style.borderColor = 'rgba(var(--primary-rgb),0.4)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
+            }}
+          />
+
           {isManualTypingMode && (
-            <span className="text-xs text-amber-600 flex items-center gap-1">
-              <ArrowRight className="w-3 h-3" /> Press Enter to search
-            </span>
+            <button
+              onClick={handleManualSearch}
+              disabled={!text.trim() || loading}
+              className={`w-full flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                text.trim() && !loading ? 'active:scale-95 hover:brightness-110' : 'cursor-not-allowed'
+              }`}
+              style={
+                text.trim() && !loading
+                  ? { background: 'linear-gradient(135deg, var(--primary), var(--hover-dark))', color: 'var(--white)', boxShadow: '0 10px 24px -8px rgba(var(--primary-rgb),0.55)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' }
+              }
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+              Search Scriptures
+            </button>
           )}
         </div>
-        
-
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={!isManualTypingMode 
-            ? "🎤 Speak now — voice mode is active" 
-            : "Type your scripture search..."
-          }
-          disabled={!currentUser || !isManualTypingMode}
-          rows={1}
-          className={`
-            w-full
-            max-w-[650px]
-            rounded-xl
-            border
-            p-4
-            text-sm
-            transition-all duration-150
-            ${!isManualTypingMode 
-              ? 'border-slate-200 bg-slate-50 cursor-not-allowed' 
-              : isManualTypingMode 
-                ? 'border-amber-300 bg-amber-50 focus:ring-2 focus:ring-amber-200 focus:border-amber-400' 
-                : 'border-slate-300 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
-            }
-            focus:outline-none
-            resize-none
-            overflow-hidden
-            text-slate-900
-            placeholder:text-slate-400
-            disabled:opacity-60
-            disabled:cursor-not-allowed
-          `}
-        />
-        
-        {/* Search Button - Only show in typing/manual mode */}
-        {isManualTypingMode && (
-          <button
-            onClick={handleManualSearch}
-            disabled={!text.trim() || loading}
-            className={`
-              flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium text-sm
-              transition-all duration-200
-              ${text.trim() && !loading
-                ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-md'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-              }
-            `}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.3-4.3"></path>
-            </svg>
-            Search Scriptures
-          </button>
-        )}
 
         <div className="space-y-4 w-full flex flex-col items-center">
           {loading ? <div>Loading...</div> : matchedVerses.map((v, idx) => (

@@ -49,14 +49,11 @@ const ChatBox = ({ userId: propUserId }) => {
 
   // 1. INITIALIZE FROM LOCAL STORAGE
   // Use a state initializer that depends on userId
-  const [messages, setMessages] = useState(() => {
-    const cached = localStorage.getItem(`chat_history_${userId}`);
-    return cached ? JSON.parse(cached) : [];
-  });
+const [messages, setMessages] = useState([]);
 
-  // Reset messages when userId changes (chat switching)
-  useEffect(() => {
-    setMessages([]);
+   useEffect(() => {
+    const cached = localStorage.getItem(`chat_history_${userId}`);
+    setMessages(cached ? JSON.parse(cached) : []);
   }, [userId]);
 
   // Input ref for focusing
@@ -96,6 +93,70 @@ const ChatBox = ({ userId: propUserId }) => {
 useEffect(() => {
     chatIdRef.current = chatId;
 }, [chatId]);
+
+  const getPendingMessages = useCallback((otherUserId) => {
+    try {
+      return JSON.parse(localStorage.getItem(`pending_messages_${otherUserId}`)) || [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const savePendingMessages = useCallback((otherUserId, msgs) => {
+    try {
+      localStorage.setItem(`pending_messages_${otherUserId}`, JSON.stringify(msgs));
+    } catch (e) {
+      console.warn("Failed to persist pending messages:", e);
+    }
+  }, []);
+
+  const upsertPendingMessage = useCallback((otherUserId, msg) => {
+    const stored = getPendingMessages(otherUserId);
+    const idx = stored.findIndex((m) => m._id === msg._id);
+    if (idx >= 0) stored[idx] = msg;
+    else stored.push(msg);
+    savePendingMessages(otherUserId, stored);
+  }, [getPendingMessages, savePendingMessages]);
+
+  const removePendingMessage = useCallback((otherUserId, msgId) => {
+    const stored = getPendingMessages(otherUserId).filter((m) => m._id !== msgId);
+    savePendingMessages(otherUserId, stored);
+  }, [getPendingMessages, savePendingMessages]);
+
+    const replacePendingMessageId = useCallback((otherUserId, oldId, updatedMsg) => {
+    const stored = getPendingMessages(otherUserId).filter((m) => m._id !== oldId);
+    stored.push(updatedMsg);
+    savePendingMessages(otherUserId, stored);
+  }, [getPendingMessages, savePendingMessages]);
+
+    const reconcilePendingWithServer = useCallback((pending, serverMessages) => {
+    const serverIds = new Set(serverMessages.map((m) => String(m._id)));
+    const now = Date.now();
+    const STUCK_SENDING_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+    return pending
+      .filter((p) => !serverIds.has(String(p._id)))
+      .filter((p) => {
+        const fuzzyMatch = serverMessages.some(
+          (sm) =>
+            sm.from_user_id === p.from_user_id &&
+            (sm.text || "") === (p.text || "") &&
+            sm.message_type === p.message_type &&
+            Math.abs(new Date(sm.createdAt) - new Date(p.createdAt)) < 30_000
+        );
+        return !fuzzyMatch;
+      })
+      .map((p) => {
+       if (p.status === "sending" && now - new Date(p.createdAt).getTime() > STUCK_SENDING_TTL_MS) {
+          return { ...p, status: "failed", failed: true };
+        }
+        return p;
+      });
+  }, []);
+
+  const resendInFlightRef = useRef(new Set());
+  const MAX_AUTO_RETRIES = 5;
+
   // Apply saved theme on mount to restore on page refresh
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -111,8 +172,8 @@ useEffect(() => {
   const lastScrollTop = useRef(0);
   const scrollStopTimeout = useRef(null);
 
-  const [scrollDirection, setScrollDirection] = useState("down");
-  const [scrollStopped, setScrollStopped] = useState(false);
+  const scrollDirectionRef = useRef("down");
+  const scrollStoppedRef = useRef(false);
   const containerRef = useRef(null);
   const chatContainerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -363,16 +424,16 @@ useEffect(() => {
       const isDown = currentTop > lastScrollTop.current;
       lastScrollTop.current = currentTop;
 
-      setScrollDirection(isDown ? "down" : "up");
+      scrollDirectionRef.current = isDown ? "down" : "up";
 
       if (scrollStopTimeout.current) {
         clearTimeout(scrollStopTimeout.current);
       }
 
-      setScrollStopped(false);
+      scrollStoppedRef.current = false;
 
       scrollStopTimeout.current = setTimeout(() => {
-        setScrollStopped(true);
+         scrollStoppedRef.current = true;
       }, 1500);
     };
 
@@ -425,17 +486,32 @@ if (chatRes.data?.room) {
   refetchConversations(); // ✅ re-sync sidebar counts from backend
 }
 
-      if (Array.isArray(chatRes.data?.messages)) {
-          const newMessages = [...chatRes.data.messages];
-          newMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          localStorage.setItem(`chat_history_${userId}`, JSON.stringify(newMessages));
-          setMessages(newMessages);
+if (Array.isArray(chatRes.data?.messages)) {
+          const serverMessages = [...chatRes.data.messages];
+          serverMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          const pending = getPendingMessages(userId);
+          const stillPending = reconcilePendingWithServer(pending, serverMessages);
+
+          const merged = [...serverMessages, ...stillPending].sort(
+            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+          );
+
+          localStorage.setItem(`chat_history_${userId}`, JSON.stringify(merged));
+          setMessages(merged);
+
+          if (stillPending.length !== pending.length) {
+            savePendingMessages(userId, stillPending);
+          }
       }
 
         // This is now handled by the intersection observer
         // clearUnread(userId);
       } catch (err) {
         console.error("❌ Error fetching chat:", err);
+        const cached = localStorage.getItem(`chat_history_${userId}`);
+        if (cached) {
+          try { setMessages(JSON.parse(cached)); } catch {}
+        }
       }finally {
     // ✅ Always set loading to false when done — success OR failure
     setLoading(false);
@@ -629,23 +705,6 @@ const getStatusText = useMemo(() => {
   }, [receiver, onlineUsers]);
 
   // eslint-disable-line //====================FAILED MESSAGE ====================/ // 
-  // LocalStorage helpers 
-  const getFailedMessages = () => {
-    try {
-      return JSON.parse(localStorage.getItem("failed_messages"))
-        || [];
-    } catch { return []; }
-  };
-  const saveFailedMessages = (msgs) => { localStorage.setItem("failed_messages", JSON.stringify(msgs)); };
-  useEffect(() => {
-    const stored = getFailedMessages();
-    if (stored.length > 0) {
-      setMessages((prev) => [
-        ...prev,
-        ...stored.filter(f => !prev.some(m => m._id === f._id))
-      ]);
-    }
-  }, []);
   // =========================== JOIN ROOM =========================== 
   useEffect(() => {
     if (chatId && connected && socket) {
@@ -688,28 +747,49 @@ const getStatusText = useMemo(() => {
 
     // optimistic UI
     setMessages((p) => [...p, tempMsg]);
+    upsertPendingMessage(userId, tempMsg);
 
-    try {
+try {
       setSending(true);
-      const formData = new FormData();
-      formData.append("chatId", chatId || "");
-      formData.append("from_user_id", user?._id);
-      formData.append("to_user_id", userId);
-      formData.append("text", tempMsg.text);
-      formData.append("tempId", tempId);
-      formData.append("replyTo", replyTo ? replyTo._id : null);
-      if (image) formData.append("media", image, image.name || `image_${Date.now()}`);
-      if (audioURL) {
-        const blob = await fetch(audioURL).then(r => r.blob());
-        let ext = blob.type === "audio/webm" ? "webm" : "";
-        formData.append("media", blob, `audio_${Date.now()}.${ext}`);
+      const hasMedia = !!image || !!audioURL;
+
+      let payload;
+      let headers = { Accept: "application/json" };
+
+      if (hasMedia) {
+        const formData = new FormData();
+        formData.append("chatId", chatId || "");
+        formData.append("from_user_id", user?._id);
+        formData.append("to_user_id", userId);
+        formData.append("text", tempMsg.text);
+        formData.append("tempId", tempId);
+        formData.append("replyTo", replyTo ? replyTo._id : null);
+        if (image) formData.append("media", image, image.name || `image_${Date.now()}`);
+        if (audioURL) {
+          const blob = await fetch(audioURL).then(r => r.blob());
+          let ext = blob.type === "audio/webm" ? "webm" : "";
+          formData.append("media", blob, `audio_${Date.now()}.${ext}`);
+        }
+        payload = formData;
+      } else {
+        // ✅ FIX: plain text messages no longer pay the multipart-parsing tax.
+        payload = {
+          chatId: chatId || "",
+          from_user_id: user?._id,
+          to_user_id: userId,
+          text: tempMsg.text,
+          tempId,
+          replyTo: replyTo ? replyTo._id : null,
+        };
+        headers["Content-Type"] = "application/json";
       }
+
       requestAnimationFrame(() => {
         scrollToBottom();
       });
-      const res = await axiosBase.post("/api/chat/message",
-        formData, {
-        headers: { Accept: "application/json" },
+
+      const res = await axiosBase.post("/api/chat/message", payload, {
+        headers,
         withCredentials: true,
       });
       const serverMsg = res.data.message;
@@ -719,6 +799,7 @@ const getStatusText = useMemo(() => {
             ...serverMsg, status: onlineUsers.has(userId) ?
               "delivered" : "sent"
           } : m));
+      removePendingMessage(userId, tempId);
       setImage(null); setAudioURL(null);
       setSending(false);
       sendSound.current.currentTime = 0;
@@ -735,11 +816,10 @@ const getStatusText = useMemo(() => {
     }
     catch (err) {
       console.error("❌ sendMessage error:", err);
-      const failedMsg = { ...tempMsg, failed: true, status: "failed" };
+      const failedMsg = { ...tempMsg, failed: true, status: "failed", retryCount: 0 };
       setMessages((p) => p.map((m) => (m._id === tempId ? failedMsg : m)));
-      const stored = getFailedMessages();
+      upsertPendingMessage(userId, failedMsg); // ✅ scoped to this chat, replaces the "sending" entry
       setSending(false);
-      saveFailedMessages([...stored, failedMsg]);
     }
     finally {
       setSending(false)
@@ -747,58 +827,91 @@ const getStatusText = useMemo(() => {
     }
   };
   // ============================== RESEND MESSAGE ========================= 
-  const resendMessage = async (failedMsg) => {
+const resendMessage = useCallback(async (failedMsg) => {
     if (!failedMsg || !failedMsg.failed) return;
-    const { text, message_type, media_url, _id: tempId } = failedMsg;
+    if (resendInFlightRef.current.has(failedMsg._id)) return; // already retrying this one
+    resendInFlightRef.current.add(failedMsg._id);
+
+    const { text, message_type, media_url, _id: tempId, replyTo: originalReplyTo, retryCount = 0 } = failedMsg;
     const newTempId = "temp_" + Date.now();
 
-    const replyInfo = replyTo?._id
-    // Update UI: mark as resending 
-    setMessages((prev) => prev.map((m) => m._id === tempId ?
-      { ...m, status: "sending", failed: false, _id: newTempId }
-      : m));
+    // ✅ FIX: use the message's OWN original reply, not whatever is currently
+    // sitting in the compose box's replyTo state — those are unrelated, and
+    // using the live one could attach the wrong reply link (or drop it).
+    const replyInfo = originalReplyTo?._id || null;
+
+    const resendingMsg = { ...failedMsg, status: "sending", failed: false, _id: newTempId, retryCount };
+
+    setMessages((prev) => prev.map((m) => (m._id === tempId ? resendingMsg : m)));
+    replacePendingMessageId(userId, tempId, resendingMsg);
 
     try {
       const formData = new FormData();
-      formData.append("chatId", chatId);
+      formData.append("chatId", chatId || "");
       formData.append("from_user_id", user?._id);
       formData.append("to_user_id", userId);
-      formData.append("text", text);
+      formData.append("text", text || "");
       formData.append("tempId", newTempId);
-      formData.append("replyTo", replyInfo ? replyInfo : "");
+      formData.append("replyTo", replyInfo || "");
       if (message_type === "image" && media_url) {
         const blob = await fetch(media_url).then((r) => r.blob());
         formData.append("media", blob, `image_${Date.now()}.jpg`);
+      } else if (message_type === "audio" && media_url) {
+        const blob = await fetch(media_url).then((r) => r.blob());
+        formData.append("media", blob, `audio_${Date.now()}.mp3`);
       }
-      else if (message_type === "audio" && media_url) {
-        const blob = await fetch(media_url).
-          then((r) => r.blob()); formData.append("media", blob, `audio_${Date.now()}.mp3`);
-      }
-      const res = await axiosBase.post("/api/chat/message",
-        formData, {
+
+      const res = await axiosBase.post("/api/chat/message", formData, {
         headers: { Accept: "application/json" },
         withCredentials: true,
       });
+
       const serverMsg = res.data.message;
-      requestAnimationFrame(() => {
-        scrollToBottom();
-      });
-      setMessages((prev) => prev.map((m) =>
-        m._id === newTempId ?
-          {
-            ...serverMsg, status: onlineUsers.has(userId)
-              ? "delivered" : "sent"
-          } : m));
-      // Remove from localStorage after success 
-      const stored = getFailedMessages();
-      saveFailedMessages(stored.filter((m) => m._id !== failedMsg._id));
-    }
-    catch (err) {
+      requestAnimationFrame(() => scrollToBottom());
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === newTempId
+            ? { ...serverMsg, status: onlineUsers.has(userId) ? "delivered" : "sent" }
+            : m
+        )
+      );
+      removePendingMessage(userId, newTempId); // ✅ confirmed, drop from outbox
+    } catch (err) {
       console.error("❌ resendMessage error:", err);
-      setMessages((prev) => prev.map((m) => m._id === newTempId ?
-        { ...m, failed: true, status: "failed" } : m));
+      const nextRetryCount = retryCount + 1;
+      const rerFailedMsg = {
+        ...resendingMsg,
+        failed: true,
+        status: "failed",
+        retryCount: nextRetryCount,
+        autoRetryExhausted: nextRetryCount >= MAX_AUTO_RETRIES,
+      };
+      setMessages((prev) => prev.map((m) => (m._id === newTempId ? rerFailedMsg : m)));
+      replacePendingMessageId(userId, newTempId, rerFailedMsg);
+    } finally {
+      resendInFlightRef.current.delete(failedMsg._id);
+      resendInFlightRef.current.delete(newTempId);
     }
-  };
+  }, [chatId, user, userId, onlineUsers, scrollToBottom, replacePendingMessageId, removePendingMessage]);
+
+// ✅ Auto-flush: retry failed messages for this chat automatically — once
+    useEffect(() => {
+    if (!userId || !connected) return;
+
+    const flushOutbox = () => {
+      const pending = getPendingMessages(userId);
+      const retryable = pending.filter(
+        (m) => m.status === "failed" && (m.retryCount || 0) < MAX_AUTO_RETRIES
+      );
+      retryable.forEach((m) => resendMessage(m));
+    };
+
+    flushOutbox();
+
+    window.addEventListener("socketReconnected", flushOutbox);
+    return () => window.removeEventListener("socketReconnected", flushOutbox);
+  }, [userId, connected, getPendingMessages, resendMessage]);
 
   // ======================== SEARCH IN CHAT ======================
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -1111,11 +1224,20 @@ const startRecording = async () => {
   }, []);
 
   // =========================== HELPERS ========================== 
-  const sortedMessages = [...messages].sort((a, b) =>
-    new Date(a.createdAt) - new Date(b.createdAt));
-  const formatTime = (iso) => new Date(iso).
-    toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const imageMessages = sortedMessages.filter(m => m.message_type === "image" && m.media_url);
+const sortedMessages = useMemo(
+    () => [...messages].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    [messages]
+  );
+
+  const imageMessages = useMemo(
+    () => sortedMessages.filter(m => m.message_type === "image" && m.media_url),
+    [sortedMessages]
+  );
+
+  const formatTime = useCallback(
+    (iso) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    []
+  );
   // Input bar height / spacing
   const INPUT_BAR_HEIGHT_PX = 96;
   // a safe height accounting for padding and potential previews 
@@ -1668,8 +1790,7 @@ useEffect(() => {
 
 
   // ============================= sidebar widht ==============
-  // measurement using ResizeObserver  // -------------------------------
-  const [sidebarWidth, setSidebarWidth] = useState(0);
+const sidebarWidthRef = useRef(0);
 
   useEffect(() => {
     let ro;
@@ -1679,19 +1800,18 @@ useEffect(() => {
           document.querySelector('#sidebar') ||
           document.querySelector('.sidebar');
         if (!el) {
-          setSidebarWidth(0);
+          sidebarWidthRef.current = 0;
           return;
         }
         const rect = el.getBoundingClientRect();
-        setSidebarWidth(Math.round(rect.width));
+        sidebarWidthRef.current = Math.round(rect.width);
       } catch (e) {
-        setSidebarWidth(0);
+        sidebarWidthRef.current = 0;
       }
     };
 
     updateSidebarWidth();
 
-    // ResizeObserver will pick up sidebar width changes (animations, responsive)
     try {
       const el = document.querySelector('.sidebar-root') ||
         document.querySelector('#sidebar') ||
@@ -1700,15 +1820,10 @@ useEffect(() => {
         ro = new ResizeObserver(() => updateSidebarWidth());
         ro.observe(el);
       }
-    } catch (e) {
-      // ignore if ResizeObserver unsupported
-    }
+    } catch (e) {}
 
-    // also listen for window resize as fallback
     const onResize = () => updateSidebarWidth();
     window.addEventListener('resize', onResize);
-
-    // if your sidebar toggles with animation, measure again after a short delay
     const t = setTimeout(updateSidebarWidth, 120);
 
     return () => {
@@ -1716,8 +1831,7 @@ useEffect(() => {
       clearTimeout(t);
       if (ro && ro.disconnect) ro.disconnect();
     };
-  }, [sidebarOpen]); // re-run when sidebar open state toggles
-
+  }, [sidebarOpen]);
 
 
   // =========================== RETURN UI =========================== 
@@ -2148,8 +2262,8 @@ useEffect(() => {
                 messages={sortedMessages}
                 setMessages={setMessages}
                 chatId={chatId}
-                scrollDirection={scrollDirection}
-                scrollStopped={scrollStopped}
+                scrollDirection={scrollDirectionRef}
+                scrollStopped={scrollStoppedRef}
                 containerRef={containerRef}
                 user={user}
                 resendMessage={resendMessage}

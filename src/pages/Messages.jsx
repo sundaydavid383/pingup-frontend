@@ -32,9 +32,6 @@ const Messages = () => {
     getConvoByChatId,
   } = useMessageSeen();
 
-  useEffect(() => {
-    setContextActiveChatId(activeChatId);
-  }, [activeChatId, setContextActiveChatId]);
 
   const sortedConversations = useMemo(() => {
     if (!conversations || conversations.length === 0) return [];

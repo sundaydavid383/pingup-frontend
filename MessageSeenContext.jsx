@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axiosBase from "./src/utils/axiosBase"; // adjust path as needed
 import { useAuth } from "./src/context/AuthContext";
 import { useSocket } from "./src/context/SocketContext";
@@ -30,14 +30,17 @@ export const MessageSeenProvider = ({ children }) => {
       if (res.data?.success) {
         const convos = res.data.conversations || [];
         setConversations(convos);
-
-        // Build unread map from the data returned by the server
-        const map = {};
-        convos.forEach((c) => {
-          map[c._id] = c.unreadCount || 0;
+        setUnreadCountsMap((prevMap) => {
+          const map = {};
+          convos.forEach((c) => {
+            map[c._id] =
+              c._id === activeChatIdRef.current
+                ? (prevMap[c._id] ?? 0)
+                : (c.unreadCount || 0);
+          });
+          setTotalUnreadCount(Object.values(map).reduce((a, b) => a + b, 0));
+          return map;
         });
-        setUnreadCountsMap(map);
-        setTotalUnreadCount(Object.values(map).reduce((a, b) => a + b, 0));
       }
     } catch (err) {
       console.error("Failed to fetch conversations:", err);
@@ -166,27 +169,23 @@ const handleNewMessageAlert = (data) => {
    }, [socket, user?._id, incrementUnread, updateConversationLastMessage]);
 
 
+const value = useMemo(
+    () => ({
+      conversations, setConversations, unreadCountsMap, totalUnreadCount,
+      loading, setLoading, failedToFetch, activeChatId, setActiveChatId,
+      incrementUnread, clearUnreadForChat, setUnreadForChat,
+      updateConversationLastMessage, getConvoByChatId, getConvoByOtherUser,
+      refetchConversations: fetchConversations,
+    }),
+    [
+      conversations, unreadCountsMap, totalUnreadCount, loading, failedToFetch,
+      activeChatId, incrementUnread, clearUnreadForChat, setUnreadForChat,
+      updateConversationLastMessage, getConvoByChatId, getConvoByOtherUser, fetchConversations,
+    ]
+  );
+
   return (
-    <MessageSeenContext.Provider
-      value={{
-        conversations,
-        setConversations,
-        unreadCountsMap,
-        totalUnreadCount,
-        loading,
-        setLoading,
-        failedToFetch,
-        activeChatId,
-        setActiveChatId,
-        incrementUnread,
-        clearUnreadForChat,
-        setUnreadForChat,
-        updateConversationLastMessage,
-        getConvoByChatId,
-        getConvoByOtherUser,
-        refetchConversations: fetchConversations,
-      }}
-    >
+    <MessageSeenContext.Provider value={value}>
       {children}
     </MessageSeenContext.Provider>
   );

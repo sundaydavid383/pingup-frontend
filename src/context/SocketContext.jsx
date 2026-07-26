@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { useMessageContext } from "./MessageContext";
@@ -10,7 +10,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const { addUnread, updateLastMessage, incrementUnread, markAsRead } = useMessageContext();
   const { addNotification, notifications } = useNotificationContext();
@@ -18,15 +18,23 @@ export const SocketProvider = ({ children }) => {
   const processedNotifications = useRef(new Set());
   const processed = useRef(new Set());
 
-  // ─── STEP 1: Initialize socket once ───────────────────────────────────────
-  // No user dependency here — socket connects as soon as the app loads
+  // ─── STEP 1: Initialize socket ─────────────────────────────────────────────
+  // ✅ FIX: this used to run once on mount with an empty dep array, connecting
+  // switch), so the very first connection attempt always carries valid auth.
   useEffect(() => {
+    if (!token) {
+      setSocket(null);
+      setConnected(false);
+      return;
+    }
+
     const s = io(import.meta.env.VITE_SERVER, {
-      auth: { token: localStorage.getItem("token") || "" },
+      auth: { token },
       transports: ["websocket"],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
     });
 
     setSocket(s);
@@ -45,9 +53,9 @@ export const SocketProvider = ({ children }) => {
     });
 
     // ✅ Update token on reconnect attempt
-    s.io.on("reconnect_attempt", () => {
+s.io.on("reconnect_attempt", () => {
       console.log("🔄 Reconnecting...");
-      s.auth = { token: localStorage.getItem("token") || "" };
+      s.auth = { token: localStorage.getItem("token") || token || "" };
     });
 
     // ✅ Re-request online users after successful reconnect
@@ -55,14 +63,25 @@ export const SocketProvider = ({ children }) => {
     s.io.on("reconnect", () => {
       console.log("✅ Reconnected — refreshing online users");
       s.emit("requestOnlineUsers");
+      window.dispatchEvent(new CustomEvent("socketReconnected"));
     });
 
     s.on("connect_error", (err) => {
       console.warn("⚠️ Socket connection error:", err.message);
     });
+    s.on("authError", (data) => {
+      console.warn("🔐 Socket auth rejected:", data?.message);
+    });
+     s.io.on("reconnect_failed", () => {
+      console.warn("🔁 Reconnection attempts exhausted — forcing manual reconnect");
+      setTimeout(() => {
+        if (!s.connected) s.connect();
+      }, 3000);
+    });
 
     // ─── Online presence events ──────────────────────────────────────────────
     s.on("userOnline", ({ userId }) => {
+      console.log(`🔍 [PRESENCE-CLIENT] Received userOnline for ${userId} at ${new Date().toISOString()}, my socket=${s.id}, connected=${s.connected}`);
       setOnlineUsers(prev => {
         const next = new Set(prev);
         next.add(userId);
@@ -70,7 +89,8 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
-    s.on("userOffline", ({ userId }) => {
+    s.on("userOffline", ({ userId, lastActiveAt }) => {
+      console.log(`🔍 [PRESENCE-CLIENT] Received userOffline for ${userId} at ${new Date().toISOString()}, lastActiveAt=${lastActiveAt}`);
       setOnlineUsers(prev => {
         const next = new Set(prev);
         next.delete(userId);
@@ -80,6 +100,7 @@ export const SocketProvider = ({ children }) => {
 
     // Full snapshot — replaces local state entirely
     s.on("onlineUsers", (users) => {
+      console.log(`🔍 [PRESENCE-CLIENT] Received onlineUsers snapshot at ${new Date().toISOString()}:`, users);
       setOnlineUsers(new Set(users));
     });
 
@@ -91,7 +112,7 @@ export const SocketProvider = ({ children }) => {
       console.log("🧹 Cleaning up global socket connection...");
       s.disconnect();
     };
-  }, []); // ← empty deps: socket created once on mount
+  }, [token]); // ← empty deps: socket created once on mount
 
 
 useEffect(() => {
@@ -123,6 +144,40 @@ useEffect(() => {
       clearInterval(activityInterval);
     };
   }, [socket, user]);
+  // ✅ NEW: send the application-level heartbeat the server sweep is
+  // listening for.
+  useEffect(() => {
+    if (!socket) return;
+    const heartbeatInterval = setInterval(() => {
+      if (socket.connected) socket.emit("heartbeat");
+    }, 20000);
+    return () => clearInterval(heartbeatInterval);
+  }, [socket]);
+
+  // ✅ NEW: the moment the tab/app regains focus, or the OS reports
+  useEffect(() => {
+    if (!socket) return;
+
+    const resync = () => {
+      if (!socket.connected) return;
+      socket.emit("heartbeat");
+      socket.emit("requestOnlineUsers");
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") resync();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", resync);
+    window.addEventListener("online", resync);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", resync);
+      window.removeEventListener("online", resync);
+    };
+  }, [socket]);
 
   // ─── STEP 3: Global notification listener ────────────────────────────────
   useEffect(() => {
@@ -276,8 +331,13 @@ useEffect(() => {
   }, [socket, user]);
 
 
+const value = useMemo(
+    () => ({ socket, connected, onlineUsers }),
+    [socket, connected, onlineUsers]
+  );
+
   return (
-    <SocketContext.Provider value={{ socket, connected, onlineUsers }}>
+    <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );

@@ -78,9 +78,9 @@ const firstUnreadMessageId = useMemo(() => {
   });
 useEffect(() => {
   if (!chatId) return;
-  setUnreadForChat(chatId, seenManager.unseenBelowCount);
-}, [chatId, seenManager.unseenBelowCount, setUnreadForChat]);
-
+  if (!seenManager.hasInitialized) return;
+   setUnreadForChat(chatId, seenManager.unseenBelowCount);
+}, [chatId, seenManager.unseenBelowCount, seenManager.hasInitialized, setUnreadForChat]);
   // State for read-more functionality
   const [expandedMessages, setExpandedMessages] = useState(new Set());
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -553,8 +553,8 @@ useEffect(() => {
   className={`
     ${
       msg.message_type === "image"
-        ? "px-[7px] py-[7px] w-[220px] sm:w-[260px]"
-        : "px-3 py-3 max-w-[75%] sm:max-w-[60%] md:max-w-[400px]"
+        ? "px-[7px] py-[7px] w-[360px] sm:w-[400px]"
+        : "px-3 py-3 max-w-[75%] sm:max-w-[60%] md:max-w-[460px]"
     }
     min-w-[120px]
     relative overflow-hidden text-sm
@@ -852,4 +852,4 @@ function ChatImage({ src, onClick }) {
   );
 }
 
-export default ChatMessagesFull;
+export default React.memo(ChatMessagesFull);

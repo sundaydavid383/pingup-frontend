@@ -38,7 +38,9 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", stat
     SPEECH_RECEIVED: "speech_received",
     SEARCHING: "searching",
     SPEECH_TIMEOUT: "speech_timeout",
-    LEMMONFOX_ERROR: "lemonfox_error",
+    LEMONFOX_ERROR: "lemonfox_error", // FIX: was "LEMMONFOX_ERROR" (typo) — every setVoiceState() call
+                                        // elsewhere already used the correct spelling, so this was
+                                        // silently evaluating to `undefined` before.
     PROCESSING_COMPLETE: "processing_complete",
     PROCESSING: "processing",
     TTS: "tts",
@@ -57,6 +59,11 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", stat
   const errorRef = useRef(null);
   const isStartingRef = useRef(false); // Prevent double-start
 
+  // NEW: refs supporting the fixes below
+  const webComboRef = useRef(""); // latest WebSpeech transcript, used for fallback searches
+  const silenceFallbackTimer = useRef(null); // forces a search if WebSpeech never marks a result "final"
+  const pauseDetectedTimerRef = useRef(null); // guards the pause-detected → sending transition
+
 
   // chunking config
   const MIN_CHUNK_WORDS = 5; 
@@ -68,29 +75,43 @@ const VoiceInput = forwardRef(({ onTranscribe, disabled, mode = "lemonfox", stat
     const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE);
 
 // Use external statusMessage from parent ONLY when idle/ready, otherwise use internal detailed states
-// This ensures the user sees every step of the voice process
+// This ensures the user sees every step of the voice process.
+// FIX: every message here now branches on the ACTUAL active engine
+// (currentMode) instead of always describing Lemonfox.
 const getInternalStatus = () => {
+  const engineLabel = currentMode === "vosk" ? "Vosk" : "Lemonfox";
+
   switch (voiceState) {
     case VOICE_STATE.READY:
       return "Speak now, I am listening";
     case VOICE_STATE.LISTENING:
       return "Listening… (speak now)";
     case VOICE_STATE.RECORDING_FINISHED:
-      return "Recording finished — sending audio to Lemonfox...";
+      return currentMode === "web"
+        ? "Finishing up — processing what you said..."
+        : "Recording finished — preparing to send...";
     case VOICE_STATE.SENDING_TO_LEMONFOX:
-      return "Sending speech to Lemonfox API... (please wait)";
+      return currentMode === "web"
+        ? "Processing your speech..."
+        : `Sending speech to ${engineLabel}... (please wait)`;
     case VOICE_STATE.PAUSE_DETECTED:
-      return "2-second pause detected — processing what you said...";
+      return "Pause detected — processing what you said...";
     case VOICE_STATE.TRANSCRIBING:
-      return "Transcribing speech... (Lemonfox is working)";
+      return currentMode === "web"
+        ? "Transcribing your speech..."
+        : `Transcribing speech... (${engineLabel} is working)`;
     case VOICE_STATE.SPEECH_RECEIVED:
       return "Speech received successfully — now searching scriptures...";
     case VOICE_STATE.SEARCHING:
       return "Searching the Bible for your request...";
     case VOICE_STATE.SPEECH_TIMEOUT:
-      return "No speech received from Lemonfox (timeout) — please try speaking again";
+      return currentMode === "web"
+        ? "Didn't catch that — please try speaking again"
+        : `No speech received from ${engineLabel} (timeout) — please try speaking again`;
     case VOICE_STATE.LEMONFOX_ERROR:
-      return "Lemonfox API error — please check your internet or try again";
+      return currentMode === "web"
+        ? "Speech recognition failed — please check your microphone and try again"
+        : `${engineLabel} API error — please check your internet or try again`;
     case VOICE_STATE.PROCESSING_COMPLETE:
       return "Done — you can speak again";
     case VOICE_STATE.PROCESSING:
@@ -98,7 +119,7 @@ const getInternalStatus = () => {
     case VOICE_STATE.TTS:
       return "Speaking...";
     case VOICE_STATE.ERROR:
-      return error || "Voice error";
+      return error || "Voice error — tap the mic to try again";
     case VOICE_STATE.IDLE:
       return "Ready – speak or type";
     default:
@@ -111,12 +132,18 @@ const displayStatus = (voiceState === VOICE_STATE.IDLE || voiceState === VOICE_S
   ? statusMessage 
   : getInternalStatus();
 
-// Determine if mic should be disabled (during sending/transcribing)
+// Determine if mic should be disabled (during any "busy" phase).
+// FIX: added RECORDING_FINISHED, PAUSE_DETECTED, and PROCESSING —
+// these were previously missing, so the mic looked "idle" during
+// parts of the flow where it was actually busy.
 const isMicDisabled = [
+  VOICE_STATE.RECORDING_FINISHED,
   VOICE_STATE.SENDING_TO_LEMONFOX,
+  VOICE_STATE.PAUSE_DETECTED,
   VOICE_STATE.TRANSCRIBING,
-  VOICE_STATE.SEARCHING,
   VOICE_STATE.SPEECH_RECEIVED,
+  VOICE_STATE.SEARCHING,
+  VOICE_STATE.PROCESSING,
 ].includes(voiceState);
   // Bible books array with common abbreviations
 
@@ -418,6 +445,41 @@ const detectBibleReference = (text) => {
   return null;
 };
 
+// NEW: fires a search using whatever WebSpeech transcript we currently
+// have. Used both as a fallback when a browser never fires a final
+// onresult, and when the user manually stops the mic mid-utterance —
+// fixes issue #3 (text appears, no search happens).
+const performWebSearch = useCallback((comboText) => {
+  if (!comboText || !comboText.trim()) return;
+
+  const words = comboText.trim().split(/\s+/).filter(Boolean);
+  const take = Math.min(MAX_CHUNK_WORDS, words.length);
+  const chunk = words.slice(0, take).join(" ");
+  const leftover = words.slice(take).join(" ");
+  leftoverRef.current = leftover;
+
+  setVoiceState(VOICE_STATE.PROCESSING);
+  setIsThinking(true);
+  isThinkingRef.current = true;
+
+  onTranscribe(chunk, leftover, {
+    forceSearch: true,
+    source: "web",
+    onComplete: () => {
+      console.log("🔹 WebSpeech search complete, resetting to READY");
+      setIsThinking(false);
+      isThinkingRef.current = false;
+      setVoiceState(VOICE_STATE.READY);
+    },
+    onError: () => {
+      setIsThinking(false);
+      isThinkingRef.current = false;
+      setVoiceState(VOICE_STATE.ERROR);
+      setError("Search failed. Please try again.");
+    }
+  });
+}, [onTranscribe]);
+
 
 
   useEffect(() => {
@@ -476,32 +538,26 @@ recognition.onresult = (event) => {
 
   if (!combined) return;
 
+  // NEW: track latest transcript so we can force a search later even
+  // if the browser never marks a result "final".
+  webComboRef.current = combined;
+
+  // NEW: reflect that we're actively hearing something
+  setVoiceState(VOICE_STATE.LISTENING);
+
   // 🔵 Live textarea update
   onTranscribe(null, combined, { live: true });
 
   if (pauseTimer.current) clearTimeout(pauseTimer.current);
+  if (silenceFallbackTimer.current) clearTimeout(silenceFallbackTimer.current);
 
   const words = combined.split(" ");
 
   const doSearch = () => {
-    if (!combined) return;
-    // Keep leftover words beyond MAX_CHUNK_WORDS in leftoverRef
-    const take = Math.min(MAX_CHUNK_WORDS, words.length);
-    const chunk = words.slice(0, take).join(" ");
-    const leftover = words.slice(take).join(" ");
-    leftoverRef.current = leftover;
-
-    // Set processing state before search
-    setVoiceState(VOICE_STATE.PROCESSING);
-
-    onTranscribe(chunk, leftover, {
-      forceSearch: true,
-      onComplete: () => {
-        // Reset to READY after search completes
-        console.log("🔹 WebSpeech search complete, resetting to READY");
-        setVoiceState(VOICE_STATE.READY);
-      }
-    });
+    if (!webComboRef.current) return;
+    const combo = webComboRef.current;
+    webComboRef.current = "";
+    performWebSearch(combo);
   };
 
   // Rule 1: immediate search if 15+ words final
@@ -510,10 +566,19 @@ recognition.onresult = (event) => {
     return;
   }
 
-  // Rule 2: search after 1s pause
+  // Rule 2: search after 1s pause once we have a final result
   if (finalText.trim()) {
     pauseTimer.current = setTimeout(doSearch, 1000);
+    return;
   }
+
+  // Rule 3 (NEW fallback): some browsers only ever deliver interim
+  // results and never mark anything "final". If nothing new arrives
+  // for 3.5s, treat it as done and search whatever we have so far.
+  silenceFallbackTimer.current = setTimeout(() => {
+    console.log("🔹 No final WebSpeech result after 3.5s of silence — forcing search");
+    doSearch();
+  }, 6500);
 };
 
 recognition.onerror = (event) => {
@@ -521,6 +586,8 @@ recognition.onerror = (event) => {
 
   // 🚫 Ignore non-fatal silence
   if (event.error === "no-speech") return;
+
+  if (silenceFallbackTimer.current) clearTimeout(silenceFallbackTimer.current);
 
   let message = "Speech recognition failed";
 
@@ -536,6 +603,7 @@ recognition.onerror = (event) => {
 
   errorRef.current = message;
   setError(message);
+  setVoiceState(VOICE_STATE.ERROR);
 
   stopListening(); // ⛔ hard stop
 };
@@ -546,8 +614,9 @@ recognition.onerror = (event) => {
       try { recognition.stop(); } catch (e) {}
       recognitionRef.current = null;
       if (pauseTimer.current) clearTimeout(pauseTimer.current);
+      if (silenceFallbackTimer.current) clearTimeout(silenceFallbackTimer.current);
     };
-  }, [onTranscribe, currentMode]);
+  }, [onTranscribe, currentMode, performWebSearch]);
 
   
 useEffect(() => {
@@ -617,6 +686,9 @@ const startListening = useCallback(async () => {
   }
 }, [shouldBlockVoice, disabled]);
 
+// FIX (issue #1 + #3): stopListening no longer claims "sending to
+// Lemonfox" while on WebSpeech, and now force-searches any leftover
+// WebSpeech transcript instead of letting it silently vanish.
 const stopListening = useCallback(() => {
   if (!listeningRef.current) return;
 
@@ -624,36 +696,54 @@ const stopListening = useCallback(() => {
   setListening(false);
   listeningRef.current = false;
   setIsTranscribing(true); // We're now processing the audio
-  
-  // Set state to show recording finished first
-  setVoiceState(VOICE_STATE.RECORDING_FINISHED);
-  
-  // After brief delay, show we're sending to Lemonfox
-  setTimeout(() => {
-    setVoiceState(VOICE_STATE.SENDING_TO_LEMONFOX);
-  }, 500);
 
-  // WebSpeech - defer heavy work
+  setVoiceState(VOICE_STATE.RECORDING_FINISHED);
+
   if (speechEngineRef.current === "web" && recognitionRef.current) {
     requestIdleCallback(() => {
-      leftoverRef.current = "";
       isPausedRef.current = true;
       try {
         recognitionRef.current.stop();
       } catch (e) {
         // Ignore errors when stopping
       }
+
+      // Give the browser a brief moment to flush any pending final
+      // onresult, then force a search with whatever transcript we
+      // already have so speech is never silently dropped.
+      setTimeout(() => {
+        if (pauseTimer.current) {
+          clearTimeout(pauseTimer.current);
+          pauseTimer.current = null;
+        }
+        if (silenceFallbackTimer.current) {
+          clearTimeout(silenceFallbackTimer.current);
+          silenceFallbackTimer.current = null;
+        }
+        if (webComboRef.current && webComboRef.current.trim()) {
+          const combo = webComboRef.current;
+          webComboRef.current = "";
+          performWebSearch(combo);
+        } else {
+          setVoiceState(VOICE_STATE.READY);
+        }
+      }, 400);
     });
   }
 
-  // Backend capture
+  // Backend capture — this is the only case where audio is genuinely
+  // being uploaded, so this status message is only accurate here.
   else if (backendRef.current) {
+    setTimeout(() => {
+      setVoiceState(VOICE_STATE.SENDING_TO_LEMONFOX);
+    }, 500);
+
     requestIdleCallback(() => {
       leftoverRef.current = "";
       backendRef.current.stop();
     });
   }
-}, []);
+}, [performWebSearch]);
 
 
 // Toggle mic (memoized for performance)
@@ -704,11 +794,20 @@ const switchMode = useCallback((newMode) => {
   // Clear all state in one batch for better performance
   leftoverRef.current = "";
   isPausedRef.current = false;
+  webComboRef.current = "";
   
   // Clear any pending timers
   if (pauseTimer.current) {
     clearTimeout(pauseTimer.current);
     pauseTimer.current = null;
+  }
+  if (silenceFallbackTimer.current) {
+    clearTimeout(silenceFallbackTimer.current);
+    silenceFallbackTimer.current = null;
+  }
+  if (pauseDetectedTimerRef.current) {
+    clearTimeout(pauseDetectedTimerRef.current);
+    pauseDetectedTimerRef.current = null;
   }
 
   // Update ref first (synchronous)
@@ -726,6 +825,26 @@ const switchMode = useCallback((newMode) => {
   console.log(`✅ Mode switched to ${newMode}`);
 }, []); // Empty deps since we use refs for all dynamic values
 
+// NEW: stable callback for BackendAudioCapture's silence detector —
+// fixes issue #4. The old version was an inline arrow function
+// recreated every render, and its setTimeout read `voiceState` from a
+// stale closure. Both together could make the "pause detected" status
+// flip far sooner than the real 2 seconds of silence.
+const handleBackendStatus = useCallback((status) => {
+  if (status === 'SILENCE_DETECTED') {
+    if (pauseDetectedTimerRef.current) {
+      clearTimeout(pauseDetectedTimerRef.current);
+    }
+    setVoiceState(VOICE_STATE.PAUSE_DETECTED);
+    pauseDetectedTimerRef.current = setTimeout(() => {
+      setVoiceState((prev) =>
+        prev === VOICE_STATE.PAUSE_DETECTED ? VOICE_STATE.SENDING_TO_LEMONFOX : prev
+      );
+      pauseDetectedTimerRef.current = null;
+    }, 2000);
+  }
+}, []);
+
 
 return (
   <>
@@ -737,13 +856,13 @@ return (
       disabled={isMicDisabled || disabled}      // ← disable during sending/transcribing
       statusMessage={displayStatus}
       isSending={voiceState === VOICE_STATE.SENDING_TO_LEMONFOX || voiceState === VOICE_STATE.TRANSCRIBING}
+      stage={voiceState}
     />
 
 
     {/* Input Mode Selector - Enhanced UX */}
-    <div className="mode-selector-container">
-      <label className="mode-selector-label">Input Mode</label>
-      <div className="mode-buttons">
+    <div className="mode-buttons">
+        <div className="mode-indicator" aria-hidden="true" />
         <button
           onClick={() => switchMode("web")}
           disabled={currentMode === "web"}
@@ -771,7 +890,6 @@ return (
           {currentMode === "lemonfox" ? "🦊 Lemonfox" : "🦊"}
         </button>
       </div>
-    </div>
 
 
 
@@ -783,16 +901,7 @@ return (
         ref={backendRef}
         userId={user._id}
         mode={currentMode}
-        onStatus={(status) => {
-          if (status === 'SILENCE_DETECTED') {
-            setVoiceState(VOICE_STATE.PAUSE_DETECTED);
-            setTimeout(() => {
-              if (voiceState === VOICE_STATE.PAUSE_DETECTED) {
-                setVoiceState(VOICE_STATE.SENDING_TO_LEMONFOX);
-              }
-            }, 2000);
-          }
-        }}
+        onStatus={handleBackendStatus}
         onResult={(data)=>{
           // Handle error cases
           if (data?.error) {
